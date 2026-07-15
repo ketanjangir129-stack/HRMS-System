@@ -92,8 +92,6 @@ const Register = () => {
                              value={formData.companyName}
                              onChange={handleChange}
                             onBlur={handleBlur}
-
-                        
                             placeholder="wevois labs pvt ltd"
                             className="w-full border rounded-lg p-3"
                         />
