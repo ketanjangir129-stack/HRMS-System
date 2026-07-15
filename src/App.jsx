@@ -1,9 +1,9 @@
-function App(){
+function App() {
   return (
-    <>
-      <h1></h1>
-    </>
-  )
+    <div>
+      <h1>Ketan</h1>
+    </div>
+  );
 }
 
-export default App
+export default App;
