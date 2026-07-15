@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { validateField } from "../../utils/validation/validatefield"
 import { validateForm } from "../../utils/validation/validateform";
+import {registerCompany} from "../../services/companyService";
 
 
 
@@ -35,7 +36,7 @@ const Register = () => {
         }));
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
 
         const validationErrors = validateForm(formData);
@@ -44,7 +45,23 @@ const Register = () => {
             setErrors(validationErrors);
             return;
         }
+        try{
 
+            await registerCompany(formData);
+            console.log("data sent to firebase");
+            setFormData({
+                companyName: "",
+                companyCode: "",
+                ownerName: "",
+                email: "",
+                password: "",
+                phone: "",
+                address: "",
+            });
+        }catch(error){
+            console.error(error);
+            alert(error.message || "Registration Failed");
+        }
         console.log("Form is valid!");
     };
 
