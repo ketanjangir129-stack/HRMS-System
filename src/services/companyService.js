@@ -4,13 +4,14 @@ import { db } from "../firebase/firebase";
 //  Register Company
 export const registerCompany = async (companyData) => {
     
-    const companyCode = companyData.companyCode.toUpperCase();
+    const companyCode = companyData.companyCode.trim().toUpperCase();
 
     await set(
         ref(db, `companies/${companyCode}`),
         {
             details: {
                 ...companyData,
+                companyCode,
                 createdAt: Date.now(),
             },
 
@@ -22,7 +23,6 @@ export const registerCompany = async (companyData) => {
 };
 
 //  Login Company
-
 export const loginCompany = async ({
     companyCode,
     email,

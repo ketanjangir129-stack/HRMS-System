@@ -1,9 +1,10 @@
-function App() {
-  return (
-    <div>
-      <h1>Ketan</h1>
-    </div>
-  );
-}
+import Register from "./pages/authenticate/Register";
 
+function App(){
+  return(
+    <>
+      <Register /> 
+    </>
+  )
+}
 export default App;
