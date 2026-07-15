@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { validateField } from "../../utils/validation/validatefield"
 import { validateForm } from "../../utils/validation/validateform";
-import {registerCompany} from "../../services/companyService";
-
+import { registerCompany } from "../../services/companyService";
+import {toast} from "react-toastify";
 
 
 const Register = () => {
@@ -45,7 +45,7 @@ const Register = () => {
             setErrors(validationErrors);
             return;
         }
-        try{
+        try {
 
             await registerCompany(formData);
             console.log("data sent to firebase");
@@ -58,192 +58,215 @@ const Register = () => {
                 phone: "",
                 address: "",
             });
-        }catch(error){
+            toast.success("Company Registered Successfully");
+        } catch (error) {
             console.error(error);
             alert(error.message || "Registration Failed");
+            toast.error(error);
         }
         console.log("Form is valid!");
     };
 
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-gray-100 p-6">
-            <div className="w-full max-w-xl bg-white rounded-xl shadow-lg p-8">
+        <div className="h-screen bg-slate-100 flex items-center justify-center p-4 overflow-hidden">
+            <div className="w-full max-w-5xl h-[92vh] bg-white rounded-3xl shadow-xl border border-slate-200 flex flex-col">
 
-                <h1 className="text-3xl font-bold text-center mb-2">
-                    Company Registration
-                </h1>
-
-                <p className="text-center text-gray-500 mb-8">
-                    Register your company to start using the HRMS.
-                </p>
-
-                <form onSubmit={handleSubmit}>
-
-                    {/* Company Name */}
-                    <div className="mb-4">
-                        <label className="block mb-2 font-medium">
-                            Company Name
-                        </label>
-
-                        <input
-                            type="text"
-                             name="companyName"
-                             value={formData.companyName}
-                             onChange={handleChange}
-                            onBlur={handleBlur}
-                            placeholder="wevois labs pvt ltd"
-                            className="w-full border rounded-lg p-3"
-                        />
-
-                        {errors.companyName && (
-                            <p className="text-red-500 text-sm">
-                                {errors.companyName}
-                            </p>)}
+                {/* Header */}
+                <div className="px-8 py-6 border-b border-slate-200 flex-shrink-0">
+                    <div className="inline-flex items-center px-3 py-1 rounded-full bg-blue-50 text-blue-600 text-sm font-medium">
+                        HRMS
                     </div>
 
-                    {/* Company Code */}
-                    <div className="mb-4">
-                        <label className="block mb-2 font-medium">
-                            Company Code
-                        </label>
+                    <h1 className="mt-4 text-3xl font-bold text-slate-900">
+                        Company Registration
+                    </h1>
 
-                        <input
-                            type="text"
-                            placeholder="ABC001"
-                            name="companyCode"
-                            value={formData.companyCode}
-                            className="w-full border rounded-lg p-3" value={formData.companyCode}
-                            onChange={handleChange}
-                            onBlur={handleBlur}
-                        />
+                    <p className="mt-2 text-slate-500">
+                        Register your company to access the Human Resource Management System.
+                    </p>
+                </div>
 
-                        {errors.companyCode && (
-                            <p className="text-red-500 text-sm">
-                                {errors.companyCode}
-                            </p>)}
-                    </div>
+                {/* Scrollable Form */}
+                <div className="flex-1 overflow-y-auto px-8 py-6 hide-scrollbar">
 
-                    {/* Owner Name */}
-                    <div className="mb-4">
-                        <label className="block mb-2 font-medium">
-                            Owner Name
-                        </label>
+                    <form onSubmit={handleSubmit}>
 
-                        <input
-                            type="text"
-                            placeholder="John Doe"
-                            name="ownerName"
-                            className="w-full border rounded-lg p-3"
-                            value={formData.ownerName}
-                            onChange={handleChange}
-                            onBlur={handleBlur}
-                        />
-                        {errors.ownerName && (
-                            <p className="text-red-500 text-sm">
-                                {errors.ownerName}
-                            </p>
-                        )}
-                    </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
-                    {/* Email */}
-                    <div className="mb-4">
-                        <label className="block mb-2 font-medium">
-                            Email
-                        </label>
+                            {/* Company Name */}
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-2">
+                                    Company Name
+                                </label>
 
-                        <input
-                            type="email"
-                            name="email"
-                            placeholder="company@email.com"
-                            className="w-full border rounded-lg p-3"
-                            value={formData.email}
-                            onChange={handleChange}
-                            onBlur={handleBlur}
-                        />
-                        {errors.email && (
-                            <p className="text-red-500 text-sm">
-                                {errors.email}
-                            </p>
-                        )}
-                    </div>
-                    {/* Password */}
-                    <div className="mb-4">
-                        <label className="block mb-2 font-medium">
-                            Password
-                        </label>
+                                <input
+                                    type="text" 
+                                    name="companyName" 
+                                    value={formData.companyName}
+                                    onChange={handleChange}
+                                    onBlur={handleBlur}
+                                    placeholder="Wevois Labs Pvt Ltd"
+                                    className="w-full h-12 px-4 rounded-xl border border-slate-300 bg-white focus:outline-none focus:ring-4 focus:ring-blue-100 focus:border-blue-500 transition"
+                                />
 
-                        <input
-                            type="password"
-                            placeholder="********"
-                            name="password"
-                            className="w-full border rounded-lg p-3"
-                            value={formData.password}
-                            onChange={handleChange}
-                            onBlur={handleBlur}
-                        />
-                        {errors.password && (
-                            <p className="text-red-500 text-sm">
-                                {errors.password}
-                            </p>
-                        )}
-                    </div>
+                                {errors.companyName && (
+                                    <p className="mt-1 text-sm text-red-500">
+                                        {errors.companyName}
+                                    </p>
+                                )}
+                            </div>
 
-                    {/* Phone */}
-                    <div className="mb-4">
-                        <label className="block mb-2 font-medium">
-                            Phone
-                        </label>
+                            {/* Company Code */}
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-2">
+                                    Company Code
+                                </label>
 
-                        <input
-                            type="text"
-                            name="phone"
-                            placeholder="9876543210"
-                            className="w-full border rounded-lg p-3"
-                        value={formData.phone}
-                            onChange={handleChange}
-                            onBlur={handleBlur}
-                        />
-                        {errors.phone && (
-                            <p className="text-red-500 text-sm">
-                                {errors.phone}
-                            </p>
-                        )}
-                    </div>
+                                <input
+                                    type="text"
+                                    name="companyCode"
+                                    value={formData.companyCode}
+                                    onChange={handleChange}
+                                    onBlur={handleBlur}
+                                    placeholder="CMP001"
+                                    className="w-full h-12 px-4 rounded-xl border border-slate-300 bg-white focus:outline-none focus:ring-4 focus:ring-blue-100 focus:border-blue-500 transition"
+                                />
 
-                    {/* Address */}
-                    <div className="mb-4">
-                        <label className="block mb-2 font-medium">
-                            Address
-                        </label>
+                                {errors.companyCode && (
+                                    <p className="mt-1 text-sm text-red-500">
+                                        {errors.companyCode}
+                                    </p>
+                                )}
+                            </div>
 
-                        <textarea
-                            rows="3"
-                            placeholder="Company Address"
-                            name="address"
-                            className="w-full border rounded-lg p-3"
-                       value={formData.address}
-                            onChange={handleChange}
-                            onBlur={handleBlur}
-                        />
-                        {errors.address && (
-                            <p className="text-red-500 text-sm">
-                                {errors.address}
-                            </p>
-                        )}
-                    </div>
+                            {/* Owner Name */}
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-2">
+                                    Owner Name
+                                </label>
 
+                                <input
+                                    type="text"
+                                    name="ownerName"
+                                    value={formData.ownerName}
+                                    onChange={handleChange}
+                                    onBlur={handleBlur}
+                                    placeholder="John Doe"
+                                    className="w-full h-12 px-4 rounded-xl border border-slate-300 bg-white focus:outline-none focus:ring-4 focus:ring-blue-100 focus:border-blue-500 transition"
+                                />
 
+                                {errors.ownerName && (
+                                    <p className="mt-1 text-sm text-red-500">
+                                        {errors.ownerName}
+                                    </p>
+                                )}
+                            </div>
 
-                    <button
-                        type="submit"
-                        className="w-full bg-blue-600 text-white p-3 rounded-lg hover:bg-blue-700"
-                    >
-                        Register Company
-                    </button>
+                            {/* Email */}
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-2">
+                                    Email Address
+                                </label>
 
-                </form>
+                                <input
+                                    type="email"
+                                    name="email"
+                                    value={formData.email}
+                                    onChange={handleChange}
+                                    onBlur={handleBlur}
+                                    placeholder="company@email.com"
+                                    className="w-full h-12 px-4 rounded-xl border border-slate-300 bg-white focus:outline-none focus:ring-4 focus:ring-blue-100 focus:border-blue-500 transition"
+                                />
 
+                                {errors.email && (
+                                    <p className="mt-1 text-sm text-red-500">
+                                        {errors.email}
+                                    </p>
+                                )}
+                            </div>
+
+                            {/* Password */}
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-2">
+                                    Password
+                                </label>
+
+                                <input
+                                    type="password"
+                                    name="password"
+                                    value={formData.password}
+                                    onChange={handleChange}
+                                    onBlur={handleBlur}
+                                    placeholder="********"
+                                    className="w-full h-12 px-4 rounded-xl border border-slate-300 bg-white focus:outline-none focus:ring-4 focus:ring-blue-100 focus:border-blue-500 transition"
+                                />
+
+                                {errors.password && (
+                                    <p className="mt-1 text-sm text-red-500">
+                                        {errors.password}
+                                    </p>
+                                )}
+                            </div>
+
+                            {/* Phone */}
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-2">
+                                    Phone Number
+                                </label>
+
+                                <input
+                                    type="text"
+                                    name="phone"
+                                    value={formData.phone}
+                                    onChange={handleChange}
+                                    onBlur={handleBlur}
+                                    placeholder="9876543210"
+                                    className="w-full h-12 px-4 rounded-xl border border-slate-300 bg-white focus:outline-none focus:ring-4 focus:ring-blue-100 focus:border-blue-500 transition"
+                                />
+
+                                {errors.phone && (
+                                    <p className="mt-1 text-sm text-red-500">
+                                        {errors.phone}
+                                    </p>
+                                )}
+                            </div>
+
+                            {/* Address */}
+                            <div className="md:col-span-2">
+                                <label className="block text-sm font-medium text-slate-700 mb-2">
+                                    Company Address
+                                </label>
+
+                                <textarea
+                                    rows="4"
+                                    name="address"
+                                    value={formData.address}
+                                    onChange={handleChange}
+                                    onBlur={handleBlur}
+                                    placeholder="Enter company address"
+                                    className="w-full p-4 rounded-xl border border-slate-300 bg-white resize-none focus:outline-none focus:ring-4 focus:ring-blue-100 focus:border-blue-500 transition"
+                                />
+
+                                {errors.address && (
+                                    <p className="mt-1 text-sm text-red-500">
+                                        {errors.address}
+                                    </p>
+                                )}
+                            </div>
+
+                        </div>
+
+                        <button
+                            type="submit"
+                            className="w-full h-12 mt-8 rounded-xl bg-blue-600 text-white font-semibold hover:bg-blue-700 transition"
+                        >
+                            Register Company
+                        </button>
+
+                    </form>
+
+                </div>
             </div>
         </div>
     );

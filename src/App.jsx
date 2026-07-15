@@ -1,7 +1,10 @@
-import Login from "./pages/authenticate/login"
+import Register from "./pages/authenticate/Register";
+
 function App(){
   return(
-    <Login />
+    <>
+      <Register /> 
+    </>
   )
 }
 export default App;
