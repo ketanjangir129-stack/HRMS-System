@@ -2,7 +2,7 @@ import { useState } from "react";
 import { validateField } from "../../utils/validation/validatefield"
 import { validateForm } from "../../utils/validation/validateform";
 import { registerCompany } from "../../services/companyService";
-
+import {toast} from "react-toastify";
 
 
 const Register = () => {
@@ -58,9 +58,11 @@ const Register = () => {
                 phone: "",
                 address: "",
             });
+            toast.success("Company Registered Successfully");
         } catch (error) {
             console.error(error);
             alert(error.message || "Registration Failed");
+            toast.error(error);
         }
         console.log("Form is valid!");
     };

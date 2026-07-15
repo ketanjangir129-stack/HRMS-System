@@ -1,4 +1,4 @@
-import Register from "./pages/authenticate/register";
+import Register from "./pages/authenticate/Register";
 
 function App(){
   return(
