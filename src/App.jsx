@@ -1,7 +1,9 @@
-function App(){
+function App() {
   return (
-    <>
-      <h1>HJJJjjxckzxjbc</h1>
-    </>
-  )
+    <div>
+      <h1>Ketan</h1>
+    </div>
+  );
 }
+
+export default App;
