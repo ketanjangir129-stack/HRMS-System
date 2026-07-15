@@ -23,7 +23,6 @@ export const registerCompany = async (companyData) => {
 };
 
 //  Login Company
-
 export const loginCompany = async ({
     companyCode,
     email,

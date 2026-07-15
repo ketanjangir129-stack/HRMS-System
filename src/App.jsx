@@ -2,7 +2,9 @@ import Register from "./pages/authenticate/register";
 
 function App(){
   return(
-    <Register />
+    <>
+      <Register /> 
+    </>
   )
 }
 export default App;
