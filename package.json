@@ -13,17 +13,12 @@
     "@tailwindcss/vite": "^4.3.2",
     "firebase": "^12.16.0",
     "react": "^19.2.7",
-    "react-dom": "^19.2.7",
-<<<<<<< HEAD
+
     "react-router-dom": "^7.18.1",
-    "router-dom": "^3.1.1",
-=======
-<<<<<<< HEAD
+
+
     "react-icons": "^5.7.0",
-=======
     "react-toastify": "^11.1.0",
->>>>>>> 81602f9f41afa4f359225af27ca9140bb6226ecd
->>>>>>> 48c1e74cd1dfb8488887e08645482fbd5ae6622d
     "tailwindcss": "^4.3.2"
   },
   "devDependencies": {

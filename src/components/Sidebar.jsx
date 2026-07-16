@@ -12,7 +12,6 @@ function Sidebar() {
                     <MdDashboard className="icon" />
                     <span>Dashboard</span>
                 </li>
-
             </ul>
         </div>
     );
