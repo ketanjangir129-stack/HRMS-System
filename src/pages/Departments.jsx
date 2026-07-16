@@ -36,7 +36,7 @@ function Departments() {
         return unsubscribe;
     }, [companyCode]);
     
-    
+
     const handleDepartmentSave = async () => {
         if (!departmentName.trim()) return;
 
@@ -226,21 +226,10 @@ function Departments() {
 
                                                 <button
                                                     onClick={() => {
-                                                        setSelectedDepartmentId(
-                                                            departmentId
-                                                        );
-
-                                                        setEditingDesignationId(
-                                                            designationId
-                                                        );
-
-                                                        setDesignationName(
-                                                            designation.name
-                                                        );
-
-                                                        setDesignationModal(
-                                                            true
-                                                        );
+                                                        setSelectedDepartmentId(departmentId);
+                                                        setEditingDesignationId(designationId);
+                                                        setDesignationName(designation.name);
+                                                        setDesignationModal(true);
                                                     }}
                                                     className="px-3 py-1 border rounded-lg"
                                                 >
@@ -253,19 +242,13 @@ function Departments() {
                                                             window.confirm(
                                                                 "Delete designation?"
                                                             );
-
-                                                        if (
-                                                            !confirmDelete
-                                                        )
-                                                            return;
+                                                        if (!confirmDelete) return;
 
                                                         await deleteDesignation(
                                                             companyCode,
                                                             departmentId,
                                                             designationId
                                                         );
-
-                                                        loadDepartments();
                                                     }}
                                                     className="px-3 py-1 border rounded-lg text-red-600"
                                                 >
