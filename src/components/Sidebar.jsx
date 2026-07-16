@@ -1,4 +1,6 @@
 import { MdDashboard } from "react-icons/md";
+import { FaUserTie } from "react-icons/fa";
+import { Link } from "react-router-dom";
 
 function Sidebar() {
   return (
@@ -11,11 +13,23 @@ function Sidebar() {
       </div>
 
       {/* Menu */}
-      <ul className="list-none p-5">
+      <ul className="list-none p-5 space-y-2">
+
+      <Link to="/">
+        {/* <ul className="list-none p-5"> */}
         <li className="flex items-center gap-4 h-[52px] px-[18px] rounded-xl text-gray-600 cursor-pointer transition-all duration-300 hover:bg-gray-100 bg-gray-100 text-gray-900 font-semibold">
           <MdDashboard className="text-lg" />
           <span>Dashboard</span>
         </li>
+        {/* </ul> */}
+      </Link>
+
+      <Link to="/employee">
+        <li className="flex items-center gap-4 h-[52px] px-[18px] rounded-xl text-gray-600 cursor-pointer transition-all duration-300 hover:bg-gray-100 mt-2">
+          <FaUserTie className="text-lg" />
+          <span>Employees</span>
+        </li>
+      </Link>
       </ul>
     </div>
   );
