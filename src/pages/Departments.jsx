@@ -35,7 +35,8 @@ function Departments() {
             );
         return unsubscribe;
     }, [companyCode]);
-
+    
+    
     const handleDepartmentSave = async () => {
         if (!departmentName.trim()) return;
 
