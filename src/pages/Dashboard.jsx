@@ -15,7 +15,7 @@ function Dashboard() {
       {/* Welcome Section */}
       <div className="flex justify-between items-center mb-9">
         <div>
-          <p className="text-sm text-black mb-2">
+          <p className="text-2xl text-black mb-2 font-semibold">
             Wednesday, July 15, 2026
           </p>
 
