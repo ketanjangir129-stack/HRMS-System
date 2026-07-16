@@ -1,66 +1,130 @@
-import {createContext,useContext,useEffect,useState,} from "react";
-import {loginCompany,getCompanyByCode,} from "../services/companyService";
+import {
+  createContext,
+  useEffect,
+  useState,
+} from "react";
 
-const AuthContext = createContext();
+import {
+  onAuthStateChanged,
+} from "firebase/auth";
 
-export const AuthProvider = ({children,}) => {
-    
-    const [company, setCompany] = useState(null);
-    const [loading, setLoading] = useState(true);
+import { auth } from "../../src/firebase/firebase";
 
-    useEffect(() => {
-        const restoreSession = async () => {
-                const companyCode = localStorage.getItem("companyCode");
-                if (!companyCode) {
-                    setLoading(false);
-                    return;
-                }
+import {
+  loginCompany,
+  logoutCompany,
+} from "../services/authService";
 
-                const data = await getCompanyByCode(companyCode);
-                setCompany(data);
-                setLoading(false);
-        };
+import {
+  getCompanyByCode,
+} from "../services/companyService";
 
-        restoreSession();
-    }, []);
+export const AuthContext = createContext();
 
-    const login = async (
-        companyCode,
-        email,
-        password
-    ) => {
-        const result =
-            await loginCompany({
-                companyCode,
-                email,
-                password,
-            });
+export const AuthProvider = ({ children }) => {
+  const [company, setCompany] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-        if (result.success) {
-            localStorage.setItem("companyCode",companyCode);
-            setCompany(result.company);
+  // Restore Login Session
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(
+      auth,
+      async (user) => {
+        if (user) {
+          try {
+            const companyData = await getCompanyByUID(
+              user.uid
+            );
+
+            setCompany(companyData);
+          } catch (error) {
+            console.error(error);
+            setCompany(null);
+          }
+        } else {
+          setCompany(null);
         }
 
-        return result;
-    };
-
-    const logout = () => {
-        localStorage.removeItem("companyCode");
-        setCompany(null);
-    };
-
-    return (
-        <AuthContext.Provider
-            value={{
-                company,
-                login,
-                logout,
-                loading,
-            }}
-        >
-            {children}
-        </AuthContext.Provider>
+        setLoading(false);
+      }
     );
-};
 
-export const useAuth = () => useContext(AuthContext);
+    return () => unsubscribe();
+  }, []);
+
+  // Login
+  const login = async (
+    email,
+    password,
+    companyCode
+  ) => {
+    try {
+      const result = await loginCompany(
+        email,
+        password
+      );
+
+      if (!result.success) {
+        return result;
+      }
+
+      const companyData = await getCompanyByUID(
+        result.user.uid
+      );
+
+      if (!companyData) {
+        return {
+          success: false,
+          message: "Company not found.",
+        };
+      }
+
+      if (
+        companyData.companyCode !== companyCode
+      ) {
+        return {
+          success: false,
+          message: "Invalid Company Code.",
+        };
+      }
+
+      if (companyData.status !== "active") {
+        return {
+          success: false,
+          message: "Company account is inactive.",
+        };
+      }
+
+      setCompany(companyData);
+
+      return {
+        success: true,
+        company: companyData,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        message: error.message,
+      };
+    }
+  };
+
+  // Logout
+  const logout = async () => {
+    await logoutCompany();
+    setCompany(null);
+  };
+
+  return (
+    <AuthContext.Provider
+      value={{
+        company,
+        loading,
+        login,
+        logout,
+      }}
+    >
+      {children}
+    </AuthContext.Provider>
+  );
+};

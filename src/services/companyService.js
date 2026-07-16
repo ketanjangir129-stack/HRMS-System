@@ -22,72 +22,12 @@ export const registerCompany = async (companyData) => {
     );
 };
 
-//  Login Company
-export const loginCompany = async ({
-    companyCode,
-    email,
-    password,
-}) => {
-    try {
-        const snapshot = await get(
-            ref(
-                db,
-                `companies/${companyCode.toUpperCase()}`
-            )
-        );
+export const getCompanyByCode = async (uid) => {
+  const snapshot = await get(ref(db, `companies/${uid}`));
 
-        if (!snapshot.exists()) {
-            return {
-                success: false,
-                message: "Company not found",
-            };
-        }
-
-        const company = snapshot.val();
-
-        if (
-            company.details.email !== email
-        ) {
-            return {
-                success: false,
-                message: "Invalid Email",
-            };
-        }
-
-        if (
-            company.details.password !== password
-        ) {
-            return {
-                success: false,
-                message: "Invalid Password",
-            };
-        }
-
-        return {
-            success: true,
-            company,
-        };
-    } catch (error) {
-        return {
-            success: false,
-            message: error.message,
-        };
-    }
-};
-
-//  Get Company By Code
-
-export const getCompanyByCode = async(companyCode) => {
-    const snapshot = await get(
-        ref(
-            db,
-            `companies/${companyCode}`
-        )
-    );
-
-    if (!snapshot.exists()) {
-        return null;
-    }
-
+  if (snapshot.exists()) {
     return snapshot.val();
+  }
+
+  return null;
 };
