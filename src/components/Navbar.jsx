@@ -7,6 +7,7 @@ import {
 import { useNavigate } from "react-router-dom";
 import { AiOutlineLogout } from "react-icons/ai";
 import useAuth from "../hooks/useAuth";
+import { toast } from "react-toastify";
 
 const Navbar = () => {
   const { logout } = useAuth();
@@ -15,6 +16,7 @@ const Navbar = () => {
   const handleLogout = async () => {
     await logout();
     navigate("/login");
+    toast.success("Logged Out Successfully");
   };
   return (
     <div className="h-[70px] bg-white flex justify-between items-center px-8 border-b border-gray-200">
