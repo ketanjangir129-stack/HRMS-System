@@ -4,8 +4,18 @@ import {
   FaCog,
   FaChevronDown,
 } from "react-icons/fa";
+import { useNavigate } from "react-router-dom";
+import { AiOutlineLogout } from "react-icons/ai";
+import useAuth from "../hooks/useAuth";
 
-function Navbar() {
+const Navbar = () => {
+  const { logout } = useAuth();
+  const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    await logout();
+    navigate("/login");
+  };
   return (
     <div className="h-[70px] bg-white flex justify-between items-center px-8 border-b border-gray-200">
 
@@ -22,7 +32,9 @@ function Navbar() {
 
       {/* Right Section */}
       <div className="flex items-center gap-7">
-
+        <div className="relative cursor-pointer" onClick={handleLogout}>
+          <AiOutlineLogout className="text-2xl text-red-600" />
+        </div>
         {/* Notification */}
         <div className="relative cursor-pointer">
           <FaBell className="text-xl text-gray-600" />
