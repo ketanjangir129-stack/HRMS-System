@@ -1,36 +1,54 @@
-import "../styles/Navbar.css";
 import {
-    FaSearch,
-    FaBell,
-    FaCog,
-    FaChevronDown,
-
+  FaSearch,
+  FaBell,
+  FaCog,
+  FaChevronDown,
 } from "react-icons/fa";
-function Navbar(){
-    return(
-        <div className="navbar">
 
-            <div className ="search-box">
-                <FaSearch className="search-icon" />
-                <input type="text" placeholder="Search..." />
-            </div>
+function Navbar() {
+  return (
+    <div className="h-[70px] bg-white flex justify-between items-center px-8 border-b border-gray-200">
 
-            <div className="nav-right">
-                <div className="notification">
-                <FaBell className="nav-icon" />
-                <span className="badge">3</span>
-                </div>
-                <FaCog className="nav-icon" />
+      {/* Search Box */}
+      <div className="w-[700px] h-12 flex items-center px-5 border border-gray-300 rounded-2xl bg-white">
+        <FaSearch className="text-gray-400 text-lg" />
 
-                <div className="profile">
-                    <div className="avatar">A</div>
-                    <FaChevronDown  className="down-icon"/>
-                </div>
+        <input
+          type="text"
+          placeholder="Search..."
+          className="w-full ml-3 outline-none border-none bg-transparent text-[15px]"
+        />
+      </div>
 
-            </div>
+      {/* Right Section */}
+      <div className="flex items-center gap-7">
+
+        {/* Notification */}
+        <div className="relative cursor-pointer">
+          <FaBell className="text-xl text-gray-600" />
+
+          <span className="absolute -top-2 -right-2 w-5 h-5 rounded-full bg-red-500 text-white text-[11px] font-semibold flex items-center justify-center">
+            3
+          </span>
+        </div>
+
+        {/* Settings */}
+        <FaCog className="text-xl text-gray-600 cursor-pointer" />
+
+        {/* Profile */}
+        <div className="flex items-center gap-3 cursor-pointer">
+
+          <div className="w-11 h-11 rounded-full bg-emerald-500 text-white font-bold flex items-center justify-center">
+            A
+          </div>
+
+          <FaChevronDown className="text-gray-500" />
 
         </div>
-    );
+      </div>
+
+    </div>
+  );
 }
 
 export default Navbar;
