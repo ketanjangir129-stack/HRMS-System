@@ -14,8 +14,8 @@ const firebaseConfig = {
 };
 
 const app = initializeApp(firebaseConfig);
-console.log(import.meta.env.VITE_FIREBASE_API_KEY);
-console.log(import.meta.env.VITE_FIREBASE_AUTH_DOMAIN);
+// console.log(import.meta.env.VITE_FIREBASE_API_KEY);
+// console.log(import.meta.env.VITE_FIREBASE_AUTH_DOMAIN);
 
 export const auth = getAuth(app);
 export const db = getDatabase(app);

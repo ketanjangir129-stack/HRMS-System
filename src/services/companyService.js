@@ -31,3 +31,7 @@ export const getCompanyByCode = async (uid) => {
 
   return null;
 };
+
+export const getCompanyByUID = async (uid) => {
+  return getCompanyByCode(uid);
+};

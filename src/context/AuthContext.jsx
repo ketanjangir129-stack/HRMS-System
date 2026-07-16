@@ -8,12 +8,12 @@ import {
   onAuthStateChanged,
 } from "firebase/auth";
 
-import { auth } from "../../src/firebase/firebase";
+import { auth } from "../firebase/firebase";
 
 import {
   loginCompany,
   logoutCompany,
-} from "../services/authService";
+} from "../services/authService.js";
 
 import {
   getCompanyByCode,
@@ -32,7 +32,7 @@ export const AuthProvider = ({ children }) => {
       async (user) => {
         if (user) {
           try {
-            const companyData = await getCompanyByUID(
+            const companyData = await getCompanyByCode(
               user.uid
             );
 
@@ -68,7 +68,7 @@ export const AuthProvider = ({ children }) => {
         return result;
       }
 
-      const companyData = await getCompanyByUID(
+      const companyData = await getCompanyByCode(
         result.user.uid
       );
 

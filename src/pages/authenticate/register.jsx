@@ -3,9 +3,11 @@ import { validateField } from "../../utils/validation/validatefield"
 import { validateForm } from "../../utils/validation/validateform";
 import { registerCompany } from "../../services/companyService";
 import {toast} from "react-toastify";
+import { useNavigate } from "react-router-dom";
 
 
 const Register = () => {
+    const navigate = useNavigate();
     const [formData, setFormData] = useState({
         companyName: "",
         companyCode: "",
@@ -59,6 +61,7 @@ const Register = () => {
                 address: "",
             });
             toast.success("Company Registered Successfully");
+            navigate("/login");
         } catch (error) {
             console.error(error);
             alert(error.message || "Registration Failed");
@@ -66,7 +69,6 @@ const Register = () => {
         }
         console.log("Form is valid!");
     };
-
 
     return (
         <div className="h-screen bg-slate-100 flex items-center justify-center p-4 overflow-hidden">
@@ -259,12 +261,23 @@ const Register = () => {
 
                         <button
                             type="submit"
-                            className="w-full h-12 mt-8 rounded-xl bg-blue-600 text-white font-semibold hover:bg-blue-700 transition"
+                            className="w-full h-12 mt-8 rounded-xl bg-blue-600 text-white font-semibold hover:bg-blue-700 transition cursor-pointer"
                         >
                             Register Company
                         </button>
 
                     </form>
+                    
+                    <div className="flex justify-center mt-3">
+                        <h1 className="font-semibold text-md">Already have an account ?</h1>
+                        <button 
+                            onClick={()=>navigate("/login")}
+                            className="text-blue-600 hover:text-blue-700 font-bold transition cursor-pointer"
+                        >
+                            Login
+                        </button>
+                    </div>
+                    
 
                 </div>
             </div>
