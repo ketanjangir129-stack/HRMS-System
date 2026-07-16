@@ -159,7 +159,9 @@ const Login = () => {
         <div className="p-[5px] m-[5px] ">
           <p className="mt-4 text-center">
             Don't have an account?{" "}
-            <button onClick={() => navigate("/register")}>
+            <button 
+              onClick={() => navigate("/")}
+            >
               Register
             </button>
           </p>
