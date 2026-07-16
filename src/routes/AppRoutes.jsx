@@ -6,13 +6,36 @@ import Dashboard from "../pages/Dashboard";
 import Departments from "../pages/Departments";
 import Employees from "../pages/Employees";
 import EmployeeForm from "../pages/EmployeeForm";
+import ProtectedRoute from "./ProtectedRoute";
+import GuestRoute from "./GuestRoute";
 
 function AppRoutes(){
     return(
         <Routes>
-            <Route path = "/" element={<Register />}  />
-            <Route path = "/login" element={<Login />}  />
-    <Route element={<DashboardLayout /> } >
+            <Route 
+                path = "/" 
+                element={
+                    <GuestRoute>
+                        <Register />
+                    </GuestRoute>
+                }  
+            />
+            <Route 
+                path = "/login" 
+                element={
+                    <GuestRoute>
+                        <Login />
+                    </GuestRoute>
+                }  
+            />
+
+            <Route 
+                element={
+                    <ProtectedRoute>
+                        <DashboardLayout /> 
+                    </ProtectedRoute>
+                } 
+            >
                 <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/departments" element={<Departments />} />
                 <Route path="/employees" element={<Employees />} />
