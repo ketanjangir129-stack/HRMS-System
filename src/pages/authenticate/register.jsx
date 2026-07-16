@@ -1,11 +1,18 @@
 import { useState } from "react";
 import { validateField } from "../../utils/validation/validatefield"
 import { validateForm } from "../../utils/validation/validateform";
-import { registerCompany } from "../../services/companyService";
-import {toast} from "react-toastify";
+import { registerCompany } from "../../services/authService";
+import {
+    checkCompanyCodeExists,
+    createCompany,
+} from "../../services/companyService";
+import { toast } from "react-toastify";
+import { useNavigate } from "react-router-dom";
 
 
 const Register = () => {
+    const navigate = useNavigate();
+    const [loading, setLoading] = useState(false);
     const [formData, setFormData] = useState({
         companyName: "",
         companyCode: "",
@@ -35,38 +42,78 @@ const Register = () => {
             [name]: validateField(name, value, formData),
         }));
     };
+const handleSubmit = async (e) => {
+    e.preventDefault();
 
-    const handleSubmit = async (e) => {
-        e.preventDefault();
+    const validationErrors = validateForm(formData);
 
-        const validationErrors = validateForm(formData);
+    if (Object.keys(validationErrors).length > 0) {
+      setErrors(validationErrors);
+      return;
+    }
 
-        if (Object.keys(validationErrors).length > 0) {
-            setErrors(validationErrors);
-            return;
-        }
-        try {
+    setLoading(true);
 
-            await registerCompany(formData);
-            console.log("data sent to firebase");
-            setFormData({
-                companyName: "",
-                companyCode: "",
-                ownerName: "",
-                email: "",
-                password: "",
-                phone: "",
-                address: "",
-            });
-            toast.success("Company Registered Successfully");
-        } catch (error) {
-            console.error(error);
-            alert(error.message || "Registration Failed");
-            toast.error(error);
-        }
-        console.log("Form is valid!");
-    };
+    try {
+      // Convert company code to uppercase
+      const companyCode = formData.companyCode.trim().toUpperCase();
 
+      // Check company code
+      const exists = await checkCompanyCodeExists(companyCode);
+
+      if (exists) {
+        setErrors({
+          companyCode: "Company Code already exists.",
+        });
+
+        setLoading(false);
+        return;
+      }
+
+      // Firebase Authentication
+      const authResult = await registerCompany(
+        formData.email,
+        formData.password
+      );
+      
+      if (!authResult.success) {
+        alert(authResult.message);
+        setLoading(false);
+        return;
+      }
+
+      // Company Data
+      const companyData = {
+        ownerUid: authResult.user.uid,
+        companyName: formData.companyName.trim(),
+        companyCode,
+        ownerName: formData.ownerName.trim(),
+        email: formData.email.trim(),
+        phone: formData.phone.trim(),
+        address: formData.address.trim(),
+      };
+
+      // Save Company
+      const companyResult = await createCompany(companyData);
+
+      if (!companyResult.success) {
+        alert(companyResult.message);
+        setLoading(false);
+        return;
+      }
+
+      alert("Company Registered Successfully.");
+
+      navigate("/login");
+    } catch (error) {
+      console.error(error);
+      alert(error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+      
 
     return (
         <div className="h-screen bg-slate-100 flex items-center justify-center p-4 overflow-hidden">
@@ -101,8 +148,8 @@ const Register = () => {
                                 </label>
 
                                 <input
-                                    type="text" 
-                                    name="companyName" 
+                                    type="text"
+                                    name="companyName"
                                     value={formData.companyName}
                                     onChange={handleChange}
                                     onBlur={handleBlur}
@@ -259,12 +306,23 @@ const Register = () => {
 
                         <button
                             type="submit"
-                            className="w-full h-12 mt-8 rounded-xl bg-blue-600 text-white font-semibold hover:bg-blue-700 transition"
+                            className="w-full h-12 mt-8 rounded-xl bg-blue-600 text-white font-semibold hover:bg-blue-700 transition cursor-pointer"
                         >
                             Register Company
                         </button>
 
                     </form>
+
+                    <div className="flex justify-center mt-3">
+                        <h1 className="font-semibold text-md">Already have an account ?</h1>
+                        <button
+                            onClick={() => navigate("/login")}
+                            className="text-blue-600 hover:text-blue-700 font-bold transition cursor-pointer"
+                        >
+                            Login
+                        </button>
+                    </div>
+
 
                 </div>
             </div>

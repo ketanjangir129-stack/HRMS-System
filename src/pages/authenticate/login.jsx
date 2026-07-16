@@ -2,7 +2,8 @@ import { useState } from "react";
 import { validateField } from "../../utils/validation/validatefield";
 import { validateForm } from "../../utils/validation/validateform";
 import useAuth from "../../hooks/useAuth";
-// import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
+import { toast } from 'react-toastify';
 
 
 const Login = () => {
@@ -11,9 +12,9 @@ const Login = () => {
     email: "",
     password: "",
   });
+  const [loading, setLoading] = useState(false);
   const { login } = useAuth();
-  // const navigate = useNavigate();
-
+  const navigate = useNavigate();
   const [errors, setErrors] = useState({});
 
   const handleChange = (e) => {
@@ -32,22 +33,35 @@ const Login = () => {
       [name]: validateField(name, value, formData),
     }));
   };
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+ const handleSubmit = async (e) => {
+  e.preventDefault();
 
-    const result = await login(
-      formData.email,
-      formData.password,
-      formData.companyCode
-    );
+  const validationErrors = validateForm(formData);
 
-    if (!result.success) {
-      alert(result.message);
-      return;
-    }
+  if (Object.keys(validationErrors).length > 0) {
+    setErrors(validationErrors);
+    return;
+  }
 
-    //   navigate("/dashboard");
-  };
+  setLoading(true);
+
+  const result = await login(
+    formData.companyCode,
+    formData.email,
+    formData.password
+  );
+
+  setLoading(false);
+
+  if (!result.success) {
+    toast.error(result.message);
+    return;
+  }
+
+  toast.success("Login Successful");
+
+  navigate("/dashboard");
+};
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100 p-6">
