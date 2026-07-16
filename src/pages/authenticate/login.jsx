@@ -2,7 +2,7 @@ import { useState } from "react";
 import { validateField } from "../../utils/validation/validatefield";
 import { validateForm } from "../../utils/validation/validateform";
 import useAuth from "../../hooks/useAuth";
-// import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
 
 const Login = () => {
@@ -12,7 +12,7 @@ const Login = () => {
     password: "",
   });
   const { login } = useAuth();
-  // const navigate = useNavigate();
+  const navigate = useNavigate();
 
   const [errors, setErrors] = useState({});
 
@@ -46,7 +46,7 @@ const Login = () => {
       return;
     }
 
-    //   navigate("/dashboard");
+    navigate("/dashboard");
   };
 
   return (
@@ -145,7 +145,9 @@ const Login = () => {
         <div className="p-[5px] m-[5px] ">
           <p className="mt-4 text-center">
             Don't have an account?{" "}
-            <button onClick={() => navigate("/register")}>
+            <button 
+              onClick={() => navigate("/")}
+            >
               Register
             </button>
           </p>
