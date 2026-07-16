@@ -8,12 +8,12 @@ import {
   onAuthStateChanged,
 } from "firebase/auth";
 
-import { auth } from "../../src/firebase/firebase";
+import { auth } from "../firebase/firebase";
 
 import {
   loginCompany,
   logoutCompany,
-} from "../services/authService";
+} from "../services/authService.js";
 
 import {
   getCompanyByCode,
@@ -32,9 +32,15 @@ export const AuthProvider = ({ children }) => {
       async (user) => {
         if (user) {
           try {
-            const companyData = await getCompanyByUID(
-              user.uid
-            );
+            const companyCode = localStorage.getItem("companyCode");
+
+            if (!companyCode) {
+              setCompany(null);
+              setLoading(false);
+              return;
+            }
+
+            const companyData = await getCompanyByCode(companyCode);
 
             setCompany(companyData);
           } catch (error) {
@@ -49,82 +55,84 @@ export const AuthProvider = ({ children }) => {
       }
     );
 
-    return () => unsubscribe();
+    return unsubscribe;
   }, []);
 
   // Login
   const login = async (
+    companyCode,
     email,
-    password,
-    companyCode
+    password
   ) => {
-    try {
-      const result = await loginCompany(
-        email,
-        password
-      );
 
-      if (!result.success) {
-        return result;
-      }
+    // Firebase Login
+    const authResult = await loginCompany(
+      email,
+      password
+    );
 
-      const companyData = await getCompanyByUID(
-        result.user.uid
-      );
+    if (!authResult.success) {
+      return authResult;
+    }
 
-      if (!companyData) {
-        return {
-          success: false,
-          message: "Company not found.",
-        };
-      }
+    // Database
+    const company = await getCompanyByCode(
+      companyCode
+    );
 
-      if (
-        companyData.companyCode !== companyCode
-      ) {
-        return {
-          success: false,
-          message: "Invalid Company Code.",
-        };
-      }
-
-      if (companyData.status !== "active") {
-        return {
-          success: false,
-          message: "Company account is inactive.",
-        };
-      }
-
-      setCompany(companyData);
-
-      return {
-        success: true,
-        company: companyData,
-      };
-    } catch (error) {
+    if (!company) {
       return {
         success: false,
-        message: error.message,
+        message: "Company not found.",
       };
     }
-  };
 
-  // Logout
-  const logout = async () => {
-    await logoutCompany();
-    setCompany(null);
-  };
+    // Verify Owner
+    if (
+      company.ownerUid !== authResult.user.uid
+    ) {
+      return {
+        success: false,
+        message: "Invalid Company Code.",
+      };
+    }
 
-  return (
-    <AuthContext.Provider
-      value={{
-        company,
-        loading,
-        login,
-        logout,
-      }}
-    >
-      {children}
-    </AuthContext.Provider>
-  );
+    // Status
+    if (company.status !== "active") {
+      return {
+        success: false,
+        message: "Company account is inactive.",
+      };
+    }
+
+    setCompany(company);
+    localStorage.setItem("companyCode", company.companyCode);
+
+    return {
+      success: true,
+    };
+  }
+  
+const logout = async () => {
+  await logoutCompany();
+
+  localStorage.removeItem("companyCode");
+
+  setCompany(null);
 };
+
+return (
+  <AuthContext.Provider
+    value={{
+      company,
+      loading,
+      login,
+      logout,
+    }}
+  >
+    {children}
+  </AuthContext.Provider>
+);
+};
+
+export default AuthProvider;

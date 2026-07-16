@@ -11,7 +11,7 @@ import {
 
 function Dashboard() {
   return (
-    <div className="flex-1 p-8 bg-gray-100 min-h-full">
+    <div className="flex-1 p-2 bg-gray-100 min-h-full">
       {/* Welcome Section */}
       <div className="flex justify-between items-center mb-9">
         <div>

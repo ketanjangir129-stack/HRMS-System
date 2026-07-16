@@ -3,6 +3,7 @@ import { ref, push } from "firebase/database"
 import { useState } from "react";
 function EmployeeForm() {
 
+  const companyCode = localStorage.getItem("companyCode");
   const [employee, setEmployee] = useState({
     employeeId: "",
     name: "",
@@ -29,8 +30,8 @@ function EmployeeForm() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 try{
-    const employeeRef = ref(db, "employees");
-    await push(empolyeeRef, employee);
+    const employeeRef = ref(db, `companies/${companyCode}/employees`);
+    await push(employeeRef, employee);
     alert("Employee added successfully");
      setEmployee({
       employeeId: "",
