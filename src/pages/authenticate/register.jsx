@@ -57,7 +57,6 @@ const handleSubmit = async (e) => {
     try {
       // Convert company code to uppercase
       const companyCode = formData.companyCode.trim().toUpperCase();
-
       // Check company code
       const exists = await checkCompanyCodeExists(companyCode);
 
@@ -65,8 +64,6 @@ const handleSubmit = async (e) => {
         setErrors({
           companyCode: "Company Code already exists.",
         });
-
-        setLoading(false);
         return;
       }
 
@@ -78,7 +75,6 @@ const handleSubmit = async (e) => {
       
       if (!authResult.success) {
         alert(authResult.message);
-        setLoading(false);
         return;
       }
 
@@ -98,12 +94,12 @@ const handleSubmit = async (e) => {
 
       if (!companyResult.success) {
         alert(companyResult.message);
-        setLoading(false);
         return;
       }
 
       alert("Company Registered Successfully.");
 
+      await new Promise((resolve) => setTimeout(resolve, 700));
       navigate("/login");
     } catch (error) {
       console.error(error);
@@ -307,9 +303,47 @@ const handleSubmit = async (e) => {
 
                         <button
                             type="submit"
-                            className="w-full h-12 mt-8 rounded-xl bg-blue-600 text-white font-semibold hover:bg-blue-700 transition cursor-pointer"
+                            disabled={loading}
+                            className={`
+                                w-full h-12 mt-6 rounded-xl
+                                text-white font-medium
+                                transition-all duration-200
+                                ${
+                                    loading
+                                        ? "bg-blue-500 cursor-not-allowed"
+                                        : "bg-blue-600 hover:bg-blue-700"
+                                }
+                            `}
                         >
-                            Register Company
+                            {loading ? (
+                                <div className="flex items-center justify-center gap-2">
+
+                                    <svg
+                                        className="animate-spin h-5 w-5"
+                                        viewBox="0 0 24 24"
+                                    >
+                                        <circle
+                                            cx="12"
+                                            cy="12"
+                                            r="10"
+                                            stroke="currentColor"
+                                            strokeWidth="4"
+                                            fill="none"
+                                            className="opacity-25"
+                                        />
+                                        <path
+                                            fill="currentColor"
+                                            className="opacity-75"
+                                            d="M12 2a10 10 0 00-10 10h4a6 6 0 016-6V2z"
+                                        />
+                                    </svg>
+
+                                    <span>Registering...</span>
+
+                                </div>
+                            ) : (
+                                "Register Company"
+                            )}
                         </button>
 
                     </form>
