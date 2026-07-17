@@ -9,6 +9,7 @@ import EmployeeForm from "../pages/EmployeeForm";
 import ProtectedRoute from "./ProtectedRoute";
 import GuestRoute from "./GuestRoute";
 import EmployeesDetails from "../pages/EmployeesDetails";
+import OnBoardForm from "../pages/onboarding/CreateOnboarding"
 function AppRoutes(){
     return(
         <Routes>
@@ -41,8 +42,9 @@ function AppRoutes(){
                 <Route path="/employees" element={<Employees />} />
                 <Route path="/employees/add" element={<EmployeeForm />} />
                 <Route path="/employees/details/:id" element={<EmployeesDetails />}/>
+                <Route path="/onboard" element={<OnBoardForm />}/>
+                
             </Route>
-
         </Routes>
 
     )
