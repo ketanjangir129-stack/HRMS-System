@@ -101,18 +101,18 @@ const handleSubmit = async (e) => {
   }
 
   try {
-    const result = await createEmployee(
-      companyCode,
-      employee
-    );
+   const result = await createEmployee(
+  companyCode,
+  employee
+);
 
-    if (!result.success) {
-      setErrors((prev) => ({
-        ...prev,
-        [result.field]: result.message,
-      }));
-      return;
-    }
+if (!result.success) {
+  setErrors((prev) => ({
+    ...prev,
+    [result.field]: result.message,
+  }));
+  return;
+}
 
     alert("Employee added successfully");
 
