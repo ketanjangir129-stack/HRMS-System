@@ -235,7 +235,7 @@ function EmployeeForm() {
             onChange={handleChange}
             rows="4"
             placeholder="Enter Address"
-            className="w-full border rounded-lg p-3"
+            className="w-full border rounded-lg p-3 resize-none"
           ></textarea>
 
         </div>

@@ -8,7 +8,7 @@ import Employees from "../pages/Employees";
 import EmployeeForm from "../pages/EmployeeForm";
 import ProtectedRoute from "./ProtectedRoute";
 import GuestRoute from "./GuestRoute";
-
+import EmployeesDetails from "../pages/EmployeesDetails";
 function AppRoutes(){
     return(
         <Routes>
@@ -40,6 +40,7 @@ function AppRoutes(){
                 <Route path="/departments" element={<Departments />} />
                 <Route path="/employees" element={<Employees />} />
                 <Route path="/employees/add" element={<EmployeeForm />} />
+                <Route path="/employees/details/:id" element={<EmployeesDetails />}/>
             </Route>
 
         </Routes>
