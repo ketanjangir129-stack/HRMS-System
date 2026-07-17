@@ -1,5 +1,6 @@
 import DesignationItem from "./DesignationItem";
 import {deleteDepartment,} from "../../services/departmentService";
+import {FiChevronUp,FiChevronDown,} from "react-icons/fi";
 
 function DepartmentCard({
     companyCode,
@@ -32,6 +33,7 @@ function DepartmentCard({
             <div className="flex justify-between items-start">
 
                 <div>
+                    
                     <button
                         onClick={() =>toggleDepartment(departmentId)}
                         className="flex items-center gap-2 text-xl font-semibold text-slate-900 cursor-pointer"
@@ -39,12 +41,12 @@ function DepartmentCard({
                         {department.name}
                         <span>
                             {expandedDepartment === departmentId
-                                ? "▼": "▶"
+                                ? <FiChevronUp /> : <FiChevronDown/> 
                             }
                         </span>
                     </button>
-
-                    <p className="text-sm text-slate-500 mt-1 pl-2">
+                    
+                    <p className="text-sm text-slate-500 mt-1">
                         {
                             Object.keys(
                                 department.designations || {}
@@ -52,9 +54,11 @@ function DepartmentCard({
                         }{" "}
                         Designations
                     </p>
-                </div>
 
+                </div>
                 <div className="flex gap-2">
+
+                    
 
                     <button
                         onClick={() =>
