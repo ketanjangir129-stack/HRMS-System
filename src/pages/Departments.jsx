@@ -15,6 +15,7 @@ function Departments() {
 
     const companyCode = localStorage.getItem("companyCode");
 
+    const [loading, setLoading] = useState(true);
     const [departments, setDepartments] = useState({});
     const [departmentModal, setDepartmentModal] = useState(false);
     const [designationModal, setDesignationModal] = useState(false);
@@ -25,14 +26,15 @@ function Departments() {
     const [editingDesignationId, setEditingDesignationId] = useState(null);
 
     useEffect(() => {
-        const unsubscribe =
-            subscribeDepartments(
-                companyCode,
-                setDepartments
-            );
+        const unsubscribe = subscribeDepartments(
+            companyCode,
+            (data) => {
+                setDepartments(data);
+                setLoading(false);
+            }
+        );
 
         return unsubscribe;
-
     }, [companyCode]);
 
     const handleDepartmentSave = async () => {
@@ -105,6 +107,7 @@ function Departments() {
             </div>
 
             <DepartmentList
+                loading={loading}
                 departments={departments}
                 companyCode={companyCode}
                 onEditDepartment={(
@@ -112,30 +115,17 @@ function Departments() {
                     departmentName
                 ) => {
 
-                    setEditingDepartmentId(
-                        departmentId
-                    );
-
-                    setDepartmentName(
-                        departmentName
-                    );
-
+                    setEditingDepartmentId(departmentId);
+                    setDepartmentName(departmentName);
                     setDepartmentModal(true);
                 }}
                 onAddDesignation={(
                     departmentId
                 ) => {
 
-                    setSelectedDepartmentId(
-                        departmentId
-                    );
-
+                    setSelectedDepartmentId(departmentId);
                     setDesignationName("");
-
-                    setEditingDesignationId(
-                        null
-                    );
-
+                    setEditingDesignationId(null);
                     setDesignationModal(true);
                 }}
                 onEditDesignation={(
@@ -144,18 +134,9 @@ function Departments() {
                     designationName
                 ) => {
 
-                    setSelectedDepartmentId(
-                        departmentId
-                    );
-
-                    setEditingDesignationId(
-                        designationId
-                    );
-
-                    setDesignationName(
-                        designationName
-                    );
-
+                    setSelectedDepartmentId(departmentId);
+                    setEditingDesignationId(designationId);
+                    setDesignationName(designationName);
                     setDesignationModal(true);
                 }}
             />
