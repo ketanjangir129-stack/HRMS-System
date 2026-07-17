@@ -137,3 +137,20 @@ export const subscribeDepartments = (
 
     return () => off(departmentsRef);
 };
+
+import { get } from "firebase/database";
+
+export const getDepartments = async (companyCode) => {
+  const departmentsRef = ref(
+    db,
+    getDepartmentPath(companyCode)
+  );
+
+  const snapshot = await get(departmentsRef);
+
+  if (snapshot.exists()) {
+    return snapshot.val();
+  }
+
+  return {};
+};

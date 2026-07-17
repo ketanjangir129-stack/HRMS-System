@@ -11,6 +11,12 @@ import {
 import useAuth from "../hooks/useAuth";
 const Dashboard = () => {
   const { company } = useAuth();
+  const today = new Date().toLocaleDateString("en-US", {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
 
   return (
     <div className="flex-1 p-2 bg-gray-100 min-h-full">
@@ -18,7 +24,7 @@ const Dashboard = () => {
       <div className="flex justify-between items-center mb-9">
         <div>
           <p className="text-2xl text-black mb-2 font-semibold">
-            Wednesday, July 15, 2026
+            {today}
           </p>
 
           <h1 className="text-4xl font-bold text-green-600 mb-2">

@@ -1,6 +1,8 @@
-import { db } from "../firebase/firebase";
-import { ref, push } from "firebase/database"
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { createEmployee } from "../services/EmployeeService";
+import { getDepartments } from "../services/departmentService"
+import { validateField } from "../utils/validation/validateField";
+import { validateForm } from "../utils/validation/validateForm";
 function EmployeeForm() {
 
   const companyCode = localStorage.getItem("companyCode");
@@ -14,7 +16,28 @@ function EmployeeForm() {
     address: "",
   });
 
+  const [departments, setDepartments] = useState([]);
+  const [designations, setDesignations] = useState([]);
 
+  useEffect(() => {
+    loadDepartments();
+  }, []);
+
+  const loadDepartments = async () => {
+    const data = await getDepartments(companyCode);
+
+    if (!data) {
+      setDepartments([]);
+      return;
+    }
+
+    const departmentArray = Object.keys(data).map((key) => ({
+      id: key,
+      ...data[key],
+    }));
+
+    setDepartments(departmentArray);
+  };
 
 
   const handleChange = (e) => {
@@ -26,14 +49,75 @@ function EmployeeForm() {
     });
   };
 
+  const handleDepartmentChange = (e) => {
+    const selectedDepartment = e.target.value;
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-try{
-    const employeeRef = ref(db, `companies/${companyCode}/employees`);
-    await push(employeeRef, employee);
+    setEmployee({
+      ...employee,
+      department: selectedDepartment,
+      designation: "",
+    });
+
+    const dept = departments.find(
+      (item) => item.name === selectedDepartment
+    );
+
+    if (dept) {
+      const designationArray = dept.designations
+        ? Object.keys(dept.designations).map((key) => ({
+          id: key,
+          ...dept.designations[key],
+        }))
+        : [];
+
+      setDesignations(designationArray);
+    } else {
+      setDesignations([]);
+    }
+  };
+
+  const handleBlur = (e) => {
+    const { name, value } = e.target;
+
+    setErrors((prev) => ({
+      ...prev,
+      [name]: validateField(name, value, employee),
+    }));
+  };
+  const [errors, setErrors] = useState({});
+
+const handleSubmit = async (e) => {
+  e.preventDefault();
+
+  // Clear previous errors
+  setErrors({});
+
+  // Validate form fields
+  const validationErrors = validateForm(employee);
+
+  if (Object.keys(validationErrors).length > 0) {
+    setErrors(validationErrors);
+    return;
+  }
+
+  try {
+    const result = await createEmployee(
+      companyCode,
+      employee
+    );
+
+    if (!result.success) {
+      setErrors((prev) => ({
+        ...prev,
+        [result.field]: result.message,
+      }));
+      return;
+    }
+
     alert("Employee added successfully");
-     setEmployee({
+
+    // Reset form
+    setEmployee({
       employeeId: "",
       name: "",
       email: "",
@@ -42,10 +126,17 @@ try{
       mobile: "",
       address: "",
     });
-}catch(error){
-  console.log(error);
-  alert("failed to add employee");
-}
+
+    // Reset designation dropdown
+    setDesignations([]);
+
+    // Clear validation errors
+    setErrors({});
+
+  } catch (error) {
+    console.error(error);
+    alert(error.message || "Failed to add employee");
+  }
 };
 
   return (
@@ -72,8 +163,16 @@ try{
               // disabled
               onChange={handleChange}
               required
-              className="w-full border rounded-lg p-3 bg-gray-100"
+              placeholder="Enter Employee ID"
+              className="w-full border rounded-lg p-3 "
+              onBlur={handleBlur}
             />
+
+            {errors.employeeId && (
+              <p className="mt-1 text-sm text-red-500">
+                {errors.employeeId}
+              </p>
+            )}
           </div>
 
           {/* Name */}
@@ -85,13 +184,18 @@ try{
             <input
               type="text"
               name="name"
-              pattern="[A-Za-z ]+"
-              required
               value={employee.name}
               onChange={handleChange}
               placeholder="Enter Employee Name"
               className="w-full border rounded-lg p-3"
+              onBlur={handleBlur}
             />
+
+            {errors.name && (
+              <p className="mt-1 text-sm text-red-500">
+                {errors.name}
+              </p>
+            )}
           </div>
 
           {/* Email */}
@@ -108,7 +212,14 @@ try{
               onChange={handleChange}
               placeholder="Enter Email"
               className="w-full border rounded-lg p-3"
+              onBlur={handleBlur}
             />
+
+            {errors.email && (
+              <p className="mt-1 text-sm text-red-500">
+                {errors.email}
+              </p>
+            )}
           </div>
 
           {/* Mobile */}
@@ -120,14 +231,19 @@ try{
             <input
               type="text"
               name="mobile"
-              pattern="[0-9]{10}"
-              max-length ={10}
-              required
+              maxLength={10}
               value={employee.mobile}
               onChange={handleChange}
               placeholder="Enter Mobile Number"
               className="w-full border rounded-lg p-3"
+              onBlur={handleBlur}
             />
+
+            {errors.mobile && (
+              <p className="mt-1 text-sm text-red-500">
+                {errors.mobile}
+              </p>
+            )}
           </div>
 
           {/* Department */}
@@ -139,16 +255,24 @@ try{
             <select
               name="department"
               value={employee.department}
-              onChange={handleChange}
-              required
+              onChange={handleDepartmentChange}
+              onBlur={handleBlur}
               className="w-full border rounded-lg p-3"
             >
               <option value="">Select Department</option>
-              <option>HR</option>
-              <option>IT</option>
-              <option>Finance</option>
-              <option>Sales</option>
+
+              {departments.map((dept) => (
+                <option key={dept.id} value={dept.name}>
+                  {dept.name}
+                </option>
+              ))}
             </select>
+
+            {errors.department && (
+              <p className="mt-1 text-sm text-red-500">
+                {errors.department}
+              </p>
+            )}
           </div>
 
           {/* Designation */}
@@ -156,16 +280,28 @@ try{
             <label className="block mb-2 font-medium">
               Designation
             </label>
-
-            <input
-              type="text"
+            <select
               name="designation"
               value={employee.designation}
               onChange={handleChange}
-              required
-              placeholder="Enter Designation"
+              onBlur={handleBlur}
               className="w-full border rounded-lg p-3"
-            />
+            >
+              <option value="">Select Designation</option>
+
+              {designations.map((des) => (
+                <option key={des.id} value={des.name}>
+                  {des.name}
+                </option>
+              ))}
+            </select>
+
+            {errors.designation && (
+              <p className="mt-1 text-sm text-red-500">
+                {errors.designation}
+              </p>
+            )}
+
           </div>
 
         </div>
@@ -181,21 +317,22 @@ try{
             name="address"
             value={employee.address}
             onChange={handleChange}
+            onBlur={handleBlur}
             rows="4"
             placeholder="Enter Address"
             className="w-full border rounded-lg p-3"
-          ></textarea>
+
+          />
+
+          {errors.address && (
+            <p className="mt-1 text-sm text-red-500">
+              {errors.address}
+            </p>
+          )}
 
         </div>
 
         <div className="flex justify-end gap-4 mt-8">
-
-          {/* <button
-            type="reset"
-            className="px-6 py-3 border rounded-lg"
-          >
-            Cancel
-          </button> */}
 
           <button
             type="submit"

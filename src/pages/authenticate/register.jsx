@@ -155,6 +155,7 @@ const handleSubmit = async (e) => {
                                     onBlur={handleBlur}
                                     placeholder="Wevois Labs Pvt Ltd"
                                     className="w-full h-12 px-4 rounded-xl border border-slate-300 bg-white focus:outline-none focus:ring-4 focus:ring-blue-100 focus:border-blue-500 transition"
+                                    onBlur={handleBlur}
                                 />
 
                                 {errors.companyName && (
