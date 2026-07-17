@@ -1,6 +1,5 @@
-import {
-    deleteDesignation,
-} from "../../services/departmentService";
+import {deleteDesignation,} from "../../services/departmentService";
+import { toast } from "react-toastify";
 
 function DesignationItem({
     companyCode,
@@ -11,12 +10,19 @@ function DesignationItem({
 }) {
     const handleDelete = async () => {
         const confirmDelete = window.confirm("Delete designation?");
+
         if (!confirmDelete) return;
-        await deleteDesignation(
-            companyCode,
-            departmentId,
-            designationId
-        );
+        try {
+            await deleteDesignation(
+                companyCode,
+                departmentId,
+                designationId
+            );
+            toast.success("Designation deleted successfully.");
+        } catch (error) {
+            console.error(error);
+            toast.error("Failed to delete designation.");
+        }
     };
 
     return (

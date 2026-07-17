@@ -1,6 +1,7 @@
 import DesignationItem from "./DesignationItem";
 import {deleteDepartment,} from "../../services/departmentService";
 import {FiChevronUp,FiChevronDown,} from "react-icons/fi";
+import { toast } from "react-toastify";
 
 function DepartmentCard({
     companyCode,
@@ -14,17 +15,18 @@ function DepartmentCard({
 }) {
 
     const handleDeleteDepartment = async () => {
-        const confirmDelete =
-            window.confirm(
-                `Delete ${department.name} department?`
-            );
-
+        const confirmDelete = window.confirm(`Delete ${department.name} department?`);
         if (!confirmDelete) return;
-
-        await deleteDepartment(
-            companyCode,
-            departmentId
-        );
+        try {
+            await deleteDepartment(
+                companyCode,
+                departmentId
+            );
+            toast.success("Department deleted successfully.");
+        } catch (error) {
+            console.error(error);
+            toast.error("Failed to delete department.");
+        }
     };
 
     return (

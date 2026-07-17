@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { toast } from "react-toastify";
 import DepartmentList from "../components/departments/DepartmentList";
 import DepartmentModal from "../components/departments/DepartmentModal";
 import DesignationModal from "../components/departments/DesignationModal";
@@ -37,45 +38,64 @@ function Departments() {
         return unsubscribe;
     }, [companyCode]);
 
+    //adding and editing deparment
     const handleDepartmentSave = async () => {
-
         if (!departmentName.trim()) return;
-        if (editingDepartmentId) {
-            await updateDepartment(
-                companyCode,
-                editingDepartmentId,
-                departmentName
-            );
-        } else {
-            await addDepartment(
-                companyCode,
-                departmentName
-            );
+
+        try {
+            if (editingDepartmentId) {
+                await updateDepartment(
+                    companyCode,
+                    editingDepartmentId,
+                    departmentName
+                );
+                toast.success("Department updated successfully.");
+            } else {
+                await addDepartment(
+                    companyCode,
+                    departmentName
+                );
+                toast.success("Department added successfully.");
+            }
+            setDepartmentModal(false);
+            setDepartmentName("");
+            setEditingDepartmentId(null);
+
+        } catch (error) {
+            console.error(error);
+            toast.error("Failed to save department.");
         }
-        setDepartmentModal(false);
-        setDepartmentName("");
-        setEditingDepartmentId(null);
     };
 
     const handleDesignationSave = async () => {
         if (!designationName.trim()) return;
-        if (editingDesignationId) {
-            await updateDesignation(
-                companyCode,
-                selectedDepartmentId,
-                editingDesignationId,
-                designationName
-            );
-        } else {
-            await addDesignation(
-                companyCode,
-                selectedDepartmentId,
-                designationName
-            );
+
+        try {
+            if (editingDesignationId) {
+                await updateDesignation(
+                    companyCode,
+                    selectedDepartmentId,
+                    editingDesignationId,
+                    designationName
+                );
+                toast.success("Designation updated successfully.");
+            } else {
+                await addDesignation(
+                    companyCode,
+                    selectedDepartmentId,
+                    designationName
+                );
+
+                toast.success("Designation added successfully.");
+            }
+            setDesignationModal(false);
+            setDesignationName("");
+            setEditingDesignationId(null);
+
+        } catch (error) {
+            console.error(error);
+            toast.error("Failed to save designation.");
         }
-        setDesignationModal(false);
-        setDesignationName("");
-        setEditingDesignationId(null);
     };
 
     const toggleDepartment = (departmentId) => {
