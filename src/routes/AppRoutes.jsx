@@ -9,7 +9,9 @@ import EmployeeForm from "../pages/EmployeeForm";
 import ProtectedRoute from "./ProtectedRoute";
 import GuestRoute from "./GuestRoute";
 import EmployeesDetails from "../pages/EmployeesDetails";
+import OnboardingDashboard from "../pages/onboarding/OnboardingDashboard"
 import OnBoardForm from "../pages/onboarding/CreateOnboarding"
+import OnboardingRequests from "../pages/onboarding/OnboardingRequests"
 function AppRoutes(){
     return(
         <Routes>
@@ -42,7 +44,9 @@ function AppRoutes(){
                 <Route path="/employees" element={<Employees />} />
                 <Route path="/employees/add" element={<EmployeeForm />} />
                 <Route path="/employees/details/:id" element={<EmployeesDetails />}/>
-                <Route path="/onboard" element={<OnBoardForm />}/>
+                <Route path="/OnboardDashboard" element={<OnboardingDashboard />}/>
+                <Route path="/OnboardDashboard/OnBoardForm" element={<OnBoardForm />}/>
+                <Route path="/OnboardDashboard/OnBoardRequest" element={<OnboardingRequests />}/>
                 
             </Route>
         </Routes>

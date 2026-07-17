@@ -19,9 +19,10 @@ const menuItems = [
     path: "/employees",
     icon: FaBuilding,
   },
+
   {
     label: "On-boarding",
-    path: "/onboard",
+    path: "/OnboardDashboard",
     icon: FaBuilding,
   },
   
