@@ -26,7 +26,7 @@ export const getEmployeeById = async(companyCode, employeeId) => {
 
   const snapshot = await get (employeeRef);
 
-  if(onSnapshotsInSync.exists()){
+  if(snapshot.exists()){
     return snapshot.val();
   }
   return null;
