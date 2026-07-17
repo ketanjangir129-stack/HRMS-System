@@ -24,6 +24,7 @@ function Departments() {
     const [selectedDepartmentId, setSelectedDepartmentId] = useState(null);
     const [editingDepartmentId, setEditingDepartmentId] = useState(null);
     const [editingDesignationId, setEditingDesignationId] = useState(null);
+    const [expandedDepartment, setExpandedDepartment] = useState(null);
 
     useEffect(() => {
         const unsubscribe = subscribeDepartments(
@@ -33,7 +34,6 @@ function Departments() {
                 setLoading(false);
             }
         );
-
         return unsubscribe;
     }, [companyCode]);
 
@@ -78,6 +78,14 @@ function Departments() {
         setEditingDesignationId(null);
     };
 
+    const toggleDepartment = (departmentId) => {
+        setExpandedDepartment((prev) =>
+            prev === departmentId
+                ? null
+                : departmentId
+        );
+    };
+
     return (
         <div className="p-2">
 
@@ -99,7 +107,7 @@ function Departments() {
                         setEditingDepartmentId(null);
                         setDepartmentModal(true);
                     }}
-                    className="bg-blue-600 text-white px-5 py-2.5 rounded-xl hover:bg-blue-700"
+                    className="bg-blue-600 text-white px-5 py-2.5 rounded-xl hover:bg-blue-700 cursor-pointer" 
                 >
                     Add Department
                 </button>
@@ -110,6 +118,8 @@ function Departments() {
                 loading={loading}
                 departments={departments}
                 companyCode={companyCode}
+                expandedDepartment={expandedDepartment}
+                toggleDepartment={toggleDepartment}
                 onEditDepartment={(
                     departmentId,
                     departmentName

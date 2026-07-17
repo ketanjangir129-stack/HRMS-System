@@ -6,7 +6,9 @@ function DepartmentList({
     onEditDepartment,
     onAddDesignation,
     onEditDesignation,
-    loading
+    loading,
+    expandedDepartment,
+    toggleDepartment,
 }) {
 
     if (loading) {
@@ -69,24 +71,18 @@ function DepartmentList({
     return (
         <div className="grid gap-5">
 
-            {Object.entries(
-                departments
-            ).map(
+            {Object.entries(departments).map(
                 ([departmentId, department]) => (
                     <DepartmentCard
                         key={departmentId}
                         companyCode={companyCode}
                         departmentId={departmentId}
                         department={department}
-                        onEditDepartment={
-                            onEditDepartment
-                        }
-                        onAddDesignation={
-                            onAddDesignation
-                        }
-                        onEditDesignation={
-                            onEditDesignation
-                        }
+                        expandedDepartment={expandedDepartment}
+                        toggleDepartment={toggleDepartment}
+                        onEditDepartment={onEditDepartment}
+                        onAddDesignation={onAddDesignation}
+                        onEditDesignation={onEditDesignation}
                     />
                 )
             )}

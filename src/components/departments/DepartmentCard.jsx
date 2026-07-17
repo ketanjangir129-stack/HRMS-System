@@ -8,6 +8,8 @@ function DepartmentCard({
     onEditDepartment,
     onAddDesignation,
     onEditDesignation,
+    expandedDepartment,
+    toggleDepartment
 }) {
 
     const handleDeleteDepartment = async () => {
@@ -30,11 +32,19 @@ function DepartmentCard({
             <div className="flex justify-between items-start">
 
                 <div>
-                    <h2 className="text-xl font-semibold text-slate-900">
+                    <button
+                        onClick={() =>toggleDepartment(departmentId)}
+                        className="flex items-center gap-2 text-xl font-semibold text-slate-900 cursor-pointer"
+                    >
                         {department.name}
-                    </h2>
+                        <span>
+                            {expandedDepartment === departmentId
+                                ? "▼": "▶"
+                            }
+                        </span>
+                    </button>
 
-                    <p className="text-sm text-slate-500 mt-1">
+                    <p className="text-sm text-slate-500 mt-1 pl-2">
                         {
                             Object.keys(
                                 department.designations || {}
@@ -53,7 +63,7 @@ function DepartmentCard({
                                 department.name
                             )
                         }
-                        className="px-3 py-2 border rounded-lg hover:bg-slate-50"
+                        className="px-3 py-2 border rounded-lg hover:bg-slate-50 border-gray-300 cursor-pointer"
                     >
                         Edit
                     </button>
@@ -62,7 +72,7 @@ function DepartmentCard({
                         onClick={
                             handleDeleteDepartment
                         }
-                        className="px-3 py-2 border border-red-200 text-red-600 rounded-lg hover:bg-red-50"
+                        className="px-3 py-2 border border-red-200 text-red-600 rounded-lg hover:bg-red-50 cursor-pointer"
                     >
                         Delete
                     </button>
@@ -73,7 +83,7 @@ function DepartmentCard({
                                 departmentId
                             )
                         }
-                        className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                        className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 cursor-pointer"
                     >
                         Add Designation
                     </button>
@@ -82,37 +92,41 @@ function DepartmentCard({
 
             </div>
 
-            <div className="mt-5 space-y-3">
+            {
+                expandedDepartment === departmentId && (
+                    <div className="mt-5 space-y-3">
 
-                {Object.entries(
-                    department.designations || {}
-                ).length === 0 ? (
-                    <div className="text-sm text-slate-500 border rounded-xl p-4">
-                        No designations added yet.
+                        {Object.entries(
+                            department.designations || {}
+                        ).length === 0 ? (
+                            <div className="text-sm text-slate-500 border rounded-xl p-4">
+                                No designations added yet.
+                            </div>
+                        ) : (
+                            Object.entries(
+                                department.designations || {}
+                            ).map(
+                                ([
+                                    designationId,
+                                    designation,
+                                ]) => (
+                                    <DesignationItem
+                                        key={designationId}
+                                        companyCode={companyCode}
+                                        departmentId={departmentId}
+                                        designationId={designationId}
+                                        designation={designation}
+                                        onEditDesignation={
+                                            onEditDesignation
+                                        }
+                                    />
+                                )
+                            )
+                        )}
+
                     </div>
-                ) : (
-                    Object.entries(
-                        department.designations || {}
-                    ).map(
-                        ([
-                            designationId,
-                            designation,
-                        ]) => (
-                            <DesignationItem
-                                key={designationId}
-                                companyCode={companyCode}
-                                departmentId={departmentId}
-                                designationId={designationId}
-                                designation={designation}
-                                onEditDesignation={
-                                    onEditDesignation
-                                }
-                            />
-                        )
-                    )
-                )}
-
-            </div>
+                )
+            }
 
         </div>
     );

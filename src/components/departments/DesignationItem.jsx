@@ -20,7 +20,7 @@ function DesignationItem({
     };
 
     return (
-        <div className="flex items-center justify-between border rounded-xl px-4 py-3">
+        <div className="flex items-center justify-between border border-gray-300 rounded-xl px-4 py-3 cursor-pointer">
 
             <span className="font-medium text-slate-700">
                 {designation.name}
@@ -36,14 +36,14 @@ function DesignationItem({
                             designation.name
                         )
                     }
-                    className="px-3 py-1.5 border rounded-lg hover:bg-slate-50"
+                    className="px-3 py-1.5 border rounded-lg hover:bg-slate-50 border-gray-300 cursor-pointer"
                 >
                     Edit
                 </button>
 
                 <button
                     onClick={handleDelete}
-                    className="px-3 py-1.5 border border-red-200 text-red-600 rounded-lg hover:bg-red-50"
+                    className="px-3 py-1.5 border border-red-200 text-red-600 rounded-lg hover:bg-red-50 cursor-pointer"
                 >
                     Delete
                 </button>
