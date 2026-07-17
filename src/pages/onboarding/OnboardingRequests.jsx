@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-import { getOnboardingRequestById } from "../../services/OnboardingService";
+import { getOnboardingRequests } from "../../services/OnboardingService";
 import { filterData } from "../../utils/search/filterData";
 
 function OnboardingRequests() {
@@ -30,7 +30,7 @@ function OnboardingRequests() {
         setRequests(data);
 
         setFilteredRequests(data);
-
+        
     }
 
     catch(error){
@@ -46,6 +46,7 @@ function OnboardingRequests() {
     }
 
 };
+console.log(filteredRequests)
 const getStatusStyle = (status) => {
     switch (status) {
 
@@ -151,10 +152,11 @@ return(
 <tbody>
   {filteredRequests.length > 0 ? (
     filteredRequests.map((request)=>(
+        
 
 <tr className="hover:bg-gray-50 transition" key={request.id}>
 
-<td className="px-4 py-3 border-b">{request.basic.employeeId}</td>
+<td className="px-4 py-3 border-b">{request.id}</td>
 
 <td className="px-4 py-3 border-b">{request.basic.name}</td>
 
@@ -163,12 +165,7 @@ return(
 <td className="px-4 py-3 border-b">{request.basic.designation}</td>
 
 <td className="px-4 py-3 border-b">
-
-<span
-className={`px-3 py-1 rounded-full bg-yellow-100 text-yellow-700 text-sm"
-${getStatusStyle(request.status)}`}>
-
-</span>
+{request.status}
 
 </td>
 
