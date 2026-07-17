@@ -1,3 +1,4 @@
+import Loader from "../common/Loader";
 import DepartmentCard from "./DepartmentCard";
 
 function DepartmentList({
@@ -9,41 +10,13 @@ function DepartmentList({
     loading,
     expandedDepartment,
     toggleDepartment,
+    filteredDepartments
 }) {
 
     if (loading) {
         return (
-            <div className="bg-white border rounded-2xl p-12 flex flex-col items-center justify-center">
-
-                <svg
-                    className="animate-spin h-8 w-8 text-blue-600"
-                    viewBox="0 0 24 24"
-                >
-                    <circle
-                        cx="12"
-                        cy="12"
-                        r="10"
-                        stroke="currentColor"
-                        strokeWidth="4"
-                        fill="none"
-                        className="opacity-25"
-                    />
-
-                    <path
-                        fill="currentColor"
-                        className="opacity-75"
-                        d="M12 2a10 10 0 00-10 10h4a6 6 0 016-6V2z"
-                    />
-                </svg>
-
-                <h3 className="mt-4 text-lg font-semibold text-slate-900">
-                    Loading Departments...
-                </h3>
-
-                <p className="mt-1 text-slate-500">
-                    Please wait while we fetch department data.
-                </p>
-
+            <div className="flex justify-center items-center h-96">
+                <Loader text="Loading Departments"/>
             </div>
         );
     }
@@ -69,9 +42,23 @@ function DepartmentList({
     }
 
     return (
-        <div className="grid gap-5">
+        <div className="grid gap-3">
+            {
+                filteredDepartments.length === 0 && (
+                    <div className="bg-white rounded-2xl border border-slate-200 p-10 text-center">
 
-            {Object.entries(departments).map(
+                        <h3 className="text-lg font-semibold text-slate-900">
+                            No Results Found
+                        </h3>
+
+                        <p className="text-slate-500 mt-2">
+                            Try another search term.
+                        </p>
+
+                    </div>
+                )
+            }
+            {filteredDepartments.map(
                 ([departmentId, department]) => (
                     <DepartmentCard
                         key={departmentId}
