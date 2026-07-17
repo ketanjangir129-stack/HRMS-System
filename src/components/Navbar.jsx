@@ -45,7 +45,6 @@ const Navbar = () => {
             3
           </span>
         </div>
-
         {/* Settings */}
         <FaCog className="text-xl text-gray-600 cursor-pointer" />
 

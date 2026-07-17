@@ -1,20 +1,20 @@
 import { useEffect, useState } from "react";
+import DepartmentList from "../components/departments/DepartmentList";
 import DepartmentModal from "../components/departments/DepartmentModal";
 import DesignationModal from "../components/departments/DesignationModal";
 
 import {
     addDepartment,
     updateDepartment,
-    deleteDepartment,
     addDesignation,
     updateDesignation,
-    deleteDesignation,
     subscribeDepartments,
 } from "../services/departmentService";
 
 function Departments() {
 
     const companyCode = localStorage.getItem("companyCode");
+
     const [departments, setDepartments] = useState({});
     const [departmentModal, setDepartmentModal] = useState(false);
     const [designationModal, setDesignationModal] = useState(false);
@@ -24,22 +24,20 @@ function Departments() {
     const [editingDepartmentId, setEditingDepartmentId] = useState(null);
     const [editingDesignationId, setEditingDesignationId] = useState(null);
 
-
     useEffect(() => {
         const unsubscribe =
             subscribeDepartments(
                 companyCode,
-                (data) => {
-                    setDepartments(data);
-                }
+                setDepartments
             );
+
         return unsubscribe;
+
     }, [companyCode]);
-    
 
     const handleDepartmentSave = async () => {
-        if (!departmentName.trim()) return;
 
+        if (!departmentName.trim()) return;
         if (editingDepartmentId) {
             await updateDepartment(
                 companyCode,
@@ -59,7 +57,6 @@ function Departments() {
 
     const handleDesignationSave = async () => {
         if (!designationName.trim()) return;
-
         if (editingDesignationId) {
             await updateDesignation(
                 companyCode,
@@ -77,7 +74,6 @@ function Departments() {
         setDesignationModal(false);
         setDesignationName("");
         setEditingDesignationId(null);
-
     };
 
     return (
@@ -97,177 +93,72 @@ function Departments() {
 
                 <button
                     onClick={() => {
-                        setEditingDepartmentId(null);
                         setDepartmentName("");
+                        setEditingDepartmentId(null);
                         setDepartmentModal(true);
                     }}
-                    className="bg-blue-600 text-white px-5 py-2.5 rounded-xl"
+                    className="bg-blue-600 text-white px-5 py-2.5 rounded-xl hover:bg-blue-700"
                 >
                     Add Department
                 </button>
 
             </div>
 
-            <div className="grid gap-5">
+            <DepartmentList
+                departments={departments}
+                companyCode={companyCode}
+                onEditDepartment={(
+                    departmentId,
+                    departmentName
+                ) => {
 
-                {Object.entries(departments).map(
-                    ([departmentId, department]) => (
-                        <div
-                            key={departmentId}
-                            className="bg-white border border-slate-200 rounded-2xl p-5"
-                        >
+                    setEditingDepartmentId(
+                        departmentId
+                    );
 
-                            <div className="flex justify-between items-start">
+                    setDepartmentName(
+                        departmentName
+                    );
 
-                                <div>
+                    setDepartmentModal(true);
+                }}
+                onAddDesignation={(
+                    departmentId
+                ) => {
 
-                                    <h2 className="text-xl font-semibold">
-                                        {department.name}
-                                    </h2>
+                    setSelectedDepartmentId(
+                        departmentId
+                    );
 
-                                    <p className="text-sm text-slate-500 mt-1">
-                                        {
-                                            Object.keys(
-                                                department.designations || {}
-                                            ).length
-                                        }{" "}
-                                        Designations
-                                    </p>
+                    setDesignationName("");
 
-                                </div>
+                    setEditingDesignationId(
+                        null
+                    );
 
-                                <div className="flex gap-2">
+                    setDesignationModal(true);
+                }}
+                onEditDesignation={(
+                    departmentId,
+                    designationId,
+                    designationName
+                ) => {
 
-                                    <button
-                                        onClick={() => {
-                                            setEditingDepartmentId(
-                                                departmentId
-                                            );
+                    setSelectedDepartmentId(
+                        departmentId
+                    );
 
-                                            setDepartmentName(
-                                                department.name
-                                            );
+                    setEditingDesignationId(
+                        designationId
+                    );
 
-                                            setDepartmentModal(true);
-                                        }}
-                                        className="px-3 py-2 border rounded-lg"
-                                    >
-                                        Edit
-                                    </button>
+                    setDesignationName(
+                        designationName
+                    );
 
-                                    <button
-                                        onClick={async () => {
-                                            const confirmDelete =
-                                                window.confirm(
-                                                    "Delete department?"
-                                                );
-
-                                            if (!confirmDelete)
-                                                return;
-
-                                            await deleteDepartment(
-                                                companyCode,
-                                                departmentId
-                                            );
-
-                                            loadDepartments();
-                                        }}
-                                        className="px-3 py-2 border rounded-lg text-red-600"
-                                    >
-                                        Delete
-                                    </button>
-
-                                    <button
-                                        onClick={() => {
-                                            setSelectedDepartmentId(
-                                                departmentId
-                                            );
-
-                                            setDesignationName("");
-
-                                            setEditingDesignationId(
-                                                null
-                                            );
-
-                                            setDesignationModal(
-                                                true
-                                            );
-                                        }}
-                                        className="px-3 py-2 bg-blue-600 text-white rounded-lg"
-                                    >
-                                        Add Designation
-                                    </button>
-
-                                </div>
-
-                            </div>
-
-                            <div className="mt-5 space-y-3">
-
-                                {Object.entries(
-                                    department.designations || {}
-                                ).map(
-                                    ([
-                                        designationId,
-                                        designation,
-                                    ]) => (
-                                        <div
-                                            key={designationId}
-                                            className="flex items-center justify-between border rounded-xl px-4 py-3"
-                                        >
-
-                                            <span>
-                                                {
-                                                    designation.name
-                                                }
-                                            </span>
-
-                                            <div className="flex gap-2">
-
-                                                <button
-                                                    onClick={() => {
-                                                        setSelectedDepartmentId(departmentId);
-                                                        setEditingDesignationId(designationId);
-                                                        setDesignationName(designation.name);
-                                                        setDesignationModal(true);
-                                                    }}
-                                                    className="px-3 py-1 border rounded-lg"
-                                                >
-                                                    Edit
-                                                </button>
-
-                                                <button
-                                                    onClick={async () => {
-                                                        const confirmDelete =
-                                                            window.confirm(
-                                                                "Delete designation?"
-                                                            );
-                                                        if (!confirmDelete) return;
-
-                                                        await deleteDesignation(
-                                                            companyCode,
-                                                            departmentId,
-                                                            designationId
-                                                        );
-                                                    }}
-                                                    className="px-3 py-1 border rounded-lg text-red-600"
-                                                >
-                                                    Delete
-                                                </button>
-
-                                            </div>
-
-                                        </div>
-                                    )
-                                )}
-
-                            </div>
-
-                        </div>
-                    )
-                )}
-
-            </div>
+                    setDesignationModal(true);
+                }}
+            />
 
             <DepartmentModal
                 open={departmentModal}
