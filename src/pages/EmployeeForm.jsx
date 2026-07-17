@@ -22,15 +22,15 @@ function EmployeeForm() {
   }, []);
 
   const loadDepartments = async () => {
-  const data = await getDepartments(companyCode);
+    const data = await getDepartments(companyCode);
 
-  const departmentArray = Object.keys(data).map((key) => ({
-    id: key,
-    ...data[key],
-  }));
+    const departmentArray = Object.keys(data).map((key) => ({
+      id: key,
+      ...data[key],
+    }));
 
-  setDepartments(departmentArray);
-};
+    setDepartments(departmentArray);
+  };
 
 
   const handleChange = (e) => {
@@ -55,18 +55,18 @@ function EmployeeForm() {
       (item) => item.name === selectedDepartment
     );
 
-  if (dept) {
-  const designationArray = dept.designations
-    ? Object.keys(dept.designations).map((key) => ({
-        id: key,
-        ...dept.designations[key],
-      }))
-    : [];
+    if (dept) {
+      const designationArray = dept.designations
+        ? Object.keys(dept.designations).map((key) => ({
+          id: key,
+          ...dept.designations[key],
+        }))
+        : [];
 
-  setDesignations(designationArray);
-} else {
-  setDesignations([]);
-}
+      setDesignations(designationArray);
+    } else {
+      setDesignations([]);
+    }
   };
 
 
@@ -116,7 +116,8 @@ function EmployeeForm() {
               // disabled
               onChange={handleChange}
               required
-              className="w-full border rounded-lg p-3 bg-gray-100"
+              className="w-full border rounded-lg p-3"
+              placeholder="Enter Employee ID"
             />
           </div>
 
