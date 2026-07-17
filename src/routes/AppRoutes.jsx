@@ -10,6 +10,7 @@ import ProtectedRoute from "./ProtectedRoute";
 import GuestRoute from "./GuestRoute";
 import EmployeesDetails from "../pages/EmployeesDetails";
 import OnBoardForm from "../pages/onboarding/CreateOnboarding"
+import EmployeeOnboarding from "../pages/onboarding/EmployeeOnboarding";
 function AppRoutes(){
     return(
         <Routes>
@@ -45,6 +46,9 @@ function AppRoutes(){
                 <Route path="/onboard" element={<OnBoardForm />}/>
                 
             </Route>
+            
+            <Route path="/onboarding/:companyCode/:employeeId" element={<EmployeeOnboarding />}/>
+
         </Routes>
 
     )

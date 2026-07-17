@@ -118,6 +118,7 @@ const handleSubmit = async (e) => {
       companyCode,
       employee
     );
+    console.log("Invitation Link:",result.invitationLink);
 
     if (!result.success) {
 

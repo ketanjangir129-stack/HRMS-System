@@ -14,6 +14,8 @@ export const createOnboardingRequest = async (
     const employeeId = basicInfo.employeeId
         .trim()
         .toUpperCase();
+
+    const invitationLink = `${window.location.origin}/onboarding/${companyCode}/${employeeId}`;
     const validation =
         await checkEmployeeUniqueness(
             companyCode,
@@ -43,6 +45,8 @@ export const createOnboardingRequest = async (
             designation: basicInfo.designation,
         },
 
+        invitationLink,
+
         personal: {},
 
         employment: {},
@@ -63,7 +67,8 @@ export const createOnboardingRequest = async (
 
     return {
         success: true,
-        message: "Onboarding request created successfully.",
+        message:"Onboarding request created successfully.",
+        invitationLink,
     };
 };
 
@@ -91,4 +96,75 @@ export const getOnboardingRequestById = async (
     console.error("Error fetching onboarding request:", error);
     throw error;
   }
+};
+
+export const submitOnboardingForm = async (
+    companyCode,
+    employeeId,
+    formData
+) => {
+    try {
+
+        const requestRef = ref(
+            db,
+            `companies/${companyCode}/onboardingRequests/${employeeId}`
+        );
+
+        const snapshot = await get(requestRef);
+
+        if (!snapshot.exists()) {
+            return {
+                success: false,
+                message: "Request not found",
+            };
+        }
+
+        const existingData = snapshot.val();
+
+        await set(requestRef, {
+            ...existingData,
+
+            personal: {
+                fatherName:
+                    formData.fatherName,
+
+                dob:
+                    formData.dob,
+
+                gender:
+                    formData.gender,
+
+                address:
+                    formData.address,
+            },
+
+            employment: {
+                joiningDate:
+                    formData.joiningDate,
+            },
+
+            status:
+                "Pending Approval",
+
+            submittedAt:
+                Date.now(),
+
+            updatedAt:
+                Date.now(),
+        });
+
+        return {
+            success: true,
+        };
+
+    } catch (error) {
+
+        console.error(error);
+
+        return {
+            success: false,
+            message: error.message,
+        };
+
+    }
 };
