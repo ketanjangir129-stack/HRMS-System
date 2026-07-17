@@ -12,6 +12,7 @@ import EmployeesDetails from "../pages/EmployeesDetails";
 import OnboardingDashboard from "../pages/onboarding/OnboardingDashboard"
 import OnBoardForm from "../pages/onboarding/CreateOnboarding"
 import OnboardingRequests from "../pages/onboarding/OnboardingRequests"
+import EmployeeOnboarding from "../pages/onboarding/EmployeeOnboarding";
 function AppRoutes(){
     return(
         <Routes>
@@ -49,6 +50,9 @@ function AppRoutes(){
                 <Route path="/OnboardDashboard/OnBoardRequest" element={<OnboardingRequests />}/>
                 
             </Route>
+            
+            <Route path="/onboarding/:companyCode/:employeeId" element={<EmployeeOnboarding />}/>
+
         </Routes>
 
     )
