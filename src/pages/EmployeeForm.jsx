@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
-import { addEmployee } from "../services/EmployeeService";
+import { createEmployee } from "../services/EmployeeService";
 import { getDepartments } from "../services/departmentService"
+import { validateField } from "../utils/validation/validateField";
+import { validateForm } from "../utils/validation/validateForm";
 function EmployeeForm() {
 
   const companyCode = localStorage.getItem("companyCode");
@@ -22,15 +24,20 @@ function EmployeeForm() {
   }, []);
 
   const loadDepartments = async () => {
-  const data = await getDepartments(companyCode);
+    const data = await getDepartments(companyCode);
 
-  const departmentArray = Object.keys(data).map((key) => ({
-    id: key,
-    ...data[key],
-  }));
+    if (!data) {
+      setDepartments([]);
+      return;
+    }
 
-  setDepartments(departmentArray);
-};
+    const departmentArray = Object.keys(data).map((key) => ({
+      id: key,
+      ...data[key],
+    }));
+
+    setDepartments(departmentArray);
+  };
 
 
   const handleChange = (e) => {
@@ -55,42 +62,82 @@ function EmployeeForm() {
       (item) => item.name === selectedDepartment
     );
 
-  if (dept) {
-  const designationArray = dept.designations
-    ? Object.keys(dept.designations).map((key) => ({
-        id: key,
-        ...dept.designations[key],
-      }))
-    : [];
+    if (dept) {
+      const designationArray = dept.designations
+        ? Object.keys(dept.designations).map((key) => ({
+          id: key,
+          ...dept.designations[key],
+        }))
+        : [];
 
-  setDesignations(designationArray);
-} else {
-  setDesignations([]);
-}
-  };
-
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    try {
-      // const employeeRef = ref(db, `companies/${companyCode}/employees`);
-      // await push(employeeRef, employee);
-      await addEmployee(companyCode, employee);
-      alert("Employee added successfully");
-      setEmployee({
-        employeeId: "",
-        name: "",
-        email: "",
-        department: "",
-        designation: "",
-        mobile: "",
-        address: "",
-      });
-    } catch (error) {
-      console.log(error);
-      alert("failed to add employee");
+      setDesignations(designationArray);
+    } else {
+      setDesignations([]);
     }
   };
+
+  const handleBlur = (e) => {
+    const { name, value } = e.target;
+
+    setErrors((prev) => ({
+      ...prev,
+      [name]: validateField(name, value, employee),
+    }));
+  };
+  const [errors, setErrors] = useState({});
+
+const handleSubmit = async (e) => {
+  e.preventDefault();
+
+  // Clear previous errors
+  setErrors({});
+
+  // Validate form fields
+  const validationErrors = validateForm(employee);
+
+  if (Object.keys(validationErrors).length > 0) {
+    setErrors(validationErrors);
+    return;
+  }
+
+  try {
+    const result = await createEmployee(
+      companyCode,
+      employee
+    );
+
+    if (!result.success) {
+      setErrors((prev) => ({
+        ...prev,
+        [result.field]: result.message,
+      }));
+      return;
+    }
+
+    alert("Employee added successfully");
+
+    // Reset form
+    setEmployee({
+      employeeId: "",
+      name: "",
+      email: "",
+      department: "",
+      designation: "",
+      mobile: "",
+      address: "",
+    });
+
+    // Reset designation dropdown
+    setDesignations([]);
+
+    // Clear validation errors
+    setErrors({});
+
+  } catch (error) {
+    console.error(error);
+    alert(error.message || "Failed to add employee");
+  }
+};
 
   return (
     <div className="max-w-5xl mx-auto bg-white rounded-2xl shadow-md p-8">
@@ -116,8 +163,16 @@ function EmployeeForm() {
               // disabled
               onChange={handleChange}
               required
-              className="w-full border rounded-lg p-3 bg-gray-100"
+              placeholder="Enter Employee ID"
+              className="w-full border rounded-lg p-3 "
+              onBlur={handleBlur}
             />
+
+            {errors.employeeId && (
+              <p className="mt-1 text-sm text-red-500">
+                {errors.employeeId}
+              </p>
+            )}
           </div>
 
           {/* Name */}
@@ -129,13 +184,18 @@ function EmployeeForm() {
             <input
               type="text"
               name="name"
-              pattern="[A-Za-z ]+"
-              required
               value={employee.name}
               onChange={handleChange}
               placeholder="Enter Employee Name"
               className="w-full border rounded-lg p-3"
+              onBlur={handleBlur}
             />
+
+            {errors.name && (
+              <p className="mt-1 text-sm text-red-500">
+                {errors.name}
+              </p>
+            )}
           </div>
 
           {/* Email */}
@@ -152,7 +212,14 @@ function EmployeeForm() {
               onChange={handleChange}
               placeholder="Enter Email"
               className="w-full border rounded-lg p-3"
+              onBlur={handleBlur}
             />
+
+            {errors.email && (
+              <p className="mt-1 text-sm text-red-500">
+                {errors.email}
+              </p>
+            )}
           </div>
 
           {/* Mobile */}
@@ -164,14 +231,19 @@ function EmployeeForm() {
             <input
               type="text"
               name="mobile"
-              pattern="[0-9]{10}"
-              max-length={10}
-              required
+              maxLength={10}
               value={employee.mobile}
               onChange={handleChange}
               placeholder="Enter Mobile Number"
               className="w-full border rounded-lg p-3"
+              onBlur={handleBlur}
             />
+
+            {errors.mobile && (
+              <p className="mt-1 text-sm text-red-500">
+                {errors.mobile}
+              </p>
+            )}
           </div>
 
           {/* Department */}
@@ -184,7 +256,7 @@ function EmployeeForm() {
               name="department"
               value={employee.department}
               onChange={handleDepartmentChange}
-              required
+              onBlur={handleBlur}
               className="w-full border rounded-lg p-3"
             >
               <option value="">Select Department</option>
@@ -195,6 +267,12 @@ function EmployeeForm() {
                 </option>
               ))}
             </select>
+
+            {errors.department && (
+              <p className="mt-1 text-sm text-red-500">
+                {errors.department}
+              </p>
+            )}
           </div>
 
           {/* Designation */}
@@ -202,12 +280,11 @@ function EmployeeForm() {
             <label className="block mb-2 font-medium">
               Designation
             </label>
-
             <select
               name="designation"
               value={employee.designation}
               onChange={handleChange}
-              required
+              onBlur={handleBlur}
               className="w-full border rounded-lg p-3"
             >
               <option value="">Select Designation</option>
@@ -218,6 +295,13 @@ function EmployeeForm() {
                 </option>
               ))}
             </select>
+
+            {errors.designation && (
+              <p className="mt-1 text-sm text-red-500">
+                {errors.designation}
+              </p>
+            )}
+
           </div>
 
         </div>
@@ -233,21 +317,22 @@ function EmployeeForm() {
             name="address"
             value={employee.address}
             onChange={handleChange}
+            onBlur={handleBlur}
             rows="4"
             placeholder="Enter Address"
-            className="w-full border rounded-lg p-3 resize-none"
-          ></textarea>
+            className="w-full border rounded-lg p-3"
+
+          />
+
+          {errors.address && (
+            <p className="mt-1 text-sm text-red-500">
+              {errors.address}
+            </p>
+          )}
 
         </div>
 
         <div className="flex justify-end gap-4 mt-8">
-
-          {/* <button
-            type="reset"
-            className="px-6 py-3 border rounded-lg"
-          >
-            Cancel
-          </button> */}
 
           <button
             type="submit"
