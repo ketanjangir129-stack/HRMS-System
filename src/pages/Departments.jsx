@@ -3,7 +3,7 @@ import { toast } from "react-toastify";
 import DepartmentList from "../components/departments/DepartmentList";
 import DepartmentModal from "../components/departments/DepartmentModal";
 import DesignationModal from "../components/departments/DesignationModal";
-import { validateField } from "../utils/validation/validatefield";
+import { validateField } from "../utils/validation/validateField";
 import {searchDepartments,} from "../utils/search/searchDepartments";
 import { useOutletContext } from "react-router-dom";
 

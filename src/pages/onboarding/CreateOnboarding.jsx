@@ -2,8 +2,8 @@ import { useState, useEffect } from "react";
 import { toast } from "react-toastify";
 import { createOnboardingRequest } from "../../services/OnboardingService";
 import { getDepartments } from "../../services/departmentService"
-import { validateField } from "../../utils/validation/validatefield"
-import { validateForm } from "../../utils/validation/validateform";
+import { validateField } from "../../utils/validation/validateField"
+import { validateForm } from "../../utils/validation/validateForm";
 
 function OnBoardForm() {
 

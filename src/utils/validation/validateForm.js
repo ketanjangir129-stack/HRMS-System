@@ -1,5 +1,4 @@
-import { field } from "firebase/firestore/pipelines";
-import { validateField } from "./validatefield";
+import { validateField } from "./validateField";
 
 export const validateForm = (formData) => {
   const errors = {};

@@ -11,28 +11,31 @@ function Employees() {
     const [employees, setEmployees] = useState([]);
     const [search, setSearch] = useState("");
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState("");
 
     const loadEmployees = async () => {
+        setError("");
 
-        const data = await getEmployees(companyCode);
+        try {
+            const data = await getEmployees(companyCode);
 
-        if (!data) {
+            // Flatten the nested sections so the table and searchEmployees
+            // can read plain fields (name, employeeId, department, designation)
+            const employeeArray = Object.keys(data).map((key) => ({
+                id: key,
+                name: data[key].personalInfo?.name,
+                employeeId: data[key].employmentInfo?.employeeId,
+                department: data[key].employmentInfo?.department,
+                designation: data[key].employmentInfo?.designation,
+            }));
+            setEmployees(employeeArray);
+        } catch (err) {
+            console.error("Failed to load employees:", err);
             setEmployees([]);
+            setError(err.message || "Failed to load employees.");
+        } finally {
             setLoading(false);
-            return;
         }
-
-        // Flatten the nested sections so the table and searchEmployees
-        // can read plain fields (name, employeeId, department, designation)
-        const employeeArray = Object.keys(data).map((key) => ({
-            id: key,
-            name: data[key].personalInfo?.name,
-            employeeId: data[key].employmentInfo?.employeeId,
-            department: data[key].employmentInfo?.department,
-            designation: data[key].employmentInfo?.designation,
-        }));
-        setEmployees(employeeArray);
-        setLoading(false);
     };
 
     useEffect(() => {
@@ -94,6 +97,21 @@ function Employees() {
                             <tr>
                                 <td colSpan={4} className="px-6 py-12">
                                     <Loader text="Loading employees..." />
+                                </td>
+                            </tr>
+                        ) : error ? (
+                            <tr>
+                                <td colSpan={4} className="px-6 py-12 text-center">
+                                    <p className="text-red-600">{error}</p>
+                                    <button
+                                        onClick={() => {
+                                            setLoading(true);
+                                            loadEmployees();
+                                        }}
+                                        className="mt-3 rounded-lg border border-gray-200 px-4 py-2 text-sm text-gray-700 transition-colors hover:bg-gray-50"
+                                    >
+                                        Retry
+                                    </button>
                                 </td>
                             </tr>
                         ) : filteredEmployees.length === 0 ? (

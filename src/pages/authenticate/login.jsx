@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { validateField } from "../../utils/validation/validatefield";
-import { validateForm } from "../../utils/validation/validateform";
+import { validateField } from "../../utils/validation/validateField";
+import { validateForm } from "../../utils/validation/validateForm";
 import useAuth from "../../hooks/useAuth";
 import { useNavigate } from "react-router-dom";
 import { toast } from 'react-toastify';
