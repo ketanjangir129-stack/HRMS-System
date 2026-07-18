@@ -141,36 +141,55 @@ export const submitOnboardingForm = async (
 
         const existingData = snapshot.val();
 
-        await set(requestRef, {
-            ...existingData,
+        if (
+            existingData.status === "Pending Approval" ||
+            existingData.status === "Approved"
+            ) {
+            return {
+                success: false,
+                message:"Onboarding form already submitted.",
+            };
+        }
+
+        await set(requestRef, {...existingData,
 
             personal: {
-                fatherName:
-                    formData.fatherName,
+                fatherName: formData.fatherName,
+                motherName: formData.motherName,
+                dob: formData.dob,
+                gender: formData.gender,
+                maritalStatus: formData.maritalStatus,
 
-                dob:
-                    formData.dob,
+                personalMobile: formData.personalMobile,
+                alternateMobile: formData.alternateMobile,
 
-                gender:
-                    formData.gender,
-
-                address:
-                    formData.address,
+                address: formData.address,
+                city: formData.city,
+                state: formData.state,
+                pincode: formData.pincode,
             },
 
-            employment: {
-                joiningDate:
-                    formData.joiningDate,
+            education: existingData.education || {},
+            experience: existingData.experience || {},
+
+            bank: {
+                accountHolderName: formData.accountHolderName,
+                bankName: formData.bankName,
+                accountNumber: formData.accountNumber,
+                ifscCode: formData.ifscCode,
+                branchName: formData.branchName,
             },
 
-            status:
-                "Pending Approval",
+            documents: {
+                aadhaarNumber: formData.aadhaarNumber,
+                panNumber: formData.panNumber,
+                uanNumber: formData.uanNumber,
+                esicNumber: formData.esicNumber,
+            },
 
-            submittedAt:
-                Date.now(),
-
-            updatedAt:
-                Date.now(),
+            status: "Pending Approval",
+            submittedAt: Date.now(),
+            updatedAt: Date.now(),
         });
 
         return {

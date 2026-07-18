@@ -13,7 +13,7 @@ import OnboardingDashboard from "../pages/onboarding/OnboardingDashboard"
 import OnBoardForm from "../pages/onboarding/CreateOnboarding"
 import OnboardingRequests from "../pages/onboarding/OnboardingRequests"
 import ReviewOnboarding from "../pages/onboarding/ReviewOnboarding"
-import EmployeeOnboarding from "../pages/onboarding/EmployeeOnboarding";
+import EmployeeOnboarding from "../pages/onboarding/EmployeeOnboarding/EmployeeOnboarding";
 function AppRoutes(){
     return(
         <Routes>

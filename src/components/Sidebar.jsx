@@ -1,5 +1,6 @@
 import { MdDashboard } from "react-icons/md";
-import { FaBuilding } from "react-icons/fa";
+import { FaBuilding,FaUsers } from "react-icons/fa";
+import { MdOutlineListAlt } from "react-icons/md";
 import { NavLink } from "react-router-dom";
 
 const menuItems = [
@@ -17,13 +18,13 @@ const menuItems = [
   {
     label: "Employees",
     path: "/employees",
-    icon: FaBuilding,
+    icon: FaUsers,
   },
 
   {
     label: "On-boarding",
     path: "/OnboardDashboard",
-    icon: FaBuilding,
+    icon: MdOutlineListAlt,
   },
   
   
@@ -75,7 +76,7 @@ function Sidebar() {
                       : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
                   }`}
                 >
-                  <Icon className="text-lg flex-shrink-0" />
+                  <Icon className="text-lg flex-shrink-0" size={20} />
                   <span>{item.label}</span>
                 </NavLink>
               </li>
