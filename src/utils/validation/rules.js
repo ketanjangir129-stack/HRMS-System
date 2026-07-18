@@ -14,12 +14,12 @@ export const rules = {
     pattern: /^[6-9]\d{9}$/,
     message: "Enter a valid mobile number."
   },
-   ownerName: {
+  ownerName: {
     required: true,
     pattern: /^[A-Za-z ]{3,50}$/,
     message: "Enter a valid owner name.",
   },
-   name: {
+  name: {
     required: true,
     pattern: /^[A-Za-z ]{3,50}$/,
     message: "Enter a valid name.",
@@ -31,23 +31,23 @@ export const rules = {
     message:
       "Password must contain uppercase, lowercase, number and special character.",
   },
-companyCode: {
+  companyCode: {
     required: true,
     pattern: /^[A-Z0-9]{3,10}$/,
     message:
       "Company code must contain only uppercase letters and numbers.",
   },
-   employeeId: {
+  employeeId: {
     required: true,
     pattern: /^[A-Za-z0-9_-]{3,20}$/,
     message:
       "Employee ID must be 3-20 characters and contain only letters, numbers, - or _.",
   },
-    department: {
+  department: {
     required: true,
     message: "Please select a department.",
   },
-   designation: {
+  designation: {
     required: true,
     message: "Please select a designation.",
   },
@@ -55,5 +55,16 @@ companyCode: {
     required: true,
     pattern: /^.{10,200}$/,
     message: "Address must be between 10 and 200 characters.",
+  },
+  departmentName: {
+    required: true,
+    pattern: /^[A-Za-z ]{2,50}$/,
+    message: "Department name must contain only letters and be 2-50 characters.",
+  },
+
+  designationName: {
+    required: true,
+    pattern: /^[A-Za-z ]{2,50}$/,
+    message: "Designation name must contain only letters and be 2-50 characters.",
   },
 };

@@ -3,13 +3,14 @@ import {
   FaBell,
   FaCog,
   FaChevronDown,
+  FaTimes
 } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 import { AiOutlineLogout } from "react-icons/ai";
 import useAuth from "../hooks/useAuth";
 import { toast } from "react-toastify";
 
-const Navbar = () => {
+const Navbar = ({search,setSearch,searchPlaceholder}) => {
   const { logout } = useAuth();
   const navigate = useNavigate();
 
@@ -23,13 +24,26 @@ const Navbar = () => {
 
       {/* Search Box */}
       <div className="w-[700px] h-12 flex items-center px-5 border border-gray-300 rounded-2xl bg-white">
-        <FaSearch className="text-gray-400 text-lg" />
 
-        <input
-          type="text"
-          placeholder="Search..."
-          className="w-full ml-3 outline-none border-none bg-transparent text-[15px]"
-        />
+          <FaSearch className="text-gray-400 text-lg" />
+
+          <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder={searchPlaceholder}
+              className="w-full ml-3 outline-none border-none bg-transparent text-[15px]"
+          />
+          {search && (
+              <button
+                  type="button"
+                  onClick={() => setSearch("")}
+                  className="text-gray-400 hover:text-gray-600 transition cursor-pointer"
+              >
+                  <FaTimes size={20} />
+              </button>
+          )}
+
       </div>
 
       {/* Right Section */}

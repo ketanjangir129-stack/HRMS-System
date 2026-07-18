@@ -9,6 +9,11 @@ import EmployeeForm from "../pages/EmployeeForm";
 import ProtectedRoute from "./ProtectedRoute";
 import GuestRoute from "./GuestRoute";
 import EmployeesDetails from "../pages/EmployeesDetails";
+import OnboardingDashboard from "../pages/onboarding/OnboardingDashboard"
+import OnBoardForm from "../pages/onboarding/CreateOnboarding"
+import OnboardingRequests from "../pages/onboarding/OnboardingRequests"
+import ReviewOnboarding from "../pages/onboarding/ReviewOnboarding"
+import EmployeeOnboarding from "../pages/onboarding/EmployeeOnboarding/EmployeeOnboarding";
 function AppRoutes(){
     return(
         <Routes>
@@ -41,7 +46,14 @@ function AppRoutes(){
                 <Route path="/employees" element={<Employees />} />
                 <Route path="/employees/add" element={<EmployeeForm />} />
                 <Route path="/employees/details/:id" element={<EmployeesDetails />}/>
+                <Route path="/OnboardDashboard" element={<OnboardingDashboard />}/>
+                <Route path="/OnboardDashboard/OnBoardForm" element={<OnBoardForm />}/>
+                <Route path="/OnboardDashboard/OnBoardRequest" element={<OnboardingRequests />}/>
+                <Route path="/onboarding/:requestId" element={<ReviewOnboarding />}/>
+                
             </Route>
+            
+            <Route path="/onboarding/:companyCode/:employeeId" element={<EmployeeOnboarding />}/>
 
         </Routes>
 

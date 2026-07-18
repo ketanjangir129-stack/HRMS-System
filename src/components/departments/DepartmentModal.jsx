@@ -3,6 +3,7 @@ function DepartmentModal({
     value,
     setValue,
     title,
+    error,
     onClose,
     onSave,
 }) {
@@ -25,6 +26,13 @@ function DepartmentModal({
                     placeholder="Department Name"
                     className="w-full border rounded-xl p-3 border-gray-300 focus:outline-none focus:border-gray-400"
                 />
+                {
+                    error && (
+                        <p className="mt-2 text-sm text-red-500">
+                            {error}
+                        </p>
+                    )
+                }
 
                 <div className="flex justify-end gap-3 mt-5">
                     <button
