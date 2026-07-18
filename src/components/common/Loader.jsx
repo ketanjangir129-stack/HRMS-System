@@ -1,6 +1,6 @@
 function Loader({ text = "Loading..." }) {
     return (
-        <div className="flex flex-col items-center justify-center h-full">
+        <div className="flex flex-col items-center justify-center w-full h-full min-h-[60vh]">
             <svg
                 className="animate-spin h-8 w-8 text-blue-600"
                 viewBox="0 0 24 24"

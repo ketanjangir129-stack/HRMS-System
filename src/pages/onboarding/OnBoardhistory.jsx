@@ -1,11 +1,11 @@
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import {getOnboardingHistory } from "../../services/OnboardingService";
 
-import { getOnboardingRequests } from "../../services/OnboardingService";
 import { filterData } from "../../utils/search/filterData";
 import Loader from "../../components/common/Loader"
 
-function OnboardingRequests() {
+function Onboardinghistory() {
 
     const companyCode = localStorage.getItem("companyCode");
 
@@ -26,7 +26,7 @@ function OnboardingRequests() {
         try {
 
             const data =
-                await getOnboardingRequests(companyCode);
+                await getOnboardingHistory(companyCode);
 
             setRequests(data);
 
@@ -50,12 +50,6 @@ function OnboardingRequests() {
     console.log(filteredRequests)
     const getStatusStyle = (status) => {
         switch (status) {
-
-            case "Invitation Sent":
-                return "bg-blue-100 text-blue-700";
-
-            case "Pending Approval":
-                return "bg-yellow-100 text-yellow-700";
 
             case "Approved":
                 return "bg-green-100 text-green-700";
@@ -108,7 +102,7 @@ function OnboardingRequests() {
         <div className="p-6 bg-white rounded-xl shadow">
 
             <h1 className="text-2xl font-bold mb-6">
-                Onboarding Requests
+                Onboarding History
             </h1>
 
             {/* Search */}
@@ -132,7 +126,7 @@ function OnboardingRequests() {
 
                             <th className="px-4 py-3  text-center">Status</th>
 
-                            <th className="px-4 py-3  text-center">Action</th>
+                            <th className="px-4 py-3  text-center">Approved By</th>
 
                         </tr>
 
@@ -147,30 +141,21 @@ function OnboardingRequests() {
 
                                     <td className="px-4 py-3 border-b text-center">{request.id}</td>
 
-                                    <td className="px-4 py-3 border-b text-center">{request.basic.name}</td>
+                                    <td className="px-4 py-3 border-b text-center">{request.request.basic.name}</td>
 
-                                    <td className="px-4 py-3 border-b text-center">{request.basic.department}</td>
+                                    <td className="px-4 py-3 border-b text-center">{request.request.basic.department}</td>
 
-                                    <td className="px-4 py-3 border-b text-center">{request.basic.designation}</td>
+                                    <td className="px-4 py-3 border-b text-center">{request.request.basic.designation}</td>
+                                    
 
                                     <td className="px-4 py-3 border-b text-center">
-                                        <span className={`inline-flex px-3 py-1 rounded-full text-sm font-medium ${getStatusStyle(request.status)}`}>
-                                            {request.status}
+                                        <span className={`inline-flex px-3 py-1 rounded-full text-sm font-medium ${getStatusStyle(request.action)}`}>
+                                            {request.action}
                                         </span>
                                     </td>
 
-                                    <td className="px-4 py-3 border-b text-center">
-
-                                        <button
-                                            onClick={() =>
-                                                navigate(`/onboarding/${request.id}`)
-                                            }
-                                            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-                                        >
-                                            Review
-                                        </button>
-
-                                    </td>
+                                  <td className="px-4 py-3 border-b text-center">{request.approvedBy
+}</td>
 
                                 </tr>
 
@@ -192,4 +177,4 @@ function OnboardingRequests() {
     )
 
 }
-export default OnboardingRequests;
+export default Onboardinghistory;

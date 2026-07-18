@@ -1,6 +1,9 @@
 import { MdDashboard } from "react-icons/md";
 import { FaBuilding } from "react-icons/fa";
+import { BsFillPersonLinesFill } from "react-icons/bs";
+import { PiPersonSimpleSnowboardLight } from "react-icons/pi";
 import { NavLink } from "react-router-dom";
+
 
 const menuItems = [
   {
@@ -17,13 +20,13 @@ const menuItems = [
   {
     label: "Employees",
     path: "/employees",
-    icon: FaBuilding,
+    icon: BsFillPersonLinesFill,
   },
 
   {
     label: "On-boarding",
     path: "/OnboardDashboard",
-    icon: FaBuilding,
+    icon: PiPersonSimpleSnowboardLight,
   },
   
   

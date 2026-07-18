@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { UserPlus, ClipboardList } from "lucide-react";
+import { UserPlus, ClipboardList, ClipboardClock } from "lucide-react";
 
 function OnboardingDashboard() {
 
@@ -59,6 +59,26 @@ function OnboardingDashboard() {
 
                     <p className="text-gray-500 mt-2">
                         Review and approve employee onboarding requests.
+                    </p>
+
+                </div>
+                {/* history */}
+                <div
+                    onClick={() => navigate("/OnboardDashboard/OnBoardhistory")}
+                    className="cursor-pointer bg-white rounded-2xl shadow p-8 hover:shadow-lg transition"
+                >
+
+                    <ClipboardClock
+                        size={40}
+                        className="text-green-600"
+                    />
+
+                    <h2 className="text-xl font-semibold mt-4">
+                        Onboarding History
+                    </h2>
+
+                    <p className="text-gray-500 mt-2">
+                        Check employee onboarding history.
                     </p>
 
                 </div>

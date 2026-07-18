@@ -71,6 +71,28 @@ export const createOnboardingRequest = async (
         invitationLink,
     };
 };
+export const getOnboardingHistory = async (companyCode) => {
+
+    const requestRef = ref(
+        db,
+        `companies/${companyCode}/onboardingHistory`
+    );
+
+    const snapshot = await get(requestRef);
+
+    if (!snapshot.exists()) {
+        return [];
+    }
+
+    const data = snapshot.val();
+
+    return Object.keys(data).map((id) => ({
+        id,
+        ...data[id],
+    }));
+};
+
+
 export const getOnboardingRequests = async (companyCode) => {
 
     const requestRef = ref(
