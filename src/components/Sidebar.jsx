@@ -78,7 +78,7 @@ function Sidebar() {
                       : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
                   }`}
                 >
-                  <Icon className="text-lg flex-shrink-0" />
+                  <Icon className="text-lg flex-shrink-0" size={20} />
                   <span>{item.label}</span>
                 </NavLink>
               </li>

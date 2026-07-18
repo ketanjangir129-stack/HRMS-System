@@ -13,7 +13,7 @@ export const validateField = (name, value, formData = {}) => {
   // Password match validation
   if (
     name === "confirmPassword" &&
-    value !== formData.password
+    value !== formData.account.password
   ) {
     return "Passwords do not match.";
   }
