@@ -34,6 +34,8 @@ export const createOnboardingRequest = async (
 
     await set(onboardingRef, {
         basic: {
+            employeeId,
+
             name: basicInfo.name.trim(),
 
             email: basicInfo.email.trim(),
