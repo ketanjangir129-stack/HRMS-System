@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { getEmployees } from "../services/EmployeeService";
-import { useNavigate, useOutletContext } from "react-router-dom";
-import {searchEmployees} from "../utils/search/searchEmployees";
+import { useNavigate } from "react-router-dom";
+import { searchEmployees } from "../utils/search/searchEmployees";
 import Loader from "../components/common/Loader";
 
 function Employees() {
@@ -9,10 +9,8 @@ function Employees() {
     const companyCode = localStorage.getItem("companyCode");
 
     const [employees, setEmployees] = useState([]);
-
-    useEffect(() => {
-        loadEmployees();
-    }, []);
+    const [search, setSearch] = useState("");
+    const [loading, setLoading] = useState(true);
 
     const loadEmployees = async () => {
 
@@ -20,15 +18,28 @@ function Employees() {
 
         if (!data) {
             setEmployees([]);
+            setLoading(false);
             return;
         }
 
+        // Flatten the nested sections so the table and searchEmployees
+        // can read plain fields (name, employeeId, department, designation)
         const employeeArray = Object.keys(data).map((key) => ({
             id: key,
-            ...data[key],
+            name: data[key].personalInfo?.name,
+            employeeId: data[key].employmentInfo?.employeeId,
+            department: data[key].employmentInfo?.department,
+            designation: data[key].employmentInfo?.designation,
         }));
         setEmployees(employeeArray);
+        setLoading(false);
     };
+
+    useEffect(() => {
+        loadEmployees();
+    }, []);
+
+    const filteredEmployees = searchEmployees(employees, search);
 
     return (
         <div className="p-2">
@@ -80,8 +91,23 @@ function Employees() {
                     </thead>
 
                     <tbody>
-                        {employees.map((emp) => (
-                            <tr key={emp.id} onClick={() =>navigate(`/employees/details/${emp.id}`)} className="border-t">
+                        {loading ? (
+                            <tr>
+                                <td colSpan={4} className="px-6 py-12">
+                                    <Loader text="Loading employees..." />
+                                </td>
+                            </tr>
+                        ) : filteredEmployees.length === 0 ? (
+                            <tr>
+                                <td colSpan={4} className="px-6 py-12 text-center text-gray-400">
+                                    {search
+                                        ? "No employees match your search."
+                                        : "No employees yet."}
+                                </td>
+                            </tr>
+                        ) : (
+                        filteredEmployees.map((emp) => (
+                            <tr key={emp.id} onClick={() =>navigate(`/employees/details/${emp.id}`)} className="border-t cursor-pointer hover:bg-gray-50">
 
                                 <td className="px-6 py-4">
                                     {emp.employeeId}
@@ -102,10 +128,8 @@ function Employees() {
                                
 
                             </tr>
-                        ))}
-
-
-
+                        ))
+                        )}
                     </tbody>
 
                 </table>
