@@ -7,14 +7,48 @@ function EmployeeForm() {
 
   const companyCode = localStorage.getItem("companyCode");
   const [employee, setEmployee] = useState({
-    employeeId: "",
+  personalInfo: {
     name: "",
     email: "",
-    department: "",
-    designation: "",
     mobile: "",
     address: "",
-  });
+    gender: "",
+    dob: "",
+  },
+
+  employmentInfo: {
+    employeeId: "",
+    department: "",
+    designation: "",
+    joiningDate: "",
+    employeeType: "",
+  },
+
+  bankInfo: {
+    bankName: "",
+    accountNumber: "",
+    ifsc: "",
+    branch: "",
+  },
+
+  salaryInfo: {
+    basicSalary: "",
+    hra: "",
+    bonus: "",
+  },
+
+  documents: {
+    aadhaar: "",
+    pan: "",
+    resume: "",
+  },
+
+  account: {
+    username: "",
+    password: "",
+    status: "Active",
+  },
+});
 
   const [departments, setDepartments] = useState([]);
   const [designations, setDesignations] = useState([]);
@@ -41,22 +75,42 @@ function EmployeeForm() {
 
 
   const handleChange = (e) => {
-    const { name, value } = e.target;
+  const { name, value } = e.target;
 
+  if (["name", "email", "mobile", "address", "gender", "dob"].includes(name)) {
     setEmployee({
       ...employee,
-      [name]: value,
+      personalInfo: {
+        ...employee.personalInfo,
+        [name]: value,
+      },
     });
-  };
+  }
+
+  else if (
+    ["employeeId", "department", "designation", "joiningDate", "employeeType"].includes(name)
+  ) {
+    setEmployee({
+      ...employee,
+      employmentInfo: {
+        ...employee.employmentInfo,
+        [name]: value,
+      },
+    });
+  }
+};
 
   const handleDepartmentChange = (e) => {
     const selectedDepartment = e.target.value;
 
-    setEmployee({
-      ...employee,
-      department: selectedDepartment,
-      designation: "",
-    });
+   setEmployee({
+  ...employee,
+  employmentInfo: {
+    ...employee.employmentInfo,
+    department: selectedDepartment,
+    designation: "",
+  },
+});
 
     const dept = departments.find(
       (item) => item.name === selectedDepartment
@@ -92,8 +146,11 @@ const handleSubmit = async (e) => {
   // Clear previous errors
   setErrors({});
 
-  // Validate form fields
-  const validationErrors = validateForm(employee);
+  // Validate only the sections shown on this form
+  const validationErrors = validateForm({
+    personalInfo: employee.personalInfo,
+    employmentInfo: employee.employmentInfo,
+  });
 
   if (Object.keys(validationErrors).length > 0) {
     setErrors(validationErrors);
@@ -101,31 +158,65 @@ const handleSubmit = async (e) => {
   }
 
   try {
-    const result = await createEmployee(
-      companyCode,
-      employee
-    );
+   const result = await createEmployee(
+  companyCode,
+  employee
+);
 
-    if (!result.success) {
-      setErrors((prev) => ({
-        ...prev,
-        [result.field]: result.message,
-      }));
-      return;
-    }
+if (!result.success) {
+  setErrors((prev) => ({
+    ...prev,
+    [result.field]: result.message,
+  }));
+  return;
+}
 
     alert("Employee added successfully");
 
     // Reset form
-    setEmployee({
-      employeeId: "",
-      name: "",
-      email: "",
-      department: "",
-      designation: "",
-      mobile: "",
-      address: "",
-    });
+   setEmployee({
+  personalInfo: {
+    name: "",
+    email: "",
+    mobile: "",
+    address: "",
+    gender: "",
+    dob: "",
+  },
+
+  employmentInfo: {
+    employeeId: "",
+    department: "",
+    designation: "",
+    joiningDate: "",
+    employeeType: "",
+  },
+
+  bankInfo: {
+    bankName: "",
+    accountNumber: "",
+    ifsc: "",
+    branch: "",
+  },
+
+  salaryInfo: {
+    basicSalary: "",
+    hra: "",
+    bonus: "",
+  },
+
+  documents: {
+    aadhaar: "",
+    pan: "",
+    resume: "",
+  },
+
+  account: {
+    username: "",
+    password: "",
+    status: "Active",
+  },
+});
 
     // Reset designation dropdown
     setDesignations([]);
@@ -140,31 +231,35 @@ const handleSubmit = async (e) => {
 };
 
   return (
-    <div className="max-w-5xl mx-auto bg-white rounded-2xl shadow-md p-8">
+    <div className="mx-auto max-w-5xl overflow-hidden rounded-2xl bg-white shadow-md">
 
-      <h2 className="text-3xl font-bold mb-8">
-        Add Employee
-      </h2>
+      {/* Gradient header */}
+      <div className="bg-gradient-to-r from-pink-600 via-indigo-600 to-teal-500 px-8 py-7 text-white">
+        <h2 className="text-3xl font-bold">Add Employee</h2>
+        <p className="mt-1 text-sm text-white/80">
+          Fill in the details below to create a new employee record.
+        </p>
+      </div>
 
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={handleSubmit} className="p-8">
 
         <div className="grid grid-cols-2 gap-6">
 
           {/* Employee ID */}
           <div>
-            <label className="block mb-2 font-medium">
+            <label className="mb-2 block text-sm font-medium text-gray-700">
               Employee ID
             </label>
 
             <input
               type="text"
               name="employeeId"
-              value={employee.employeeId}
+              value={employee.employmentInfo.employeeId}
               // disabled
               onChange={handleChange}
               required
               placeholder="Enter Employee ID"
-              className="w-full border rounded-lg p-3 "
+              className="w-full rounded-lg border border-gray-200 p-3 text-sm outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 "
               onBlur={handleBlur}
             />
 
@@ -177,17 +272,17 @@ const handleSubmit = async (e) => {
 
           {/* Name */}
           <div>
-            <label className="block mb-2 font-medium">
+            <label className="mb-2 block text-sm font-medium text-gray-700">
               Employee Name
             </label>
 
             <input
               type="text"
               name="name"
-              value={employee.name}
+              value={employee.personalInfo.name}
               onChange={handleChange}
               placeholder="Enter Employee Name"
-              className="w-full border rounded-lg p-3"
+              className="w-full rounded-lg border border-gray-200 p-3 text-sm outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
               onBlur={handleBlur}
             />
 
@@ -200,7 +295,7 @@ const handleSubmit = async (e) => {
 
           {/* Email */}
           <div>
-            <label className="block mb-2 font-medium">
+            <label className="mb-2 block text-sm font-medium text-gray-700">
               Email
             </label>
 
@@ -208,10 +303,10 @@ const handleSubmit = async (e) => {
               type="email"
               name="email"
               required
-              value={employee.email}
+              value={employee.personalInfo.email}
               onChange={handleChange}
               placeholder="Enter Email"
-              className="w-full border rounded-lg p-3"
+              className="w-full rounded-lg border border-gray-200 p-3 text-sm outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
               onBlur={handleBlur}
             />
 
@@ -224,7 +319,7 @@ const handleSubmit = async (e) => {
 
           {/* Mobile */}
           <div>
-            <label className="block mb-2 font-medium">
+            <label className="mb-2 block text-sm font-medium text-gray-700">
               Mobile Number
             </label>
 
@@ -232,10 +327,10 @@ const handleSubmit = async (e) => {
               type="text"
               name="mobile"
               maxLength={10}
-              value={employee.mobile}
+              value={employee.personalInfo.mobile}
               onChange={handleChange}
               placeholder="Enter Mobile Number"
-              className="w-full border rounded-lg p-3"
+              className="w-full rounded-lg border border-gray-200 p-3 text-sm outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
               onBlur={handleBlur}
             />
 
@@ -248,16 +343,16 @@ const handleSubmit = async (e) => {
 
           {/* Department */}
           <div>
-            <label className="block mb-2 font-medium">
+            <label className="mb-2 block text-sm font-medium text-gray-700">
               Department
             </label>
 
             <select
               name="department"
-              value={employee.department}
+              value={employee.employmentInfo.department}
               onChange={handleDepartmentChange}
               onBlur={handleBlur}
-              className="w-full border rounded-lg p-3"
+              className="w-full rounded-lg border border-gray-200 p-3 text-sm outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
             >
               <option value="">Select Department</option>
 
@@ -277,15 +372,15 @@ const handleSubmit = async (e) => {
 
           {/* Designation */}
           <div>
-            <label className="block mb-2 font-medium">
+            <label className="mb-2 block text-sm font-medium text-gray-700">
               Designation
             </label>
             <select
               name="designation"
-              value={employee.designation}
+              value={employee.employmentInfo.designation}
               onChange={handleChange}
               onBlur={handleBlur}
-              className="w-full border rounded-lg p-3"
+              className="w-full rounded-lg border border-gray-200 p-3 text-sm outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
             >
               <option value="">Select Designation</option>
 
@@ -309,18 +404,18 @@ const handleSubmit = async (e) => {
         {/* Address */}
         <div className="mt-6">
 
-          <label className="block mb-2 font-medium">
+          <label className="mb-2 block text-sm font-medium text-gray-700">
             Address
           </label>
 
           <textarea
             name="address"
-            value={employee.address}
+            value={employee.personalInfo.address}
             onChange={handleChange}
             onBlur={handleBlur}
             rows="4"
             placeholder="Enter Address"
-            className="w-full border rounded-lg p-3"
+            className="w-full rounded-lg border border-gray-200 p-3 text-sm outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 resize-none"
 
           />
 
@@ -332,11 +427,11 @@ const handleSubmit = async (e) => {
 
         </div>
 
-        <div className="flex justify-end gap-4 mt-8">
+        <div className="mt-8 flex justify-end gap-4  pt-6">
 
           <button
             type="submit"
-            className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            className="rounded-lg bg-indigo-600 px-8 py-3 font-medium text-white shadow-sm transition-colors hover:bg-indigo-700"
           >
             Save
           </button>

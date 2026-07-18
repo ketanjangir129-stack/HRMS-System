@@ -1,12 +1,14 @@
+import { field } from "firebase/firestore/pipelines";
 import { validateField } from "./validatefield";
 
 export const validateForm = (formData) => {
   const errors = {};
 
-  Object.keys(formData).forEach((field) => {
+  Object.keys(formData).forEach((section) => {
+    Object.keys(formData[section]).forEach((field) =>{
     const error = validateField(
       field,
-      formData[field],
+      formData[section][field],
       formData
     );
 
@@ -14,6 +16,6 @@ export const validateForm = (formData) => {
       errors[field] = error;
     }
   });
-
+  });
   return errors;
 };

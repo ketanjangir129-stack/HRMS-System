@@ -1,104 +1,148 @@
 import { db } from "../firebase/firebase";
-import { ref, push,get } from "firebase/database";
-
+import { ref, get, set, update } from "firebase/database";
+ 
 // Add Employee
 export const addEmployee = async (companyCode, employee) => {
-  const employeeRef = ref(db, `companies/${companyCode}/employees`);
-  await push(employeeRef, employee);
+  const employeeId = employee.employmentInfo.employeeId.trim().toUpperCase();
+ 
+  await set(
+    ref(db, `companies/${companyCode}/employees/${employeeId}`),
+    {
+      ...employee,
+      employmentInfo:{
+        ...employee.employmentInfo,
+      employeeId,
+     
+    },
+    account:{
+      ...employee.account,
+      status:"Active",
+    },
+     createdAt: Date.now(),
+  }
+);
 };
-
-// Get Employees
+ 
+ 
+// Get All Employees
 export const getEmployees = async (companyCode) => {
-  const employeeRef = ref(db, `companies/${companyCode}/employees`);
-
-  const snapshot = await get(employeeRef); //sending request to fb
-
-  if (snapshot.exists()) {
-    return snapshot.val();
-  }
-
-  return {};
+  const snapshot = await get(
+    ref(db, `companies/${companyCode}/employees`)
+  );
+ 
+  return snapshot.exists() ? snapshot.val() : {};
+};
+ 
+// Get Employee By ID
+export const getEmployeeById = async (
+  companyCode,
+  employeeId
+) => {
+  const snapshot = await get(
+    ref(
+      db,
+      `companies/${companyCode}/employees/${employeeId.toUpperCase()}`
+    )
+  );
+ 
+  return snapshot.exists() ? snapshot.val() : null;
+};
+ 
+ 
+// Update one section of an employee (e.g. { personalInfo: {...} })
+export const updateEmployee = async (
+  companyCode,
+  employeeId,
+  data
+) => {
+  await update(
+    ref(
+      db,
+      `companies/${companyCode}/employees/${employeeId.toUpperCase()}`
+    ),
+    data
+  );
 };
 
-//Get  single employee
-export const getEmployeeById = async(companyCode, employeeId) => {
-  const employeeRef = ref(db, `companies/${companyCode}/employees/${employeeId}`);
-
-  const snapshot = await get (employeeRef);
-
-  if(snapshot.exists()){
-    return snapshot.val();
-  }
-  return null;
-}
-
-
-// CHECK EMPLOYEE DETAILS
+// Check Duplicate Employee
 export const checkEmployeeExists = async (
   companyCode,
   employee
 ) => {
+  const employeeId = employee.employmentInfo.employeeId.trim().toUpperCase();
+ 
+  // 1. Check Employee ID directly
+  const employeeSnapshot = await get(
+    ref(
+      db,
+      `companies/${companyCode}/employees/${employeeId}`
+    )
+  );
+ 
+  if (employeeSnapshot.exists()) {
+    return {
+      success: false,
+      field: "employeeId",
+      message: "Employee ID already exists.",
+    };
+  }
+ 
+  // 2. Check Email & Mobile
   const snapshot = await get(
     ref(db, `companies/${companyCode}/employees`)
   );
-
-  if (!snapshot.exists()) {
-    return {
-      exists: false,
-    };
-  }
-
-  const employees = snapshot.val();
-
-  for (const key in employees) {
-    const emp = employees[key];
-
-    if (
-      emp.employeeId.toLowerCase() ===
-      employee.employeeId.toLowerCase()
-    ) {
-      return {
-        exists: true,
-        field: "employeeId",
-        message: "Employee ID already exists.",
-      };
-    }
-
-    if (
-      emp.email.toLowerCase() ===
-      employee.email.toLowerCase()
-    ) {
-      return {
-        exists: true,
-        field: "email",
-        message: "Email already exists.",
-      };
-    }
-
-    if (emp.mobile === employee.mobile) {
-      return {
-        exists: true,
-        field: "mobile",
-        message: "Mobile number already exists.",
-      };
+ 
+  if (snapshot.exists()) {
+    const employees = snapshot.val();
+ 
+    for (const key in employees) {
+      const emp = employees[key];
+ 
+      if (
+        emp.personalInfo?.email?.toLowerCase() ===
+        employee.personalInfo.email.trim().toLowerCase()
+      ) {
+        return {
+          success: false,
+          field: "email",
+          message: "Email already exists.",
+        };
+      }
+ 
+      if (emp.personalInfo?.mobile === employee.personalInfo.mobile.trim()) {
+        return {
+          success: false,
+          field: "mobile",
+          message: "Mobile number already exists.",
+        };
+      }
     }
   }
-
-  return {
-    exists: false,
-  };
-};
-
-export const createEmployee = async (companyCode, employee) => {
-  const duplicate = await checkEmployeeExists(companyCode, employee);
-
-  if (duplicate.exists) {
-    return duplicate;
-  }
-
-  await addEmployee(companyCode, employee);
-
+ 
   return {
     success: true,
   };
 };
+ 
+// CREATE THE EMPLOYEES
+export const createEmployee = async (
+  companyCode,
+  employee
+) => {
+  const result = await checkEmployeeExists(
+    companyCode,
+    employee
+  );
+ 
+  if (!result.success) {
+    return result;
+  }
+ 
+  await addEmployee(companyCode, employee);
+ 
+  return {
+    success: true,
+    message: "Employee created successfully.",
+  };
+};
+ 
