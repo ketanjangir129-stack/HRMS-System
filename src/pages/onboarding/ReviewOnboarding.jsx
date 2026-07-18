@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-
+import { FiArrowLeft } from "react-icons/fi";
 import { getOnboardingRequestById } from "../../services/OnboardingService";
 import Loader from "../../components/common/Loader";
 import { approveOnboarding, rejectOnboarding } from "../../services/ApprovalService";
@@ -112,6 +112,16 @@ function ReviewOnboarding() {
     return (
         <div className="bg-white rounded-xl shadow p-6">
 
+            <button
+                onClick={() =>
+                    navigate("/OnboardDashboard/OnBoardRequest")
+                }
+                className="
+                    inline-flex items-center gap-2 px-4 py-2 mb-4 bg-white border border-slate-200 rounded-xl text-slate-700 font-medium shadow-sm hover:bg-slate-50 hover:shadow-md transition-all duration-200 cursor-pointer"
+            >
+                <FiArrowLeft size={18} />
+                Back to Requests
+            </button>
             {/* Basic Information  */}
             <div className="bg-white rounded-xl border border-slate-200 p-6">
                 <h2 className="text-xl font-semibold mb-6">
