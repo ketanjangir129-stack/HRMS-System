@@ -42,14 +42,17 @@ function ReviewOnboarding() {
             const result = await approveOnboarding(companyCode, requestId, approvedBy);
 
             if (!result?.success) {
-                alert(result?.message || "Failed to approve onboarding.");
+                toast(result?.message || "Failed to approve onboarding.");
                 return;
             }
 
+            toast.success(
+                result?.message || "Onboarding approved successfully."
+            );
             navigate("/OnboardDashboard/OnBoardRequest");
         } catch (error) {
             console.error(error);
-            alert("Failed to approve onboarding.");
+            toast("Failed to approve onboarding.");
         } finally {
             setApproving(false);
         }
