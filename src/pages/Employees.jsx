@@ -40,7 +40,6 @@ function Employees() {
     }, []);
 
     const filteredEmployees = searchEmployees(employees, search);
-
     return (
         <div className="p-2">
 
@@ -124,9 +123,6 @@ function Employees() {
                                 <td className="px-6 py-4">
                                     {emp.designation}
                                 </td>
-
-                               
-
                             </tr>
                         ))
                         )}

@@ -97,47 +97,203 @@ function ReviewOnboarding() {
             </div>
         );
     }
+    const DetailField = ({ label, value }) => (
+        <div>
+            <label className="block text-sm font-medium text-slate-500 mb-1">
+                {label}
+            </label>
+
+            <div className="w-full border border-slate-200 rounded-lg p-3 bg-slate-50 text-slate-800">
+                {value || "-"}
+            </div>
+        </div>
+    );
 
     return (
         <div className="bg-white rounded-xl shadow p-6">
-            <h2 className="text-xl font-semibold mb-6">Basic Information</h2>
 
-            <div className="grid grid-cols-2 gap-6">
-                <div>
-                    <label className="font-medium">Employee ID</label>
-                    <input
+            {/* Basic Information  */}
+            <div className="bg-white rounded-xl border border-slate-200 p-6">
+                <h2 className="text-xl font-semibold mb-6">
+                    Basic Information
+                </h2>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+
+                    <DetailField
+                        label="Employee ID"
                         value={request.id}
-                        readOnly
-                        className="w-full border rounded-lg p-3"
                     />
+
+                    <DetailField
+                        label="Employee Name"
+                        value={request.basic?.name}
+                    />
+
+                    <DetailField
+                        label="Email"
+                        value={request.basic?.email}
+                    />
+
+                    <DetailField
+                        label="Mobile"
+                        value={request.basic?.mobile}
+                    />
+
+                    <DetailField
+                        label="Department"
+                        value={request.basic?.department}
+                    />
+
+                    <DetailField
+                        label="Designation"
+                        value={request.basic?.designation}
+                    />
+
                 </div>
 
-                <div>
-                    <label className="font-medium">Employee Name</label>
-                    <input
-                        value={request.basic?.name || ""}
-                        readOnly
-                        className="w-full border rounded-lg p-3"
+            </div>
+
+            {/* Personal Information */}
+            <div className="bg-white rounded-xl border border-slate-200 p-6 mt-6">
+
+                <h2 className="text-xl font-semibold mb-6">
+                    Personal Information
+                </h2>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+
+                    <DetailField
+                        label="Father Name"
+                        value={request.personal?.fatherName}
                     />
+
+                    <DetailField
+                        label="Mother Name"
+                        value={request.personal?.motherName}
+                    />
+
+                    <DetailField
+                        label="Date of Birth"
+                        value={request.personal?.dob}
+                    />
+
+                    <DetailField
+                        label="Gender"
+                        value={request.personal?.gender}
+                    />
+
+                    <DetailField
+                        label="Marital Status"
+                        value={request.personal?.maritalStatus}
+                    />
+
+                    <DetailField
+                        label="Personal Mobile"
+                        value={request.personal?.personalMobile}
+                    />
+
+                    <DetailField
+                        label="Alternate Mobile"
+                        value={request.personal?.alternateMobile}
+                    />
+
+                    <DetailField
+                        label="City"
+                        value={request.personal?.city}
+                    />
+
+                    <DetailField
+                        label="State"
+                        value={request.personal?.state}
+                    />
+
+                    <DetailField
+                        label="Pincode"
+                        value={request.personal?.pincode}
+                    />
+
                 </div>
 
-                <div>
-                    <label className="font-medium">Email</label>
-                    <input
-                        value={request.basic?.email || ""}
-                        readOnly
-                        className="w-full border rounded-lg p-3"
+                <div className="mt-5">
+
+                    <DetailField
+                        label="Address"
+                        value={request.personal?.address}
                     />
+
                 </div>
 
-                <div>
-                    <label className="font-medium">Mobile</label>
-                    <input
-                        value={request.basic?.mobile || ""}
-                        readOnly
-                        className="w-full border rounded-lg p-3"
+            </div>
+
+            {/* Bank Information  */}
+            <div className="bg-white rounded-xl border border-slate-200 p-6 mt-6">
+
+                <h2 className="text-xl font-semibold mb-6">
+                    Bank Information
+                </h2>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+
+                    <DetailField
+                        label="Account Holder Name"
+                        value={request.bank?.accountHolderName}
                     />
+
+                    <DetailField
+                        label="Bank Name"
+                        value={request.bank?.bankName}
+                    />
+
+                    <DetailField
+                        label="Account Number"
+                        value={request.bank?.accountNumber}
+                    />
+
+                    <DetailField
+                        label="IFSC Code"
+                        value={request.bank?.ifscCode}
+                    />
+
+                    <DetailField
+                        label="Branch Name"
+                        value={request.bank?.branchName}
+                    />
+
                 </div>
+
+            </div>
+
+            {/* KYC Information  */}
+            <div className="bg-white rounded-xl border border-slate-200 p-6 mt-6">
+                <h2 className="text-xl font-semibold mb-6">
+                    KYC Information
+                </h2>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+
+                    <DetailField
+                        label="Aadhaar Number"
+                        value={request.documents?.aadhaarNumber}
+                    />
+
+                    <DetailField
+                        label="PAN Number"
+                        value={request.documents?.panNumber}
+                    />
+
+                    <DetailField
+                        label="UAN Number"
+                        value={request.documents?.uanNumber}
+                    />
+
+                    <DetailField
+                        label="ESIC Number"
+                        value={request.documents?.esicNumber}
+                    />
+
+                </div>
+
             </div>
 
             <div className="flex justify-end gap-4 mt-8">
