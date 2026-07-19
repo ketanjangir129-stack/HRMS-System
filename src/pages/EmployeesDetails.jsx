@@ -21,32 +21,32 @@ function EmployeesDetails() {
         const data = await getEmployeeById(companyCode, id);
         const formattedEmployee = {
             personalInfo: {
-                name: data.basic?.name || "",
-                email: data.basic?.email || "",
-                mobile: data.basic?.mobile || "",
+                name: data.employmentInfo?.name || "",
+                email: data.employmentInfo?.email || "",
+                mobile: data.employmentInfo?.mobile || "",
 
-                gender: data.personal?.gender || "",
-                dob: data.personal?.dob || "",
+                gender: data.personalInfo?.gender || "",
+                dob: data.personalInfo?.dob || "",
 
                 address:
-                    `${data.personal?.address || ""}, 
-                    ${data.personal?.city || ""}, 
-                    ${data.personal?.state || ""} 
-                    ${data.personal?.pincode || ""}`.trim(),
+                    `${data.personalInfo?.address || ""},
+                    ${data.personalInfo?.city || ""},
+                    ${data.personalInfo?.state || ""}
+                    ${data.personalInfo?.pincode || ""}`.trim(),
             },
 
             employmentInfo: {
-                employeeId: data.basic?.employeeId || "",
-                department: data.basic?.department || "",
-                designation: data.basic?.designation || "",
-                joiningDate: data.personal?.joiningDate || "",
+                employeeId: data.employmentInfo?.employeeId || "",
+                department: data.employmentInfo?.department || "",
+                designation: data.employmentInfo?.designation || "",
+                joiningDate: data.personalInfo?.joiningDate || "",
             },
 
             bankInfo: {
-                bankName: data.bank?.bankName || "",
-                accountNumber: data.bank?.accountNumber || "",
-                ifscCode: data.bank?.ifscCode || "",
-                branch: data.bank?.branchName || "",
+                bankName: data.bankInfo?.bankName || "",
+                accountNumber: data.bankInfo?.accountNumber || "",
+                ifscCode: data.bankInfo?.ifscCode || "",
+                branch: data.bankInfo?.branchName || "",
             },
 
             documents: {
@@ -222,12 +222,16 @@ function EmployeesDetails() {
                                     {status}
                                 </span>
                             </div>
-                            <p className="mt-1 text-white/80">
+                          <div className="mt-1 text-white/120 flex items-center">
+                             {employee.employmentInfo?.department
+                                    ? ` ${employee.employmentInfo.department} - `
+                                    : ""} 
+                              <p className="px-1 text-white/80">
+                          
                                 {employee.employmentInfo?.designation || "—"}
-                                {employee.employmentInfo?.department
-                                    ? ` · ${employee.employmentInfo.department}`
-                                    : ""}
+                               
                             </p>
+                          </div>
                             <div className="mt-3 flex flex-wrap gap-4 text-sm text-white/80">
                                 <span>🆔 {employee.employmentInfo?.employeeId}</span>
                                 <span>✉️ {employee.personalInfo?.email}</span>

@@ -33,8 +33,8 @@ export const createOnboardingRequest = async (
     );
 
     await set(onboardingRef, {
-        basic: {
-            employeeId,
+  employmentInfo: {
+             employeeId,
 
             name: basicInfo.name.trim(),
 
@@ -45,15 +45,17 @@ export const createOnboardingRequest = async (
             department: basicInfo.department,
 
             designation: basicInfo.designation,
+            joiningDate: basicInfo.joiningDate,
+            employeeType: basicInfo.employeeType
+,
         },
-
         invitationLink,
 
-        personal: {},
+        personalInfo: {},
 
-        employment: {},
+        bankInfo: {},
 
-        salary: {},
+        salaryInfo: {},
 
         documents: {},
 
@@ -177,7 +179,7 @@ export const submitOnboardingForm = async (
 
         await set(requestRef, {...existingData,
 
-            personal: {
+            personalInfo: {
                 fatherName: formData.fatherName,
                 motherName: formData.motherName,
                 dob: formData.dob,
@@ -196,7 +198,7 @@ export const submitOnboardingForm = async (
             education: existingData.education || {},
             experience: existingData.experience || {},
 
-            bank: {
+            bankInfo: {
                 accountHolderName: formData.accountHolderName,
                 bankName: formData.bankName,
                 accountNumber: formData.accountNumber,

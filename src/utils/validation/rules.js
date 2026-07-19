@@ -67,4 +67,18 @@ export const rules = {
     pattern: /^[A-Za-z ]{2,50}$/,
     message: "Designation name must contain only letters and be 2-50 characters.",
   },
+
+  // onboarding form fields
+  joiningDate: {
+    required: true,
+    // HTML date input value format: YYYY-MM-DD
+    pattern: /^\d{4}-\d{2}-\d{2}$/,
+    message: "Please enter a valid joining date.",
+  },
+  employeeType: {
+    required: true,
+    // Human input like "Full Time", "Part-Time", "Contract".
+    pattern: /^[A-Za-z][A-Za-z ]{1,49}(-[A-Za-z ]{1,49})?$/,
+    message: "Enter a valid employee type.",
+  },
 };

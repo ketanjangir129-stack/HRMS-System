@@ -34,6 +34,7 @@ function Employees() {
 
                     name:
                         employee.basic?.name ||
+                        employee.employmentInfo?.name ||
                         employee.personalInfo?.name ||
                         "",
 
