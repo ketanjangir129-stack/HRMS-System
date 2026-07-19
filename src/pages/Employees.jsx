@@ -21,13 +21,33 @@ function Employees() {
 
             // Flatten the nested sections so the table and searchEmployees
             // can read plain fields (name, employeeId, department, designation)
-            const employeeArray = Object.keys(data).map((key) => ({
-                id: key,
-                name: data[key].personalInfo?.name,
-                employeeId: data[key].employmentInfo?.employeeId,
-                department: data[key].employmentInfo?.department,
-                designation: data[key].employmentInfo?.designation,
-            }));
+            const employeeArray = Object.keys(data).map((key) => {
+                const employee = data[key];
+
+                return {
+                    id: key,
+
+                    employeeId:
+                        employee.basic?.employeeId ||
+                        employee.employmentInfo?.employeeId ||
+                        "",
+
+                    name:
+                        employee.basic?.name ||
+                        employee.personalInfo?.name ||
+                        "",
+
+                    department:
+                        employee.basic?.department ||
+                        employee.employmentInfo?.department ||
+                        "",
+
+                    designation:
+                        employee.basic?.designation ||
+                        employee.employmentInfo?.designation ||
+                        "",
+                };
+            });
             setEmployees(employeeArray);
         } catch (err) {
             console.error("Failed to load employees:", err);

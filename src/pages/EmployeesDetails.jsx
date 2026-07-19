@@ -19,7 +19,49 @@ function EmployeesDetails() {
 
     const loadEmployee = async () => {
         const data = await getEmployeeById(companyCode, id);
-        setEmployee(data);
+        const formattedEmployee = {
+            personalInfo: {
+                name: data.basic?.name || "",
+                email: data.basic?.email || "",
+                mobile: data.basic?.mobile || "",
+
+                gender: data.personal?.gender || "",
+                dob: data.personal?.dob || "",
+
+                address:
+                    `${data.personal?.address || ""}, 
+                    ${data.personal?.city || ""}, 
+                    ${data.personal?.state || ""} 
+                    ${data.personal?.pincode || ""}`.trim(),
+            },
+
+            employmentInfo: {
+                employeeId: data.basic?.employeeId || "",
+                department: data.basic?.department || "",
+                designation: data.basic?.designation || "",
+                joiningDate: data.personal?.joiningDate || "",
+            },
+
+            bankInfo: {
+                bankName: data.bank?.bankName || "",
+                accountNumber: data.bank?.accountNumber || "",
+                ifscCode: data.bank?.ifscCode || "",
+                branch: data.bank?.branchName || "",
+            },
+
+            documents: {
+                aadhaar: data.documents?.aadhaarNumber || "",
+                pan: data.documents?.panNumber || "",
+                uan: data.documents?.uanNumber || "",
+                esic: data.documents?.esicNumber || "",
+            },
+
+            account: {
+                status: data.status || "Active",
+            },
+        };
+
+        setEmployee(formattedEmployee);
     };
 
     const startEdit = (sectionId) => {
