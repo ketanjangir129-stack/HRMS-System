@@ -216,7 +216,10 @@ function EmployeeOnboarding() {
 
         <form onSubmit={handleSubmit}>
           {step === 1 && (
-            <StepBasicInfo employeeId={employeeId} basic={request.basic} />
+            <StepBasicInfo
+              employeeId={employeeId}
+              employmentInfo={request.employmentInfo}
+            />
           )}
 
           {step === 2 && (

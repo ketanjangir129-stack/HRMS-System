@@ -14,6 +14,8 @@ function OnBoardForm() {
   mobile: "",
   department: "",
   designation: "",
+  joiningDate: "",
+  employeeType: "",
 };
 
 const companyCode = localStorage.getItem("companyCode");
@@ -257,7 +259,51 @@ const handleSubmit = async (e) => {
               </p>
             )}
           </div>
+           {/* joining date */}
+ <div>
+            <label className="block mb-2 font-medium">
+              joining Date
+            </label>
 
+            <input
+              type="date"
+              name="joiningDate"
+              maxLength={10}
+              value={employee.joiningDate}
+              onChange={handleChange}
+              placeholder="Employee joiningDate"
+              className="w-full border rounded-lg p-3"
+              onBlur={handleBlur}
+            />
+
+            {errors.joiningDate && (
+              <p className="mt-1 text-sm text-red-500">
+                {errors.joiningDate}
+              </p>
+            )}
+          </div>
+          {/* employeeType */}
+          <div>
+            <label className="block mb-2 font-medium">
+              Employee Type
+            </label>
+
+            <input
+              type="text"
+              name="employeeType"
+              value={employee.employeeType}
+              onChange={handleChange}
+              placeholder="Enter Employee Type (e.g., Full Time)"
+              className="w-full border rounded-lg p-3"
+              onBlur={handleBlur}
+            />
+
+            {errors.employeeType && (
+              <p className="mt-1 text-sm text-red-500">
+                {errors.employeeType}
+              </p>
+            )}
+          </div>
           {/* Department */}
           <div>
             <label className="block mb-2 font-medium">

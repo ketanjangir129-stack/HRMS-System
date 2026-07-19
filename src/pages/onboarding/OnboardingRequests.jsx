@@ -78,10 +78,10 @@ function OnboardingRequests() {
                 requests,
                 search,
                 [
-                    "basic.employeeId",
-                    "basic.name",
-                    "basic.department",
-                    "basic.designation",
+                    "employmentInfo.employeeId",
+                    "employmentInfo.name",
+                    "employmentInfo.department",
+                    "employmentInfo.designation",
                 ]
             )
         );
@@ -147,11 +147,11 @@ function OnboardingRequests() {
 
                                     <td className="px-4 py-3 border-b text-center">{request.id}</td>
 
-                                    <td className="px-4 py-3 border-b text-center">{request.basic.name}</td>
+                                    <td className="px-4 py-3 border-b text-center">{request.employmentInfo.name}</td>
 
-                                    <td className="px-4 py-3 border-b text-center">{request.basic.department}</td>
+                                    <td className="px-4 py-3 border-b text-center">{request.employmentInfo.department}</td>
 
-                                    <td className="px-4 py-3 border-b text-center">{request.basic.designation}</td>
+                                    <td className="px-4 py-3 border-b text-center">{request.employmentInfo.designation}</td>
 
                                     <td className="px-4 py-3 border-b text-center">
                                         <span className={`inline-flex px-3 py-1 rounded-full text-sm font-medium ${getStatusStyle(request.status)}`}>

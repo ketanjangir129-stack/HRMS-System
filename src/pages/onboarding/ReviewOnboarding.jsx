@@ -140,27 +140,27 @@ function ReviewOnboarding() {
 
                     <DetailField
                         label="Employee Name"
-                        value={request.basic?.name}
+                        value={request.employmentInfo?.name}
                     />
 
                     <DetailField
                         label="Email"
-                        value={request.basic?.email}
+                        value={request.employmentInfo?.email}
                     />
 
                     <DetailField
                         label="Mobile"
-                        value={request.basic?.mobile}
+                        value={request.employmentInfo?.mobile}
                     />
 
                     <DetailField
                         label="Department"
-                        value={request.basic?.department}
+                        value={request.employmentInfo?.department}
                     />
 
                     <DetailField
                         label="Designation"
-                        value={request.basic?.designation}
+                        value={request.employmentInfo?.designation}
                     />
 
                 </div>
@@ -178,52 +178,52 @@ function ReviewOnboarding() {
 
                     <DetailField
                         label="Father Name"
-                        value={request.personal?.fatherName}
+                        value={request.personalInfo?.fatherName}
                     />
 
                     <DetailField
                         label="Mother Name"
-                        value={request.personal?.motherName}
+                        value={request.personalInfo?.motherName}
                     />
 
                     <DetailField
                         label="Date of Birth"
-                        value={request.personal?.dob}
+                        value={request.personalInfo?.dob}
                     />
 
                     <DetailField
                         label="Gender"
-                        value={request.personal?.gender}
+                        value={request.personalInfo?.gender}
                     />
 
                     <DetailField
                         label="Marital Status"
-                        value={request.personal?.maritalStatus}
+                        value={request.personalInfo?.maritalStatus}
                     />
 
                     <DetailField
                         label="Personal Mobile"
-                        value={request.personal?.personalMobile}
+                        value={request.personalInfo?.personalMobile}
                     />
 
                     <DetailField
                         label="Alternate Mobile"
-                        value={request.personal?.alternateMobile}
+                        value={request.personalInfo?.alternateMobile}
                     />
 
                     <DetailField
                         label="City"
-                        value={request.personal?.city}
+                        value={request.personalInfo?.city}
                     />
 
                     <DetailField
                         label="State"
-                        value={request.personal?.state}
+                        value={request.personalInfo?.state}
                     />
 
                     <DetailField
                         label="Pincode"
-                        value={request.personal?.pincode}
+                        value={request.personalInfo?.pincode}
                     />
 
                 </div>
@@ -232,7 +232,7 @@ function ReviewOnboarding() {
 
                     <DetailField
                         label="Address"
-                        value={request.personal?.address}
+                        value={request.personalInfo?.address}
                     />
 
                 </div>
@@ -250,27 +250,27 @@ function ReviewOnboarding() {
 
                     <DetailField
                         label="Account Holder Name"
-                        value={request.bank?.accountHolderName}
+                        value={request.bankInfo?.accountHolderName}
                     />
 
                     <DetailField
                         label="Bank Name"
-                        value={request.bank?.bankName}
+                        value={request.bankInfo?.bankName}
                     />
 
                     <DetailField
                         label="Account Number"
-                        value={request.bank?.accountNumber}
+                        value={request.bankInfo?.accountNumber}
                     />
 
                     <DetailField
                         label="IFSC Code"
-                        value={request.bank?.ifscCode}
+                        value={request.bankInfo?.ifscCode}
                     />
 
                     <DetailField
                         label="Branch Name"
-                        value={request.bank?.branchName}
+                        value={request.bankInfo?.branchName}
                     />
 
                 </div>
