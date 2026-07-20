@@ -1,22 +1,22 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { getEmployeeById, updateEmployee } from "../services/EmployeeService";
-
+ 
 function EmployeesDetails() {
     const companyCode = localStorage.getItem("companyCode");
     const { id } = useParams();
-
+ 
     const [employee, setEmployee] = useState(null);
-
+ 
     // Which card is currently being edited + its working copy
     const [editingSection, setEditingSection] = useState(null);
     const [formData, setFormData] = useState({});
     const [saving, setSaving] = useState(false);
-
+ 
     useEffect(() => {
         loadEmployee();
     }, []);
-
+ 
     const loadEmployee = async () => {
         const data = await getEmployeeById(companyCode, id);
         const formattedEmployee = {
@@ -24,60 +24,60 @@ function EmployeesDetails() {
                 name: data.employmentInfo?.name || "",
                 email: data.employmentInfo?.email || "",
                 mobile: data.employmentInfo?.mobile || "",
-
+ 
                 gender: data.personalInfo?.gender || "",
                 dob: data.personalInfo?.dob || "",
-
+ 
                 address:
                     `${data.personalInfo?.address || ""},
                     ${data.personalInfo?.city || ""},
                     ${data.personalInfo?.state || ""}
                     ${data.personalInfo?.pincode || ""}`.trim(),
             },
-
+ 
             employmentInfo: {
                 employeeId: data.employmentInfo?.employeeId || "",
                 department: data.employmentInfo?.department || "",
                 designation: data.employmentInfo?.designation || "",
                 joiningDate: data.personalInfo?.joiningDate || "",
             },
-
+ 
             bankInfo: {
                 bankName: data.bankInfo?.bankName || "",
                 accountNumber: data.bankInfo?.accountNumber || "",
                 ifscCode: data.bankInfo?.ifscCode || "",
                 branch: data.bankInfo?.branchName || "",
             },
-
+ 
             documents: {
                 aadhaar: data.documents?.aadhaarNumber || "",
                 pan: data.documents?.panNumber || "",
                 uan: data.documents?.uanNumber || "",
                 esic: data.documents?.esicNumber || "",
             },
-
+ 
             account: {
                 status: data.status || "Active",
             },
         };
-
+ 
         setEmployee(formattedEmployee);
     };
-
+ 
     const startEdit = (sectionId) => {
         setFormData({ ...(employee[sectionId] || {}) });
         setEditingSection(sectionId);
     };
-
+ 
     const cancelEdit = () => {
         setEditingSection(null);
         setFormData({});
     };
-
+ 
     const handleFieldChange = (key, value) => {
         setFormData((prev) => ({ ...prev, [key]: value }));
     };
-
+ 
     const saveSection = async (sectionId) => {
         setSaving(true);
         try {
@@ -91,7 +91,7 @@ function EmployeesDetails() {
             setSaving(false);
         }
     };
-
+ 
     if (!employee) {
         return (
             <div className="flex h-screen items-center justify-center bg-gray-100">
@@ -102,7 +102,7 @@ function EmployeesDetails() {
             </div>
         );
     }
-
+ 
     // Build the initials for the avatar
     const initials =
         (employee.personalInfo?.name || "?")
@@ -111,10 +111,10 @@ function EmployeesDetails() {
             .slice(0, 2)
             .map((w) => w[0].toUpperCase())
             .join("") || "?";
-
+ 
     const status = employee.account?.status || "Unknown";
     const isActive = status.toLowerCase() === "active";
-
+ 
     // Each card: section = key inside employee, fields carry the editable key.
     // readOnly fields are shown but never turned into inputs.
     const sections = [
@@ -191,11 +191,11 @@ function EmployeesDetails() {
             ],
         },
     ];
-
+ 
     return (
         <div className="flex h-full justify-center">
             <div className="flex h-full w-full max-w-5xl flex-col overflow-hidden rounded-3xl bg-white shadow-xl">
-
+ 
                 {/* Gradient profile header — fixed */}
                 <div className="shrink-0 bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-500 px-8 py-8 text-white">
                     <div className="flex items-center gap-5">
@@ -225,9 +225,9 @@ function EmployeesDetails() {
                           <div className="mt-1 text-white/120 flex items-center">
                              {employee.employmentInfo?.department
                                     ? ` ${employee.employmentInfo.department} - `
-                                    : ""} 
+                                    : ""}
                               <p className="px-1 text-white/80">
-                          
+                         
                                 {employee.employmentInfo?.designation || "—"}
                                
                             </p>
@@ -240,7 +240,7 @@ function EmployeesDetails() {
                         </div>
                     </div>
                 </div>
-
+ 
                 {/* Body — only this area scrolls */}
                 <div className="flex-1 space-y-6 overflow-y-auto bg-white p-8">
                     {sections.map((section) => {
@@ -261,7 +261,7 @@ function EmployeesDetails() {
                                         </span>
                                         {section.title}
                                     </h2>
-
+ 
                                     {isEditing ? (
                                         <div className="flex gap-2">
                                             <button
@@ -288,7 +288,7 @@ function EmployeesDetails() {
                                         </button>
                                     )}
                                 </div>
-
+ 
                                 <div className="grid grid-cols-2 gap-x-6 gap-y-5">
                                     {section.fields.map((field) => {
                                         const value = employee[section.section]?.[field.key];
@@ -301,7 +301,7 @@ function EmployeesDetails() {
                                                 <p className="text-xs font-medium uppercase tracking-wide text-gray-400">
                                                     {field.label}
                                                 </p>
-
+ 
                                                 {editable ? (
                                                     <input
                                                         type="text"
@@ -333,5 +333,6 @@ function EmployeesDetails() {
         </div>
     );
 }
-
+ 
 export default EmployeesDetails;
+ 

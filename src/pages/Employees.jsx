@@ -1,48 +1,49 @@
 import { useEffect, useState } from "react";
 import { getEmployees } from "../services/EmployeeService";
-import { useNavigate } from "react-router-dom";
+import { useNavigate,useOutletContext } from "react-router-dom";
 import { searchEmployees } from "../utils/search/searchEmployees";
 import Loader from "../components/common/Loader";
-
+ 
 function Employees() {
     const navigate = useNavigate();
     const companyCode = localStorage.getItem("companyCode");
-
+ 
     const [employees, setEmployees] = useState([]);
-    const [search, setSearch] = useState("");
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
-
+    const {search,setSearch,setSearchPlaceholder} = useOutletContext();
+ 
+ 
     const loadEmployees = async () => {
-        setError("");
-
+            setError("");
+ 
         try {
             const data = await getEmployees(companyCode);
-
+ 
             // Flatten the nested sections so the table and searchEmployees
             // can read plain fields (name, employeeId, department, designation)
             const employeeArray = Object.keys(data).map((key) => {
                 const employee = data[key];
-
+ 
                 return {
                     id: key,
-
+ 
                     employeeId:
                         employee.basic?.employeeId ||
                         employee.employmentInfo?.employeeId ||
                         "",
-
+ 
                     name:
                         employee.basic?.name ||
                         employee.employmentInfo?.name ||
                         employee.personalInfo?.name ||
                         "",
-
+ 
                     department:
                         employee.basic?.department ||
                         employee.employmentInfo?.department ||
                         "",
-
+ 
                     designation:
                         employee.basic?.designation ||
                         employee.employmentInfo?.designation ||
@@ -58,15 +59,29 @@ function Employees() {
             setLoading(false);
         }
     };
-
+ 
     useEffect(() => {
         loadEmployees();
     }, []);
-
+ 
     const filteredEmployees = searchEmployees(employees, search);
+ 
+    useEffect(() => {
+        return () => {
+            setSearch("");
+        };
+    }, []);
+    useEffect(() => {
+        setSearchPlaceholder("Search Employees here...");
+        return () => {
+            setSearchPlaceholder("Search...");
+        };
+ 
+    }, []);
+ 
     return (
         <div className="p-2">
-
+ 
             {/* Header */}
             <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
                 <div>
@@ -76,7 +91,7 @@ function Employees() {
                         {employees.length === 1 ? "" : "s"}
                     </p>
                 </div>
-
+ 
                 <button
                     onClick={() => navigate("/employees/add")}
                     className="flex items-center gap-2 rounded-lg bg-indigo-600 px-5 py-2.5 font-medium text-white shadow-sm transition-colors hover:bg-indigo-700"
@@ -85,34 +100,20 @@ function Employees() {
                     Add
                 </button>
             </div>
-
-            {/* Search */}
-            <div className="relative mb-4 max-w-sm">
-                <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
-                    🔍
-                </span>
-                <input
-                    type="text"
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    placeholder="Search by name, ID or department…"
-                    className="w-full rounded-lg border border-gray-200 bg-white py-2.5 pl-10 pr-4 text-sm shadow-sm outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
-                />
-            </div>
             <div className="bg-white rounded-xl shadow mt-6 overflow-hidden">
-
+ 
                 <table className="w-full">
-
+ 
                     <thead className="bg-gray-100">
                         <tr>
                             <th className="px-6 py-4 text-left">Employee ID</th>
                             <th className="px-6 py-4 text-left">Name</th>
                             <th className="px-6 py-4 text-left">Department</th>
                             <th className="px-6 py-4 text-left">Designation</th>
-
+ 
                         </tr>
                     </thead>
-
+ 
                     <tbody>
                         {loading ? (
                             <tr>
@@ -145,34 +146,35 @@ function Employees() {
                             </tr>
                         ) : (
                         filteredEmployees.map((emp) => (
-                            <tr key={emp.id} onClick={() =>navigate(`/employees/${emp.id}`)} className="border-t cursor-pointer hover:bg-gray-50">
-
+                            <tr key={emp.id} onClick={() =>navigate(`/employees/details/${emp.id}`)} className="border-t cursor-pointer hover:bg-gray-50">
+ 
                                 <td className="px-6 py-4">
-                                    {emp.employmentInfo.employeeId}
+                                    {emp.employeeId}
                                 </td>
-
+ 
                                 <td className="px-6 py-4">
-                                    {emp.employmentInfo.name}
+                                    {emp.name}
                                 </td>
-
+ 
                                 <td className="px-6 py-4">
-                                    {emp.employmentInfo.department}
+                                    {emp.department}
                                 </td>
-
+ 
                                 <td className="px-6 py-4">
-                                    {emp.employmentInfo.designation}
+                                    {emp.designation}
                                 </td>
                             </tr>
                         ))
                         )}
                     </tbody>
-
+ 
                 </table>
-
+ 
             </div>
-
+ 
         </div>
     );
 }
-
+ 
 export default Employees;
+ 
