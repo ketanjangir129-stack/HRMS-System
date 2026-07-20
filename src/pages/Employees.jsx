@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { getEmployees } from "../services/EmployeeService";
-import { useNavigate } from "react-router-dom";
+import { useNavigate,useOutletContext } from "react-router-dom";
 import { searchEmployees } from "../utils/search/searchEmployees";
 import Loader from "../components/common/Loader";
 
@@ -9,12 +9,13 @@ function Employees() {
     const companyCode = localStorage.getItem("companyCode");
 
     const [employees, setEmployees] = useState([]);
-    const [search, setSearch] = useState("");
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
+    const {search,setSearch,setSearchPlaceholder} = useOutletContext();
+
 
     const loadEmployees = async () => {
-        setError("");
+            setError("");
 
         try {
             const data = await getEmployees(companyCode);
@@ -64,6 +65,20 @@ function Employees() {
     }, []);
 
     const filteredEmployees = searchEmployees(employees, search);
+
+    useEffect(() => {
+        return () => {
+            setSearch("");
+        };
+    }, []);
+    useEffect(() => {
+        setSearchPlaceholder("Search Employees here...");
+        return () => {
+            setSearchPlaceholder("Search...");
+        };
+
+    }, []);
+
     return (
         <div className="p-2">
 
@@ -84,20 +99,6 @@ function Employees() {
                     <span className="text-lg leading-none">+</span>
                     Add
                 </button>
-            </div>
-
-            {/* Search */}
-            <div className="relative mb-4 max-w-sm">
-                <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
-                    🔍
-                </span>
-                <input
-                    type="text"
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    placeholder="Search by name, ID or department…"
-                    className="w-full rounded-lg border border-gray-200 bg-white py-2.5 pl-10 pr-4 text-sm shadow-sm outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
-                />
             </div>
             <div className="bg-white rounded-xl shadow mt-6 overflow-hidden">
 
