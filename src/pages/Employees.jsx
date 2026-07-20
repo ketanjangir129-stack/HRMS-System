@@ -145,22 +145,22 @@ function Employees() {
                             </tr>
                         ) : (
                         filteredEmployees.map((emp) => (
-                            <tr key={emp.id} onClick={() =>navigate(`/employees/details/${emp.id}`)} className="border-t cursor-pointer hover:bg-gray-50">
+                            <tr key={emp.id} onClick={() =>navigate(`/employees/${emp.id}`)} className="border-t cursor-pointer hover:bg-gray-50">
 
                                 <td className="px-6 py-4">
-                                    {emp.employeeId}
+                                    {emp.employmentInfo.employeeId}
                                 </td>
 
                                 <td className="px-6 py-4">
-                                    {emp.name}
+                                    {emp.employmentInfo.name}
                                 </td>
 
                                 <td className="px-6 py-4">
-                                    {emp.department}
+                                    {emp.employmentInfo.department}
                                 </td>
 
                                 <td className="px-6 py-4">
-                                    {emp.designation}
+                                    {emp.employmentInfo.designation}
                                 </td>
                             </tr>
                         ))

@@ -234,7 +234,7 @@ if (!result.success) {
     <div className="mx-auto max-w-5xl overflow-hidden rounded-2xl bg-white shadow-md">
 
       {/* Gradient header */}
-      <div className="bg-gradient-to-r from-pink-600 via-indigo-600 to-teal-500 px-8 py-7 text-white">
+      <div className="rounded-lg bg-indigo-600  px-8 py-7 text-white">
         <h2 className="text-3xl font-bold">Add Employee</h2>
         <p className="mt-1 text-sm text-white/80">
           Fill in the details below to create a new employee record.
