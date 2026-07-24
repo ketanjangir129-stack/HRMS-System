@@ -149,7 +149,11 @@ const handleSubmit = async (e) => {
   // Validate only the sections shown on this form
   const validationErrors = validateForm({
     personalInfo: employee.personalInfo,
-    employmentInfo: employee.employmentInfo,
+    employmentInfo: {
+      employeeId: employee.employmentInfo.employeeId,
+      department: employee.employmentInfo.department,
+      designation: employee.employmentInfo.designation,
+    },
   });
 
   if (Object.keys(validationErrors).length > 0) {
@@ -231,23 +235,19 @@ if (!result.success) {
 };
 
   return (
-    <div className="mx-auto max-w-5xl overflow-hidden rounded-2xl bg-white shadow-md">
+    <div className="max-w-5xl mx-auto bg-white rounded-2xl shadow-md p-8">
 
-      {/* Gradient header */}
-      <div className="rounded-lg bg-indigo-600  px-8 py-7 text-white">
-        <h2 className="text-3xl font-bold">Add Employee</h2>
-        <p className="mt-1 text-sm text-white/80">
-          Fill in the details below to create a new employee record.
-        </p>
-      </div>
+      <h2 className="text-3xl font-bold mb-8">
+        Add Employee
+      </h2>
 
-      <form onSubmit={handleSubmit} className="p-8">
+      <form onSubmit={handleSubmit}>
 
         <div className="grid grid-cols-2 gap-6">
 
           {/* Employee ID */}
           <div>
-            <label className="mb-2 block text-sm font-medium text-gray-700">
+            <label className="block mb-2 font-medium">
               Employee ID
             </label>
 
@@ -255,11 +255,10 @@ if (!result.success) {
               type="text"
               name="employeeId"
               value={employee.employmentInfo.employeeId}
-              // disabled
               onChange={handleChange}
               required
               placeholder="Enter Employee ID"
-              className="w-full rounded-lg border border-gray-200 p-3 text-sm outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 "
+              className="w-full border rounded-lg p-3"
               onBlur={handleBlur}
             />
 
@@ -272,7 +271,7 @@ if (!result.success) {
 
           {/* Name */}
           <div>
-            <label className="mb-2 block text-sm font-medium text-gray-700">
+            <label className="block mb-2 font-medium">
               Employee Name
             </label>
 
@@ -282,7 +281,7 @@ if (!result.success) {
               value={employee.personalInfo.name}
               onChange={handleChange}
               placeholder="Enter Employee Name"
-              className="w-full rounded-lg border border-gray-200 p-3 text-sm outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
+              className="w-full border rounded-lg p-3"
               onBlur={handleBlur}
             />
 
@@ -295,7 +294,7 @@ if (!result.success) {
 
           {/* Email */}
           <div>
-            <label className="mb-2 block text-sm font-medium text-gray-700">
+            <label className="block mb-2 font-medium">
               Email
             </label>
 
@@ -306,7 +305,7 @@ if (!result.success) {
               value={employee.personalInfo.email}
               onChange={handleChange}
               placeholder="Enter Email"
-              className="w-full rounded-lg border border-gray-200 p-3 text-sm outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
+              className="w-full border rounded-lg p-3"
               onBlur={handleBlur}
             />
 
@@ -319,7 +318,7 @@ if (!result.success) {
 
           {/* Mobile */}
           <div>
-            <label className="mb-2 block text-sm font-medium text-gray-700">
+            <label className="block mb-2 font-medium">
               Mobile Number
             </label>
 
@@ -330,7 +329,7 @@ if (!result.success) {
               value={employee.personalInfo.mobile}
               onChange={handleChange}
               placeholder="Enter Mobile Number"
-              className="w-full rounded-lg border border-gray-200 p-3 text-sm outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
+              className="w-full border rounded-lg p-3"
               onBlur={handleBlur}
             />
 
@@ -341,9 +340,56 @@ if (!result.success) {
             )}
           </div>
 
+          {/* joining date */}
+          <div>
+            <label className="block mb-2 font-medium">
+              joining Date
+            </label>
+
+            <input
+              type="date"
+              name="joiningDate"
+              maxLength={10}
+              value={employee.employmentInfo.joiningDate}
+              onChange={handleChange}
+              placeholder="Employee joiningDate"
+              className="w-full border rounded-lg p-3"
+              onBlur={handleBlur}
+            />
+
+            {errors.joiningDate && (
+              <p className="mt-1 text-sm text-red-500">
+                {errors.joiningDate}
+              </p>
+            )}
+          </div>
+
+          {/* employeeType */}
+          <div>
+            <label className="block mb-2 font-medium">
+              Employee Type
+            </label>
+
+            <input
+              type="text"
+              name="employeeType"
+              value={employee.employmentInfo.employeeType}
+              onChange={handleChange}
+              placeholder="Enter Employee Type (e.g., Full Time)"
+              className="w-full border rounded-lg p-3"
+              onBlur={handleBlur}
+            />
+
+            {errors.employeeType && (
+              <p className="mt-1 text-sm text-red-500">
+                {errors.employeeType}
+              </p>
+            )}
+          </div>
+
           {/* Department */}
           <div>
-            <label className="mb-2 block text-sm font-medium text-gray-700">
+            <label className="block mb-2 font-medium">
               Department
             </label>
 
@@ -352,7 +398,7 @@ if (!result.success) {
               value={employee.employmentInfo.department}
               onChange={handleDepartmentChange}
               onBlur={handleBlur}
-              className="w-full rounded-lg border border-gray-200 p-3 text-sm outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
+              className="w-full border rounded-lg p-3"
             >
               <option value="">Select Department</option>
 
@@ -372,15 +418,14 @@ if (!result.success) {
 
           {/* Designation */}
           <div>
-            <label className="mb-2 block text-sm font-medium text-gray-700">
+            <label className="block mb-2 font-medium">
               Designation
             </label>
             <select
               name="designation"
               value={employee.employmentInfo.designation}
               onChange={handleChange}
-              onBlur={handleBlur}
-              className="w-full rounded-lg border border-gray-200 p-3 text-sm outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
+              className="w-full border rounded-lg p-3"
             >
               <option value="">Select Designation</option>
 
@@ -391,12 +436,6 @@ if (!result.success) {
               ))}
             </select>
 
-            {errors.designation && (
-              <p className="mt-1 text-sm text-red-500">
-                {errors.designation}
-              </p>
-            )}
-
           </div>
 
         </div>
@@ -404,7 +443,7 @@ if (!result.success) {
         {/* Address */}
         <div className="mt-6">
 
-          <label className="mb-2 block text-sm font-medium text-gray-700">
+          <label className="block mb-2 font-medium">
             Address
           </label>
 
@@ -415,8 +454,7 @@ if (!result.success) {
             onBlur={handleBlur}
             rows="4"
             placeholder="Enter Address"
-            className="w-full rounded-lg border border-gray-200 p-3 text-sm outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 resize-none"
-
+            className="w-full border rounded-lg p-3 resize-none"
           />
 
           {errors.address && (
@@ -427,11 +465,11 @@ if (!result.success) {
 
         </div>
 
-        <div className="mt-8 flex justify-end gap-4  pt-6">
+        <div className="flex justify-end gap-4 mt-8">
 
           <button
             type="submit"
-            className="rounded-lg bg-indigo-600 px-8 py-3 font-medium text-white shadow-sm transition-colors hover:bg-indigo-700"
+            className="px-6 py-3 bg-blue-600 text-white rounded-lg disabled:opacity-50"
           >
             Save
           </button>

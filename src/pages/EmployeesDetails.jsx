@@ -1,6 +1,19 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { getEmployeeById, updateEmployee } from "../services/EmployeeService";
+import {
+  BadgeCheck,
+  BriefcaseBusiness,
+  ChevronDown,
+  ChevronUp,
+  Eye,
+  EyeOff,
+  FileText,
+  Landmark,
+  Pencil,
+  UserRound,
+  WalletCards,
+} from "lucide-react";
  
 function EmployeesDetails() {
     const companyCode = localStorage.getItem("companyCode");
@@ -12,6 +25,22 @@ function EmployeesDetails() {
     const [editingSection, setEditingSection] = useState(null);
     const [formData, setFormData] = useState({});
     const [saving, setSaving] = useState(false);
+
+    // Every section starts collapsed — the user opens what they need.
+    const [expanded, setExpanded] = useState({});
+    const [revealed, setRevealed] = useState({});
+
+    const toggleExpand = (sectionId) =>
+        setExpanded((prev) => ({ ...prev, [sectionId]: !prev[sectionId] }));
+
+    const toggleReveal = (fieldId) =>
+        setRevealed((prev) => ({ ...prev, [fieldId]: !prev[fieldId] }));
+
+    // Keep the last 4 characters visible, mask the rest
+    const maskValue = (value) => {
+        const text = String(value);
+        return text.length <= 4 ? "X".repeat(text.length) : "X".repeat(text.length - 4) + text.slice(-4);
+    };
  
     useEffect(() => {
         loadEmployee();
@@ -21,9 +50,10 @@ function EmployeesDetails() {
         const data = await getEmployeeById(companyCode, id);
         const formattedEmployee = {
             personalInfo: {
-                name: data.employmentInfo?.name || "",
-                email: data.employmentInfo?.email || "",
-                mobile: data.employmentInfo?.mobile || "",
+                ...data.personalInfo,
+                name: data.personalInfo?.name || data.employmentInfo?.name || "",
+                email: data.personalInfo?.email || data.employmentInfo?.email || "",
+                mobile: data.personalInfo?.mobile || data.employmentInfo?.mobile || "",
  
                 gender: data.personalInfo?.gender || "",
                 dob: data.personalInfo?.dob || "",
@@ -34,29 +64,35 @@ function EmployeesDetails() {
                     ${data.personalInfo?.state || ""}
                     ${data.personalInfo?.pincode || ""}`.trim(),
             },
- 
+
             employmentInfo: {
-                employeeId: data.employmentInfo?.employeeId || "",
-                department: data.employmentInfo?.department || "",
-                designation: data.employmentInfo?.designation || "",
-                joiningDate: data.personalInfo?.joiningDate || "",
+                ...data.employmentInfo,
+                employeeId: data.employmentInfo?.employeeId || data.basic?.employeeId || "",
+                department: data.employmentInfo?.department || data.basic?.department || "",
+                designation: data.employmentInfo?.designation || data.basic?.designation || "",
+                joiningDate: data.employmentInfo?.joiningDate || "",
             },
- 
+
             bankInfo: {
+                ...data.bankInfo,
                 bankName: data.bankInfo?.bankName || "",
                 accountNumber: data.bankInfo?.accountNumber || "",
-                ifscCode: data.bankInfo?.ifscCode || "",
-                branch: data.bankInfo?.branchName || "",
+                ifsc: data.bankInfo?.ifsc || data.bankInfo?.ifscCode || "",
+                branch: data.bankInfo?.branch || data.bankInfo?.branchName || "",
             },
- 
+
             documents: {
-                aadhaar: data.documents?.aadhaarNumber || "",
-                pan: data.documents?.panNumber || "",
-                uan: data.documents?.uanNumber || "",
-                esic: data.documents?.esicNumber || "",
+                ...data.documents,
+                aadhaar: data.documents?.aadhaar || data.documents?.aadhaarNumber || "",
+                pan: data.documents?.pan || data.documents?.panNumber || "",
+                uan: data.documents?.uan || data.documents?.uanNumber || "",
+                esic: data.documents?.esic || data.documents?.esicNumber || "",
             },
- 
+
+            salaryInfo: data.salaryInfo || {},
+
             account: {
+                ...data.account,
                 status: data.status || "Active",
             },
         };
@@ -67,6 +103,7 @@ function EmployeesDetails() {
     const startEdit = (sectionId) => {
         setFormData({ ...(employee[sectionId] || {}) });
         setEditingSection(sectionId);
+        setExpanded((prev) => ({ ...prev, [sectionId]: true }));
     };
  
     const cancelEdit = () => {
@@ -120,9 +157,9 @@ function EmployeesDetails() {
     const sections = [
         {
             section: "personalInfo",
-            icon: "👤",
+            icon: UserRound,
             title: "Personal Information",
-            accent: "bg-indigo-50",
+            accent: "bg-indigo-50 text-indigo-600",
             fields: [
                 { key: "name", label: "Name" },
                 { key: "email", label: "Email" },
@@ -134,9 +171,9 @@ function EmployeesDetails() {
         },
         {
             section: "employmentInfo",
-            icon: "💼",
+            icon: BriefcaseBusiness,
             title: "Employment Information",
-            accent: "bg-purple-50",
+            accent: "bg-violet-50 text-violet-600",
             fields: [
                 { key: "employeeId", label: "Employee ID", readOnly: true },
                 { key: "department", label: "Department" },
@@ -147,9 +184,9 @@ function EmployeesDetails() {
         },
         {
             section: "salaryInfo",
-            icon: "💰",
+            icon: WalletCards,
             title: "Salary Information",
-            accent: "bg-emerald-50",
+            accent: "bg-emerald-50 text-emerald-600",
             fields: [
                 { key: "basicSalary", label: "Basic Salary" },
                 { key: "bonus", label: "Bonus" },
@@ -158,46 +195,46 @@ function EmployeesDetails() {
         },
         {
             section: "account",
-            icon: "🔐",
+            icon: BadgeCheck,
             title: "Account Information",
-            accent: "bg-amber-50",
+            accent: "bg-amber-50 text-amber-600",
             fields: [
                 { key: "username", label: "Username" },
-                { key: "password", label: "Password" },
+                { key: "password", label: "Password", masked: true },
                 { key: "status", label: "Status" },
             ],
         },
         {
             section: "bankInfo",
-            icon: "🏦",
+            icon: Landmark,
             title: "Bank Information",
-            accent: "bg-sky-50",
+            accent: "bg-sky-50 text-sky-600",
             fields: [
                 { key: "bankName", label: "Bank Name" },
                 { key: "branch", label: "Branch" },
-                { key: "accountNumber", label: "Account Number" },
-                { key: "ifscCode", label: "IFSC Code" },
+                { key: "accountNumber", label: "Account Number", masked: true },
+                { key: "ifsc", label: "IFSC Code" },
             ],
         },
         {
             section: "documents",
-            icon: "📂",
+            icon: FileText,
             title: "Documents",
-            accent: "bg-rose-50",
+            accent: "bg-rose-50 text-rose-600",
             fields: [
                 { key: "resume", label: "Resume" },
-                { key: "aadhaar", label: "Aadhaar Number" },
-                { key: "pan", label: "PAN Number" },
+                { key: "aadhaar", label: "Aadhaar Number", masked: true },
+                { key: "pan", label: "PAN Number", masked: true },
             ],
         },
     ];
  
+
     return (
-        <div className="flex h-full justify-center">
-            <div className="flex h-full w-full max-w-5xl flex-col overflow-hidden rounded-3xl bg-white shadow-xl">
+        <div className="w-full space-y-6">
  
-                {/* Gradient profile header — fixed */}
-                <div className="shrink-0 bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-500 px-8 py-8 text-white">
+                {/* Gradient profile header */}
+                <div className="rounded-3xl bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-500 px-8 py-8 text-white shadow-lg">
                     <div className="flex items-center gap-5">
                         <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-2xl bg-white/20 text-2xl font-bold ring-2 ring-white/30">
                             {initials}
@@ -241,95 +278,136 @@ function EmployeesDetails() {
                     </div>
                 </div>
  
-                {/* Body — only this area scrolls */}
-                <div className="flex-1 space-y-6 overflow-y-auto bg-white p-8">
+                {/* Cards */}
+                <div className="space-y-5">
                     {sections.map((section) => {
                         const isEditing = editingSection === section.section;
+                        const isOpen = !!expanded[section.section];
+                        const Icon = section.icon;
                         return (
                             <section
                                 key={section.section}
-                                className="rounded-2xl border border-gray-100 bg-gray-50 p-6 shadow-sm
-                                           transition-all duration-200 hover:shadow-md"
+                                className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm
+                                           transition-shadow duration-200 hover:shadow-md"
                             >
-                                {/* Card header with Edit / Save-Cancel */}
-                                <div className="mb-5 flex items-center justify-between border-b pb-3">
-                                    <h2 className="flex items-center gap-3 text-lg font-semibold text-gray-800">
+                                {/* Tinted header strip: title left, actions right */}
+                                <div className="flex items-center justify-between gap-4 border-b border-gray-100 bg-gray-50/80 px-6 py-4">
+                                    <h2 className="flex min-w-0 items-center gap-3">
                                         <span
-                                            className={`flex h-9 w-9 items-center justify-center rounded-xl text-lg ${section.accent}`}
+                                            className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${section.accent}`}
                                         >
-                                            {section.icon}
+                                            <Icon className="h-4 w-4" />
                                         </span>
-                                        {section.title}
+                                        <span className="truncate text-xs font-semibold uppercase tracking-wider text-gray-500">
+                                            {section.title}
+                                        </span>
                                     </h2>
- 
-                                    {isEditing ? (
-                                        <div className="flex gap-2">
-                                            <button
-                                                onClick={cancelEdit}
-                                                disabled={saving}
-                                                className="rounded-lg px-3 py-1.5 text-sm font-medium text-gray-500 transition hover:bg-gray-200"
-                                            >
-                                                Cancel
-                                            </button>
-                                            <button
-                                                onClick={() => saveSection(section.section)}
-                                                disabled={saving}
-                                                className="rounded-lg bg-indigo-600 px-4 py-1.5 text-sm font-medium text-white transition hover:bg-indigo-700 disabled:opacity-60"
-                                            >
-                                                {saving ? "Saving…" : "Save"}
-                                            </button>
-                                        </div>
-                                    ) : (
-                                        <button
-                                            onClick={() => startEdit(section.section)}
-                                            className="flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm font-medium text-gray-600 transition hover:border-indigo-300 hover:text-indigo-600"
-                                        >
-                                            ✏️ Edit
-                                        </button>
-                                    )}
+
+                                    <div className="flex shrink-0 items-center gap-2">
+                                        {isEditing ? (
+                                            <>
+                                                <button
+                                                    onClick={cancelEdit}
+                                                    disabled={saving}
+                                                    className="rounded-lg px-3 py-1.5 text-sm font-medium text-gray-500 transition hover:bg-gray-200"
+                                                >
+                                                    Cancel
+                                                </button>
+                                                <button
+                                                    onClick={() => saveSection(section.section)}
+                                                    disabled={saving}
+                                                    className="rounded-lg bg-indigo-600 px-4 py-1.5 text-sm font-medium text-white transition hover:bg-indigo-700 disabled:opacity-60"
+                                                >
+                                                    {saving ? "Saving…" : "Save"}
+                                                </button>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <button
+                                                    onClick={() => startEdit(section.section)}
+                                                    className="flex items-center gap-1.5 text-sm font-medium text-indigo-600 transition hover:text-indigo-700"
+                                                >
+                                                    <Pencil className="h-3.5 w-3.5" /> Edit
+                                                </button>
+                                                <button
+                                                    onClick={() => toggleExpand(section.section)}
+                                                    aria-label={isOpen ? "Collapse" : "Expand"}
+                                                    aria-expanded={isOpen}
+                                                    className="flex h-7 w-7 items-center justify-center rounded-full border border-gray-300 text-gray-400 transition hover:border-indigo-300 hover:text-indigo-600"
+                                                >
+                                                    {isOpen ? (
+                                                        <ChevronUp className="h-4 w-4" />
+                                                    ) : (
+                                                        <ChevronDown className="h-4 w-4" />
+                                                    )}
+                                                </button>
+                                            </>
+                                        )}
+                                    </div>
                                 </div>
- 
-                                <div className="grid grid-cols-2 gap-x-6 gap-y-5">
-                                    {section.fields.map((field) => {
-                                        const value = employee[section.section]?.[field.key];
-                                        const editable = isEditing && !field.readOnly;
-                                        return (
-                                            <div
-                                                key={field.key}
-                                                className={field.full ? "col-span-2" : ""}
-                                            >
-                                                <p className="text-xs font-medium uppercase tracking-wide text-gray-400">
-                                                    {field.label}
-                                                </p>
- 
-                                                {editable ? (
-                                                    <input
-                                                        type="text"
-                                                        value={formData[field.key] || ""}
-                                                        onChange={(e) =>
-                                                            handleFieldChange(
-                                                                field.key,
-                                                                e.target.value
-                                                            )
-                                                        }
-                                                        className="mt-1 w-full rounded-lg border border-gray-200 bg-white p-2 text-sm outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
-                                                    />
-                                                ) : (
-                                                    <p className="mt-1 font-medium text-gray-800 break-words">
-                                                        {value || (
-                                                            <span className="text-gray-300">—</span>
-                                                        )}
+
+                                {isOpen && (
+                                    <div className="divide-y divide-gray-100 px-6 py2">
+                                        {section.fields.map((field) => {
+                                            const value = employee[section.section]?.[field.key];
+                                            const editable = isEditing && !field.readOnly;
+                                            const fieldId = `${section.section}.${field.key}`;
+                                            const isHidden = field.masked && !revealed[fieldId];
+                                            return (
+                                                <div
+                                                    key={field.key}
+                                                    className={field.full ? "sm:col-span-2 lg:col-span-3" : ""}
+                                                >
+                                                    <p className="w-40 shrink-0 text-xs font-medium uppercase tracking-wide text-gray-40">
+                                                        {field.label}
                                                     </p>
-                                                )}
-                                            </div>
-                                        );
-                                    })}
-                                </div>
+
+                                                    {editable ? (
+                                                        // <input className ="flex-1 text-right"
+                                                        <input
+                                                            type="text"
+                                                            value={formData[field.key] || ""}
+                                                            onChange={(e) =>
+                                                                handleFieldChange(
+                                                                    field.key,
+                                                                    e.target.value
+                                                                )
+                                                            }
+                                                            className="mt-1.5 w-full rounded-lg border border-gray-200 bg-white p-2 text-sm outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
+                                                        />
+                                                    ) : (
+                                                        <div className="mt-1.5 flex items-center gap-2">
+                                                            <p className="break-words font-medium text-gray-800">
+                                                                {value ? (
+                                                                    isHidden ? maskValue(value) : value
+                                                                ) : (
+                                                                    <span className="text-gray-300">—</span>
+                                                                )}
+                                                            </p>
+                                                            {field.masked && value && (
+                                                                <button
+                                                                    onClick={() => toggleReveal(fieldId)}
+                                                                    aria-label={isHidden ? "Show value" : "Hide value"}
+                                                                    className="shrink-0 text-gray-400 transition hover:text-indigo-600"
+                                                                >
+                                                                    {isHidden ? (
+                                                                        <Eye className="h-4 w-4" />
+                                                                    ) : (
+                                                                        <EyeOff className="h-4 w-4" />
+                                                                    )}
+                                                                </button>
+                                                            )}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                )}
                             </section>
                         );
                     })}
                 </div>
-            </div>
         </div>
     );
 }

@@ -6,9 +6,9 @@ import {ref , get , set,remove , update} from  "firebase/database";
 // addEmployee writes. Map between the two so approved employees render the
 // same as manually added ones.
 const toEmployeeRecord = (request, employeeId) => {
-  const basic = request.basic || {};
-  const personal = request.personal || {};
-  const bank = request.bank || {};
+  const basic = request.employmentInfo || request.basic || {};
+  const personal = request.personalInfo || request.personal || {};
+  const bank = request.bankInfo || request.bank || {};
   const documents = request.documents || {};
 
   return {
@@ -32,23 +32,23 @@ const toEmployeeRecord = (request, employeeId) => {
       employeeId,
       department: basic.department || "",
       designation: basic.designation || "",
-      joiningDate: request.employment?.joiningDate || "",
-      employeeType: request.employment?.employeeType || "",
+      joiningDate: basic.joiningDate || request.employment?.joiningDate || "",
+      employeeType: basic.employeeType || request.employment?.employeeType || "",
     },
 
     bankInfo: {
       bankName: bank.bankName || "",
       accountHolderName: bank.accountHolderName || "",
       accountNumber: bank.accountNumber || "",
-      ifsc: bank.ifscCode || "",
-      branch: bank.branchName || "",
+      ifsc: bank.ifsc || bank.ifscCode || "",
+      branch: bank.branch || bank.branchName || "",
     },
 
     documents: {
-      aadhaar: documents.aadhaarNumber || "",
-      pan: documents.panNumber || "",
-      uan: documents.uanNumber || "",
-      esic: documents.esicNumber || "",
+      aadhaar: documents.aadhaar || documents.aadhaarNumber || "",
+      pan: documents.pan || documents.panNumber || "",
+      uan: documents.uan || documents.uanNumber || "",
+      esic: documents.esic || documents.esicNumber || "",
     },
 
     account: {

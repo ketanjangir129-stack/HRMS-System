@@ -6,7 +6,7 @@ export const validateField = (name, value, formData = {}) => {
   if (!rule) return "";
 
   // Required validation
-  if (rule.required && !value.trim()) {
+  if (rule.required && !String(value ?? "").trim()) {
     return "This field is required.";
   }
 

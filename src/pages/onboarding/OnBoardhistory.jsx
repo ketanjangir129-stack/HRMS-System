@@ -141,11 +141,11 @@ function Onboardinghistory() {
 
                                     <td className="px-4 py-3 border-b text-center">{request.id}</td>
 
-                                    <td className="px-4 py-3 border-b text-center">{request.request.basic.name}</td>
+                                    <td className="px-4 py-3 border-b text-center">{request.request.employmentInfo.name}</td>
 
-                                    <td className="px-4 py-3 border-b text-center">{request.request.basic.department}</td>
+                                    <td className="px-4 py-3 border-b text-center">{request.request.employmentInfo.department}</td>
 
-                                    <td className="px-4 py-3 border-b text-center">{request.request.basic.designation}</td>
+                                    <td className="px-4 py-3 border-b text-center">{request.request.employmentInfo.designation}</td>
                                     
 
                                     <td className="px-4 py-3 border-b text-center">

@@ -3,6 +3,7 @@ import { getEmployees } from "../services/EmployeeService";
 import { useNavigate,useOutletContext } from "react-router-dom";
 import { searchEmployees } from "../utils/search/searchEmployees";
 import Loader from "../components/common/Loader";
+import { UserPlus } from "lucide-react";
  
 function Employees() {
     const navigate = useNavigate();
@@ -35,8 +36,14 @@ function Employees() {
  
                     name:
                         employee.basic?.name ||
-                        employee.employmentInfo?.name ||
                         employee.personalInfo?.name ||
+                        employee.employmentInfo?.name ||
+                        "",
+
+                        email:
+                        employee.basic?.email ||
+                        employee.personalInfo?.email ||
+                        employee.employmentInfo?.email ||
                         "",
  
                     department:
@@ -80,50 +87,51 @@ function Employees() {
     }, []);
  
     return (
-        <div className="p-2">
- 
+        <div className="p-6 bg-white rounded-xl shadow">
+
             {/* Header */}
-            <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
+            <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
                 <div>
-                    <h1 className="text-3xl font-bold text-gray-800">Employees</h1>
+                    <h1 className="text-2xl font-bold text-gray-800">Employees</h1>
                     <p className="mt-1 text-sm text-gray-500">
                         {employees.length} total employee
                         {employees.length === 1 ? "" : "s"}
                     </p>
                 </div>
- 
+
                 <button
                     onClick={() => navigate("/employees/add")}
-                    className="flex items-center gap-2 rounded-lg bg-indigo-600 px-5 py-2.5 font-medium text-white shadow-sm transition-colors hover:bg-indigo-700"
+                    className="group inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-indigo-600/20 transition-all duration-200 hover:-translate-y-0.5 hover:bg-indigo-700 hover:shadow-lg hover:shadow-indigo-600/30 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:ring-offset-2 active:translate-y-0"
                 >
-                    <span className="text-lg leading-none">+</span>
-                    Add
+                    <UserPlus className="h-4 w-4 transition-transform duration-200 group-hover:scale-110" />
+                
                 </button>
             </div>
-            <div className="bg-white rounded-xl shadow mt-6 overflow-hidden">
- 
-                <table className="w-full">
- 
+
+            {/* Table */}
+            <div className="overflow-x-auto">
+                <table className="min-w-full border-collapse">
+
                     <thead className="bg-gray-100">
                         <tr>
-                            <th className="px-6 py-4 text-left">Employee ID</th>
-                            <th className="px-6 py-4 text-left">Name</th>
-                            <th className="px-6 py-4 text-left">Department</th>
-                            <th className="px-6 py-4 text-left">Designation</th>
- 
+                            <th className="px-4 py-3 text-center">Employee ID</th>
+                            <th className="px-4 py-3 text-center">Name</th>
+                            <th className="px-4 py-3 text-center">Email</th>
+                            <th className="px-4 py-3 text-center">Department</th>
+                            <th className="px-4 py-3 text-center">Designation</th>
                         </tr>
                     </thead>
- 
+
                     <tbody>
                         {loading ? (
                             <tr>
-                                <td colSpan={4} className="px-6 py-12">
+                                <td colSpan={5} className="px-6 py-12">
                                     <Loader text="Loading employees..." />
                                 </td>
                             </tr>
                         ) : error ? (
                             <tr>
-                                <td colSpan={4} className="px-6 py-12 text-center">
+                                <td colSpan={5} className="px-6 py-12 text-center">
                                     <p className="text-red-600">{error}</p>
                                     <button
                                         onClick={() => {
@@ -138,7 +146,7 @@ function Employees() {
                             </tr>
                         ) : filteredEmployees.length === 0 ? (
                             <tr>
-                                <td colSpan={4} className="px-6 py-12 text-center text-gray-400">
+                                <td colSpan={5} className="px-6 py-12 text-center text-gray-400">
                                     {search
                                         ? "No employees match your search."
                                         : "No employees yet."}
@@ -146,32 +154,38 @@ function Employees() {
                             </tr>
                         ) : (
                         filteredEmployees.map((emp) => (
-                            <tr key={emp.id} onClick={() =>navigate(`/employees/details/${emp.id}`)} className="border-t cursor-pointer hover:bg-gray-50">
- 
-                                <td className="px-6 py-4">
+                            <tr
+                                key={emp.id}
+                                onClick={() => navigate(`/employees/details/${emp.id}`)}
+                                className="hover:bg-gray-50 transition cursor-pointer"
+                            >
+                                <td className="px-4 py-3 border-b text-center">
                                     {emp.employeeId}
                                 </td>
- 
-                                <td className="px-6 py-4">
+
+                                <td className="px-4 py-3 border-b text-center">
                                     {emp.name}
                                 </td>
- 
-                                <td className="px-6 py-4">
+
+                                <td className="px-4 py-3 border-b text-center">
+                                    {emp.email}
+                                </td>
+
+                                <td className="px-4 py-3 border-b text-center">
                                     {emp.department}
                                 </td>
- 
-                                <td className="px-6 py-4">
+
+                                <td className="px-4 py-3 border-b text-center">
                                     {emp.designation}
                                 </td>
                             </tr>
                         ))
                         )}
                     </tbody>
- 
+
                 </table>
- 
             </div>
- 
+
         </div>
     );
 }

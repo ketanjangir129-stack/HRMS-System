@@ -8,150 +8,150 @@ import { validateForm } from "../../utils/validation/validateForm";
 function OnBoardForm() {
 
   const initialState = {
-  employeeId: "",
-  name: "",
-  email: "",
-  mobile: "",
-  department: "",
-  designation: "",
-  joiningDate: "",
-  employeeType: "",
-};
+    employeeId: "",
+    name: "",
+    email: "",
+    mobile: "",
+    department: "",
+    designation: "",
+    joiningDate: "",
+    employeeType: "",
+  };
 
-const companyCode = localStorage.getItem("companyCode");
+  const companyCode = localStorage.getItem("companyCode");
 
-const [employee, setEmployee] = useState(initialState);
+  const [employee, setEmployee] = useState(initialState);
 
-const [errors, setErrors] = useState({});
+  const [errors, setErrors] = useState({});
 
-const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-const [departments, setDepartments] = useState([]);
+  const [departments, setDepartments] = useState([]);
 
-const [designations, setDesignations] = useState([]);
+  const [designations, setDesignations] = useState([]);
 
   useEffect(() => {
-  loadDepartments();
-}, []);
+    loadDepartments();
+  }, []);
 
-const loadDepartments = async () => {
-  const data = await getDepartments(companyCode);
+  const loadDepartments = async () => {
+    const data = await getDepartments(companyCode);
 
-  const departmentArray = Object.keys(data || {}).map((key) => ({
-    id: key,
-    ...data[key],
-  }));
+    const departmentArray = Object.keys(data || {}).map((key) => ({
+      id: key,
+      ...data[key],
+    }));
 
-  setDepartments(departmentArray);
-};
+    setDepartments(departmentArray);
+  };
 
 
   const handleChange = (e) => {
-  const { name, value } = e.target;
+    const { name, value } = e.target;
 
-  setEmployee((prev) => ({
-    ...prev,
-    [name]: value,
-  }));
+    setEmployee((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
 
-  setErrors((prev) => ({
-    ...prev,
-    [name]: "",
-  }));
-};
- const handleDepartmentChange = (e) => {
-  const department = e.target.value;
+    setErrors((prev) => ({
+      ...prev,
+      [name]: "",
+    }));
+  };
+  const handleDepartmentChange = (e) => {
+    const department = e.target.value;
 
-  setEmployee((prev) => ({
-    ...prev,
-    department,
-    designation: "",
-  }));
+    setEmployee((prev) => ({
+      ...prev,
+      department,
+      designation: "",
+    }));
 
-  setErrors((prev) => ({
-    ...prev,
-    department: "",
-    designation: "",
-  }));
+    setErrors((prev) => ({
+      ...prev,
+      department: "",
+      designation: "",
+    }));
 
-  const selected = departments.find(
-    (item) => item.name === department
-  );
-
-  if (!selected) {
-    setDesignations([]);
-    return;
-  }
-
-  const designationArray = selected.designations
-    ? Object.keys(selected.designations).map((key) => ({
-        id: key,
-        ...selected.designations[key],
-      }))
-    : [];
-
-  setDesignations(designationArray);
-};
-
- const handleBlur = (e) => {
-  const { name, value } = e.target;
-
-  setErrors((prev) => ({
-    ...prev,
-    [name]: validateField(name, value, employee),
-  }));
-};
-
-const handleSubmit = async (e) => {
-  e.preventDefault();
-
-  const validationErrors = validateForm(employee);
-
-  if (Object.keys(validationErrors).length > 0) {
-    setErrors(validationErrors);
-    return;
-  }
-
-  setLoading(true);
-
-  try {
-
-    const result = await createOnboardingRequest(
-      companyCode,
-      employee
+    const selected = departments.find(
+      (item) => item.name === department
     );
-    console.log("Invitation Link:",result.invitationLink);
 
-    if (!result.success) {
-
-      setErrors((prev) => ({
-        ...prev,
-        [result.field]: result.message,
-      }));
-
+    if (!selected) {
+      setDesignations([]);
       return;
     }
 
-    toast.success(result.message);
+    const designationArray = selected.designations
+      ? Object.keys(selected.designations).map((key) => ({
+        id: key,
+        ...selected.designations[key],
+      }))
+      : [];
 
-    setEmployee(initialState);
+    setDesignations(designationArray);
+  };
 
-    setErrors({});
+  const handleBlur = (e) => {
+    const { name, value } = e.target;
 
-    setDesignations([]);
+    setErrors((prev) => ({
+      ...prev,
+      [name]: validateField(name, value, employee),
+    }));
+  };
 
-  } catch (error) {
+  const handleSubmit = async (e) => {
+    e.preventDefault();
 
-    console.error(error);
+    const validationErrors = validateForm(employee);
 
-    toast.error("Failed to create onboarding request.");
+    if (Object.keys(validationErrors).length > 0) {
+      setErrors(validationErrors);
+      return;
+    }
 
-  } finally {
+    setLoading(true);
 
-    setLoading(false);
+    try {
 
-  }
-};
+      const result = await createOnboardingRequest(
+        companyCode,
+        employee
+      );
+      console.log("Invitation Link:", result.invitationLink);
+
+      if (!result.success) {
+
+        setErrors((prev) => ({
+          ...prev,
+          [result.field]: result.message,
+        }));
+
+        return;
+      }
+
+      toast.success(result.message);
+
+      setEmployee(initialState);
+
+      setErrors({});
+
+      setDesignations([]);
+
+    } catch (error) {
+
+      console.error(error);
+
+      toast.error("Failed to create onboarding request.");
+
+    } finally {
+
+      setLoading(false);
+
+    }
+  };
 
   return (
     <div className="max-w-5xl mx-auto bg-white rounded-2xl shadow-md p-8">
@@ -259,8 +259,8 @@ const handleSubmit = async (e) => {
               </p>
             )}
           </div>
-           {/* joining date */}
- <div>
+          {/* joining date */}
+          <div>
             <label className="block mb-2 font-medium">
               joining Date
             </label>
@@ -282,6 +282,7 @@ const handleSubmit = async (e) => {
               </p>
             )}
           </div>
+          
           {/* employeeType */}
           <div>
             <label className="block mb-2 font-medium">
@@ -352,7 +353,7 @@ const handleSubmit = async (e) => {
                 </option>
               ))}
             </select>
-            
+
           </div>
 
         </div>
@@ -361,14 +362,14 @@ const handleSubmit = async (e) => {
         <div className="flex justify-end gap-4 mt-8">
 
           <button
-  type="submit"
-  disabled={loading}
-  className="px-6 py-3 bg-blue-600 text-white rounded-lg disabled:opacity-50"
->
-  {loading
-    ? "Sending Invitation..."
-    : "Send Invitation"}
-</button>
+            type="submit"
+            disabled={loading}
+            className="px-6 py-3 bg-blue-600 text-white rounded-lg disabled:opacity-50"
+          >
+            {loading
+              ? "Sending Invitation..."
+              : "Send Invitation"}
+          </button>
 
         </div>
 
