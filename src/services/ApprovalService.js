@@ -34,6 +34,7 @@ const toEmployeeRecord = (request, employeeId) => {
       designation: basic.designation || "",
       joiningDate: basic.joiningDate || request.employment?.joiningDate || "",
       employeeType: basic.employeeType || request.employment?.employeeType || "",
+      role: basic.role || "employee",
     },
 
     bankInfo: {
@@ -52,6 +53,7 @@ const toEmployeeRecord = (request, employeeId) => {
     },
 
     account: {
+      ...(request.account || {}),
       status: "Active",
     },
   };

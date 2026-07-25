@@ -3,55 +3,59 @@ import { createEmployee } from "../services/EmployeeService";
 import { getDepartments } from "../services/departmentService"
 import { validateField } from "../utils/validation/validateField";
 import { validateForm } from "../utils/validation/validateForm";
+import { useNavigate } from "react-router-dom";
+
 function EmployeeForm() {
 
   const companyCode = localStorage.getItem("companyCode");
   const [employee, setEmployee] = useState({
-  personalInfo: {
-    name: "",
-    email: "",
-    mobile: "",
-    address: "",
-    gender: "",
-    dob: "",
-  },
+    personalInfo: {
+      name: "",
+      email: "",
+      mobile: "",
+      address: "",
+      gender: "",
+      dob: "",
+    },
 
-  employmentInfo: {
-    employeeId: "",
-    department: "",
-    designation: "",
-    joiningDate: "",
-    employeeType: "",
-  },
+    employmentInfo: {
+      employeeId: "",
+      department: "",
+      designation: "",
+      joiningDate: "",
+      employeeType: "",
+    },
 
-  bankInfo: {
-    bankName: "",
-    accountNumber: "",
-    ifsc: "",
-    branch: "",
-  },
+    bankInfo: {
+      bankName: "",
+      accountNumber: "",
+      ifsc: "",
+      branch: "",
+    },
 
-  salaryInfo: {
-    basicSalary: "",
-    hra: "",
-    bonus: "",
-  },
+    salaryInfo: {
+      basicSalary: "",
+      hra: "",
+      bonus: "",
+    },
 
-  documents: {
-    aadhaar: "",
-    pan: "",
-    resume: "",
-  },
-
-  account: {
-    username: "",
-    password: "",
-    status: "Active",
-  },
-});
+    documents: {
+      aadhaar: "",
+      pan: "",
+      resume: "",
+    },
+    account: {
+      username: "",
+      password: "",
+      role: "employee",
+      status: "Active",
+      isPasswordChanged: false,
+    },
+  });
 
   const [departments, setDepartments] = useState([]);
   const [designations, setDesignations] = useState([]);
+  const navigate = useNavigate();
 
   useEffect(() => {
     loadDepartments();
@@ -75,42 +79,50 @@ function EmployeeForm() {
 
 
   const handleChange = (e) => {
-  const { name, value } = e.target;
+    const { name, value } = e.target;
 
-  if (["name", "email", "mobile", "address", "gender", "dob"].includes(name)) {
-    setEmployee({
-      ...employee,
-      personalInfo: {
-        ...employee.personalInfo,
-        [name]: value,
-      },
-    });
-  }
+    if (["name", "email", "mobile", "address", "gender", "dob"].includes(name)) {
+      setEmployee({
+        ...employee,
+        personalInfo: {
+          ...employee.personalInfo,
+          [name]: value,
+        },
+      });
+    }
 
-  else if (
-    ["employeeId", "department", "designation", "joiningDate", "employeeType"].includes(name)
-  ) {
-    setEmployee({
-      ...employee,
-      employmentInfo: {
-        ...employee.employmentInfo,
-        [name]: value,
-      },
-    });
-  }
-};
+    else if (
+      ["employeeId", "department", "designation", "joiningDate", "employeeType"].includes(name)
+    ) {
+      setEmployee({
+        ...employee,
+        employmentInfo: {
+          ...employee.employmentInfo,
+          [name]: value,
+        },
+      });
+    }else if (name === "role") {
+      setEmployee({
+          ...employee,
+          account: {
+              ...employee.account,
+              role: value,
+          },
+      });
+    }
+  };
 
   const handleDepartmentChange = (e) => {
     const selectedDepartment = e.target.value;
 
-   setEmployee({
-  ...employee,
-  employmentInfo: {
-    ...employee.employmentInfo,
-    department: selectedDepartment,
-    designation: "",
-  },
-});
+    setEmployee({
+      ...employee,
+      employmentInfo: {
+        ...employee.employmentInfo,
+        department: selectedDepartment,
+        designation: "",
+      },
+    });
 
     const dept = departments.find(
       (item) => item.name === selectedDepartment
@@ -140,99 +152,102 @@ function EmployeeForm() {
   };
   const [errors, setErrors] = useState({});
 
-const handleSubmit = async (e) => {
-  e.preventDefault();
+  const handleSubmit = async (e) => {
+    e.preventDefault();
 
-  // Clear previous errors
-  setErrors({});
-
-  // Validate only the sections shown on this form
-  const validationErrors = validateForm({
-    personalInfo: employee.personalInfo,
-    employmentInfo: {
-      employeeId: employee.employmentInfo.employeeId,
-      department: employee.employmentInfo.department,
-      designation: employee.employmentInfo.designation,
-    },
-  });
-
-  if (Object.keys(validationErrors).length > 0) {
-    setErrors(validationErrors);
-    return;
-  }
-
-  try {
-   const result = await createEmployee(
-  companyCode,
-  employee
-);
-
-if (!result.success) {
-  setErrors((prev) => ({
-    ...prev,
-    [result.field]: result.message,
-  }));
-  return;
-}
-
-    alert("Employee added successfully");
-
-    // Reset form
-   setEmployee({
-  personalInfo: {
-    name: "",
-    email: "",
-    mobile: "",
-    address: "",
-    gender: "",
-    dob: "",
-  },
-
-  employmentInfo: {
-    employeeId: "",
-    department: "",
-    designation: "",
-    joiningDate: "",
-    employeeType: "",
-  },
-
-  bankInfo: {
-    bankName: "",
-    accountNumber: "",
-    ifsc: "",
-    branch: "",
-  },
-
-  salaryInfo: {
-    basicSalary: "",
-    hra: "",
-    bonus: "",
-  },
-
-  documents: {
-    aadhaar: "",
-    pan: "",
-    resume: "",
-  },
-
-  account: {
-    username: "",
-    password: "",
-    status: "Active",
-  },
-});
-
-    // Reset designation dropdown
-    setDesignations([]);
-
-    // Clear validation errors
+    // Clear previous errors
     setErrors({});
 
-  } catch (error) {
-    console.error(error);
-    alert(error.message || "Failed to add employee");
-  }
-};
+    // Validate only the sections shown on this form
+    const validationErrors = validateForm({
+      personalInfo: employee.personalInfo,
+      employmentInfo: {
+        employeeId: employee.employmentInfo.employeeId,
+        department: employee.employmentInfo.department,
+        designation: employee.employmentInfo.designation,
+      },
+    });
+
+    if (Object.keys(validationErrors).length > 0) {
+      setErrors(validationErrors);
+      return;
+    }
+
+    try {
+      const result = await createEmployee(
+        companyCode,
+        employee
+      );
+
+      if (!result.success) {
+        setErrors((prev) => ({
+          ...prev,
+          [result.field]: result.message,
+        }));
+        return;
+      }
+
+      alert("Employee added successfully");
+      navigate("/employees");
+      // Reset form
+      setEmployee({
+        personalInfo: {
+          name: "",
+          email: "",
+          mobile: "",
+          address: "",
+          gender: "",
+          dob: "",
+        },
+
+        employmentInfo: {
+          employeeId: "",
+          department: "",
+          designation: "",
+          joiningDate: "",
+          employeeType: "",
+        },
+
+        bankInfo: {
+          bankName: "",
+          accountNumber: "",
+          ifsc: "",
+          branch: "",
+        },
+
+        salaryInfo: {
+          basicSalary: "",
+          hra: "",
+          bonus: "",
+        },
+
+        documents: {
+          aadhaar: "",
+          pan: "",
+          resume: "",
+        },
+
+        account: {
+          username: "",
+          password: "",
+          role: "employee",
+          status: "Active",
+          isPasswordChanged: false,
+        },
+      });
+
+      // Reset designation dropdown
+      setDesignations([]);
+
+      // Clear validation errors
+      setErrors({});
+      
+
+    } catch (error) {
+      console.error(error);
+      alert(error.message || "Failed to add employee");
+    }
+  };
 
   return (
     <div className="max-w-5xl mx-auto bg-white rounded-2xl shadow-md p-8">
@@ -385,6 +400,27 @@ if (!result.success) {
                 {errors.employeeType}
               </p>
             )}
+          </div>
+
+            <div>
+              <label className="block mb-2 font-medium">
+                Role
+              </label>
+
+              <select
+                  name="role"
+                  value={employee.account.role}
+                  onChange={handleChange}
+                  className="w-full border rounded-lg p-3"
+              >
+                  <option value="employee">
+                      Employee
+                  </option>
+
+                  <option value="hr">
+                      HR
+                  </option>
+              </select>
           </div>
 
           {/* Department */}

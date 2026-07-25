@@ -33,45 +33,39 @@ export const createOnboardingRequest = async (
     );
 
     await set(onboardingRef, {
-  employmentInfo: {
-             employeeId,
-
+        employmentInfo: {
+            employeeId,
             name: basicInfo.name.trim(),
-
             email: basicInfo.email.trim(),
-
             mobile: basicInfo.mobile.trim(),
-
             department: basicInfo.department,
-
             designation: basicInfo.designation,
             joiningDate: basicInfo.joiningDate,
-            employeeType: basicInfo.employeeType
-,
+            employeeType: basicInfo.employeeType,
+            role: basicInfo.role,
+        },
+         account: {
+            username: employeeId,
+            password: employeeId,
+            role: basicInfo.role,
+            status: "Pending",
+            isPasswordChanged: false,
         },
         invitationLink,
-
         personalInfo: {},
-
         bankInfo: {},
-
         salaryInfo: {},
-
         documents: {},
-
         status: "Invitation Sent",
-
         createdAt: Date.now(),
         updatedAt: Date.now(),
-
         submittedAt: null,
-
         approvedAt: null,
     });
 
     return {
         success: true,
-        message:"Onboarding request created successfully.",
+        message: "Onboarding request created successfully.",
         invitationLink,
     };
 };
@@ -119,29 +113,29 @@ export const getOnboardingRequests = async (companyCode) => {
 };
 
 export const getOnboardingRequestById = async (
-  companyCode,
-  requestId
+    companyCode,
+    requestId
 ) => {
-  try {
-    const requestRef = ref(
-      db,
-      `companies/${companyCode}/onboardingRequests/${requestId}`
-    );
+    try {
+        const requestRef = ref(
+            db,
+            `companies/${companyCode}/onboardingRequests/${requestId}`
+        );
 
-    const snapshot = await get(requestRef);
+        const snapshot = await get(requestRef);
 
-    if (!snapshot.exists()) {
-      return null;
+        if (!snapshot.exists()) {
+            return null;
+        }
+
+        return {
+            id: snapshot.key,
+            ...snapshot.val(),
+        };
+    } catch (error) {
+        console.error("Error fetching onboarding request:", error);
+        throw error;
     }
-
-    return {
-      id: snapshot.key,
-      ...snapshot.val(),
-    };
-  } catch (error) {
-    console.error("Error fetching onboarding request:", error);
-    throw error;
-  }
 };
 
 export const submitOnboardingForm = async (
@@ -170,14 +164,15 @@ export const submitOnboardingForm = async (
         if (
             existingData.status === "Pending Approval" ||
             existingData.status === "Approved"
-            ) {
+        ) {
             return {
                 success: false,
-                message:"Onboarding form already submitted.",
+                message: "Onboarding form already submitted.",
             };
         }
 
-        await set(requestRef, {...existingData,
+        await set(requestRef, {
+            ...existingData,
 
             personalInfo: {
                 fatherName: formData.fatherName,
