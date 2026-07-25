@@ -1,6 +1,7 @@
 import {Routes,Route} from "react-router-dom";
 import Register from "../pages/authenticate/Register";
 import Login from "../pages/authenticate/login";
+import ChangePassword from "../pages/authenticate/ChangePassword";
 import DashboardLayout from "../layouts/DashboardLayout";
 import Dashboard from "../pages/Dashboard";
 import Departments from "../pages/Departments";
@@ -55,6 +56,8 @@ function AppRoutes(){
                 
             </Route>
             
+            <Route path="/change-password" element={<ChangePassword />} />
+
             <Route path="/onboarding/:companyCode/:employeeId" element={<EmployeeOnboarding />}/>
 
         </Routes>

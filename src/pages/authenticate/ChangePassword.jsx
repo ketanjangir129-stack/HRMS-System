@@ -1,20 +1,31 @@
 import { useState } from "react";
-import { validateField } from "../../utils/validation/validateField";
 import useAuth from "../../hooks/useAuth";
-import { useNavigate } from "react-router-dom";
+import { Navigate, useNavigate } from "react-router-dom";
 import { toast } from 'react-toastify';
 
-
-const Login = () => {
+const ChangePassword = () => {
   const [formData, setFormData] = useState({
-    companyCode: "",
-    userId: "",
-    password: "",
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: "",
   });
   const [loading, setLoading] = useState(false);
-  const { login } = useAuth();
+  const { changePassword } = useAuth();
   const navigate = useNavigate();
   const [errors, setErrors] = useState({});
+
+  // Guards: only a logged-in HR/Employee whose password is still the default
+  // may reach this page. Owner and already-updated users are sent to dashboard.
+  const companyCode = localStorage.getItem("companyCode");
+  const role = localStorage.getItem("role");
+  const storedUser = JSON.parse(localStorage.getItem("currentUser") || "null");
+
+  if (!companyCode) {
+    return <Navigate to="/login" replace />;
+  }
+  if (role === "owner" || storedUser?.account?.isPasswordChanged !== false) {
+    return <Navigate to="/dashboard" replace />;
+  }
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -24,13 +35,36 @@ const Login = () => {
       [name]: value,
     }));
   };
-  // On login we only check that a password was entered — the password-strength
-  // pattern is for creation, not for verifying an existing password.
-  const validateLoginField = (name, value) => {
-    if (name === "password") {
+
+  const validateChangeField = (name, value) => {
+    if (name === "currentPassword") {
       return String(value ?? "").trim() ? "" : "This field is required.";
     }
-    return validateField(name, value, formData);
+
+    if (name === "newPassword") {
+      if (!String(value ?? "").trim()) {
+        return "This field is required.";
+      }
+      if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/.test(value)) {
+        return "Password must be at least 8 characters and contain uppercase, lowercase and number.";
+      }
+      if (value === formData.currentPassword) {
+        return "New password cannot be the same as current password.";
+      }
+      return "";
+    }
+
+    if (name === "confirmPassword") {
+      if (!String(value ?? "").trim()) {
+        return "This field is required.";
+      }
+      if (value !== formData.newPassword) {
+        return "Passwords do not match.";
+      }
+      return "";
+    }
+
+    return "";
   };
 
   const handleBlur = (e) => {
@@ -38,15 +72,16 @@ const Login = () => {
 
     setErrors((prev) => ({
       ...prev,
-      [name]: validateLoginField(name, value),
+      [name]: validateChangeField(name, value),
     }));
   };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
     const validationErrors = {};
     Object.entries(formData).forEach(([name, value]) => {
-      const error = validateLoginField(name, value);
+      const error = validateChangeField(name, value);
       if (error) {
         validationErrors[name] = error;
       }
@@ -60,10 +95,9 @@ const Login = () => {
     setLoading(true);
 
     try {
-      const result = await login(
-        formData.companyCode.trim().toUpperCase(),
-        formData.userId.trim(),
-        formData.password
+      const result = await changePassword(
+        formData.currentPassword,
+        formData.newPassword
       );
 
       if (!result.success) {
@@ -71,17 +105,11 @@ const Login = () => {
         return;
       }
 
-      toast.success("Login Successful");
-
-      // HR / Employee must set a new password before entering the app.
-      if (result.role !== "owner" && !result.isPasswordChanged) {
-        navigate("/change-password");
-      } else {
-        navigate("/dashboard");
-      }
+      toast.success("Password updated successfully");
+      navigate("/dashboard");
     } catch (error) {
       console.error(error);
-      toast.error("Login failed.");
+      toast.error("Failed to update password.");
     } finally {
       setLoading(false);
     }
@@ -93,80 +121,80 @@ const Login = () => {
         {/* header */}
         <div>
           <h1 className="text-3xl font-bold text-center mb-2">
-            Company Login
+            Change Password
           </h1>
 
           <p className="text-center text-gray-500 mb-8">
-            Login to your HRMS account
+            Update your password to continue
           </p>
         </div>
         <div>
           {/* body */}
           <form onSubmit={handleSubmit}>
 
-            {/* Company Code */}
+            {/* Current Password */}
             <div className="mb-4">
               <label className="block mb-2 font-medium">
-                Company Code
-              </label>
-
-              <input
-                type="text"
-                name="companyCode"
-                value={formData.companyCode}
-                onChange={handleChange}
-                onBlur={handleBlur}
-                placeholder="ABC001"
-                className="w-full border rounded-lg p-3"
-              />
-              {errors.companyCode && (
-                <p className="text-red-500 text-sm mt-1">
-                  {errors.companyCode}
-                </p>
-              )}
-            </div>
-
-            {/* Email */}
-            <div className="mb-4">
-              <label className="block mb-2 font-medium">
-                Email or Employee Id
-              </label>
-
-              <input
-                type="text"
-                name="userId"
-                value={formData.userId}
-                onChange={handleChange}
-                onBlur={handleBlur}
-                placeholder=""
-                className="w-full border rounded-lg p-3"
-              />
-
-              {errors.userId && (
-                <p className="text-red-500 text-sm mt-1">
-                  {errors.userId}
-                </p>
-              )}
-            </div>
-
-            {/* Password */}
-            <div className="mb-6">
-              <label className="block mb-2 font-medium">
-                Password
+                Current Password
               </label>
 
               <input
                 type="password"
-                name="password"
-                value={formData.password}
+                name="currentPassword"
+                value={formData.currentPassword}
                 onChange={handleChange}
                 onBlur={handleBlur}
                 placeholder="********"
                 className="w-full border rounded-lg p-3"
               />
-              {errors.password && (
+              {errors.currentPassword && (
                 <p className="text-red-500 text-sm mt-1">
-                  {errors.password}
+                  {errors.currentPassword}
+                </p>
+              )}
+            </div>
+
+            {/* New Password */}
+            <div className="mb-4">
+              <label className="block mb-2 font-medium">
+                New Password
+              </label>
+
+              <input
+                type="password"
+                name="newPassword"
+                value={formData.newPassword}
+                onChange={handleChange}
+                onBlur={handleBlur}
+                placeholder="********"
+                className="w-full border rounded-lg p-3"
+              />
+
+              {errors.newPassword && (
+                <p className="text-red-500 text-sm mt-1">
+                  {errors.newPassword}
+                </p>
+              )}
+            </div>
+
+            {/* Confirm Password */}
+            <div className="mb-6">
+              <label className="block mb-2 font-medium">
+                Confirm Password
+              </label>
+
+              <input
+                type="password"
+                name="confirmPassword"
+                value={formData.confirmPassword}
+                onChange={handleChange}
+                onBlur={handleBlur}
+                placeholder="********"
+                className="w-full border rounded-lg p-3"
+              />
+              {errors.confirmPassword && (
+                <p className="text-red-500 text-sm mt-1">
+                  {errors.confirmPassword}
                 </p>
               )}
             </div>
@@ -208,30 +236,19 @@ const Login = () => {
                     />
                   </svg>
 
-                  <span>Signing In...</span>
+                  <span>Updating...</span>
 
                 </div>
               ) : (
-                "Login"
+                "Update Password"
               )}
             </button>
 
           </form>
         </div>
-        <div className="p-[5px] m-[5px] ">
-          <p className="mt-4 text-center">
-            Don't have an account?{" "}
-            <button
-              onClick={() => navigate("/")}
-            >
-              Register
-            </button>
-          </p>
-        </div>
-
       </div>
     </div>
   );
 };
 
-export default Login;
+export default ChangePassword;
