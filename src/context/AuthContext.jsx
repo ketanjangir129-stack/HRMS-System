@@ -12,6 +12,7 @@ import {
 import {
   getCompanyByCode,
 } from "../services/companyService";
+import { updateEmployee } from "../services/EmployeeService";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "../firebase/firebase";
 
@@ -145,7 +146,66 @@ export const AuthProvider = ({ children }) => {
     return {
       success: true,
       role: authResult.role,
+      isPasswordChanged:
+        authResult.role === "owner"
+          ? true
+          : loggedInUser?.account?.isPasswordChanged ?? false,
     };
+  };
+
+  // Mandatory first-time password change for HR / Employee users.
+  const changePassword = async (currentPassword, newPassword) => {
+    try {
+      const companyCode = localStorage.getItem("companyCode");
+      const role = localStorage.getItem("role");
+      const storedUser = JSON.parse(
+        localStorage.getItem("currentUser") || "null"
+      );
+
+      // Owner never uses this flow.
+      if (role === "owner" || !storedUser?.account) {
+        return {
+          success: false,
+          message: "Not allowed.",
+        };
+      }
+
+      if (storedUser.account.password !== currentPassword) {
+        return {
+          success: false,
+          message: "Current password is incorrect.",
+        };
+      }
+
+      const employeeId = storedUser.account.username;
+
+      // Update ONLY the two account fields, leaving the rest of the
+      // employee object untouched (Firebase multi-path update).
+      await updateEmployee(companyCode, employeeId, {
+        "account/password": newPassword,
+        "account/isPasswordChanged": true,
+      });
+
+      const updatedUser = {
+        ...storedUser,
+        account: {
+          ...storedUser.account,
+          password: newPassword,
+          isPasswordChanged: true,
+        },
+      };
+
+      setCurrentUser(updatedUser);
+      localStorage.setItem("currentUser", JSON.stringify(updatedUser));
+
+      return { success: true };
+    } catch (error) {
+      console.error(error);
+      return {
+        success: false,
+        message: "Failed to update password.",
+      };
+    }
   };
 
   const logout = async () => {
@@ -169,6 +229,7 @@ export const AuthProvider = ({ children }) => {
         loading,
         login,
         logout,
+        changePassword,
       }}
     >
       {children}
