@@ -1,21 +1,21 @@
 import {db} from "../firebase/firebase"
 import {ref , get , set,remove , update} from  "firebase/database";
 
-// Onboarding requests are stored as basic/personal/bank/documents, but the
+// Onboarding requests store contact details in employmentInfo, but the
 // employees node uses the personalInfo/employmentInfo/bankInfo shape that
 // addEmployee writes. Map between the two so approved employees render the
 // same as manually added ones.
 const toEmployeeRecord = (request, employeeId) => {
-  const basic = request.employmentInfo || request.basic || {};
-  const personal = request.personalInfo || request.personal || {};
-  const bank = request.bankInfo || request.bank || {};
+  const employment = request.employmentInfo || {};
+  const personal = request.personalInfo || {};
+  const bank = request.bankInfo || {};
   const documents = request.documents || {};
 
   return {
     personalInfo: {
-      name: basic.name || "",
-      email: basic.email || "",
-      mobile: basic.mobile || "",
+      name: employment.name || "",
+      email: employment.email || "",
+      mobile: employment.mobile || "",
       address: personal.address || "",
       gender: personal.gender || "",
       dob: personal.dob || "",
@@ -30,10 +30,10 @@ const toEmployeeRecord = (request, employeeId) => {
 
     employmentInfo: {
       employeeId,
-      department: basic.department || "",
-      designation: basic.designation || "",
-      joiningDate: basic.joiningDate || request.employment?.joiningDate || "",
-      employeeType: basic.employeeType || request.employment?.employeeType || "",
+      department: employment.department || "",
+      designation: employment.designation || "",
+      joiningDate: employment.joiningDate || "",
+      employeeType: employment.employeeType || "",
     },
 
     bankInfo: {

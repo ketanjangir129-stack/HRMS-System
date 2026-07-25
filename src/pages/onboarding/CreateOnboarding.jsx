@@ -343,6 +343,7 @@ function OnBoardForm() {
               name="designation"
               value={employee.designation}
               onChange={handleChange}
+              onBlur={handleBlur}
               className="w-full border rounded-lg p-3"
             >
               <option value="">Select Designation</option>
@@ -354,6 +355,11 @@ function OnBoardForm() {
               ))}
             </select>
 
+            {errors.designation && (
+              <p className="mt-1 text-sm text-red-500">
+                {errors.designation}
+              </p>
+            )}
           </div>
 
         </div>

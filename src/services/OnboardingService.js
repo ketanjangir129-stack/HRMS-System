@@ -9,9 +9,9 @@ import {
 import { checkEmployeeUniqueness } from "./ValidationService";
 export const createOnboardingRequest = async (
     companyCode,
-    basicInfo
+    employeeInfo
 ) => {
-    const employeeId = basicInfo.employeeId
+    const employeeId = employeeInfo.employeeId
         .trim()
         .toUpperCase();
 
@@ -19,7 +19,7 @@ export const createOnboardingRequest = async (
     const validation =
         await checkEmployeeUniqueness(
             companyCode,
-            basicInfo
+            employeeInfo
         );
 
     if (!validation.success) {
@@ -36,17 +36,17 @@ export const createOnboardingRequest = async (
   employmentInfo: {
              employeeId,
 
-            name: basicInfo.name.trim(),
+            name: employeeInfo.name.trim(),
 
-            email: basicInfo.email.trim(),
+            email: employeeInfo.email.trim(),
 
-            mobile: basicInfo.mobile.trim(),
+            mobile: employeeInfo.mobile.trim(),
 
-            department: basicInfo.department,
+            department: employeeInfo.department,
 
-            designation: basicInfo.designation,
-            joiningDate: basicInfo.joiningDate,
-            employeeType: basicInfo.employeeType
+            designation: employeeInfo.designation,
+            joiningDate: employeeInfo.joiningDate,
+            employeeType: employeeInfo.employeeType
 ,
         },
         invitationLink,

@@ -30,29 +30,24 @@ function Employees() {
                     id: key,
  
                     employeeId:
-                        employee.basic?.employeeId ||
                         employee.employmentInfo?.employeeId ||
                         "",
- 
+
                     name:
-                        employee.basic?.name ||
                         employee.personalInfo?.name ||
                         employee.employmentInfo?.name ||
                         "",
 
                         email:
-                        employee.basic?.email ||
                         employee.personalInfo?.email ||
                         employee.employmentInfo?.email ||
                         "",
- 
+
                     department:
-                        employee.basic?.department ||
                         employee.employmentInfo?.department ||
                         "",
- 
+
                     designation:
-                        employee.basic?.designation ||
                         employee.employmentInfo?.designation ||
                         "",
                 };

@@ -67,9 +67,9 @@ function EmployeesDetails() {
 
             employmentInfo: {
                 ...data.employmentInfo,
-                employeeId: data.employmentInfo?.employeeId || data.basic?.employeeId || "",
-                department: data.employmentInfo?.department || data.basic?.department || "",
-                designation: data.employmentInfo?.designation || data.basic?.designation || "",
+                employeeId: data.employmentInfo?.employeeId || "",
+                department: data.employmentInfo?.department || "",
+                designation: data.employmentInfo?.designation || "",
                 joiningDate: data.employmentInfo?.joiningDate || "",
             },
 

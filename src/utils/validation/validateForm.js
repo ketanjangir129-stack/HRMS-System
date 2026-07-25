@@ -3,18 +3,25 @@ import { validateField } from "./validateField";
 export const validateForm = (formData) => {
   const errors = {};
 
-  Object.keys(formData).forEach((section) => {
-    Object.keys(formData[section]).forEach((field) =>{
-    const error = validateField(
-      field,
-      formData[section][field],
-      formData
-    );
+  Object.entries(formData).forEach(([key, value]) => {
+    if (value && typeof value === "object" && !Array.isArray(value)) {
+      // Nested section (e.g. personalInfo, employmentInfo).
+      Object.entries(value).forEach(([field, fieldValue]) => {
+        const error = validateField(field, fieldValue, formData);
 
-    if (error) {
-      errors[field] = error;
+        if (error) {
+          errors[field] = error;
+        }
+      });
+    } else {
+      // Flat field.
+      const error = validateField(key, value, formData);
+
+      if (error) {
+        errors[key] = error;
+      }
     }
   });
-  });
+
   return errors;
 };

@@ -5,13 +5,11 @@ export const checkEmployeeUniqueness = async (
   companyCode,
   employee
 ) => {
-  const employeeSnapshot = await get(
-    ref(db, `companies/${companyCode}/employees`)
-  );
-
-  const onboardingSnapshot = await get(
-    ref(db, `companies/${companyCode}/onboardingRequests`)
-  );
+  // Check against both active employees and pending onboarding requests.
+  const [employeeSnapshot, onboardingSnapshot] = await Promise.all([
+    get(ref(db, `companies/${companyCode}/employees`)),
+    get(ref(db, `companies/${companyCode}/onboardingRequests`)),
+  ]);
 
   const employees = employeeSnapshot.exists()
     ? employeeSnapshot.val()
@@ -26,46 +24,52 @@ export const checkEmployeeUniqueness = async (
     ...Object.values(requests),
   ];
 
- for (const record of records) {
-  const details = record.basic || record;
+  const targetEmployeeId = employee.employeeId?.trim().toLowerCase();
+  const targetEmail = employee.email?.trim().toLowerCase();
+  const targetMobile = employee.mobile?.trim();
 
-  const employeeId = details.employeeId?.trim().toLowerCase();
-  const email = details.email?.trim().toLowerCase();
-  const mobile = details.mobile?.trim();
+  for (const record of records) {
+    const employment = record.employmentInfo || {};
+    const personal = record.personalInfo || {};
 
-  if (
-    employeeId &&
-    employeeId === employee.employeeId.trim().toLowerCase()
-  ) {
-    return {
-      success: false,
-      field: "employeeId",
-      message: "Employee ID already exists.",
-    };
+    // employeeId always lives in employmentInfo.
+    const employeeId = employment.employeeId?.trim().toLowerCase();
+
+    // Active employees store contact in personalInfo; onboarding requests
+    // store it in employmentInfo. Check both.
+    const email = (personal.email || employment.email)
+      ?.trim()
+      .toLowerCase();
+    const mobile = (personal.mobile || employment.mobile)?.trim();
+
+    if (
+      targetEmployeeId &&
+      employeeId &&
+      employeeId === targetEmployeeId
+    ) {
+      return {
+        success: false,
+        field: "employeeId",
+        message: "Employee ID already exists.",
+      };
+    }
+
+    if (targetEmail && email && email === targetEmail) {
+      return {
+        success: false,
+        field: "email",
+        message: "Email already exists.",
+      };
+    }
+
+    if (targetMobile && mobile && mobile === targetMobile) {
+      return {
+        success: false,
+        field: "mobile",
+        message: "Mobile number already exists.",
+      };
+    }
   }
-
-  if (
-    email &&
-    email === employee.email.trim().toLowerCase()
-  ) {
-    return {
-      success: false,
-      field: "email",
-      message: "Email already exists.",
-    };
-  }
-
-  if (
-    mobile &&
-    mobile === employee.mobile.trim()
-  ) {
-    return {
-      success: false,
-      field: "mobile",
-      message: "Mobile number already exists.",
-    };
-  }
-}
 
   return {
     success: true,
