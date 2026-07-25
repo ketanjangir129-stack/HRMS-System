@@ -161,7 +161,9 @@ function EmployeeOnboarding() {
   }
 
   if (!request) {
-    return <div className="p-10 flex justify-center items-center text-md font-bold h-screen">Invalid invitation.</div>;
+    return <div className="p-10 text-md text-center font-bold h-screen w-full flex flex-col items-center justify-center">
+     <h3> Link is Expire.</h3>
+     <p className="mt-2">Inform Your Hr to Share The Onboarding Link Again. If Your Onboarding Request is Rejected or you forget to fill any details in Onboarding Form</p></div>;
   }
 
   if (request.status === "Pending Approval") {

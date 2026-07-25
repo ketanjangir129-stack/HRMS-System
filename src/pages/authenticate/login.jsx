@@ -123,7 +123,7 @@ const Login = () => {
             {/* Email */}
             <div className="mb-4">
               <label className="block mb-2 font-medium">
-                Email
+                Email or Employee Id
               </label>
 
               <input
@@ -132,7 +132,7 @@ const Login = () => {
                 value={formData.userId}
                 onChange={handleChange}
                 onBlur={handleBlur}
-                placeholder="Owner Email or Employee ID"
+                placeholder=""
                 className="w-full border rounded-lg p-3"
               />
 
