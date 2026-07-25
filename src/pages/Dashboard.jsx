@@ -10,13 +10,20 @@ import {
 } from "react-icons/fa";
 import useAuth from "../hooks/useAuth";
 const Dashboard = () => {
-  const { company } = useAuth();
+  const { company, currentUser } = useAuth();
   const today = new Date().toLocaleDateString("en-US", {
     weekday: "long",
     year: "numeric",
     month: "long",
     day: "numeric",
   });
+
+  const displayName = currentUser?.role === "owner"
+    ? company?.details?.ownerName || currentUser?.name
+    : 
+    currentUser?.personalInfo?.name ||
+    currentUser?.employmentInfo?.name ||
+    currentUser?.name;
 
   return (
     <div className="flex-1 p-2 bg-gray-100 min-h-full">
@@ -28,7 +35,7 @@ const Dashboard = () => {
           </p>
 
           <h1 className="text-4xl font-bold text-green-600 mb-2">
-            Hello, {company?.ownerName}
+            Hello, {displayName}
           </h1>
 
           <p className="text-gray-500">

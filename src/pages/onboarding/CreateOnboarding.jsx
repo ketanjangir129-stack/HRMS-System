@@ -16,18 +16,15 @@ function OnBoardForm() {
     designation: "",
     joiningDate: "",
     employeeType: "",
+
+    role: "employee",
   };
 
   const companyCode = localStorage.getItem("companyCode");
-
   const [employee, setEmployee] = useState(initialState);
-
   const [errors, setErrors] = useState({});
-
   const [loading, setLoading] = useState(false);
-
   const [departments, setDepartments] = useState([]);
-
   const [designations, setDesignations] = useState([]);
 
   useEffect(() => {
@@ -282,7 +279,6 @@ function OnBoardForm() {
               </p>
             )}
           </div>
-          
           {/* employeeType */}
           <div>
             <label className="block mb-2 font-medium">
@@ -304,6 +300,28 @@ function OnBoardForm() {
                 {errors.employeeType}
               </p>
             )}
+          </div>
+
+          {/* Role */}
+          <div>
+            <label className="block mb-2 font-medium">
+              Role
+            </label>
+
+            <select
+              name="role"
+              value={employee.role}
+              onChange={handleChange}
+              className="w-full border rounded-lg p-3"
+            >
+              <option value="employee">
+                Employee
+              </option>
+
+              <option value="hr">
+                HR
+              </option>
+            </select>
           </div>
           {/* Department */}
           <div>

@@ -175,9 +175,7 @@ function Departments() {
         <div className="p-2">
 
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
-
                 <div>
-
                     <h1 className="text-3xl font-bold text-slate-900">
                         Departments
                     </h1>
@@ -185,9 +183,7 @@ function Departments() {
                     <p className="text-slate-500 mt-1">
                         Manage departments and designations.
                     </p>
-
                 </div>
-
                 <div className="flex items-center gap-3">
                     <button
                         onClick={() => {
@@ -199,9 +195,7 @@ function Departments() {
                     >
                         Add Department
                     </button>
-
                 </div>
-
             </div>
 
             <DepartmentList

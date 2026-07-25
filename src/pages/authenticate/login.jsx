@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { validateField } from "../../utils/validation/validateField";
-import { validateForm } from "../../utils/validation/validateForm";
 import useAuth from "../../hooks/useAuth";
 import { useNavigate } from "react-router-dom";
 import { toast } from 'react-toastify';
@@ -9,7 +8,7 @@ import { toast } from 'react-toastify';
 const Login = () => {
   const [formData, setFormData] = useState({
     companyCode: "",
-    email: "",
+    userId: "",
     password: "",
   });
   const [loading, setLoading] = useState(false);
@@ -25,43 +24,62 @@ const Login = () => {
       [name]: value,
     }));
   };
+  // On login we only check that a password was entered — the password-strength
+  // pattern is for creation, not for verifying an existing password.
+  const validateLoginField = (name, value) => {
+    if (name === "password") {
+      return String(value ?? "").trim() ? "" : "This field is required.";
+    }
+    return validateField(name, value, formData);
+  };
+
   const handleBlur = (e) => {
     const { name, value } = e.target;
 
     setErrors((prev) => ({
       ...prev,
-      [name]: validateField(name, value, formData),
+      [name]: validateLoginField(name, value),
     }));
   };
- const handleSubmit = async (e) => {
-  e.preventDefault();
+  const handleSubmit = async (e) => {
+    e.preventDefault();
 
-  const validationErrors = validateForm(formData);
+    const validationErrors = {};
+    Object.entries(formData).forEach(([name, value]) => {
+      const error = validateLoginField(name, value);
+      if (error) {
+        validationErrors[name] = error;
+      }
+    });
 
-  if (Object.keys(validationErrors).length > 0) {
-    setErrors(validationErrors);
-    return;
-  }
+    if (Object.keys(validationErrors).length > 0) {
+      setErrors(validationErrors);
+      return;
+    }
 
-  setLoading(true);
+    setLoading(true);
 
-  const result = await login(
-    formData.companyCode,
-    formData.email,
-    formData.password
-  );
+    try {
+      const result = await login(
+        formData.companyCode.trim().toUpperCase(),
+        formData.userId.trim(),
+        formData.password
+      );
 
-  setLoading(false);
+      if (!result.success) {
+        toast.error(result.message);
+        return;
+      }
 
-  if (!result.success) {
-    toast.error(result.message);
-    return;
-  }
-
-  toast.success("Login Successful");
-
-  navigate("/dashboard");
-};
+      toast.success("Login Successful");
+      navigate("/dashboard");
+    } catch (error) {
+      console.error(error);
+      toast.error("Login failed.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100 p-6">
@@ -109,18 +127,18 @@ const Login = () => {
               </label>
 
               <input
-                type="email"
-                name="email"
-                value={formData.email}
+                type="text"
+                name="userId"
+                value={formData.userId}
                 onChange={handleChange}
                 onBlur={handleBlur}
-                placeholder="company@email.com"
+                placeholder="Owner Email or Employee ID"
                 className="w-full border rounded-lg p-3"
               />
 
-              {errors.email && (
+              {errors.userId && (
                 <p className="text-red-500 text-sm mt-1">
-                  {errors.email}
+                  {errors.userId}
                 </p>
               )}
             </div>
@@ -153,43 +171,42 @@ const Login = () => {
               className={`
                   w-full py-3 rounded-lg text-white font-medium
                   transition-all duration-200
-                  ${
-                      loading
-                          ? "bg-blue-500 cursor-not-allowed"
-                          : "bg-blue-600 hover:bg-blue-700"
-                  }
+                  ${loading
+                  ? "bg-blue-500 cursor-not-allowed"
+                  : "bg-blue-600 hover:bg-blue-700"
+                }
               `}
             >
               {loading ? (
-                  <div className="flex items-center justify-center gap-2">
+                <div className="flex items-center justify-center gap-2">
 
-                      <svg
-                          className="w-5 h-5 animate-spin"
-                          xmlns="http://www.w3.org/2000/svg"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                      >
-                          <circle
-                              className="opacity-25"
-                              cx="12"
-                              cy="12"
-                              r="10"
-                              stroke="currentColor"
-                              strokeWidth="4"
-                          />
+                  <svg
+                    className="w-5 h-5 animate-spin"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    />
 
-                          <path
-                              className="opacity-75"
-                              fill="currentColor"
-                              d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
-                          />
-                      </svg>
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+                    />
+                  </svg>
 
-                      <span>Signing In...</span>
+                  <span>Signing In...</span>
 
-                  </div>
+                </div>
               ) : (
-                  "Login"
+                "Login"
               )}
             </button>
 
@@ -198,7 +215,7 @@ const Login = () => {
         <div className="p-[5px] m-[5px] ">
           <p className="mt-4 text-center">
             Don't have an account?{" "}
-            <button 
+            <button
               onClick={() => navigate("/")}
             >
               Register
