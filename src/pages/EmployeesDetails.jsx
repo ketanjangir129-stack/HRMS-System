@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { getEmployeeById, updateEmployee } from "../services/EmployeeService";
+import { validateField } from "../utils/validation/validateField";
+import { rules } from "../utils/validation/rules";
 import {
   BadgeCheck,
   BriefcaseBusiness,
@@ -25,6 +27,8 @@ function EmployeesDetails() {
     const [editingSection, setEditingSection] = useState(null);
     const [formData, setFormData] = useState({});
     const [saving, setSaving] = useState(false);
+    const [errors, setErrors] = useState({});
+    const [loadError, setLoadError] = useState("");
 
     // Every section starts collapsed — the user opens what they need.
     const [expanded, setExpanded] = useState({});
@@ -47,23 +51,37 @@ function EmployeesDetails() {
     }, []);
  
     const loadEmployee = async () => {
+        setLoadError("");
+        try {
         const data = await getEmployeeById(companyCode, id);
+
+        // Employee mila hi nahi (galat id / delete ho gaya)
+        if (!data) {
+            setLoadError("Employee not found.");
+            return;
+        }
+
         const formattedEmployee = {
-            personalInfo: {
-                ...data.personalInfo,
-                name: data.personalInfo?.name || data.employmentInfo?.name || "",
-                email: data.personalInfo?.email || data.employmentInfo?.email || "",
-                mobile: data.personalInfo?.mobile || data.employmentInfo?.mobile || "",
- 
-                gender: data.personalInfo?.gender || "",
-                dob: data.personalInfo?.dob || "",
- 
-                address:
-                    `${data.personalInfo?.address || ""},
-                    ${data.personalInfo?.city || ""},
-                    ${data.personalInfo?.state || ""}
-                    ${data.personalInfo?.pincode || ""}`.trim(),
-            },
+            personalInfo: (() => {
+                // Pull city/state/pincode out so the spread can't leak them back in —
+                // otherwise they'd get re-appended to the combined address on every reload.
+                const { city, state, pincode, ...rest } = data.personalInfo || {};
+                return {
+                    ...rest,
+                    name: data.personalInfo?.name || data.employmentInfo?.name || "",
+                    email: data.personalInfo?.email || data.employmentInfo?.email || "",
+                    mobile: data.personalInfo?.mobile || data.employmentInfo?.mobile || "",
+                    gender: data.personalInfo?.gender || "",
+                    dob: data.personalInfo?.dob || "",
+                    address: [rest.address, city, state, pincode]
+                        .map((part) => (part ? String(part).replace(/\s+/g, " ").trim() : ""))
+                        .filter(Boolean)
+                        .join(", ")
+                        .replace(/(,\s*)+/g, ", ")
+                        .trim(),
+                };
+            })(),
+
 
             employmentInfo: {
                 ...data.employmentInfo,
@@ -73,54 +91,101 @@ function EmployeesDetails() {
                 joiningDate: data.employmentInfo?.joiningDate || "",
             },
 
-            bankInfo: {
-                ...data.bankInfo,
-                bankName: data.bankInfo?.bankName || "",
-                accountNumber: data.bankInfo?.accountNumber || "",
-                ifsc: data.bankInfo?.ifsc || data.bankInfo?.ifscCode || "",
-                branch: data.bankInfo?.branch || data.bankInfo?.branchName || "",
-            },
+            bankInfo: (() => {
+                // Purane naam (ifscCode/branchName) nikaal do taaki spread se dubara na aayein
+                const { ifscCode, branchName, ...rest } = data.bankInfo || {};
+                return {
+                    ...rest,
+                    bankName: rest.bankName || "",
+                    accountNumber: rest.accountNumber || "",
+                    ifsc: rest.ifsc || ifscCode || "",
+                    branch: rest.branch || branchName || "",
+                };
+            })(),
 
-            documents: {
-                ...data.documents,
-                aadhaar: data.documents?.aadhaar || data.documents?.aadhaarNumber || "",
-                pan: data.documents?.pan || data.documents?.panNumber || "",
-                uan: data.documents?.uan || data.documents?.uanNumber || "",
-                esic: data.documents?.esic || data.documents?.esicNumber || "",
-            },
+            documents: (() => {
+                // Purane naam (…Number) nikaal do taaki duplicate keys na banein
+                const { aadhaarNumber, panNumber, uanNumber, esicNumber, ...rest } = data.documents || {};
+                return {
+                    ...rest,
+                    aadhaar: rest.aadhaar || aadhaarNumber || "",
+                    pan: rest.pan || panNumber || "",
+                    uan: rest.uan || uanNumber || "",
+                    esic: rest.esic || esicNumber || "",
+                };
+            })(),
 
             salaryInfo: data.salaryInfo || {},
 
             account: {
                 ...data.account,
-                status: data.status || "Active",
+                status: data.account?.status || data.status || "Active",
             },
         };
  
         setEmployee(formattedEmployee);
+        } catch (error) {
+            console.error("Failed to load employee:", error);
+            setLoadError("Failed to load employee. Please try again.");
+        }
     };
- 
+
     const startEdit = (sectionId) => {
         setFormData({ ...(employee[sectionId] || {}) });
         setEditingSection(sectionId);
         setExpanded((prev) => ({ ...prev, [sectionId]: true }));
+        setErrors({});
     };
- 
+
     const cancelEdit = () => {
         setEditingSection(null);
         setFormData({});
+        setErrors({});
     };
- 
+
     const handleFieldChange = (key, value) => {
         setFormData((prev) => ({ ...prev, [key]: value }));
+        // Jis field ko user theek kar raha hai, uska error turant hata do
+        setErrors((prev) => ({ ...prev, [key]: "" }));
     };
- 
+
+    // Section ke andar sirf un fields ko validate karta hai jinke rules bane hain.
+    // Core fields (name/email/mobile) khaali nahi ho sakte; baaki optional fields
+    // tabhi check hote hain jab unme kuch value ho (edit pe force-fill na ho).
+    const validateSection = (sectionId, data) => {
+        const coreFields = ["name", "email", "mobile"];
+        const sectionErrors = {};
+
+        Object.keys(data).forEach((key) => {
+            if (!rules[key]) return; // is field ka koi rule nahi → skip
+
+            const value = data[key];
+            const isEmpty = !String(value ?? "").trim();
+
+            // Optional (non-core) field khaali ho to validate mat karo
+            if (isEmpty && !coreFields.includes(key)) return;
+
+            const error = validateField(key, value, { ...employee, [sectionId]: data });
+            if (error) sectionErrors[key] = error;
+        });
+
+        return sectionErrors;
+    };
+
     const saveSection = async (sectionId) => {
+        // Save se pehle validate karo
+        const validationErrors = validateSection(sectionId, formData);
+        if (Object.keys(validationErrors).length > 0) {
+            setErrors(validationErrors);
+            return; // galti hai to save mat karo
+        }
+
         setSaving(true);
         try {
             await updateEmployee(companyCode, id, { [sectionId]: formData });
             setEmployee((prev) => ({ ...prev, [sectionId]: formData }));
             setEditingSection(null);
+            setErrors({});
         } catch (error) {
             console.error(error);
             alert("Failed to save changes");
@@ -129,6 +194,23 @@ function EmployeesDetails() {
         }
     };
  
+    // Load fail hua ya employee mila nahi → error + Retry (infinite spinner se bachne ke liye)
+    if (loadError) {
+        return (
+            <div className="flex h-screen items-center justify-center bg-gray-100">
+                <div className="flex flex-col items-center gap-3 text-center">
+                    <p className="font-medium text-red-600">{loadError}</p>
+                    <button
+                        onClick={loadEmployee}
+                        className="rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm text-gray-700 transition-colors hover:bg-gray-50"
+                    >
+                        Retry
+                    </button>
+                </div>
+            </div>
+        );
+    }
+
     if (!employee) {
         return (
             <div className="flex h-screen items-center justify-center bg-gray-100">
@@ -290,8 +372,13 @@ function EmployeesDetails() {
                                 className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm
                                            transition-shadow duration-200 hover:shadow-md"
                             >
-                                {/* Tinted header strip: title left, actions right */}
-                                <div className="flex items-center justify-between gap-4 border-b border-gray-100 bg-gray-50/80 px-6 py-4">
+                                {/* Whole header strip toggles the section open/closed */}
+                                <button
+                                    type="button"
+                                    onClick={() => toggleExpand(section.section)}
+                                    aria-expanded={isOpen}
+                                    className="flex w-full items-center justify-between gap-4 border-b border-gray-100 bg-gray-50/80 px-6 py-4 text-left transition hover:bg-gray-100/80"
+                                >
                                     <h2 className="flex min-w-0 items-center gap-3">
                                         <span
                                             className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${section.accent}`}
@@ -303,51 +390,18 @@ function EmployeesDetails() {
                                         </span>
                                     </h2>
 
-                                    <div className="flex shrink-0 items-center gap-2">
-                                        {isEditing ? (
-                                            <>
-                                                <button
-                                                    onClick={cancelEdit}
-                                                    disabled={saving}
-                                                    className="rounded-lg px-3 py-1.5 text-sm font-medium text-gray-500 transition hover:bg-gray-200"
-                                                >
-                                                    Cancel
-                                                </button>
-                                                <button
-                                                    onClick={() => saveSection(section.section)}
-                                                    disabled={saving}
-                                                    className="rounded-lg bg-indigo-600 px-4 py-1.5 text-sm font-medium text-white transition hover:bg-indigo-700 disabled:opacity-60"
-                                                >
-                                                    {saving ? "Saving…" : "Save"}
-                                                </button>
-                                            </>
+                                    <span className="flex h-7 w-7 shrink-0 items-center justify-center text-gray-400">
+                                        {isOpen ? (
+                                            <ChevronUp className="h-4 w-4" />
                                         ) : (
-                                            <>
-                                                <button
-                                                    onClick={() => startEdit(section.section)}
-                                                    className="flex items-center gap-1.5 text-sm font-medium text-indigo-600 transition hover:text-indigo-700"
-                                                >
-                                                    <Pencil className="h-3.5 w-3.5" /> Edit
-                                                </button>
-                                                <button
-                                                    onClick={() => toggleExpand(section.section)}
-                                                    aria-label={isOpen ? "Collapse" : "Expand"}
-                                                    aria-expanded={isOpen}
-                                                    className="flex h-7 w-7 items-center justify-center rounded-full border border-gray-300 text-gray-400 transition hover:border-indigo-300 hover:text-indigo-600"
-                                                >
-                                                    {isOpen ? (
-                                                        <ChevronUp className="h-4 w-4" />
-                                                    ) : (
-                                                        <ChevronDown className="h-4 w-4" />
-                                                    )}
-                                                </button>
-                                            </>
+                                            <ChevronDown className="h-4 w-4" />
                                         )}
-                                    </div>
-                                </div>
+                                    </span>
+                                </button>
 
                                 {isOpen && (
-                                    <div className="divide-y divide-gray-100 px-6 py2">
+                                    <div className="px-6 py-4">
+                                        <div className="grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-2">
                                         {section.fields.map((field) => {
                                             const value = employee[section.section]?.[field.key];
                                             const editable = isEditing && !field.readOnly;
@@ -356,28 +410,38 @@ function EmployeesDetails() {
                                             return (
                                                 <div
                                                     key={field.key}
-                                                    className={field.full ? "sm:col-span-2 lg:col-span-3" : ""}
+                                                    className={`flex flex-col gap-1.5 ${field.full ? "sm:col-span-2" : ""}`}
                                                 >
-                                                    <p className="w-40 shrink-0 text-xs font-medium uppercase tracking-wide text-gray-40">
+                                                    <p className="text-xs font-medium uppercase tracking-wide text-gray-400">
                                                         {field.label}
                                                     </p>
 
                                                     {editable ? (
-                                                        // <input className ="flex-1 text-right"
-                                                        <input
-                                                            type="text"
-                                                            value={formData[field.key] || ""}
-                                                            onChange={(e) =>
-                                                                handleFieldChange(
-                                                                    field.key,
-                                                                    e.target.value
-                                                                )
-                                                            }
-                                                            className="mt-1.5 w-full rounded-lg border border-gray-200 bg-white p-2 text-sm outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
-                                                        />
+                                                        <>
+                                                            <input
+                                                                type="text"
+                                                                value={formData[field.key] || ""}
+                                                                onChange={(e) =>
+                                                                    handleFieldChange(
+                                                                        field.key,
+                                                                        e.target.value
+                                                                    )
+                                                                }
+                                                                className={`w-full rounded-lg border bg-white px-3 py-2 text-sm outline-none transition focus:ring-2 ${
+                                                                    errors[field.key]
+                                                                        ? "border-red-400 focus:border-red-400 focus:ring-red-100"
+                                                                        : "border-gray-200 focus:border-indigo-400 focus:ring-indigo-100"
+                                                                }`}
+                                                            />
+                                                            {errors[field.key] && (
+                                                                <p className="text-xs text-red-500">
+                                                                    {errors[field.key]}
+                                                                </p>
+                                                            )}
+                                                        </>
                                                     ) : (
-                                                        <div className="mt-1.5 flex items-center gap-2">
-                                                            <p className="break-words font-medium text-gray-800">
+                                                        <div className="flex min-w-0 items-center gap-2">
+                                                            <p className="break-words text-sm font-medium text-gray-800">
                                                                 {value ? (
                                                                     isHidden ? maskValue(value) : value
                                                                 ) : (
@@ -402,6 +466,36 @@ function EmployeesDetails() {
                                                 </div>
                                             );
                                         })}
+                                        </div>
+
+                                        {/* Actions live inside the open card */}
+                                        <div className="flex items-center justify-end gap-2 pt-4">
+                                            {isEditing ? (
+                                                <>
+                                                    <button
+                                                        onClick={cancelEdit}
+                                                        disabled={saving}
+                                                        className="rounded-lg px-3 py-1.5 text-sm font-medium text-gray-500 transition hover:bg-gray-100 disabled:opacity-60"
+                                                    >
+                                                        Cancel
+                                                    </button>
+                                                    <button
+                                                        onClick={() => saveSection(section.section)}
+                                                        disabled={saving}
+                                                        className="rounded-lg bg-indigo-600 px-4 py-1.5 text-sm font-medium text-white transition hover:bg-indigo-700 disabled:opacity-60"
+                                                    >
+                                                        {saving ? "Saving…" : "Save"}
+                                                    </button>
+                                                </>
+                                            ) : (
+                                                <button
+                                                    onClick={() => startEdit(section.section)}
+                                                    className="flex items-center gap-1.5 rounded-lg border border-indigo-200 px-3 py-1.5 text-sm font-medium text-indigo-600 transition hover:bg-indigo-50"
+                                                >
+                                                    <Pencil className="h-3.5 w-3.5" /> Edit
+                                                </button>
+                                            )}
+                                        </div>
                                     </div>
                                 )}
                             </section>

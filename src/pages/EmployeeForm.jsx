@@ -196,8 +196,8 @@ function EmployeeForm() {
           email: "",
           mobile: "",
           address: "",
-          gender: "",
-          dob: "",
+          // gender: "",
+          // dob: "",
         },
 
         employmentInfo: {
