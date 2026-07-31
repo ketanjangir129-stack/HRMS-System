@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { getEmployeeById, updateEmployee } from "../services/EmployeeService";
+import { getDepartments } from "../services/departmentService";
 import { validateField } from "../utils/validation/validateField";
 import { rules } from "../utils/validation/rules";
 import {
@@ -11,8 +12,11 @@ import {
   Eye,
   EyeOff,
   FileText,
+  IdCard,
   Landmark,
+  Mail,
   Pencil,
+  Phone,
   UserRound,
   WalletCards,
 } from "lucide-react";
@@ -22,7 +26,11 @@ function EmployeesDetails() {
     const { id } = useParams();
  
     const [employee, setEmployee] = useState(null);
- 
+
+    // Add Employee jaisa hi source — departments list + selected dept ke designations
+    const [departments, setDepartments] = useState([]);
+    const [designations, setDesignations] = useState([]);
+
     // Which card is currently being edited + its working copy
     const [editingSection, setEditingSection] = useState(null);
     const [formData, setFormData] = useState({});
@@ -48,8 +56,46 @@ function EmployeesDetails() {
  
     useEffect(() => {
         loadEmployee();
+        loadDepartments();
     }, []);
- 
+
+    const loadDepartments = async () => {
+        const data = await getDepartments(companyCode);
+
+        if (!data) {
+            setDepartments([]);
+            return;
+        }
+
+        const departmentArray = Object.keys(data).map((key) => ({
+            id: key,
+            ...data[key],
+        }));
+
+        setDepartments(departmentArray);
+    };
+
+    // Chune hue department ke hisaab se designation options set karo
+    const loadDesignationsFor = (departmentName) => {
+        const dept = departments.find((item) => item.name === departmentName);
+
+        const designationArray = dept?.designations
+            ? Object.keys(dept.designations).map((key) => ({
+                id: key,
+                ...dept.designations[key],
+            }))
+            : [];
+
+        setDesignations(designationArray);
+    };
+
+    // Department badla → designation reset + uske naye options load
+    const handleDepartmentChange = (value) => {
+        setFormData((prev) => ({ ...prev, department: value, designation: "" }));
+        setErrors((prev) => ({ ...prev, department: "" }));
+        loadDesignationsFor(value);
+    };
+
     const loadEmployee = async () => {
         setLoadError("");
         try {
@@ -135,6 +181,11 @@ function EmployeesDetails() {
         setEditingSection(sectionId);
         setExpanded((prev) => ({ ...prev, [sectionId]: true }));
         setErrors({});
+
+        // Employment edit khulte hi maujooda department ke designations dikha do
+        if (sectionId === "employmentInfo") {
+            loadDesignationsFor(employee.employmentInfo?.department);
+        }
     };
 
     const cancelEdit = () => {
@@ -149,11 +200,7 @@ function EmployeesDetails() {
         setErrors((prev) => ({ ...prev, [key]: "" }));
     };
 
-    // Section ke andar sirf un fields ko validate karta hai jinke rules bane hain.
-    // Core fields (name/email/mobile) khaali nahi ho sakte; baaki optional fields
-    // tabhi check hote hain jab unme kuch value ho (edit pe force-fill na ho).
     const validateSection = (sectionId, data) => {
-        const coreFields = ["name", "email", "mobile"];
         const sectionErrors = {};
 
         Object.keys(data).forEach((key) => {
@@ -162,8 +209,8 @@ function EmployeesDetails() {
             const value = data[key];
             const isEmpty = !String(value ?? "").trim();
 
-            // Optional (non-core) field khaali ho to validate mat karo
-            if (isEmpty && !coreFields.includes(key)) return;
+            // Optional field (rule required nahi) khaali ho to validate mat karo
+            if (isEmpty && !rules[key].required) return;
 
             const error = validateField(key, value, { ...employee, [sectionId]: data });
             if (error) sectionErrors[key] = error;
@@ -246,9 +293,9 @@ function EmployeesDetails() {
                 { key: "name", label: "Name" },
                 { key: "email", label: "Email" },
                 { key: "mobile", label: "Mobile" },
-                { key: "gender", label: "Gender" },
-                { key: "dob", label: "DOB" },
-                { key: "address", label: "Address", full: true },
+                { key: "gender", label: "Gender", type:"select" , options:["Male", "Female", "Prefer not to say"] },
+                { key: "dob", label: "DOB", type:"date" },
+                { key: "address", label: "Address" },
             ],
         },
         {
@@ -258,9 +305,9 @@ function EmployeesDetails() {
             accent: "bg-violet-50 text-violet-600",
             fields: [
                 { key: "employeeId", label: "Employee ID", readOnly: true },
-                { key: "department", label: "Department" },
-                { key: "designation", label: "Designation" },
-                { key: "joiningDate", label: "Joining Date" },
+                { key: "department", label: "Department", type: "select" },
+                { key: "designation", label: "Designation", type: "select" },
+                { key: "joiningDate", label: "Joining Date", type: "date" },
                 { key: "employeeType", label: "Employee Type" },
             ],
         },
@@ -352,9 +399,18 @@ function EmployeesDetails() {
                             </p>
                           </div>
                             <div className="mt-3 flex flex-wrap gap-4 text-sm text-white/80">
-                                <span>🆔 {employee.employmentInfo?.employeeId}</span>
-                                <span>✉️ {employee.personalInfo?.email}</span>
-                                <span>📞 {employee.personalInfo?.mobile}</span>
+                                <span className="flex items-center gap-1.5">
+                                    <IdCard className="h-4 w-4" />
+                                    {employee.employmentInfo?.employeeId}
+                                </span>
+                                <span className="flex items-center gap-1.5">
+                                    <Mail className="h-4 w-4" />
+                                    {employee.personalInfo?.email}
+                                </span>
+                                <span className="flex items-center gap-1.5">
+                                    <Phone className="h-4 w-4" />
+                                    {employee.personalInfo?.mobile}
+                                </span>
                             </div>
                         </div>
                     </div>
@@ -372,7 +428,7 @@ function EmployeesDetails() {
                                 className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm
                                            transition-shadow duration-200 hover:shadow-md"
                             >
-                                {/* Whole header strip toggles the section open/closed */}
+                    
                                 <button
                                     type="button"
                                     onClick={() => toggleExpand(section.section)}
@@ -407,6 +463,20 @@ function EmployeesDetails() {
                                             const editable = isEditing && !field.readOnly;
                                             const fieldId = `${section.section}.${field.key}`;
                                             const isHidden = field.masked && !revealed[fieldId];
+
+                                            // Dropdown options:
+                                            const selectOptions =
+                                                field.key === "department"
+                                                    ? departments.map((d) => d.name)
+                                                    : field.key === "designation"
+                                                    ? designations.map((d) => d.name)
+                                                    : field.options || [];
+
+                                            
+                                            const handleSelectChange =
+                                                field.key === "department"
+                                                    ? (e) => handleDepartmentChange(e.target.value)
+                                                    : (e) => handleFieldChange(field.key, e.target.value);
                                             return (
                                                 <div
                                                     key={field.key}
@@ -418,21 +488,46 @@ function EmployeesDetails() {
 
                                                     {editable ? (
                                                         <>
-                                                            <input
-                                                                type="text"
-                                                                value={formData[field.key] || ""}
-                                                                onChange={(e) =>
-                                                                    handleFieldChange(
-                                                                        field.key,
-                                                                        e.target.value
-                                                                    )
-                                                                }
-                                                                className={`w-full rounded-lg border bg-white px-3 py-2 text-sm outline-none transition focus:ring-2 ${
-                                                                    errors[field.key]
-                                                                        ? "border-red-400 focus:border-red-400 focus:ring-red-100"
-                                                                        : "border-gray-200 focus:border-indigo-400 focus:ring-indigo-100"
-                                                                }`}
-                                                            />
+                                                            {field.type === "select" ? (
+                                                                <select
+                                                                    value={formData[field.key] || ""}
+                                                                    onChange={handleSelectChange}
+                                                                    disabled={
+                                                                        field.key === "designation" &&
+                                                                        !formData.department
+                                                                    }
+                                                                    className={`w-full rounded-lg border bg-white px-3 py-2 text-sm outline-none transition focus:ring-2 disabled:cursor-not-allowed disabled:bg-gray-50 ${
+                                                                        errors[field.key]
+                                                                            ? "border-red-400 focus:border-red-400 focus:ring-red-100"
+                                                                            : "border-gray-200 focus:border-indigo-400 focus:ring-indigo-100"
+                                                                    }`}
+                                                                >
+                                                                    <option value="">
+                                                                        Select {field.label}
+                                                                    </option>
+                                                                    {selectOptions.map((opt) => (
+                                                                        <option key={opt} value={opt}>
+                                                                            {opt}
+                                                                        </option>
+                                                                    ))}
+                                                                </select>
+                                                            ) : (
+                                                                <input
+                                                                    type={field.type === "date" ? "date" : "text"}
+                                                                    value={formData[field.key] || ""}
+                                                                    onChange={(e) =>
+                                                                        handleFieldChange(
+                                                                            field.key,
+                                                                            e.target.value
+                                                                        )
+                                                                    }
+                                                                    className={`w-full rounded-lg border bg-white px-3 py-2 text-sm outline-none transition focus:ring-2 ${
+                                                                        errors[field.key]
+                                                                            ? "border-red-400 focus:border-red-400 focus:ring-red-100"
+                                                                            : "border-gray-200 focus:border-indigo-400 focus:ring-indigo-100"
+                                                                    }`}
+                                                                />
+                                                            )}
                                                             {errors[field.key] && (
                                                                 <p className="text-xs text-red-500">
                                                                     {errors[field.key]}
@@ -468,7 +563,7 @@ function EmployeesDetails() {
                                         })}
                                         </div>
 
-                                        {/* Actions live inside the open card */}
+                                    
                                         <div className="flex items-center justify-end gap-2 pt-4">
                                             {isEditing ? (
                                                 <>
