@@ -16,6 +16,9 @@ import OnboardingRequests from "../pages/onboarding/OnboardingRequests"
 import Onboardinghistory from "../pages/onboarding/OnBoardhistory"
 import ReviewOnboarding from "../pages/onboarding/ReviewOnboarding"
 import EmployeeOnboarding from "../pages/onboarding/EmployeeOnboarding/EmployeeOnboarding";
+import SalaryDashboard from "../pages/salary/SalaryDashBoard"
+import SalaryCRUD from "../pages/salary/SalaryCRUD"
+import SalaryForm from "../pages/salary/SalaryForm"
 function AppRoutes(){
     return(
         <Routes>
@@ -53,6 +56,11 @@ function AppRoutes(){
                 <Route path="/OnboardDashboard/OnBoardRequest" element={<OnboardingRequests />}/>
                 <Route path="/OnboardDashboard/OnBoardhistory" element={<Onboardinghistory />}/>
                 <Route path="/onboarding/:requestId" element={<ReviewOnboarding />}/>
+                <Route path="/salarydashboard" element={<SalaryDashboard />} />
+                <Route path="/salarydashboard/salary" element={<SalaryCRUD />} />
+                <Route path="/salarydashboard/salary/create/:employeeId" element={<SalaryForm />} />
+                <Route path="/salarydashboard/salary/edit/:employeeId" element={<SalaryForm />} />
+                ``
                 
             </Route>
             

@@ -2,6 +2,7 @@ import { MdDashboard } from "react-icons/md";
 import { FaBuilding } from "react-icons/fa";
 import { BsFillPersonLinesFill } from "react-icons/bs";
 import { PiPersonSimpleSnowboardLight } from "react-icons/pi";
+import { GiTakeMyMoney } from "react-icons/gi";
 import { NavLink } from "react-router-dom";
 
 
@@ -18,7 +19,7 @@ const menuItems = [
   },
   
   {
-    label: "Employees",
+    label: "Employees-Management",
     path: "/employees",
     icon: BsFillPersonLinesFill,
   },
@@ -27,6 +28,11 @@ const menuItems = [
     label: "On-boarding",
     path: "/OnboardDashboard",
     icon: PiPersonSimpleSnowboardLight,
+  },
+  {
+    label: "Salary-Management",
+    path: "/salarydashboard",
+    icon: GiTakeMyMoney,
   },
   
   
