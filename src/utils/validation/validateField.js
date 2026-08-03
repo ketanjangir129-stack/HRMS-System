@@ -5,10 +5,15 @@ export const validateField = (name, value, formData = {}) => {
 
   if (!rule) return "";
 
+  const isEmpty = !String(value ?? "").trim();
+
   // Required validation
-  if (rule.required && !String(value ?? "").trim()) {
+  if (rule.required && isEmpty) {
     return "This field is required.";
   }
+
+  // Optional field khaali hai to aage ke checks skip
+  if (isEmpty) return "";
 
   // Password match validation
   if (
@@ -21,6 +26,11 @@ export const validateField = (name, value, formData = {}) => {
   // Regex validation
   if (rule.pattern && !rule.pattern.test(value)) {
     return rule.message;
+  }
+
+  // Custom validation (e.g. dob ki age check) — pattern ke baad chalti hai
+  if (rule.validate) {
+    return rule.validate(value, formData) || "";
   }
 
   return "";

@@ -51,6 +51,44 @@ export const rules = {
     required: true,
     message: "Please select a designation.",
   },
+  gender: {
+    required: true,
+    // Sirf wahi values jo dropdown deta hai
+    pattern: /^(Male|Female|Prefer not to say)$/,
+    message: "Please select a gender.",
+  },
+  // Add Employee form DOB nahi puchta — details page se bharna zaroori hai.
+  dob: {
+    required: true,
+    // HTML date input value format: YYYY-MM-DD
+    pattern: /^\d{4}-\d{2}-\d{2}$/,
+    message: "Please enter a valid date of birth.",
+    // Aane wali date ya 18 saal se kam umar allowed nahi
+    validate: (value) => {
+      const dob = new Date(value);
+
+      if (Number.isNaN(dob.getTime())) {
+        return "Please enter a valid date of birth.";
+      }
+
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      if (dob > today) {
+        return "Date of birth cannot be in the future.";
+      }
+
+      // 18th birthday nikaalo aur aaj se compare karo
+      const eighteenth = new Date(dob);
+      eighteenth.setFullYear(eighteenth.getFullYear() + 18);
+
+      if (eighteenth > today) {
+        return "Employee must be at least 18 years old.";
+      }
+
+      return "";
+    },
+  },
   address: {
     required: true,
     pattern: /^.{10,200}$/,

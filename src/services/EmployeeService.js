@@ -60,9 +60,9 @@ export const updateEmployee = async (
 ) => {
   await update(
     ref(
-      db,
-      `companies/${companyCode}/employees/${employeeId.toUpperCase()}`
-    ),
+       db,
+        `companies/${companyCode}/employees/${employeeId.toUpperCase()}` 
+      ),
     data
   );
 };

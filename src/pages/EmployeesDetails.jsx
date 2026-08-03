@@ -42,6 +42,9 @@ function EmployeesDetails() {
     const [expanded, setExpanded] = useState({});
     const [revealed, setRevealed] = useState({});
 
+    // DOB picker mein future date select hi na ho
+    const today = new Date().toISOString().split("T")[0];
+
     const toggleExpand = (sectionId) =>
         setExpanded((prev) => ({ ...prev, [sectionId]: !prev[sectionId] }));
 
@@ -101,7 +104,7 @@ function EmployeesDetails() {
         try {
         const data = await getEmployeeById(companyCode, id);
 
-        // Employee mila hi nahi (galat id / delete ho gaya)
+        // Employee mila hi nahi (galat id / delete ho gaya)]
         if (!data) {
             setLoadError("Employee not found.");
             return;
@@ -109,8 +112,7 @@ function EmployeesDetails() {
 
         const formattedEmployee = {
             personalInfo: (() => {
-                // Pull city/state/pincode out so the spread can't leak them back in —
-                // otherwise they'd get re-appended to the combined address on every reload.
+                
                 const { city, state, pincode, ...rest } = data.personalInfo || {};
                 return {
                     ...rest,
@@ -327,6 +329,8 @@ function EmployeesDetails() {
             icon: BadgeCheck,
             title: "Account Information",
             accent: "bg-amber-50 text-amber-600",
+            // Poora section sirf dekhne ke liye — koi Edit button nahi
+            readOnly: true,
             fields: [
                 { key: "username", label: "Username" },
                 { key: "password", label: "Password", masked: true },
@@ -364,54 +368,58 @@ function EmployeesDetails() {
  
                 {/* Gradient profile header */}
                 <div className="rounded-3xl bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-500 px-8 py-8 text-white shadow-lg">
-                    <div className="flex items-center gap-5">
-                        <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-2xl bg-white/20 text-2xl font-bold ring-2 ring-white/30">
-                            {initials}
-                        </div>
-                        <div className="min-w-0">
-                            <div className="flex flex-wrap items-center gap-3">
-                                <h1 className="truncate text-2xl font-bold">
-                                    {employee.personalInfo?.name}
-                                </h1>
-                                <span
-                                    className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ${
-                                        isActive
-                                            ? "bg-emerald-400/20 text-emerald-100"
-                                            : "bg-rose-400/20 text-rose-100"
-                                    }`}
-                                >
+                    {/* Left: avatar + name/dept · Right: contact details */}
+                    <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+                        <div className="flex min-w-0 items-center gap-5">
+                            <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-2xl bg-white/20 text-2xl font-bold ring-2 ring-white/30">
+                                {initials}
+                            </div>
+                            <div className="min-w-0">
+                                <div className="flex flex-wrap items-center gap-3">
+                                    <h1 className="truncate text-2xl font-bold">
+                                        {employee.personalInfo?.name}
+                                    </h1>
                                     <span
-                                        className={`h-2 w-2 rounded-full ${
-                                            isActive ? "bg-emerald-300" : "bg-rose-300"
+                                        className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ${
+                                            isActive
+                                                ? "bg-emerald-400/20 text-emerald-100"
+                                                : "bg-rose-400/20 text-rose-100"
                                         }`}
-                                    />
-                                    {status}
-                                </span>
+                                    >
+                                        <span
+                                            className={`h-2 w-2 rounded-full ${
+                                                isActive ? "bg-emerald-300" : "bg-rose-300"
+                                            }`}
+                                        />
+                                        {status}
+                                    </span>
+                                </div>
+                                <div className="mt-1 flex items-center text-white/80">
+                                    {employee.employmentInfo?.department
+                                        ? ` ${employee.employmentInfo.department} - `
+                                        : ""}
+                                    <p className="px-1 text-white/80">
+                                        {employee.employmentInfo?.designation || "—"}
+                                    </p>
+                                </div>
                             </div>
-                          <div className="mt-1 text-white/120 flex items-center">
-                             {employee.employmentInfo?.department
-                                    ? ` ${employee.employmentInfo.department} - `
-                                    : ""}
-                              <p className="px-1 text-white/80">
-                         
-                                {employee.employmentInfo?.designation || "—"}
-                               
-                            </p>
-                          </div>
-                            <div className="mt-3 flex flex-wrap gap-4 text-sm text-white/80">
-                                <span className="flex items-center gap-1.5">
-                                    <IdCard className="h-4 w-4" />
-                                    {employee.employmentInfo?.employeeId}
+                        </div>
+
+                        <div className="flex shrink-0 flex-col gap-2 text-sm text-white/80 lg:items-end">
+                            <span className="flex items-center gap-1.5">
+                                <IdCard className="h-4 w-4 shrink-0" />
+                                {employee.employmentInfo?.employeeId || "—"}
+                            </span>
+                            <span className="flex items-center gap-1.5">
+                                <Phone className="h-4 w-4 shrink-0" />
+                                {employee.personalInfo?.mobile || "—"}
+                            </span>
+                            <span className="flex min-w-0 items-center gap-1.5">
+                                <Mail className="h-4 w-4 shrink-0" />
+                                <span className="truncate">
+                                    {employee.personalInfo?.email || "—"}
                                 </span>
-                                <span className="flex items-center gap-1.5">
-                                    <Mail className="h-4 w-4" />
-                                    {employee.personalInfo?.email}
-                                </span>
-                                <span className="flex items-center gap-1.5">
-                                    <Phone className="h-4 w-4" />
-                                    {employee.personalInfo?.mobile}
-                                </span>
-                            </div>
+                            </span>
                         </div>
                     </div>
                 </div>
@@ -460,7 +468,8 @@ function EmployeesDetails() {
                                         <div className="grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-2">
                                         {section.fields.map((field) => {
                                             const value = employee[section.section]?.[field.key];
-                                            const editable = isEditing && !field.readOnly;
+                                            const editable =
+                                                isEditing && !section.readOnly && !field.readOnly;
                                             const fieldId = `${section.section}.${field.key}`;
                                             const isHidden = field.masked && !revealed[fieldId];
 
@@ -514,6 +523,7 @@ function EmployeesDetails() {
                                                             ) : (
                                                                 <input
                                                                     type={field.type === "date" ? "date" : "text"}
+                                                                    max={field.key === "dob" ? today : undefined}
                                                                     value={formData[field.key] || ""}
                                                                     onChange={(e) =>
                                                                         handleFieldChange(
@@ -564,6 +574,7 @@ function EmployeesDetails() {
                                         </div>
 
                                     
+                                        {!section.readOnly && (
                                         <div className="flex items-center justify-end gap-2 pt-4">
                                             {isEditing ? (
                                                 <>
@@ -591,6 +602,7 @@ function EmployeesDetails() {
                                                 </button>
                                             )}
                                         </div>
+                                        )}
                                     </div>
                                 )}
                             </section>

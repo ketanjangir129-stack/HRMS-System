@@ -15,7 +15,6 @@ function EmployeeForm() {
       mobile: "",
       address: "",
       gender: "",
-      dob: "",
     },
 
     employmentInfo: {
@@ -55,6 +54,7 @@ function EmployeeForm() {
 
   const [departments, setDepartments] = useState([]);
   const [designations, setDesignations] = useState([]);
+  const [saving, setSaving] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -81,7 +81,7 @@ function EmployeeForm() {
   const handleChange = (e) => {
     const { name, value } = e.target;
 
-    if (["name", "email", "mobile", "address", "gender", "dob"].includes(name)) {
+    if (["name", "email", "mobile", "address", "gender"].includes(name)) {
       setEmployee({
         ...employee,
         personalInfo: {
@@ -158,20 +158,19 @@ function EmployeeForm() {
     // Clear previous errors
     setErrors({});
 
-    // Validate only the sections shown on this form
+    // Validate the two sections this form collects. Fields without a rule in
+    // rules.js (gender, dob) are skipped by validateField on their own.
     const validationErrors = validateForm({
       personalInfo: employee.personalInfo,
-      employmentInfo: {
-        employeeId: employee.employmentInfo.employeeId,
-        department: employee.employmentInfo.department,
-        designation: employee.employmentInfo.designation,
-      },
+      employmentInfo: employee.employmentInfo,
     });
 
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors);
       return;
     }
+
+    setSaving(true);
 
     try {
       const result = await createEmployee(
@@ -189,63 +188,12 @@ function EmployeeForm() {
 
       alert("Employee added successfully");
       navigate("/employees");
-      // Reset form
-      setEmployee({
-        personalInfo: {
-          name: "",
-          email: "",
-          mobile: "",
-          address: "",
-          // gender: "",
-          // dob: "",
-        },
-
-        employmentInfo: {
-          employeeId: "",
-          department: "",
-          designation: "",
-          joiningDate: "",
-          employeeType: "",
-        },
-
-        bankInfo: {
-          bankName: "",
-          accountNumber: "",
-          ifsc: "",
-          branch: "",
-        },
-
-        salaryInfo: {
-          basicSalary: "",
-          hra: "",
-          bonus: "",
-        },
-
-        documents: {
-          aadhaar: "",
-          pan: "",
-          resume: "",
-        },
-
-        account: {
-          username: "",
-          password: "",
-          role: "employee",
-          status: "Active",
-          isPasswordChanged: false,
-        },
-      });
-
-      // Reset designation dropdown
-      setDesignations([]);
-
-      // Clear validation errors
-      setErrors({});
-      
 
     } catch (error) {
       console.error(error);
       alert(error.message || "Failed to add employee");
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -271,7 +219,6 @@ function EmployeeForm() {
               name="employeeId"
               value={employee.employmentInfo.employeeId}
               onChange={handleChange}
-              required
               placeholder="Enter Employee ID"
               className="w-full border rounded-lg p-3"
               onBlur={handleBlur}
@@ -316,7 +263,6 @@ function EmployeeForm() {
             <input
               type="email"
               name="email"
-              required
               value={employee.personalInfo.email}
               onChange={handleChange}
               placeholder="Enter Email"
@@ -355,19 +301,43 @@ function EmployeeForm() {
             )}
           </div>
 
+          {/* Gender */}
+          <div>
+            <label className="block mb-2 font-medium">
+              Gender
+            </label>
+
+            <select
+              name="gender"
+              value={employee.personalInfo.gender}
+              onChange={handleChange}
+              onBlur={handleBlur}
+              className="w-full border rounded-lg p-3"
+            >
+              <option value="">Select Gender</option>
+              <option value="Male">Male</option>
+              <option value="Female">Female</option>
+              <option value="Prefer not to say">Prefer not to say</option>
+            </select>
+
+            {errors.gender && (
+              <p className="mt-1 text-sm text-red-500">
+                {errors.gender}
+              </p>
+            )}
+          </div>
+
           {/* joining date */}
           <div>
             <label className="block mb-2 font-medium">
-              joining Date
+              Joining Date
             </label>
 
             <input
               type="date"
               name="joiningDate"
-              maxLength={10}
               value={employee.employmentInfo.joiningDate}
               onChange={handleChange}
-              placeholder="Employee joiningDate"
               className="w-full border rounded-lg p-3"
               onBlur={handleBlur}
             />
@@ -377,50 +347,6 @@ function EmployeeForm() {
                 {errors.joiningDate}
               </p>
             )}
-          </div>
-
-          {/* employeeType */}
-          <div>
-            <label className="block mb-2 font-medium">
-              Employee Type
-            </label>
-
-            <input
-              type="text"
-              name="employeeType"
-              value={employee.employmentInfo.employeeType}
-              onChange={handleChange}
-              placeholder="Enter Employee Type (e.g., Full Time)"
-              className="w-full border rounded-lg p-3"
-              onBlur={handleBlur}
-            />
-
-            {errors.employeeType && (
-              <p className="mt-1 text-sm text-red-500">
-                {errors.employeeType}
-              </p>
-            )}
-          </div>
-
-            <div>
-              <label className="block mb-2 font-medium">
-                Role
-              </label>
-
-              <select
-                  name="role"
-                  value={employee.account.role}
-                  onChange={handleChange}
-                  className="w-full border rounded-lg p-3"
-              >
-                  <option value="employee">
-                      Employee
-                  </option>
-
-                  <option value="hr">
-                      HR
-                  </option>
-              </select>
           </div>
 
           {/* Department */}
@@ -461,6 +387,7 @@ function EmployeeForm() {
               name="designation"
               value={employee.employmentInfo.designation}
               onChange={handleChange}
+              onBlur={handleBlur}
               className="w-full border rounded-lg p-3"
             >
               <option value="">Select Designation</option>
@@ -472,6 +399,51 @@ function EmployeeForm() {
               ))}
             </select>
 
+            {errors.designation && (
+              <p className="mt-1 text-sm text-red-500">
+                {errors.designation}
+              </p>
+            )}
+          </div>
+
+          {/* employeeType */}
+          <div>
+            <label className="block mb-2 font-medium">
+              Employee Type
+            </label>
+
+            <input
+              type="text"
+              name="employeeType"
+              value={employee.employmentInfo.employeeType}
+              onChange={handleChange}
+              placeholder="Enter Employee Type (e.g., Full Time)"
+              className="w-full border rounded-lg p-3"
+              onBlur={handleBlur}
+            />
+
+            {errors.employeeType && (
+              <p className="mt-1 text-sm text-red-500">
+                {errors.employeeType}
+              </p>
+            )}
+          </div>
+
+          {/* Role */}
+          <div>
+            <label className="block mb-2 font-medium">
+              Role
+            </label>
+
+            <select
+              name="role"
+              value={employee.account.role}
+              onChange={handleChange}
+              className="w-full border rounded-lg p-3"
+            >
+              <option value="employee">Employee</option>
+              <option value="hr">HR</option>
+            </select>
           </div>
 
         </div>
@@ -505,9 +477,10 @@ function EmployeeForm() {
 
           <button
             type="submit"
-            className="px-6 py-3 bg-blue-600 text-white rounded-lg disabled:opacity-50"
+            disabled={saving}
+            className="px-6 py-3 bg-blue-600 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Save
+            {saving ? "Saving..." : "Save"}
           </button>
 
         </div>
