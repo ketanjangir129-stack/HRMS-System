@@ -113,6 +113,51 @@ export const rules = {
     pattern: /^\d{4}-\d{2}-\d{2}$/,
     message: "Please enter a valid joining date.",
   },
+
+  // bank info — details page ke Bank Information card se bharta hai
+  bankName: {
+    required: true,
+    pattern: /^[A-Za-z][A-Za-z .&'-]{2,59}$/,
+    message: "Enter a valid bank name.",
+  },
+  branch: {
+    required: true,
+    pattern: /^[A-Za-z0-9][A-Za-z0-9 .,&'()-]{1,59}$/,
+    message: "Enter a valid branch name.",
+  },
+  accountNumber: {
+    required: true,
+    // Indian bank account numbers 9-18 digits ke beech hote hain
+    pattern: /^\d{9,18}$/,
+    message: "Account number must be 9-18 digits.",
+  },
+  ifsc: {
+    required: true,
+    // 4 letters + 0 + 6 alphanumeric (e.g. HDFC0001234)
+    pattern: /^[A-Za-z]{4}0[A-Za-z0-9]{6}$/,
+    message: "Enter a valid IFSC code (e.g. HDFC0001234).",
+  },
+
+  aadhaar: {
+    required: true,
+    // 12 digits, pehla digit 0 ya 1 nahi hota
+    pattern: /^[2-9]\d{11}$/,
+    message: "Aadhaar number must be 12 digits.",
+  },
+  pan: {
+    required: true,
+    // 5 letters + 4 digits + 1 letter (e.g. ABCDE1234F)
+    pattern: /^[A-Za-z]{5}\d{4}[A-Za-z]$/,
+    message: "Enter a valid PAN (e.g. ABCDE1234F).",
+  },
+
+  // documents — resume sirf PDF (file name ya link, dono chalenge)
+  resume: {
+    required: false,
+    pattern: /^\S.*\.pdf(\?\S*)?$/i,
+    message: "Resume must be a PDF file (.pdf).",
+  },
+
   employeeType: {
     required: true,
     // Human input like "Full Time", "Part-Time", "Contract".

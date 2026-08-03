@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import { getEmployeeById, updateEmployee } from "../services/EmployeeService";
+import { getEmployeeById, updateEmployee, uploadResume } from "../services/EmployeeService";
 import { getDepartments } from "../services/departmentService";
 import { validateField } from "../utils/validation/validateField";
 import { rules } from "../utils/validation/rules";
@@ -35,6 +35,9 @@ function EmployeesDetails() {
     const [editingSection, setEditingSection] = useState(null);
     const [formData, setFormData] = useState({});
     const [saving, setSaving] = useState(false);
+
+    // Documents card mein chuni hui PDF — Save par hi upload hoti hai
+    const [resumeFile, setResumeFile] = useState(null);
     const [errors, setErrors] = useState({});
     const [loadError, setLoadError] = useState("");
 
@@ -183,6 +186,7 @@ function EmployeesDetails() {
         setEditingSection(sectionId);
         setExpanded((prev) => ({ ...prev, [sectionId]: true }));
         setErrors({});
+        setResumeFile(null);
 
         // Employment edit khulte hi maujooda department ke designations dikha do
         if (sectionId === "employmentInfo") {
@@ -194,6 +198,39 @@ function EmployeesDetails() {
         setEditingSection(null);
         setFormData({});
         setErrors({});
+        setResumeFile(null);
+    };
+
+    // Resume sirf PDF, 5 MB tak — galat file turant reject
+    const MAX_RESUME_SIZE = 5 * 1024 * 1024;
+
+    const handleResumeChange = (e) => {
+        const file = e.target.files?.[0];
+
+        if (!file) {
+            setResumeFile(null);
+            return;
+        }
+
+        const isPdf =
+            file.type === "application/pdf" || /\.pdf$/i.test(file.name);
+
+        if (!isPdf) {
+            e.target.value = "";
+            setResumeFile(null);
+            setErrors((prev) => ({ ...prev, resume: "Resume must be a PDF file (.pdf)." }));
+            return;
+        }
+
+        if (file.size > MAX_RESUME_SIZE) {
+            e.target.value = "";
+            setResumeFile(null);
+            setErrors((prev) => ({ ...prev, resume: "Resume must be smaller than 5 MB." }));
+            return;
+        }
+
+        setResumeFile(file);
+        setErrors((prev) => ({ ...prev, resume: "" }));
     };
 
     const handleFieldChange = (key, value) => {
@@ -222,8 +259,13 @@ function EmployeesDetails() {
     };
 
     const saveSection = async (sectionId) => {
-        // Save se pehle validate karo
-        const validationErrors = validateSection(sectionId, formData);
+        const hasNewResume = sectionId === "documents" && !!resumeFile;
+
+        // Nayi PDF chuni hai to purane link ki jagah uska naam validate karo
+        const validationErrors = validateSection(
+            sectionId,
+            hasNewResume ? { ...formData, resume: resumeFile.name } : formData
+        );
         if (Object.keys(validationErrors).length > 0) {
             setErrors(validationErrors);
             return; // galti hai to save mat karo
@@ -231,9 +273,17 @@ function EmployeesDetails() {
 
         setSaving(true);
         try {
-            await updateEmployee(companyCode, id, { [sectionId]: formData });
-            setEmployee((prev) => ({ ...prev, [sectionId]: formData }));
+            const sectionData = { ...formData };
+
+            // Baaki fields sahi hain, ab hi file Storage pe bhejo
+            if (hasNewResume) {
+                sectionData.resume = await uploadResume(companyCode, id, resumeFile);
+            }
+
+            await updateEmployee(companyCode, id, { [sectionId]: sectionData });
+            setEmployee((prev) => ({ ...prev, [sectionId]: sectionData }));
             setEditingSection(null);
+            setResumeFile(null);
             setErrors({});
         } catch (error) {
             console.error(error);
@@ -355,7 +405,7 @@ function EmployeesDetails() {
             title: "Documents",
             accent: "bg-rose-50 text-rose-600",
             fields: [
-                { key: "resume", label: "Resume" },
+                { key: "resume", label: "Resume", type: "file" },
                 { key: "aadhaar", label: "Aadhaar Number", masked: true },
                 { key: "pan", label: "PAN Number", masked: true },
             ],
@@ -497,7 +547,27 @@ function EmployeesDetails() {
 
                                                     {editable ? (
                                                         <>
-                                                            {field.type === "select" ? (
+                                                            {field.type === "file" ? (
+                                                                <>
+                                                                    <input
+                                                                        type="file"
+                                                                        accept="application/pdf"
+                                                                        onChange={handleResumeChange}
+                                                                        className={`w-full rounded-lg border bg-white text-sm text-gray-600 outline-none transition file:mr-3 file:cursor-pointer file:rounded-l-lg file:border-0 file:bg-gray-50 file:px-3 file:py-2 file:text-sm file:font-medium file:text-gray-700 hover:file:bg-gray-100 ${
+                                                                            errors[field.key]
+                                                                                ? "border-red-400"
+                                                                                : "border-gray-200"
+                                                                        }`}
+                                                                    />
+                                                                    <p className="truncate text-xs text-gray-400">
+                                                                        {resumeFile
+                                                                            ? resumeFile.name
+                                                                            : formData[field.key]
+                                                                            ? "Ek resume pehle se uploaded hai — nayi PDF chunne par wo replace ho jayegi."
+                                                                            : "Sirf PDF, 5 MB tak."}
+                                                                    </p>
+                                                                </>
+                                                            ) : field.type === "select" ? (
                                                                 <select
                                                                     value={formData[field.key] || ""}
                                                                     onChange={handleSelectChange}
@@ -548,7 +618,21 @@ function EmployeesDetails() {
                                                         <div className="flex min-w-0 items-center gap-2">
                                                             <p className="break-words text-sm font-medium text-gray-800">
                                                                 {value ? (
-                                                                    isHidden ? maskValue(value) : value
+                                                                    field.type === "file" &&
+                                                                    /^https?:\/\//.test(value) ? (
+                                                                        <a
+                                                                            href={value}
+                                                                            target="_blank"
+                                                                            rel="noreferrer"
+                                                                            className="text-indigo-600 hover:underline"
+                                                                        >
+                                                                            View Resume (PDF)
+                                                                        </a>
+                                                                    ) : isHidden ? (
+                                                                        maskValue(value)
+                                                                    ) : (
+                                                                        value
+                                                                    )
                                                                 ) : (
                                                                     <span className="text-gray-300">—</span>
                                                                 )}

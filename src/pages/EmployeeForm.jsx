@@ -15,6 +15,7 @@ function EmployeeForm() {
       mobile: "",
       address: "",
       gender: "",
+      
     },
 
     employmentInfo: {
@@ -158,8 +159,7 @@ function EmployeeForm() {
     // Clear previous errors
     setErrors({});
 
-    // Validate the two sections this form collects. Fields without a rule in
-    // rules.js (gender, dob) are skipped by validateField on their own.
+    
     const validationErrors = validateForm({
       personalInfo: employee.personalInfo,
       employmentInfo: employee.employmentInfo,

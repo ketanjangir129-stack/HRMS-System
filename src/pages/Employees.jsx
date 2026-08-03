@@ -21,8 +21,7 @@ function Employees() {
         try {
             const data = await getEmployees(companyCode);
  
-            // Flatten the nested sections so the table and searchEmployees
-            // can read plain fields (name, employeeId, department, designation)
+           
             const employeeArray = Object.keys(data).map((key) => {
                 const employee = data[key];
  

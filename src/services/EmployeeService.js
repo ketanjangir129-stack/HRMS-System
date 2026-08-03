@@ -1,5 +1,10 @@
-import { db } from "../firebase/firebase";
+import { db, storage } from "../firebase/firebase";
 import { ref, get, set, update } from "firebase/database";
+import {
+  ref as storageRef,
+  uploadBytes,
+  getDownloadURL,
+} from "firebase/storage";
 
 // Add Employee
 export const addEmployee = async (companyCode, employee) => {
@@ -65,6 +70,18 @@ export const updateEmployee = async (
       ),
     data
   );
+};
+
+// Resume upload — PDF Storage mein jaata hai, DB mein sirf uska link save hota hai
+export const uploadResume = async (companyCode, employeeId, file) => {
+  const fileRef = storageRef(
+    storage,
+    `companies/${companyCode}/employees/${employeeId.toUpperCase()}/resume.pdf`
+  );
+
+  await uploadBytes(fileRef, file, { contentType: "application/pdf" });
+
+  return await getDownloadURL(fileRef);
 };
 
 // Check Duplicate Employee
