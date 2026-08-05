@@ -213,3 +213,71 @@ export const editSalary = async (
         message : "Salary updated successfully."
     }
 }
+export const getAllSalaryHistory = async (
+    companyCode,
+    employeeId
+) => {
+
+    const snapshot = await get(
+        ref(
+            db,
+            `companies/${companyCode}/salaryHistory`
+        )
+    );
+
+    if (!snapshot.exists()) {
+
+        return [];
+
+    }
+
+    const data = snapshot.val();
+
+    return Object.keys(data)
+        .map((id) => ({
+
+            id,
+
+            ...data[id],
+
+        }))
+        .sort(
+            (a, b) =>
+                b.updatedAt - a.updatedAt
+        );
+
+};
+export const getSalaryHistory = async (
+    companyCode,
+    employeeId
+) => {
+
+    const snapshot = await get(
+        ref(
+            db,
+            `companies/${companyCode}/salaryHistory/${employeeId}`
+        )
+    );
+
+    if (!snapshot.exists()) {
+
+        return [];
+
+    }
+
+    const data = snapshot.val();
+
+    return Object.keys(data)
+        .map((id) => ({
+
+            id,
+
+            ...data[id],
+
+        }))
+        .sort(
+            (a, b) =>
+                b.updatedAt - a.updatedAt
+        );
+
+};
