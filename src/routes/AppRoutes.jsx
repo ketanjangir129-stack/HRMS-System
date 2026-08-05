@@ -26,6 +26,7 @@ import EmployeeOnboarding from "../pages/onboarding/EmployeeOnboarding/EmployeeO
 import SalaryDashboard from "../pages/salary/SalaryDashBoard"
 import SalaryCRUD from "../pages/salary/SalaryCRUD"
 import SalaryForm from "../pages/salary/SalaryForm"
+import SalaryHistory from "../pages/salary/SalaryHistory"
 function AppRoutes(){
     return(
         <Routes>
@@ -76,6 +77,7 @@ function AppRoutes(){
                 {/* Salary Routing */}
                 <Route path="/salarydashboard" element={<SalaryDashboard />} />
                 <Route path="/salarydashboard/salary" element={<SalaryCRUD />} />
+                <Route path="/salarydashboard/salary/history/:employeeId" element={<SalaryHistory />} />
                 <Route path="/salarydashboard/salary/create/:employeeId" element={<SalaryForm />} />
                 <Route path="/salarydashboard/salary/edit/:employeeId" element={<SalaryForm />} />
                 

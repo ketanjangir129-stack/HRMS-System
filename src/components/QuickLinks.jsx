@@ -1,101 +1,114 @@
-function QuickLinks(){
-    return(
+import { useNavigate } from "react-router-dom";
+import {
+    FaUserTie,
+    FaCog,
+    FaGlobe,
+    FaGraduationCap,
+    FaChartBar,
+    FaImage,
+    FaBuilding,
+    FaShieldAlt,
+    FaSnowboarding,
+    FaTasks,
+} from "react-icons/fa";
+import {FcLeave } from "react-icons/fc";
+import { TbMoneybag } from "react-icons/tb";
+function QuickLinks() {
+    const navigate = useNavigate();
+
+    const gotoEmployees = () => {
+        navigate("/employees");
+    };
+
+    const gotodepartment = () => {
+        navigate("/departments");
+    };
+    
+    const gotoSalary = () => {
+        navigate("/salarydashboard");
+    };
+   
+    const gotoonboard = () => {
+        navigate("/OnboardDashboard");
+    };
+    const gotoattendence = () => {
+        navigate("/attendance");
+    };
+    const gototasks = () => {
+        navigate("/tasks");
+    };
+
+    return (
         <>
-            <div className="welcome-section" >
-                <div>
-                    <p className="date" >Wednesday, July 15, 2026</p>
 
-                    <h1>Hello, Admin</h1>
 
-                    <p className="welcome-text">Here's what's happening with your HRMS today.</p>
 
-                </div>
-            </div>
-
-            
             <div className="dashboard-row">
 
-                {/* Today's Tasks */}
-                <div className="task-card">
-
-                    <div className="card-title">
-                        <h2>Today's Tasks</h2>
-                        <button>View All</button>
-                    </div>
-
-                    <div className="task-item">
-                        <input type="checkbox" />
-                        <span>Complete employee onboarding process</span>
-                    </div>
-
-                    <div className="task-item">
-                        <input type="checkbox" />
-                        <span>Review leave requests</span>
-                    </div>
-
-
-                    <div className="task-item">
-                        <input type="checkbox" />
-                        <span>Prepare monthly payroll report</span>
-                    </div>
-
-                    <div className="task-item">
-                        <input type="checkbox" />
-                        <span>Conduct performance evaluations</span>
-                    </div>
-
-                </div>
-
                 {/* Quick find */}
-                <div className="quick-card">
-                    <h2>Quick Find</h2>
-                    
-                    <div className="quick-grid">
+                <div className="bg-white rounded-2xl p-6 shadow-md">
+                    <h2 className="text-2xl font-semibold text-gray-800 mb-6">
+                        Quick Find
+                    </h2>
 
-                        <div className="quick-item">
-                            <FaUserTie className="quick-icon blue" />
-                            <p>Employees</p>
+                    <div className="grid grid-cols-3 gap-6">
+                        <div className="flex flex-col items-center cursor-pointer" onClick={gotoEmployees}>
+                            <FaUserTie className="text-4xl p-3 rounded-xl bg-blue-100 text-blue-600" />
+                            <p className="mt-2 text-sm font-medium text-gray-700">
+                                Employees
+                            </p>
+                        </div>
+
+                        <div className="flex flex-col items-center cursor-pointer">
+                            <FaCog className="text-4xl p-3 rounded-xl bg-green-100 text-green-600" />
+                            <p className="mt-2 text-sm font-medium text-gray-700">
+                                Settings
+                            </p>
+                        </div>
+
+                        <div className="flex flex-col items-center cursor-pointer" onClick={gotodepartment}>
+                            <FaGlobe className="text-4xl p-3 rounded-xl bg-orange-100 text-orange-600" />
+                            <p className="mt-2 text-sm font-medium text-gray-700">
+                                Departments
+                            </p>
+                        </div>
+
+                        <div className="flex flex-col items-center cursor-pointer" onClick={gotoonboard}>
+                            <FaSnowboarding className="text-4xl p-3 rounded-xl bg-red-100 text-red-600" />
+                            <p className="mt-2 text-sm font-medium text-gray-700">
+                                OnBoarding
+                            </p>
+                        </div>
+
+                        <div className="flex flex-col items-center cursor-pointer" onClick={gototasks}>
+                            <FaTasks className="text-4xl p-3 rounded-xl bg-teal-100 text-teal-600" />
+                            <p className="mt-2 text-sm font-medium text-gray-700">
+                                Tasks
+                            </p>
+                        </div>
+
+                        <div className="flex flex-col items-center cursor-pointer" onClick={gotoattendence}>
+                            <FcLeave className="text-4xl p-3 rounded-xl bg-pink-100 text-pink-600" />
+                            <p className="mt-2 text-sm font-medium text-gray-700">
+                                Attendence
+                            </p>
+                        </div>
+
+                        <div className="flex flex-col items-center cursor-pointer">
+                            <FaBuilding className="text-4xl p-3 rounded-xl bg-cyan-100 text-cyan-600" />
+                            <p className="mt-2 text-sm font-medium text-gray-700">
+                                Offices
+                            </p>
+                        </div>
+
+                        <div className="flex flex-col items-center cursor-pointer" onClick={gotoSalary}>
+                            <TbMoneybag className="text-4xl p-3 rounded-xl bg-gray-100 text-gray-600" />
+                            <p className="mt-2 text-sm font-medium text-gray-700">
+                                Salary
+                            </p>
+                        </div>
                     </div>
-
-                        <div className="quick-item">
-                            <FaCog className="quick-icon green" />
-                            <p>Settings</p>
-                        </div>
-
-                        <div className="quick-item">
-                            <FaGlobe className="quick-icon orange" />
-                            <p>Departments</p>
-                        </div>
-
-
-                        <div className="quick-item">
-                            <FaGraduationCap className="quick-icon red" />
-                            <p>Training</p>
-                        </div>
-
-                        <div className="quick-item">
-                            <FaChartBar className="quick-icon teal" />
-                            <p>Reports</p>
-                        </div>
-
-                        <div className="quick-item">
-                            <FaImage className="quick-icon pink" />
-                            <p>Media</p>
-                        </div>
-
-                        <div className="quick-item">
-                            <FaBuilding className="quick-icon brown" />
-                            <p>Offices</p>
-                        </div>
-
-                        <div className="quick-item">
-                            <FaShieldAlt className="quick-icon gray" />
-                            <p>Security</p>
-                            </div>
-
-                        </div>
                 </div>
-
             </div>
         </>
     )

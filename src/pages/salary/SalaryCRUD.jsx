@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { BsClockHistory } from "react-icons/bs";
+import { TbMoneybagEdit } from "react-icons/tb";
 import { getEmployeeWithSalaryStatus, updateSalary } from "../../services/SalaryService";
 import { filterData } from "../../utils/search/filterData";
 import Loader from "../../components/common/Loader"
@@ -122,10 +124,9 @@ function SalaryCRUD() {
             <div className="mb-10 text-sm pl-[2px]">
                 <h1 className="text-2xl font-bold mb-2">
 
-                    Create & Update Salary's
-
+                    Create & Update Salaries
                 </h1>
-                <p>Create & Update All Employees Salarys Here</p>
+                <p>create new entries or update existing ones here.</p>
             </div>
 
 
@@ -174,7 +175,7 @@ function SalaryCRUD() {
             </div>
             <div className="overflow-x-auto">
 
-                <div className="max-h-[300px] overflow-y-auto hide-scrollbar">
+                <div className="max-h-[450px] overflow-y-auto hide-scrollbar">
                     <table className="min-w-full border-collapse ">
 
                         <thead className="sticky top-0 z-20 bg-white shadow-sm">
@@ -247,26 +248,44 @@ ${employee.salaryAssigned
                                                 employee.salaryAssigned ?
 
                                                     (
+                                                        <div className="flex gap-2 items-center justify-center">
+                                                            <button
 
-                                                        <button
+                                                                className="px-2 py-2 rounded-lg"
 
-                                                            className="px-2 py-2 bg-blue-600 text-white rounded-lg"
+                                                                onClick={() =>
 
-                                                            onClick={() =>
+                                                                    navigate(
 
-                                                                navigate(
+                                                                        `/salarydashboard/salary/edit/${employee.employeeId}`
 
-                                                                    `/salarydashboard/salary/edit/${employee.employeeId}`
+                                                                    )
 
-                                                                )
+                                                                }
+                                                                title="Edit Employee Salary"
 
-                                                            }
+                                                            >
 
-                                                        >
+                                                                <TbMoneybagEdit size={20}
+                                                                    className="text-blue-600" />
 
-                                                            Edit
+                                                            </button>
+                                                            <button
+                                                                className="px-3 py-2"
+                                                                onClick={() =>
+                                                                    navigate(
+                                                                        `/salarydashboard/salary/history/${employee.employeeId}`
+                                                                    )
+                                                                }
+                                                                title="Check Salary History"
+                                                            >
+                                                                <BsClockHistory
+                                                                    size={20}
+                                                                    className="text-blue-600"
+                                                                />
+                                                            </button>
+                                                        </div>
 
-                                                        </button>
 
                                                     )
 
@@ -287,6 +306,7 @@ ${employee.salaryAssigned
                                                                 )
 
                                                             }
+                                                            title="Assign Salary to Employee"
 
                                                         >
 

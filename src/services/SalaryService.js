@@ -3,6 +3,8 @@ import {
     ref, set, get, update, remove
 } from "firebase/database";
 import {getEmployees} from "./EmployeeService"
+import { compile } from "tailwindcss";
+import { add } from "firebase/firestore/pipelines";
 export const addSalary = async (
     companyCode, 
     salary
@@ -159,3 +161,123 @@ export const getEmployeeWithSalaryStatus = async (
         }
     })
 }
+export const addSalaryHistory = async (
+    companyCode, 
+    employeeId,
+    salary,
+    updatedBy
+)=>{
+    const historyId = Date.now();
+    await set(
+       ref( db,
+        `companies/${companyCode}/salaryHistory/${employeeId}/${historyId}`
+    ),
+    {
+        ...salary,
+        updatedBy,
+        updatedAt: historyId,
+    }
+);
+};
+
+
+export const editSalary = async (
+    companyCode,
+    employeeId,
+    newSalary,
+    updatedBy
+)=>{
+    const currentSalary = await getSalary(
+        companyCode,
+        employeeId
+    );
+    if(!currentSalary){
+        return {
+            success: false,
+            message : "Salary not found.",
+        }
+    }
+    await addSalaryHistory(
+        companyCode,
+        employeeId,
+        currentSalary,
+        updatedBy
+    );
+    await updateSalary(
+        companyCode,
+        employeeId,
+        newSalary
+    );
+    return{
+        success : true,
+        message : "Salary updated successfully."
+    }
+}
+export const getAllSalaryHistory = async (
+    companyCode,
+    employeeId
+) => {
+
+    const snapshot = await get(
+        ref(
+            db,
+            `companies/${companyCode}/salaryHistory`
+        )
+    );
+
+    if (!snapshot.exists()) {
+
+        return [];
+
+    }
+
+    const data = snapshot.val();
+
+    return Object.keys(data)
+        .map((id) => ({
+
+            id,
+
+            ...data[id],
+
+        }))
+        .sort(
+            (a, b) =>
+                b.updatedAt - a.updatedAt
+        );
+
+};
+export const getSalaryHistory = async (
+    companyCode,
+    employeeId
+) => {
+
+    const snapshot = await get(
+        ref(
+            db,
+            `companies/${companyCode}/salaryHistory/${employeeId}`
+        )
+    );
+
+    if (!snapshot.exists()) {
+
+        return [];
+
+    }
+
+    const data = snapshot.val();
+
+    return Object.keys(data)
+        .map((id) => ({
+
+            id,
+
+            ...data[id],
+
+        }))
+        .sort(
+            (a, b) =>
+                b.updatedAt - a.updatedAt
+        );
+
+};
