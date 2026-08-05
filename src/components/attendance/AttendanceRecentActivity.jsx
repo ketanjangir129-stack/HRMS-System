@@ -3,34 +3,34 @@ import {
   FiLogOut,
   FiClock,
 } from "react-icons/fi";
+import { formatTime } from "../../utils/attendance/attendanceDate";
+
+/*
+|--------------------------------------------------------------------------
+| Recent Activities
+|--------------------------------------------------------------------------
+| The feed is built by `getAttendanceActivities`, so this component only
+| renders the timeline it is given.
+|--------------------------------------------------------------------------
+*/
 
 function AttendanceRecentActivity({
   activities = [],
+  loading = false,
 }) {
-
-  const formatTime = (timestamp) => {
-
-    if (!timestamp) return "--";
-
-    return new Date(timestamp).toLocaleTimeString([], {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-
-  };
 
   const getActivityIcon = (type) => {
 
     switch (type) {
 
-      case "checkin":
+      case "punchin":
         return {
           icon: <FiLogIn />,
           color:
             "bg-emerald-50 text-emerald-600 ring-emerald-100",
         };
 
-      case "checkout":
+      case "punchout":
         return {
           icon: <FiLogOut />,
           color:
@@ -82,9 +82,34 @@ function AttendanceRecentActivity({
 
       </div>
 
+      {/* Loading State */}
+
+      {loading && (
+
+        <div className="flex-1 space-y-4">
+
+          {[0, 1, 2, 3].map((item) => (
+
+            <div key={item} className="flex items-center gap-4">
+
+              <div className="h-10 w-10 shrink-0 animate-pulse rounded-xl bg-slate-200" />
+
+              <div className="flex-1 space-y-2">
+                <div className="h-3 w-32 animate-pulse rounded-md bg-slate-200" />
+                <div className="h-3 w-20 animate-pulse rounded-md bg-slate-100" />
+              </div>
+
+            </div>
+
+          ))}
+
+        </div>
+
+      )}
+
       {/* Empty State */}
 
-      {latestActivities.length === 0 && (
+      {!loading && latestActivities.length === 0 && (
 
         <div className="flex flex-1 items-center justify-center">
 
@@ -111,7 +136,7 @@ function AttendanceRecentActivity({
 
       {/* Timeline */}
 
-      {latestActivities.length > 0 && (
+      {!loading && latestActivities.length > 0 && (
 
         <div className="hide-scrollbar flex-1 overflow-y-auto">
 

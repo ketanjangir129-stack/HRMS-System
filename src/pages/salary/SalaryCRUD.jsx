@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { getEmployeeWithSalaryStatus, updateSalary } from "../../services/SalaryService";
 import { filterData } from "../../utils/search/filterData";
 import Loader from "../../components/common/Loader"
+import { useOutletContext } from "react-router-dom";
 
 function SalaryCRUD() {
     const companyCode = localStorage.getItem("companyCode");
@@ -16,7 +17,7 @@ function SalaryCRUD() {
 
     const [loading, setLoading] = useState(true);
 
-    const [search, setSearch] = useState("");
+    const {search,setSearch,setSearchPlaceholder} = useOutletContext();
     const [departmentFilter, setDepartmentFilter] =
         useState("All");
 
@@ -42,6 +43,21 @@ function SalaryCRUD() {
     useEffect(() => {
         loadEmployees();
     }, []);
+
+    useEffect(() => {
+        return () => {
+            setSearch("");
+        };
+    }, []);
+
+    useEffect(() => {
+        setSearchPlaceholder("Search employee...");
+        return () => {
+            setSearchPlaceholder("Search...");
+        };
+
+    }, []);
+
     const departments = [
         "All",
         ...new Set(
@@ -116,14 +132,6 @@ function SalaryCRUD() {
 
 
             <div className="flex flex-col md:flex-row gap-4 mb-6">
-
-                <input
-                    type="text"
-                    placeholder="Search Employee..."
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    className="border rounded-lg px-4 py-2 w-full md:w-80"
-                />
 
                 <select
                     value={departmentFilter}

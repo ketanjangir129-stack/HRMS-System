@@ -1,5 +1,8 @@
+import { useState } from "react";
 import {deleteDesignation,} from "../../services/departmentService";
+import ConfirmDeleteModal from "../common/ConfirmDeleteModal";
 import { toast } from "react-toastify";
+import { FiEdit2, FiTrash2 } from "react-icons/fi";
 
 function DesignationItem({
     companyCode,
@@ -8,10 +11,9 @@ function DesignationItem({
     designation,
     onEditDesignation,
 }) {
-    const handleDelete = async () => {
-        const confirmDelete = window.confirm("Delete designation?");
+    const [confirmDelete, setConfirmDelete] = useState(false);
 
-        if (!confirmDelete) return;
+    const handleDelete = async () => {
         try {
             await deleteDesignation(
                 companyCode,
@@ -19,6 +21,7 @@ function DesignationItem({
                 designationId
             );
             toast.success("Designation deleted successfully.");
+            setConfirmDelete(false);
         } catch (error) {
             console.error(error);
             toast.error("Failed to delete designation.");
@@ -26,13 +29,19 @@ function DesignationItem({
     };
 
     return (
-        <div className="flex items-center justify-between border border-gray-300 rounded-xl px-4 py-3 cursor-pointer">
+        <div className="group/item flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 transition-all duration-200 hover:border-slate-300 hover:bg-slate-50">
 
-            <span className="font-medium text-slate-700">
-                {designation.name}
-            </span>
+            <div className="flex min-w-0 items-center gap-3">
 
-            <div className="flex gap-2">
+                <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-blue-500" />
+
+                <span className="truncate text-sm font-medium text-slate-700">
+                    {designation.name}
+                </span>
+
+            </div>
+
+            <div className="flex shrink-0 gap-2">
 
                 <button
                     onClick={() =>
@@ -42,19 +51,32 @@ function DesignationItem({
                             designation.name
                         )
                     }
-                    className="px-3 py-1.5 border rounded-lg hover:bg-slate-50 border-gray-300 cursor-pointer"
+                    title="Edit designation"
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-600 transition-all duration-200 hover:border-slate-300 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-300 cursor-pointer"
                 >
+                    <FiEdit2 className="text-[14px]" />
                     Edit
                 </button>
 
                 <button
-                    onClick={handleDelete}
-                    className="px-3 py-1.5 border border-red-200 text-red-600 rounded-lg hover:bg-red-50 cursor-pointer"
+                    onClick={() => setConfirmDelete(true)}
+                    title="Delete designation"
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 bg-white px-3 py-1.5 text-sm font-medium text-red-600 transition-all duration-200 hover:border-red-300 hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-300 cursor-pointer"
                 >
+                    <FiTrash2 className="text-[14px]" />
                     Delete
                 </button>
 
             </div>
+
+            <ConfirmDeleteModal
+                open={confirmDelete}
+                title="Delete Designation"
+                message="Are you sure you want to delete the designation"
+                itemName={designation.name}
+                onConfirm={handleDelete}
+                onClose={() => setConfirmDelete(false)}
+            />
 
         </div>
     );

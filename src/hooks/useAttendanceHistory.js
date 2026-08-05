@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 
-import { getEmployeeAttendanceHistory } from "../services/attendanceServices/attendanceService";
+import { subscribeToEmployeeAttendanceHistory } from "../services/attendanceServices/attendanceService";
 
 const useAttendanceHistory = (
   companyCode,
@@ -10,7 +10,18 @@ const useAttendanceHistory = (
 ) => {
 
   const [history, setHistory] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  /*
+  | Loading is derived from which month has actually been delivered, so it
+  | resets on its own when the parameters change without having to set state
+  | from inside the effect body.
+  */
+  const requestKey = `${companyCode}|${employeeId}|${year}|${month}`;
+
+  const [loadedKey, setLoadedKey] = useState("");
+
+  const loading = loadedKey !== requestKey;
 
   useEffect(() => {
 
@@ -21,36 +32,53 @@ const useAttendanceHistory = (
       return;
     }
 
-    const loadHistory = async () => {
+    const unsubscribe =
+      subscribeToEmployeeAttendanceHistory(
+        companyCode,
+        employeeId,
+        year,
+        month,
+        (data) => {
 
-      setLoading(true);
+          setHistory(data);
+          setError("");
+          setLoadedKey(requestKey);
 
-      const data =
-        await getEmployeeAttendanceHistory(
-          companyCode,
-          employeeId,
-          year,
-          month
-        );
+        },
+        // Without this the subscription fails silently and loading never ends.
+        (subscriptionError) => {
 
-      setHistory(data);
+          console.error(
+            "Failed to load attendance history:",
+            subscriptionError
+          );
 
-      setLoading(false);
+          setHistory([]);
 
-    };
+          setError(
+            subscriptionError.message ||
+            "Failed to load attendance history."
+          );
 
-    loadHistory();
+          setLoadedKey(requestKey);
+
+        }
+      );
+
+    return () => unsubscribe();
 
   }, [
     companyCode,
     employeeId,
     year,
     month,
+    requestKey,
   ]);
 
   return {
     history,
     loading,
+    error,
   };
 
 };

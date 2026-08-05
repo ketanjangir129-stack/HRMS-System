@@ -3,7 +3,7 @@ import {
   FiPlus,
 } from "react-icons/fi";
 
-function AttendanceHeader({ onMarkAttendance }) {
+function AttendanceHeader({ onMarkAttendance, canMarkAttendance = true }) {
   const today = new Date().toLocaleDateString("en-US", {
     weekday: "long",
     day: "numeric",
@@ -36,19 +36,22 @@ function AttendanceHeader({ onMarkAttendance }) {
       </div>
 
       {/* Right */}
-      <button
-        onClick={onMarkAttendance}
-        className="group inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-blue-600/20 transition-all duration-200 hover:-translate-y-0.5 hover:bg-blue-700 hover:shadow-lg hover:shadow-blue-600/30 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 active:translate-y-0 cursor-pointer whitespace-nowrap"
-      >
+      {canMarkAttendance && (
+        <button
+          type="button"
+          onClick={onMarkAttendance}
+          className="group inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-blue-600/20 transition-all duration-200 hover:-translate-y-0.5 hover:bg-blue-700 hover:shadow-lg hover:shadow-blue-600/30 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 active:translate-y-0 cursor-pointer whitespace-nowrap"
+        >
 
-        <FiPlus
-          size={18}
-          className="transition-transform duration-200 group-hover:rotate-90"
-        />
+          <FiPlus
+            size={18}
+            className="transition-transform duration-200 group-hover:rotate-90"
+          />
 
-        Mark Attendance
+          Mark Attendance
 
-      </button>
+        </button>
+      )}
 
     </div>
   );

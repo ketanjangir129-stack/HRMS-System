@@ -1,178 +1,243 @@
+import {
+  APPROVER_ROLES,
+  REQUEST_STATUS,
+  REQUEST_TYPES,
+} from "./attendanceConstants";
+import {
+  getDateKey,
+  isFutureDate,
+  toTimestamp,
+} from "./attendanceDate";
+import { searchRows } from "./attendanceTable";
+
 /*
 |--------------------------------------------------------------------------
 | Attendance Request Utilities
 |--------------------------------------------------------------------------
-| Pure helper functions for filtering, sorting, paginating and formatting
-| attendance requests. Kept free of Firebase logic so they can be reused
-| across components and hooks.
+| Pure helpers for request permissions, validation, filtering and summaries.
+| Kept free of Firebase logic so they can be reused across components, hooks
+| and services.
 |--------------------------------------------------------------------------
 */
 
 /*
 |--------------------------------------------------------------------------
-| Request Type Options
+| Request Type Helpers
 |--------------------------------------------------------------------------
 */
 
-export const REQUEST_TYPES = [
-  { value: "Late Check-in", label: "Late Check-in" },
-  { value: "Missed Check-out", label: "Missed Check-out" },
-  { value: "Wrong Attendance", label: "Wrong Attendance" },
-  { value: "Leave Correction", label: "Leave Correction" },
-  { value: "Other", label: "Other" },
-];
+export const getRequestType = (value) =>
+  REQUEST_TYPES.find((type) => type.value === value) || null;
+
+/*
+| Falls back to the raw value so records saved with an older type still render.
+*/
+
+export const getRequestTypeLabel = (value) =>
+  getRequestType(value)?.label || value || "--";
 
 /*
 |--------------------------------------------------------------------------
-| Status Badge Styles
+| Roles & Permissions
 |--------------------------------------------------------------------------
+| Owners sign in through Firebase Auth and only have a role on the user
+| object; employees and HR carry theirs on `account`.
 */
 
-export const STATUS_BADGES = {
-  Pending: "bg-amber-50 text-amber-700 ring-amber-200",
-  Approved: "bg-emerald-50 text-emerald-700 ring-emerald-200",
-  Rejected: "bg-red-50 text-red-700 ring-red-200",
-};
+export const getUserRole = (currentUser) =>
+  currentUser?.account?.role ||
+  currentUser?.role ||
+  "";
 
-export const STATUS_DOTS = {
-  Pending: "bg-amber-500",
-  Approved: "bg-emerald-500",
-  Rejected: "bg-red-500",
-};
+export const isApprover = (currentUser) =>
+  APPROVER_ROLES.includes(getUserRole(currentUser));
+
+export const getCurrentEmployeeId = (currentUser) =>
+  currentUser?.employmentInfo?.employeeId || "";
+
+export const isPending = (request) =>
+  request?.status === REQUEST_STATUS.PENDING;
+
+/*
+| Only the employee who raised a still pending request can change it. HR sees
+| every request but reviews them instead of editing them.
+*/
+
+export const canModifyRequest = (request, currentUser) =>
+  isPending(request) &&
+  request?.employeeId === getCurrentEmployeeId(currentUser);
+
+export const canReviewRequest = (request, currentUser) =>
+  isPending(request) && isApprover(currentUser);
+
+/*
+| A request can only be applied to an attendance record if it actually asks
+| for a punch time.
+*/
+
+export const hasRequestedTimes = (request) =>
+  Boolean(request?.requestedPunchIn || request?.requestedPunchOut);
 
 /*
 |--------------------------------------------------------------------------
-| Date & Time Formatting
+| Validation
 |--------------------------------------------------------------------------
+| Returns a `{ field: message }` map so the modal can render errors inline.
 */
 
-export const formatDate = (date) => {
-  if (!date) return "--";
-  return new Date(date).toLocaleDateString("en-IN", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  });
-};
+export const validateRequestForm = (form = {}) => {
 
-export const formatTime = (timestamp) => {
-  if (!timestamp) return "--";
-  return new Date(timestamp).toLocaleTimeString("en-IN", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-};
+  const errors = {};
 
-export const formatDateTime = (timestamp) => {
-  if (!timestamp) return "--";
-  return new Date(timestamp).toLocaleString("en-IN", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-};
+  if (!form.employeeId?.trim()) {
+    errors.employeeId = "Employee ID is required.";
+  }
 
-/*
-|--------------------------------------------------------------------------
-| Request Filtering
-|--------------------------------------------------------------------------
-*/
+  if (!form.type) {
+    errors.type = "Please select a request type.";
+  }
 
-export const filterRequests = (requests, { search = "", status = "", type = "" }) => {
-  const keyword = search.trim().toLowerCase();
+  if (!form.date) {
+    errors.date = "Please select a date.";
+  } else if (isFutureDate(form.date)) {
+    errors.date = "Attendance date cannot be in the future.";
+  }
 
-  return requests.filter((request) => {
-    const matchesSearch =
-      !keyword ||
-      request.employeeName?.toLowerCase().includes(keyword) ||
-      request.employeeId?.toLowerCase().includes(keyword) ||
-      request.requestId?.toLowerCase().includes(keyword) ||
-      request.type?.toLowerCase().includes(keyword);
+  const requires = getRequestType(form.type)?.requires;
 
-    const matchesStatus = !status || request.status === status;
-    const matchesType = !type || request.type === type;
+  if (requires === "punchIn" && !form.requestedPunchIn) {
+    errors.requestedPunchIn = "Requested punch in time is required.";
+  }
 
-    return matchesSearch && matchesStatus && matchesType;
-  });
-};
+  if (requires === "punchOut" && !form.requestedPunchOut) {
+    errors.requestedPunchOut = "Requested punch out time is required.";
+  }
 
-/*
-|--------------------------------------------------------------------------
-| Request Sorting
-|--------------------------------------------------------------------------
-*/
+  if (requires === "both") {
 
-export const sortRequests = (requests, sortBy = "requestedAt", sortOrder = "desc") => {
-  const direction = sortOrder === "asc" ? 1 : -1;
-
-  return [...requests].sort((a, b) => {
-    let aValue = a[sortBy];
-    let bValue = b[sortBy];
-
-    // Handle nested or missing values gracefully
-    if (sortBy === "employeeName") {
-      aValue = a[sortBy] || "";
-      bValue = b[sortBy] || "";
-      return String(aValue).localeCompare(String(bValue)) * direction;
+    if (!form.requestedPunchIn) {
+      errors.requestedPunchIn = "Requested punch in time is required.";
     }
 
-    if (aValue == null) aValue = 0;
-    if (bValue == null) bValue = 0;
-
-    if (typeof aValue === "number" && typeof bValue === "number") {
-      return (aValue - bValue) * direction;
+    if (!form.requestedPunchOut) {
+      errors.requestedPunchOut = "Requested punch out time is required.";
     }
 
-    return String(aValue).localeCompare(String(bValue)) * direction;
-  });
+  }
+
+  if (
+    requires === "any" &&
+    !form.requestedPunchIn &&
+    !form.requestedPunchOut
+  ) {
+    errors.requestedPunchIn =
+      "Provide a punch in or a punch out time.";
+  }
+
+  if (
+    form.requestedPunchIn &&
+    form.requestedPunchOut &&
+    form.requestedPunchOut <= form.requestedPunchIn
+  ) {
+    errors.requestedPunchOut =
+      "Punch out time must be after punch in time.";
+  }
+
+  if (!form.reason?.trim()) {
+    errors.reason = "Please provide a reason for this request.";
+  } else if (form.reason.trim().length < 5) {
+    errors.reason = "Please describe the reason in a few more words.";
+  }
+
+  return errors;
+
 };
 
 /*
 |--------------------------------------------------------------------------
-| Pagination
+| Form State
 |--------------------------------------------------------------------------
+| Requests store the employee id only. Names and departments are resolved
+| from the employees collection when they need to be displayed.
 */
 
-export const paginateRequests = (requests, page = 1, pageSize = 8) => {
-  const start = (page - 1) * pageSize;
-  return requests.slice(start, start + pageSize);
-};
-
-export const getTotalPages = (total, pageSize = 8) => {
-  return Math.max(1, Math.ceil(total / pageSize));
-};
-
-/*
-|--------------------------------------------------------------------------
-| Request Summary
-|--------------------------------------------------------------------------
-*/
-
-export const getRequestSummary = (requests = []) => {
-  return {
-    total: requests.length,
-    pending: requests.filter((r) => r.status === "Pending").length,
-    approved: requests.filter((r) => r.status === "Approved").length,
-    rejected: requests.filter((r) => r.status === "Rejected").length,
-  };
-};
-
-/*
-|--------------------------------------------------------------------------
-| Initial Request Form
-|--------------------------------------------------------------------------
-*/
-
-export const getInitialRequestForm = (employee = {}) => ({
-  employeeId: employee?.employmentInfo?.employeeId || "",
-  employeeName: employee?.personalInfo?.name || "",
-  department: employee?.employmentInfo?.department || "",
-  designation: employee?.employmentInfo?.designation || "",
+export const getInitialRequestForm = (currentUser) => ({
+  employeeId: getCurrentEmployeeId(currentUser),
   type: "",
-  date: new Date().toISOString().split("T")[0],
-  requestedCheckIn: "",
-  requestedCheckOut: "",
+  date: getDateKey(),
+  requestedPunchIn: "",
+  requestedPunchOut: "",
   reason: "",
 });
+
+/*
+| The stored request converted back into form values for editing.
+*/
+
+export const toRequestForm = (request = {}, toTimeValue) => ({
+  employeeId: request.employeeId || "",
+  type: request.type || "",
+  date: request.date || getDateKey(),
+  requestedPunchIn: toTimeValue(request.requestedPunchIn),
+  requestedPunchOut: toTimeValue(request.requestedPunchOut),
+  reason: request.reason || "",
+});
+
+/*
+| The form values converted into the payload that is stored.
+*/
+
+export const toRequestPayload = (form = {}) => ({
+  employeeId: form.employeeId.trim().toUpperCase(),
+  type: form.type,
+  date: form.date,
+  requestedPunchIn: toTimestamp(form.date, form.requestedPunchIn),
+  requestedPunchOut: toTimestamp(form.date, form.requestedPunchOut),
+  reason: form.reason.trim(),
+});
+
+/*
+|--------------------------------------------------------------------------
+| Filtering
+|--------------------------------------------------------------------------
+| Runs against requests already joined with the employee directory, so a
+| search by name works without the request storing one.
+*/
+
+const SEARCH_FIELDS = [
+  "employeeName",
+  "employeeId",
+  "requestId",
+  "type",
+  "department",
+];
+
+export const filterRequests = (
+  requests = [],
+  { search = "", status = "", type = "" } = {}
+) =>
+  searchRows(requests, search, SEARCH_FIELDS).filter((request) => {
+
+    const matchesStatus = !status || request.status === status;
+
+    const matchesType = !type || request.type === type;
+
+    return matchesStatus && matchesType;
+
+  });
+
+/*
+| Requests raised by the signed in employee, used for the "My Requests" view.
+*/
+
+export const filterOwnRequests = (requests = [], currentUser) => {
+
+  const employeeId = getCurrentEmployeeId(currentUser);
+
+  if (!employeeId) return [];
+
+  return requests.filter(
+    (request) => request.employeeId === employeeId
+  );
+
+};

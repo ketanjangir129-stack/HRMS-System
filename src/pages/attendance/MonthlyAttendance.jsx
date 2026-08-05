@@ -1,33 +1,58 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { FiClock } from "react-icons/fi";
 import { useOutletContext } from "react-router-dom";
 import AttendancePageHeader from "../../components/attendance/AttendancePageHeader";
 import AttendanceSummaryCards from "../../components/attendance/AttendanceSummaryCards";
 import MonthlyAttendanceTable from "../../components/attendance/MonthlyAttendanceTable";
 import useAuth from "../../hooks/useAuth";
-import useMonthlyAttendance, {
+import useEmployeeDirectory from "../../hooks/useEmployeeDirectory";
+import useMonthlyAttendance from "../../hooks/useMonthlyAttendance";
+import {
   getMonthLabel,
-} from "../../hooks/useMonthlyAttendance";
+  shiftMonth,
+} from "../../utils/attendance/attendanceDate";
+import {
+  buildMonthlyReport,
+  getMonthlySummary,
+} from "../../utils/attendance/attendanceUtils";
+
+/*
+|--------------------------------------------------------------------------
+| Monthly Attendance
+|--------------------------------------------------------------------------
+| Company wide totals per employee for the selected month. Search comes from
+| the header search bar.
+|--------------------------------------------------------------------------
+*/
 
 function MonthlyAttendance() {
+
   const { company } = useAuth();
+
+  const companyCode = company?.companyCode;
 
   const { search, setSearch, setSearchPlaceholder } = useOutletContext();
 
-  // Selected month (defaults to current month)
-  const now = new Date();
-  const [year, setYear] = useState(now.getFullYear());
-  const [month, setMonth] = useState(now.getMonth() + 1);
+  const today = useMemo(() => new Date(), []);
 
-  const [departmentFilter, setDepartmentFilter] = useState("");
+  const [year, setYear] = useState(today.getFullYear());
+  const [month, setMonth] = useState(today.getMonth() + 1);
 
-  const { rows, loading, error, reload } = useMonthlyAttendance(
-    company?.companyCode,
-    year,
-    month
-  );
+  const {
+    directory,
+    departments,
+    loading: directoryLoading,
+    error: directoryError,
+    reload: reloadDirectory,
+  } = useEmployeeDirectory(companyCode);
 
-  // Set the header search placeholder for this page
+  const {
+    records,
+    loading: recordsLoading,
+    error: recordsError,
+    reload: reloadRecords,
+  } = useMonthlyAttendance(companyCode, year, month);
+
   useEffect(() => {
     setSearchPlaceholder("Search employees by name, ID or department...");
 
@@ -37,43 +62,31 @@ function MonthlyAttendance() {
     };
   }, [setSearch, setSearchPlaceholder]);
 
+  const rows = useMemo(
+    () => buildMonthlyReport(directory, records),
+    [directory, records]
+  );
+
+  const summary = useMemo(() => getMonthlySummary(rows), [rows]);
+
   const currentLabel = getMonthLabel(year, month);
 
+  const isCurrentMonth =
+    year === today.getFullYear() && month === today.getMonth() + 1;
+
   const handleMonthChange = (direction) => {
-    let nextMonth = month + (direction === "next" ? 1 : -1);
-    let nextYear = year;
 
-    if (nextMonth > 12) {
-      nextMonth = 1;
-      nextYear += 1;
-    } else if (nextMonth < 1) {
-      nextMonth = 12;
-      nextYear -= 1;
-    }
+    const next = shiftMonth(year, month, direction);
 
-    setMonth(nextMonth);
-    setYear(nextYear);
-    setDepartmentFilter("");
+    setYear(next.year);
+    setMonth(next.month);
+
   };
 
-  // Company-wide summary for the selected month
-  const summary = {
-    present: rows.reduce((acc, r) => acc + r.present, 0),
-    late: rows.reduce((acc, r) => acc + r.late, 0),
-    absent: rows.reduce((acc, r) => acc + r.absent, 0),
-    leave: rows.reduce((acc, r) => acc + r.leave, 0),
-    total: rows.reduce((acc, r) => acc + r.workingDays, 0),
+  const handleRetry = () => {
+    reloadDirectory();
+    reloadRecords();
   };
-
-  const percentage = (value) => {
-    if (summary.total === 0) return 0;
-    return Math.round((value / summary.total) * 100);
-  };
-
-  summary.presentPercentage = percentage(summary.present);
-  summary.absentPercentage = percentage(summary.absent);
-  summary.latePercentage = percentage(summary.late);
-  summary.leavePercentage = percentage(summary.leave);
 
   return (
     <div className="p-2">
@@ -84,26 +97,27 @@ function MonthlyAttendance() {
         icon={<FiClock />}
       />
 
-      <div className="mt-6">
-        <AttendanceSummaryCards summary={summary} />
-      </div>
+      <div className="mt-6 space-y-6">
 
-      <div className="mt-6">
+        <AttendanceSummaryCards summary={summary} />
+
         <MonthlyAttendanceTable
           rows={rows}
-          loading={loading}
-          error={error}
-          onRetry={reload}
+          loading={directoryLoading || recordsLoading}
+          error={directoryError || recordsError}
+          onRetry={handleRetry}
+          search={search}
+          departments={departments}
           currentLabel={currentLabel}
           onMonthChange={handleMonthChange}
-          search={search}
-          departmentFilter={departmentFilter}
-          onDepartmentFilterChange={setDepartmentFilter}
+          disableNextMonth={isCurrentMonth}
         />
+
       </div>
 
     </div>
   );
+
 }
 
 export default MonthlyAttendance;

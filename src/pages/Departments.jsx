@@ -6,6 +6,7 @@ import DesignationModal from "../components/departments/DesignationModal";
 import { validateField } from "../utils/validation/validateField";
 import {searchDepartments,} from "../utils/search/searchDepartments";
 import { useOutletContext } from "react-router-dom";
+import { FiLayers, FiPlus, FiGrid, FiBriefcase } from "react-icons/fi";
 
 import {
     addDepartment,
@@ -158,6 +159,27 @@ function Departments() {
         search
     );
 
+    const totalDepartments = Object.keys(departments || {}).length;
+
+    const totalDesignations = Object.values(departments || {}).reduce(
+        (total, department) =>
+            total + Object.keys(department.designations || {}).length,
+        0
+    );
+
+    const stats = [
+        {
+            title: "Total Departments",
+            value: totalDepartments,
+            icon: <FiGrid />,
+        },
+        {
+            title: "Total Designations",
+            value: totalDesignations,
+            icon: <FiBriefcase />,
+        },
+    ];
+
     useEffect(() => {
         return () => {
             setSearch("");
@@ -172,30 +194,76 @@ function Departments() {
     }, []);
 
     return (
-        <div className="p-2">
+        <div className="mx-auto max-w-[1600px] space-y-6 p-1 sm:p-2">
 
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
-                <div>
-                    <h1 className="text-3xl font-bold text-slate-900">
-                        Departments
-                    </h1>
+            {/* Header */}
+            <div className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white px-5 py-5 shadow-sm sm:px-6 md:flex-row md:items-center md:justify-between">
 
-                    <p className="text-slate-500 mt-1">
-                        Manage departments and designations.
-                    </p>
+                <div className="flex items-center gap-3 sm:gap-4">
+
+                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-600 shadow-sm shadow-blue-600/20">
+                        <FiLayers className="text-white text-xl" />
+                    </div>
+
+                    <div>
+                        <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
+                            Departments
+                        </h1>
+
+                        <p className="mt-1 text-sm text-slate-500 sm:text-base">
+                            Manage departments and designations
+                        </p>
+                    </div>
+
                 </div>
-                <div className="flex items-center gap-3">
+
+                {/* Stats + Action */}
+                <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-end">
+
+                    <div className="flex flex-wrap items-center justify-end gap-2">
+
+                        {stats.map((stat) => (
+
+                            <div
+                                key={stat.title}
+                                className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 whitespace-nowrap"
+                            >
+
+                                <span className="text-sm text-slate-400">
+                                    {stat.icon}
+                                </span>
+
+                                <span className="text-xs font-medium text-slate-500">
+                                    {stat.title}
+                                </span>
+
+                                <span className="text-sm font-semibold text-slate-900">
+                                    {stat.value}
+                                </span>
+
+                            </div>
+
+                        ))}
+
+                    </div>
+
                     <button
                         onClick={() => {
                             setEditingDepartmentId(null);
                             setDepartmentName("");
                             setDepartmentModal(true);
                         }}
-                        className="bg-blue-600 text-white px-5 py-2.5 rounded-xl hover:bg-blue-700 cursor-pointer whitespace-nowrap"
+                        className="group inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-blue-600/20 transition-all duration-200 hover:-translate-y-0.5 hover:bg-blue-700 hover:shadow-lg hover:shadow-blue-600/30 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 active:translate-y-0 cursor-pointer whitespace-nowrap"
                     >
+                        <FiPlus
+                            size={18}
+                            className="transition-transform duration-200 group-hover:rotate-90"
+                        />
                         Add Department
                     </button>
+
                 </div>
+
             </div>
 
             <DepartmentList

@@ -1,105 +1,87 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
-  ref,
-  onValue,
-} from "firebase/database";
-import { db } from "../firebase/firebase";
-import {
-  checkInEmployee,
-  checkOutEmployee,
+  punchInEmployee,
+  punchOutEmployee,
+  subscribeToEmployeeDay,
 } from "../services/attendanceServices/attendanceService";
+import { getDateKey } from "../utils/attendance/attendanceDate";
+import { getCurrentEmployeeId } from "../utils/attendance/attendanceRequestUtils";
 
-const useAttendance = (
-  companyCode,
-  currentUser
-) => {
+/*
+|--------------------------------------------------------------------------
+| My Attendance
+|--------------------------------------------------------------------------
+| The signed in employee's record for today, plus their punch actions. The
+| subscription keeps the card in sync the moment a punch is written.
+|
+| Loading is derived from which request has been delivered, so it resets on
+| its own without setting state from inside the effect body.
+|--------------------------------------------------------------------------
+*/
 
-  const [attendance, setAttendance] = useState(null);
-  const [loading, setLoading] = useState(true);
+const useAttendance = (companyCode, currentUser) => {
 
-  /*
-  ------------------------------------
-  Check In
-  ------------------------------------
-  */
+  const employeeId = getCurrentEmployeeId(currentUser);
 
-  const checkIn = async () => {
+  const [state, setState] = useState({
+    key: "",
+    attendance: null,
+    error: "",
+  });
 
-    const result =
-      await checkInEmployee(
-        companyCode,
-        currentUser
-      );
+  const enabled = Boolean(companyCode && employeeId);
 
-    if (result.success) {
+  const key = `${companyCode}|${employeeId}`;
 
-      setAttendance(result.data);
+  const isCurrent = state.key === key;
 
-    }
-
-    return result;
-
-  };
-
-  /*
-  ------------------------------------
-  Check Out
-  ------------------------------------
-  */
-
-  const checkOut = async () => {
-
-    const result =
-      await checkOutEmployee(
-        companyCode,
-        currentUser.employmentInfo.employeeId
-      );
-
-    return result;
-
-  };
   useEffect(() => {
 
-    if (
-      !companyCode ||
-      !currentUser
-    ) {
-      setLoading(false);
-      return;
-    }
+    if (!enabled) return undefined;
 
-    const today = new Date()
-      .toISOString()
-      .split("T")[0];
+    const unsubscribe = subscribeToEmployeeDay(
+      companyCode,
+      employeeId,
+      getDateKey(),
+      (record) => {
+        setState({ key, attendance: record, error: "" });
+      },
+      // Without this the subscription fails silently and loading never ends.
+      (subscriptionError) => {
 
-    const attendanceRef = ref(
-      db,
-      `companies/${companyCode}/attendance/records/${today}/${currentUser.employmentInfo.employeeId}`
-    );
+        console.error("Failed to load attendance:", subscriptionError);
 
-    const unsubscribe = onValue(
-      attendanceRef,
-      (snapshot) => {
+        setState({
+          key,
+          attendance: null,
+          error:
+            subscriptionError.message || "Failed to load attendance.",
+        });
 
-        if (snapshot.exists()) {
-          setAttendance(snapshot.val());
-        } else {
-          setAttendance(null);
-        }
-
-        setLoading(false);
       }
     );
 
     return () => unsubscribe();
 
-  }, [companyCode, currentUser]);
+  }, [companyCode, employeeId, enabled, key]);
+
+  const punchIn = useCallback(
+    () => punchInEmployee(companyCode, employeeId),
+    [companyCode, employeeId]
+  );
+
+  const punchOut = useCallback(
+    () => punchOutEmployee(companyCode, employeeId),
+    [companyCode, employeeId]
+  );
 
   return {
-    attendance,
-    loading,
-    checkIn,
-    checkOut,
+    attendance: isCurrent ? state.attendance : null,
+    loading: enabled && !isCurrent,
+    error: isCurrent ? state.error : "",
+    employeeId,
+    punchIn,
+    punchOut,
   };
 
 };

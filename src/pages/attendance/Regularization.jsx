@@ -1,34 +1,17 @@
-import { FiRefreshCw } from "react-icons/fi";
-import AttendancePageHeader from "../../components/attendance/AttendancePageHeader";
+import { Navigate } from "react-router-dom";
 
-function Regularization(){
-  return (
-    <div className="p-2">
+/*
+|--------------------------------------------------------------------------
+| Regularization
+|--------------------------------------------------------------------------
+| Attendance regularization is handled end to end by the attendance requests
+| module (raise, edit, approve, reject). The route is kept so existing links
+| keep working and sends the user there.
+|--------------------------------------------------------------------------
+*/
 
-      <AttendancePageHeader
-        title="Regularization"
-        subtitle="Approve attendance corrections raised by employees"
-        icon={<FiRefreshCw />}
-      />
-
-      <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-12 text-center shadow-sm">
-
-        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-purple-50 text-2xl text-purple-600">
-          <FiRefreshCw />
-        </div>
-
-        <h2 className="mt-4 text-lg font-semibold text-slate-900">
-          No regularization requests
-        </h2>
-
-        <p className="mx-auto mt-1 max-w-sm text-sm text-slate-500">
-          Correction requests submitted by employees will appear here for approval.
-        </p>
-
-      </div>
-
-    </div>
-  )
+function Regularization() {
+  return <Navigate to="/attendance/requests" replace />;
 }
 
 export default Regularization;

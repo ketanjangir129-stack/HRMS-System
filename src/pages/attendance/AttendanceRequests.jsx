@@ -1,190 +1,292 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { FiFileText } from "react-icons/fi";
 import { useOutletContext } from "react-router-dom";
 import { toast } from "react-toastify";
 import AttendancePageHeader from "../../components/attendance/AttendancePageHeader";
+import AttendanceRequestDetailModal from "../../components/attendance/requests/AttendanceRequestDetailModal";
 import AttendanceRequestList from "../../components/attendance/requests/AttendanceRequestList";
 import AttendanceRequestModal from "../../components/attendance/requests/AttendanceRequestModal";
-import AttendanceRequestDetailModal from "../../components/attendance/requests/AttendanceRequestDetailModal";
 import RejectRequestModal from "../../components/attendance/requests/RejectRequestModal";
-import ConfirmDeleteModal from "../../components/attendance/requests/ConfirmDeleteModal";
-import useAuth from "../../hooks/useAuth";
+import ConfirmDeleteModal from "../../components/common/ConfirmDeleteModal";
 import useAttendanceRequests from "../../hooks/useAttendanceRequests";
+import useAuth from "../../hooks/useAuth";
+import useEmployeeDirectory from "../../hooks/useEmployeeDirectory";
+import {
+  filterOwnRequests,
+  getRequestTypeLabel,
+  isApprover,
+} from "../../utils/attendance/attendanceRequestUtils";
+import { attachEmployeeDetails } from "../../utils/attendance/attendanceUtils";
+
+/*
+|--------------------------------------------------------------------------
+| Attendance Requests
+|--------------------------------------------------------------------------
+| Employees raise, edit and delete their own pending requests. HR and owners
+| review every request and approve or reject it.
+|
+| Requests store the employee id only, so they are joined with the employee
+| directory here before they are listed or searched.
+|--------------------------------------------------------------------------
+*/
 
 function AttendanceRequests() {
+
   const { company, currentUser } = useAuth();
+
   const companyCode = company?.companyCode;
+
   const { search, setSearch, setSearchPlaceholder } = useOutletContext();
-  const { requests, loading, create, update, approve, reject, remove } =
-    useAttendanceRequests(companyCode);
 
-  // Header search placeholder integration
-  useEffect(() => {
-    setSearchPlaceholder("Search attendance requests...");
-    return () => {
-      setSearchPlaceholder("Search...");
-      setSearch("");
-    };
-  }, [setSearch, setSearchPlaceholder]);
+  const canReview = isApprover(currentUser);
 
-  // Action actor name (role-ready: can be swapped later for HR/Manager)
-  const actorName =
-    currentUser?.personalInfo?.name ||
-    currentUser?.name ||
-    "Admin";
+  const {
+    requests,
+    loading,
+    error,
+    create,
+    update,
+    approve,
+    reject,
+    remove,
+  } = useAttendanceRequests(companyCode);
 
-  // Modal states
+  const {
+    directory,
+    activeEmployees,
+    loading: directoryLoading,
+    reload: reloadDirectory,
+  } = useEmployeeDirectory(companyCode);
+
+  // Employees only ever see their own requests.
+  const [scope, setScope] = useState(() => (canReview ? "all" : "mine"));
+
   const [createOpen, setCreateOpen] = useState(false);
-  const [editData, setEditData] = useState(null);
+  const [editRequest, setEditRequest] = useState(null);
   const [detailRequest, setDetailRequest] = useState(null);
   const [rejectRequest, setRejectRequest] = useState(null);
   const [deleteRequest, setDeleteRequest] = useState(null);
 
-  // Async loading flags
   const [submitting, setSubmitting] = useState(false);
   const [approving, setApproving] = useState(false);
   const [rejecting, setRejecting] = useState(false);
-  const [deleting, setDeleting] = useState(false);
 
-  const pendingCount = requests.filter((r) => r.status === "Pending").length;
+  useEffect(() => {
+    setSearchPlaceholder("Search attendance requests...");
+
+    return () => {
+      setSearch("");
+      setSearchPlaceholder("Search...");
+    };
+  }, [setSearch, setSearchPlaceholder]);
+
+  const detailedRequests = useMemo(
+    () => attachEmployeeDetails(requests, directory),
+    [requests, directory]
+  );
+
+  const visibleRequests = useMemo(
+    () =>
+      canReview && scope === "all"
+        ? detailedRequests
+        : filterOwnRequests(detailedRequests, currentUser),
+    [canReview, scope, detailedRequests, currentUser]
+  );
+
+  /*
+  | The detail modal is fed from the live list, so an approval or a rejection
+  | made elsewhere is reflected while it is open.
+  */
+  const activeDetail = useMemo(
+    () =>
+      detailRequest
+        ? detailedRequests.find(
+          (request) => request.requestId === detailRequest.requestId
+        ) || null
+        : null,
+    [detailRequest, detailedRequests]
+  );
+
+  const actorName =
+    currentUser?.personalInfo?.name || currentUser?.name || "Admin";
 
   /*
   |--------------------------------------------------------------------------
-  | Create Request
+  | Create / Edit
   |--------------------------------------------------------------------------
   */
-  const handleCreate = async (payload) => {
+
+  const closeForm = () => {
+    setCreateOpen(false);
+    setEditRequest(null);
+  };
+
+  const handleSubmit = async (payload) => {
+
     setSubmitting(true);
+
     try {
-      const result = await create(payload);
+
+      const result = editRequest
+        ? await update(editRequest.requestId, payload)
+        : await create(payload);
+
       if (!result?.success) {
-        toast.error(result?.message || "Failed to create request.");
+        toast.error(result?.message || "Failed to save request.");
         return;
       }
-      toast.success("Attendance request submitted successfully.");
-      setCreateOpen(false);
-    } catch (error) {
-      console.error(error);
-      toast.error("Failed to create attendance request.");
+
+      toast.success(
+        editRequest
+          ? "Attendance request updated successfully."
+          : "Attendance request submitted successfully."
+      );
+
+      closeForm();
+
+    } catch (submitError) {
+
+      console.error(submitError);
+      toast.error("Failed to save attendance request.");
+
     } finally {
+
       setSubmitting(false);
+
     }
+
   };
 
   /*
   |--------------------------------------------------------------------------
-  | Edit Request (pending only)
+  | Approve / Reject
   |--------------------------------------------------------------------------
   */
-  const handleEdit = async (payload) => {
-    if (!editData?.requestId) return;
-    setSubmitting(true);
-    try {
-      const result = await update(editData.requestId, payload);
-      if (!result?.success) {
-        toast.error(result?.message || "Failed to update request.");
-        return;
-      }
-      toast.success("Attendance request updated successfully.");
-      setEditData(null);
-    } catch (error) {
-      console.error(error);
-      toast.error("Failed to update attendance request.");
-    } finally {
-      setSubmitting(false);
-    }
-  };
 
-  /*
-  |--------------------------------------------------------------------------
-  | Approve Request
-  |--------------------------------------------------------------------------
-  */
   const handleApprove = async (request) => {
+
     setApproving(true);
+
     try {
+
       const result = await approve(request, actorName);
+
       if (!result?.success) {
         toast.error(result?.message || "Failed to approve request.");
         return;
       }
-      toast.success("Attendance request approved.");
+
+      toast.success("Request approved and attendance updated.");
       setDetailRequest(null);
-    } catch (error) {
-      console.error(error);
+
+    } catch (approveError) {
+
+      console.error(approveError);
       toast.error("Failed to approve attendance request.");
+
     } finally {
+
       setApproving(false);
+
     }
+
   };
 
-  /*
-  |--------------------------------------------------------------------------
-  | Reject Request (remarks required)
-  |--------------------------------------------------------------------------
-  */
   const handleReject = async (remarks) => {
+
     if (!rejectRequest?.requestId) return;
+
     setRejecting(true);
+
     try {
+
       const result = await reject(
         rejectRequest.requestId,
         actorName,
         remarks
       );
+
       if (!result?.success) {
         toast.error(result?.message || "Failed to reject request.");
         return;
       }
+
       toast.success("Attendance request rejected.");
       setRejectRequest(null);
       setDetailRequest(null);
-    } catch (error) {
-      console.error(error);
+
+    } catch (rejectError) {
+
+      console.error(rejectError);
       toast.error("Failed to reject attendance request.");
+
     } finally {
+
       setRejecting(false);
+
     }
+
   };
 
   /*
   |--------------------------------------------------------------------------
-  | Delete Request (pending only)
+  | Delete
   |--------------------------------------------------------------------------
   */
+
   const handleDelete = async () => {
+
     if (!deleteRequest?.requestId) return;
-    setDeleting(true);
+
     try {
-      await remove(deleteRequest.requestId);
+
+      const result = await remove(deleteRequest.requestId);
+
+      if (!result?.success) {
+        toast.error(result?.message || "Failed to delete request.");
+        return;
+      }
+
       toast.success("Attendance request deleted.");
       setDeleteRequest(null);
-    } catch (error) {
-      console.error(error);
+
+    } catch (deleteError) {
+
+      console.error(deleteError);
       toast.error("Failed to delete attendance request.");
-    } finally {
-      setDeleting(false);
+
     }
+
   };
 
   return (
     <div className="p-2">
+
       <AttendancePageHeader
         title="Attendance Requests"
-        subtitle="Review and action attendance correction requests"
+        subtitle="Raise and review attendance correction requests"
         icon={<FiFileText />}
       />
 
-      <div className="mt-6 space-y-6">
+      <div className="mt-6">
+
         <AttendanceRequestList
-          requests={requests}
-          loading={loading}
-          pendingCount={pendingCount}
+          requests={visibleRequests}
+          loading={loading || directoryLoading}
+          error={error}
+          onRetry={reloadDirectory}
+          currentUser={currentUser}
           headerSearch={search}
-          onCreate={() => setCreateOpen(true)}
+          canReview={canReview}
+          scope={scope}
+          onScopeChange={setScope}
+          onCreate={() => {
+            setEditRequest(null);
+            setCreateOpen(true);
+          }}
           onView={setDetailRequest}
           onEdit={(request) => {
-            setEditData(request);
+            setEditRequest(request);
             setCreateOpen(true);
           }}
           onDelete={setDeleteRequest}
@@ -194,31 +296,32 @@ function AttendanceRequests() {
             setDetailRequest(null);
           }}
         />
+
       </div>
 
-      {/* Create / Edit Modal */}
       <AttendanceRequestModal
         open={createOpen}
-        onClose={() => {
-          setCreateOpen(false);
-          setEditData(null);
-        }}
-        onSubmit={editData ? handleEdit : handleCreate}
+        onClose={closeForm}
+        onSubmit={handleSubmit}
         submitting={submitting}
-        initialData={editData}
+        initialData={editRequest}
         currentUser={currentUser}
-        title={editData ? "Edit Attendance Request" : "New Attendance Request"}
+        employees={activeEmployees}
+        canSelectEmployee={canReview}
+        title={
+          editRequest ? "Edit Attendance Request" : "New Attendance Request"
+        }
         subtitle={
-          editData
-            ? "Update the pending attendance correction request"
+          editRequest
+            ? "Update your pending attendance correction request"
             : "Raise an attendance correction request"
         }
       />
 
-      {/* Detail Modal */}
       <AttendanceRequestDetailModal
-        open={Boolean(detailRequest)}
-        request={detailRequest}
+        open={Boolean(activeDetail)}
+        request={activeDetail}
+        currentUser={currentUser}
         onClose={() => setDetailRequest(null)}
         onApprove={handleApprove}
         onReject={(request) => {
@@ -229,7 +332,6 @@ function AttendanceRequests() {
         rejecting={rejecting}
       />
 
-      {/* Reject Modal */}
       <RejectRequestModal
         open={Boolean(rejectRequest)}
         onClose={() => setRejectRequest(null)}
@@ -238,17 +340,23 @@ function AttendanceRequests() {
         employeeName={rejectRequest?.employeeName}
       />
 
-      {/* Delete Confirmation Modal */}
       <ConfirmDeleteModal
         open={Boolean(deleteRequest)}
-        onClose={() => setDeleteRequest(null)}
+        title="Delete Request"
+        message="Are you sure you want to delete this attendance request?"
+        itemName={
+          deleteRequest
+            ? `${getRequestTypeLabel(deleteRequest.type)} · ${deleteRequest.requestId}`
+            : ""
+        }
+        confirmText="Delete Request"
         onConfirm={handleDelete}
-        loading={deleting}
-        request={deleteRequest}
+        onClose={() => setDeleteRequest(null)}
       />
+
     </div>
   );
+
 }
 
 export default AttendanceRequests;
-

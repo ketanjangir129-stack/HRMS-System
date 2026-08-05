@@ -1,70 +1,108 @@
-import { useEffect, useState } from "react";
-import { ref, onValue } from "firebase/database";
-import { db } from "../firebase/firebase";
+import { useCallback, useEffect, useState } from "react";
 import {
   createAttendanceRequest,
   updateAttendanceRequest,
   approveAttendanceRequest,
   rejectAttendanceRequest,
   deleteAttendanceRequest,
+  subscribeToAttendanceRequests,
 } from "../services/attendanceServices/attendanceRequestService";
 
+/*
+|--------------------------------------------------------------------------
+| Attendance Requests
+|--------------------------------------------------------------------------
+| Realtime list plus the request actions. Every action resolves to the
+| service result `{ success, message }`, so callers decide which toast to
+| show without knowing anything about Firebase.
+|--------------------------------------------------------------------------
+*/
+
+const EMPTY = [];
+
 function useAttendanceRequests(companyCode) {
-  const [requests, setRequests] = useState([]);
-  const [loading, setLoading] = useState(true);
 
-  // Realtime subscription keeps the UI instantly in sync after any action.
+  const [state, setState] = useState({
+    key: "",
+    requests: EMPTY,
+    error: "",
+  });
+
+  const enabled = Boolean(companyCode);
+
+  const isCurrent = state.key === companyCode;
+
   useEffect(() => {
-    if (!companyCode) return;
 
-    const requestRef = ref(
-      db,
-      `companies/${companyCode}/attendance/requests`
+    if (!enabled) return undefined;
+
+    const unsubscribe = subscribeToAttendanceRequests(
+      companyCode,
+      (requests) => {
+        setState({ key: companyCode, requests, error: "" });
+      },
+      // Without this the subscription fails silently and loading never ends.
+      (subscriptionError) => {
+
+        console.error(
+          "Failed to load attendance requests:",
+          subscriptionError
+        );
+
+        setState({
+          key: companyCode,
+          requests: EMPTY,
+          error:
+            subscriptionError.message ||
+            "Failed to load attendance requests.",
+        });
+
+      }
     );
 
-    return onValue(requestRef, (snapshot) => {
-      if (snapshot.exists()) {
-        setRequests(
-          Object.values(snapshot.val()).sort(
-            (a, b) => b.requestedAt - a.requestedAt
-          )
-        );
-      } else {
-        setRequests([]);
-      }
-      setLoading(false);
-    });
-  }, [companyCode]);
+    return () => unsubscribe();
 
-  const create = async (request) => {
-    return createAttendanceRequest(companyCode, request);
-  };
+  }, [companyCode, enabled]);
 
-  const update = async (requestId, updates) => {
-    return updateAttendanceRequest(companyCode, requestId, updates);
-  };
+  const create = useCallback(
+    (request) => createAttendanceRequest(companyCode, request),
+    [companyCode]
+  );
 
-  const approve = async (request, hrName) => {
-    return approveAttendanceRequest(companyCode, request, hrName);
-  };
+  const update = useCallback(
+    (requestId, updates) =>
+      updateAttendanceRequest(companyCode, requestId, updates),
+    [companyCode]
+  );
 
-  const reject = async (requestId, hrName, remarks) => {
-    return rejectAttendanceRequest(companyCode, requestId, hrName, remarks);
-  };
+  const approve = useCallback(
+    (request, approvedBy) =>
+      approveAttendanceRequest(companyCode, request, approvedBy),
+    [companyCode]
+  );
 
-  const remove = async (requestId) => {
-    return deleteAttendanceRequest(companyCode, requestId);
-  };
+  const reject = useCallback(
+    (requestId, approvedBy, remarks) =>
+      rejectAttendanceRequest(companyCode, requestId, approvedBy, remarks),
+    [companyCode]
+  );
+
+  const remove = useCallback(
+    (requestId) => deleteAttendanceRequest(companyCode, requestId),
+    [companyCode]
+  );
 
   return {
-    requests,
-    loading,
+    requests: isCurrent ? state.requests : EMPTY,
+    loading: enabled && !isCurrent,
+    error: isCurrent ? state.error : "",
     create,
     update,
     approve,
     reject,
     remove,
   };
+
 }
 
 export default useAttendanceRequests;

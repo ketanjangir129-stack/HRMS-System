@@ -1,16 +1,19 @@
-import { FiSettings, FiClock, FiMapPin, FiBell } from "react-icons/fi";
+import { FiBell, FiMapPin, FiSettings } from "react-icons/fi";
 import AttendancePageHeader from "../../components/attendance/AttendancePageHeader";
 
-const settings = [
-  {
-    title: "Shift Timings",
-    description: "Default office hours and grace period",
-    icon: <FiClock />,
-    color: "bg-blue-50 text-blue-600",
-  },
+/*
+|--------------------------------------------------------------------------
+| Attendance Settings
+|--------------------------------------------------------------------------
+| Attendance preferences. The working day rules live in
+| `utils/attendance/attendanceConstants.js`.
+|--------------------------------------------------------------------------
+*/
+
+const SETTINGS = [
   {
     title: "Geo Fencing",
-    description: "Allowed locations for check-in",
+    description: "Allowed locations for punch in",
     icon: <FiMapPin />,
     color: "bg-emerald-50 text-emerald-600",
   },
@@ -22,7 +25,7 @@ const settings = [
   },
 ];
 
-function AttendanceSettings(){
+function AttendanceSettings() {
   return (
     <div className="p-2">
 
@@ -32,17 +35,17 @@ function AttendanceSettings(){
         icon={<FiSettings />}
       />
 
-      <div className="mt-6 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+      <div className="mt-6 grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
 
-        {settings.map((item) => (
+        {SETTINGS.map((item) => (
 
           <div
             key={item.title}
-            className="group cursor-pointer rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:shadow-slate-200"
+            className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"
           >
 
             <div
-              className={`flex h-12 w-12 items-center justify-center rounded-2xl text-xl transition-transform duration-300 group-hover:scale-110 ${item.color}`}
+              className={`flex h-12 w-12 items-center justify-center rounded-2xl text-xl ${item.color}`}
             >
               {item.icon}
             </div>
@@ -55,6 +58,10 @@ function AttendanceSettings(){
               {item.description}
             </p>
 
+            <span className="mt-4 inline-flex rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-500">
+              Coming soon
+            </span>
+
           </div>
 
         ))}
@@ -62,7 +69,7 @@ function AttendanceSettings(){
       </div>
 
     </div>
-  )
+  );
 }
 
 export default AttendanceSettings;

@@ -18,8 +18,8 @@ function AttendanceAnalytics({ analytics }) {
       subtitle: `${analytics.presentEmployees} employees present`,
     },
     {
-      title: "Avg. Check-In",
-      value: analytics.averageCheckIn,
+      title: "Avg. Punch-In",
+      value: analytics.averagePunchIn,
       progress: 100,
       icon: <FiClock />,
       iconColor: "bg-blue-50 text-blue-600",

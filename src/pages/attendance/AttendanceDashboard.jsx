@@ -1,83 +1,211 @@
-import { useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { toast } from "react-toastify";
-import AttendanceHeader from "../../components/attendance/AttendanceHeader";
-import AttendanceSummaryCards from "../../components/attendance/AttendanceSummaryCards";
-import AttendanceTodayTable from "../../components/attendance/AttendanceTodayTable";
-import AttendanceQuickActions from "../../components/attendance/AttendanceQuickActions";
-import AttendanceCalendar from "../../components/attendance/AttendanceCalender/AttendanceCalendar";
 import AttendanceAnalytics from "../../components/attendance/AttendanceAnalytics";
+import AttendanceCalendar from "../../components/attendance/AttendanceCalender/AttendanceCalendar";
+import AttendanceHeader from "../../components/attendance/AttendanceHeader";
+import AttendanceQuickActions from "../../components/attendance/AttendanceQuickActions";
 import AttendanceRecentActivity from "../../components/attendance/AttendanceRecentActivity";
 import AttendanceRequests from "../../components/attendance/AttendanceRequests";
-import AttendanceShiftCard from "../../components/attendance/AttendanceShiftCard";
+import AttendanceSummaryCards from "../../components/attendance/AttendanceSummaryCards";
+import AttendanceTodayTable from "../../components/attendance/AttendanceTodayTable";
 import MarkAttendanceModal from "../../components/attendance/MarkAttendanceModal";
 import TodayAttendanceCard from "../../components/attendance/TodayAttendanceCard";
-import useAuth from "../../hooks/useAuth";
-import useTodayAttendance from "../../hooks/useTodayAttendance";
+import RejectRequestModal from "../../components/attendance/requests/RejectRequestModal";
 import useAttendanceHistory from "../../hooks/useAttendanceHistory";
-import {
-  getAttendanceSummary,
-  getAttendanceAnalytics,
-  getAttendanceActivities,
-} from "../../utils/attendance/attendanceUtils";
 import useAttendanceRequests from "../../hooks/useAttendanceRequests";
+import useAuth from "../../hooks/useAuth";
+import useDailyAttendance from "../../hooks/useDailyAttendance";
+import useEmployeeDirectory from "../../hooks/useEmployeeDirectory";
+import { getDateKey } from "../../utils/attendance/attendanceDate";
 import {
-  approveAttendanceRequest,
-  rejectAttendanceRequest,
-} from "../../services/attendanceServices/attendanceRequestService";
+  attachEmployeeDetails,
+  getAttendanceActivities,
+  getAttendanceAnalytics,
+  getAttendanceSummary,
+} from "../../utils/attendance/attendanceUtils";
+import {
+  filterOwnRequests,
+  getCurrentEmployeeId,
+  isApprover,
+} from "../../utils/attendance/attendanceRequestUtils";
+
+/*
+|--------------------------------------------------------------------------
+| Attendance Dashboard
+|--------------------------------------------------------------------------
+| Today's attendance in realtime, the signed in user's own punch card, the
+| month calendar, analytics, the activity feed and the latest requests.
+|
+| Records store the employee id only, so they are joined with the employee
+| directory once here and every panel below works from that.
+|--------------------------------------------------------------------------
+*/
 
 function AttendanceDashboard() {
 
-  const [showModal, setShowModal] = useState(false);
-  const { company } = useAuth();
-  const { currentUser } = useAuth();
-  const employeeId = currentUser?.employmentInfo?.employeeId;
-  const { attendance, loading, } = useTodayAttendance(company?.companyCode);
-  const summary = getAttendanceSummary(attendance);
-  const analytics = getAttendanceAnalytics(attendance);
-  const activities = getAttendanceActivities(attendance);
-  const { requests} = useAttendanceRequests(company?.companyCode);
-  const today = new Date();
+  const { company, currentUser } = useAuth();
 
-  const year = today.getFullYear();
+  const companyCode = company?.companyCode;
 
-  const month = String(
-    today.getMonth() + 1
-  ).padStart(2, "0");
+  const employeeId = getCurrentEmployeeId(currentUser);
+
+  const [markOpen, setMarkOpen] = useState(false);
+  const [rejectRequest, setRejectRequest] = useState(null);
+  const [rejecting, setRejecting] = useState(false);
+
+  const today = useMemo(() => new Date(), []);
+
+  const [calendarMonth, setCalendarMonth] = useState(() => ({
+    year: today.getFullYear(),
+    month: today.getMonth() + 1,
+  }));
+
   const {
-    history,
-    loading: calendarLoading,
-  } = useAttendanceHistory(
-    company?.companyCode,
+    directory,
+    activeEmployees,
+    activeCount,
+    loading: directoryLoading,
+    error: directoryError,
+    reload: reloadDirectory,
+  } = useEmployeeDirectory(companyCode);
+
+  const {
+    attendance,
+    loading: attendanceLoading,
+    error: attendanceError,
+    markAttendance,
+  } = useDailyAttendance(companyCode);
+
+  const {
+    requests,
+    loading: requestsLoading,
+    approve,
+    reject,
+  } = useAttendanceRequests(companyCode);
+
+  const { history, loading: calendarLoading } = useAttendanceHistory(
+    companyCode,
     employeeId,
-    year,
-    month
+    calendarMonth.year,
+    calendarMonth.month
   );
+
+  /*
+  | Attendance and requests are joined with the directory once, so the table,
+  | the activity feed and the request card all read the same resolved names.
+  */
+  const records = useMemo(
+    () => attachEmployeeDetails(attendance, directory),
+    [attendance, directory]
+  );
+
+  /*
+  | Reviewers see every request; everyone else only sees the ones they raised.
+  */
+  const detailedRequests = useMemo(() => {
+
+    const detailed = attachEmployeeDetails(requests, directory);
+
+    return isApprover(currentUser)
+      ? detailed
+      : filterOwnRequests(detailed, currentUser);
+
+  }, [requests, directory, currentUser]);
+
+  const summary = useMemo(
+    () => getAttendanceSummary(records, activeCount),
+    [records, activeCount]
+  );
+
+  const analytics = useMemo(
+    () => getAttendanceAnalytics(records, activeCount),
+    [records, activeCount]
+  );
+
+  const activities = useMemo(
+    () => getAttendanceActivities(records),
+    [records]
+  );
+
+  const actorName =
+    currentUser?.personalInfo?.name || currentUser?.name || "Admin";
+
+  const handleMonthChange = useCallback((year, month) => {
+    setCalendarMonth({ year, month });
+  }, []);
+
   const handleApprove = async (request) => {
-    const result = await approveAttendanceRequest(
-      company.companyCode,
-      request,
-      currentUser?.personalInfo?.name || "Admin"
-    );
-    if (result.success) {
-      toast.success("Attendance request approved.");
+
+    if (!isApprover(currentUser)) {
+      toast.error("You are not allowed to review requests.");
+      return;
     }
+
+    try {
+
+      const result = await approve(request, actorName);
+
+      if (!result?.success) {
+        toast.error(result?.message || "Failed to approve request.");
+        return;
+      }
+
+      toast.success("Attendance request approved.");
+
+    } catch (error) {
+
+      console.error(error);
+      toast.error("Failed to approve attendance request.");
+
+    }
+
   };
-  const handleReject = async (request) => {
-    await rejectAttendanceRequest(
-      company.companyCode,
-      request.requestId,
-      currentUser?.personalInfo?.name || "Admin",
-      "Rejected"
-    );
-    toast.success("Attendance request rejected.");
+
+  const handleReject = async (remarks) => {
+
+    if (!rejectRequest?.requestId) return;
+
+    setRejecting(true);
+
+    try {
+
+      const result = await reject(
+        rejectRequest.requestId,
+        actorName,
+        remarks
+      );
+
+      if (!result?.success) {
+        toast.error(result?.message || "Failed to reject request.");
+        return;
+      }
+
+      toast.success("Attendance request rejected.");
+      setRejectRequest(null);
+
+    } catch (error) {
+
+      console.error(error);
+      toast.error("Failed to reject attendance request.");
+
+    } finally {
+
+      setRejecting(false);
+
+    }
+
   };
 
   return (
     <div className="mx-auto max-w-[1600px] space-y-6 p-1 sm:p-2">
 
-      <AttendanceHeader onMarkAttendance={() => setShowModal(true)} />
+      <AttendanceHeader
+        onMarkAttendance={() => setMarkOpen(true)}
+        canMarkAttendance={isApprover(currentUser)}
+      />
 
       <div className="grid grid-cols-1 items-stretch gap-6 xl:grid-cols-12">
+
         <div className="xl:col-span-5">
           <TodayAttendanceCard className="h-full" />
         </div>
@@ -89,13 +217,19 @@ function AttendanceDashboard() {
             gridClassName="grid-cols-1 sm:grid-cols-2 sm:grid-rows-2"
           />
         </div>
+
       </div>
 
-      {/* Main Section */}
+      {/* Today */}
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-12">
 
         <div className="xl:col-span-8">
-          <AttendanceTodayTable attendance={attendance} loading={loading} />
+          <AttendanceTodayTable
+            attendance={records}
+            loading={attendanceLoading || directoryLoading}
+            error={attendanceError || directoryError}
+            onRetry={reloadDirectory}
+          />
         </div>
 
         <div className="xl:col-span-4">
@@ -104,11 +238,15 @@ function AttendanceDashboard() {
 
       </div>
 
-      {/* Analytics */}
+      {/* Insights */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 xl:grid-cols-12">
 
         <div className="xl:col-span-4">
-          <AttendanceCalendar history={history} loading={calendarLoading} />
+          <AttendanceCalendar
+            history={history}
+            loading={calendarLoading}
+            onMonthChange={handleMonthChange}
+          />
         </div>
 
         <div className="xl:col-span-4">
@@ -116,36 +254,49 @@ function AttendanceDashboard() {
         </div>
 
         <div className="lg:col-span-2 xl:col-span-4">
-          <AttendanceRecentActivity activities={activities} />
+          <AttendanceRecentActivity
+            activities={activities}
+            loading={attendanceLoading || directoryLoading}
+          />
         </div>
 
       </div>
 
-      {/* Bottom Cards */}
+      {/* Requests */}
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-12">
 
         <div className="xl:col-span-7">
           <AttendanceRequests
-            requests={requests}
-            loading={loading}
+            requests={detailedRequests}
+            loading={requestsLoading || directoryLoading}
+            currentUser={currentUser}
             onApprove={handleApprove}
-            onReject={handleReject}
+            onReject={setRejectRequest}
           />
-        </div>
-
-        <div className="xl:col-span-5">
-          <AttendanceShiftCard />
         </div>
 
       </div>
 
       <MarkAttendanceModal
-        open={showModal}
-        onClose={() => setShowModal(false)}
+        open={markOpen}
+        onClose={() => setMarkOpen(false)}
+        onSave={markAttendance}
+        employees={activeEmployees}
+        dayRecords={records}
+        recordsDate={getDateKey()}
+      />
+
+      <RejectRequestModal
+        open={Boolean(rejectRequest)}
+        onClose={() => setRejectRequest(null)}
+        onConfirm={handleReject}
+        loading={rejecting}
+        employeeName={rejectRequest?.employeeName}
       />
 
     </div>
   );
+
 }
 
 export default AttendanceDashboard;

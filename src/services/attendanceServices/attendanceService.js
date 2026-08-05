@@ -4,261 +4,241 @@ import {
   get,
   set,
   update,
+  onValue,
+  query,
+  orderByKey,
+  startAt,
+  endAt,
 } from "firebase/database";
+import {
+  getDateKey,
+  getMonthPrefix,
+  formatTime,
+} from "../../utils/attendance/attendanceDate";
+import {
+  calculateWorkingHours,
+  resolvePunchInStatus,
+} from "../../utils/attendance/attendanceUtils";
+import { ATTENDANCE_STATUS } from "../../utils/attendance/attendanceConstants";
 
 /*
 |--------------------------------------------------------------------------
-| Helpers
+| Attendance Service
+|--------------------------------------------------------------------------
+| The only place that talks to the attendance branch of the database.
+|
+| A record stores the minimum a day of attendance needs. Employee details are
+| never copied here: they are resolved from
+| `companies/{companyCode}/employees/{employeeId}` whenever a name, department
+| or designation has to be shown.
+|
+| companies/{companyCode}/attendance/records/{YYYY-MM-DD}/{employeeId}
 |--------------------------------------------------------------------------
 */
 
-const getTodayKey = () => {
-  return new Date().toISOString().split("T")[0];
+const recordsPath = (companyCode) =>
+  `companies/${companyCode}/attendance/records`;
+
+const recordPath = (companyCode, date, employeeId) =>
+  `${recordsPath(companyCode)}/${date}/${employeeId}`;
+
+/*
+| Firebase rejects `undefined`, so every field is written explicitly.
+*/
+
+const buildAttendanceRecord = ({
+  employeeId,
+  date,
+  punchIn = null,
+  punchOut = null,
+  status,
+  remarks = "",
+}) => ({
+
+  employeeId,
+
+  date,
+
+  punchIn,
+  punchInTime: punchIn ? formatTime(punchIn) : "",
+
+  punchOut,
+  punchOutTime: punchOut ? formatTime(punchOut) : "",
+
+  workingHours: calculateWorkingHours(punchIn, punchOut),
+
+  status:
+    status ||
+    (punchIn ? resolvePunchInStatus(punchIn) : ""),
+
+  remarks,
+
+  createdAt: Date.now(),
+
+});
+
+/*
+|--------------------------------------------------------------------------
+| Reads
+|--------------------------------------------------------------------------
+*/
+
+/*
+| Every record of a single month as `{ [date]: { [employeeId]: record } }`.
+|
+| Date keys are ordered, so the month is selected with a key range instead of
+| downloading the whole records tree. `\uf8ff` is the highest code point
+| Firebase orders on and makes the range cover every day of the prefix.
+*/
+
+const MONTH_RANGE_END = "\uf8ff";
+
+const monthQuery = (companyCode, year, month) => {
+
+  const prefix = getMonthPrefix(year, month);
+
+  return query(
+    ref(db, recordsPath(companyCode)),
+    orderByKey(),
+    startAt(prefix),
+    endAt(`${prefix}${MONTH_RANGE_END}`)
+  );
+
 };
 
-export const calculateWorkingHours = (
-  checkIn,
-  checkOut
+export const getMonthlyAttendanceRecords = async (
+  companyCode,
+  year,
+  month
 ) => {
 
-  if (!checkIn || !checkOut) return "";
-
-  const diff = checkOut - checkIn;
-
-  const hours = Math.floor(
-    diff / (1000 * 60 * 60)
+  const snapshot = await get(
+    monthQuery(companyCode, year, month)
   );
 
-  const minutes = Math.floor(
-    (diff % (1000 * 60 * 60)) /
-    (1000 * 60)
-  );
-
-  return `${hours}h ${minutes}m`;
+  return snapshot.exists() ? snapshot.val() : {};
 
 };
 
+/*
+|--------------------------------------------------------------------------
+| Subscriptions
+|--------------------------------------------------------------------------
+| Each returns its unsubscribe function. The error callback is always passed
+| through: without it a failing subscription is silent and the caller stays
+| stuck on loading.
+*/
+
+export const subscribeToDailyAttendance = (
+  companyCode,
+  date,
+  onData,
+  onError
+) =>
+  onValue(
+    ref(db, `${recordsPath(companyCode)}/${date}`),
+    (snapshot) => {
+      onData(
+        snapshot.exists() ? Object.values(snapshot.val()) : []
+      );
+    },
+    onError
+  );
+
+export const subscribeToEmployeeDay = (
+  companyCode,
+  employeeId,
+  date,
+  onData,
+  onError
+) =>
+  onValue(
+    ref(db, recordPath(companyCode, date, employeeId)),
+    (snapshot) => {
+      onData(snapshot.exists() ? snapshot.val() : null);
+    },
+    onError
+  );
+
+/*
+| One employee's records for a single month, sorted by date.
+*/
+
+export const subscribeToEmployeeAttendanceHistory = (
+  companyCode,
+  employeeId,
+  year,
+  month,
+  onData,
+  onError
+) =>
+  onValue(
+    monthQuery(companyCode, year, month),
+    (snapshot) => {
+
+      const history = [];
+
+      if (snapshot.exists()) {
+
+        Object.values(snapshot.val()).forEach((employees) => {
+
+          if (employees?.[employeeId]) {
+            history.push(employees[employeeId]);
+          }
+
+        });
+
+      }
+
+      history.sort((a, b) => a.date.localeCompare(b.date));
+
+      onData(history);
+
+    },
+    onError
+  );
 
 /*
 |--------------------------------------------------------------------------
-| Get Today's Attendance
+| Punch In
 |--------------------------------------------------------------------------
 */
 
-export const getTodayAttendance = async (
+export const punchInEmployee = async (
   companyCode,
   employeeId
 ) => {
 
-  const today = getTodayKey();
-
-  const snapshot = await get(
-    ref(
-      db,
-      `companies/${companyCode}/attendance/records/${today}/${employeeId}`
-    )
-  );
-
-  if (!snapshot.exists()) {
-    return null;
-  }
-
-  return snapshot.val();
-
-};
-
-/*
-|--------------------------------------------------------------------------
-| Get Employee Attendance History
-|--------------------------------------------------------------------------
-*/
-
-export const getEmployeeAttendanceHistory = async (
-  companyCode,
-  employeeId,
-  year,
-  month
-) => {
-
-  const snapshot = await get(
-    ref(
-      db,
-      `companies/${companyCode}/attendance/records`
-    )
-  );
-
-  if (!snapshot.exists()) {
-    return [];
-  }
-
-  const records = snapshot.val();
-
-  const history = [];
-
-  Object.entries(records).forEach(([date, employees]) => {
-
-    if (!date.startsWith(`${year}-${month}`)) {
-      return;
-    }
-
-    if (employees[employeeId]) {
-
-      history.push(employees[employeeId]);
-
-    }
-
-  });
-
-  history.sort(
-    (a, b) =>
-      new Date(a.date) - new Date(b.date)
-  );
-
-  return history;
-
-};
-
-
-/*
-|--------------------------------------------------------------------------
-| Get Monthly Attendance
-|--------------------------------------------------------------------------
-*/
-
-export const getMonthlyAttendance = async (
-  companyCode,
-  year,
-  month
-) => {
-
-  const snapshot = await get(
-    ref(
-      db,
-      `companies/${companyCode}/attendance/records`
-    )
-  );
-
-  if (!snapshot.exists()) {
-    return {};
-  }
-
-  const records = snapshot.val();
-
-  const monthAttendance = {};
-
-  Object.entries(records).forEach(([date, employees]) => {
-
-    if (!date.startsWith(`${year}-${month}`)) {
-      return;
-    }
-
-    let present = 0;
-    let absent = 0;
-    let late = 0;
-    let leave = 0;
-
-    Object.values(employees).forEach((employee) => {
-
-      switch (employee.status) {
-
-        case "Present":
-          present++;
-          break;
-
-        case "Late":
-          late++;
-          break;
-
-        case "Absent":
-          absent++;
-          break;
-
-        case "Leave":
-          leave++;
-          break;
-
-        default:
-          break;
-      }
-
-    });
-
-    monthAttendance[date] = {
-      present,
-      late,
-      absent,
-      leave,
+  if (!employeeId) {
+    return {
+      success: false,
+      message: "Employee account not found.",
     };
+  }
 
-  });
-
-  return monthAttendance;
-
-};
-
-/*
-|--------------------------------------------------------------------------
-| Employee Check In
-|--------------------------------------------------------------------------
-*/
-
-export const checkInEmployee = async (
-  companyCode,
-  employee
-) => {
-
-  const today = getTodayKey();
+  const today = getDateKey();
 
   const attendanceRef = ref(
     db,
-    `companies/${companyCode}/attendance/records/${today}/${employee.employmentInfo.employeeId}`
+    recordPath(companyCode, today, employeeId)
   );
 
-  const snapshot = await get(
-    attendanceRef
-  );
+  const snapshot = await get(attendanceRef);
 
   if (snapshot.exists()) {
-
     return {
       success: false,
       message: "Attendance already marked.",
     };
-
   }
 
-  const now = new Date();
-
-  const attendance = {
-    employeeId: employee.employmentInfo.employeeId,
-    employeeName: employee.personalInfo.name,
-    department: employee.employmentInfo.department,
-    designation: employee.employmentInfo.designation,
-
+  const attendance = buildAttendanceRecord({
+    employeeId,
     date: today,
+    punchIn: Date.now(),
+  });
 
-    checkIn: now.getTime(),
-    checkInTime: now.toLocaleTimeString("en-IN", {
-      hour: "2-digit",
-      minute: "2-digit",
-    }),
-
-    checkOut: null,
-    checkOutTime: "",
-
-    workingHours: "",
-
-    status: "Present",
-
-    remarks: "",
-
-    createdAt: Date.now(),
-  };
-
-  await set(
-    attendanceRef,
-    attendance
-  );
+  await set(attendanceRef, attendance);
 
   return {
     success: true,
@@ -269,75 +249,63 @@ export const checkInEmployee = async (
 
 /*
 |--------------------------------------------------------------------------
-| Employee Check Out
+| Punch Out
 |--------------------------------------------------------------------------
 */
 
-export const checkOutEmployee = async (
+export const punchOutEmployee = async (
   companyCode,
   employeeId
 ) => {
 
-  const today = getTodayKey();
-
   const attendanceRef = ref(
     db,
-    `companies/${companyCode}/attendance/records/${today}/${employeeId}`
+    recordPath(companyCode, getDateKey(), employeeId)
   );
 
-  const snapshot = await get(
-    attendanceRef
-  );
+  const snapshot = await get(attendanceRef);
 
   if (!snapshot.exists()) {
-
     return {
       success: false,
-      message:
-        "Check in first.",
+      message: "Punch in first.",
     };
-
   }
 
-  const attendance =
-    snapshot.val();
+  const attendance = snapshot.val();
 
-  if (attendance.checkOut) {
-
+  if (attendance.punchOut) {
     return {
       success: false,
-      message:
-        "Already checked out.",
+      message: "Already punched out.",
     };
-
   }
 
-  const now = new Date();
-
-  const checkOut = now.getTime();
+  const punchOut = Date.now();
 
   await update(attendanceRef, {
-    checkOut,
-    checkOutTime: now.toLocaleTimeString("en-IN", {
-      hour: "2-digit",
-      minute: "2-digit",
-    }),
+    punchOut,
+    punchOutTime: formatTime(punchOut),
     workingHours: calculateWorkingHours(
-      attendance.checkIn,
-      checkOut
+      attendance.punchIn,
+      punchOut
     ),
   });
 
-  return {
-    success: true,
-  };
+  return { success: true };
 
 };
 
 /*
 |--------------------------------------------------------------------------
-| Manual Attendance (HR/Admin)
+| Manual Attendance (HR / Admin)
 |--------------------------------------------------------------------------
+| HR has the final say on a day of attendance, so an existing record is
+| replaced instead of rejected: that is how an employee who punched in is
+| later marked Half Day, Absent or On Leave.
+|
+| The original `createdAt` is kept, so the day still reports when it was
+| first recorded.
 */
 
 export const saveAttendance = async (
@@ -347,35 +315,41 @@ export const saveAttendance = async (
 
   const attendanceRef = ref(
     db,
-    `companies/${companyCode}/attendance/records/${attendance.date}/${attendance.employeeId}`
+    recordPath(companyCode, attendance.date, attendance.employeeId)
   );
 
   const snapshot = await get(attendanceRef);
 
-  if (snapshot.exists()) {
-    return {
-      success: false,
-      message: "Attendance already exists for today.",
-    };
-  }
+  const existing = snapshot.exists() ? snapshot.val() : null;
 
-  await set(attendanceRef, {
-    ...attendance,
-    createdAt: Date.now(),
-  });
+  const record = buildAttendanceRecord(attendance);
+
+  await set(
+    attendanceRef,
+    existing
+      ? { ...record, createdAt: existing.createdAt || record.createdAt }
+      : record
+  );
 
   return {
     success: true,
+    updated: Boolean(existing),
   };
 
 };
-
 
 /*
 |--------------------------------------------------------------------------
 | Apply Attendance Changes
 |--------------------------------------------------------------------------
+| Used when an attendance request is approved.
+|
+| Approving a punch in correction regularises the day: the punch in has been
+| accepted by HR, so the day counts as Present and the Late flag it was given
+| at punch in time is cleared. A punch out only correction leaves the status
+| alone, because it says nothing about when the employee arrived.
 */
+
 export const updateAttendanceRecord = async (
   companyCode,
   request
@@ -383,17 +357,41 @@ export const updateAttendanceRecord = async (
 
   const attendanceRef = ref(
     db,
-    `companies/${companyCode}/attendance/records/${request.date}/${request.employeeId}`
+    recordPath(companyCode, request.date, request.employeeId)
   );
 
   const snapshot = await get(attendanceRef);
 
+  /*
+  | No record for that day usually means the employee never punched in, which
+  | is exactly what a correction request is for. Build the record from the
+  | request instead of failing, as long as it carries a punch in time.
+  */
   if (!snapshot.exists()) {
 
-    return {
-      success: false,
-      message: "Attendance record not found.",
-    };
+    if (!request.requestedPunchIn) {
+
+      return {
+        success: false,
+        message:
+          "Attendance record not found. A punch in time is required to create one.",
+      };
+
+    }
+
+    await set(
+      attendanceRef,
+      buildAttendanceRecord({
+        employeeId: request.employeeId,
+        date: request.date,
+        punchIn: request.requestedPunchIn,
+        punchOut: request.requestedPunchOut || null,
+        status: ATTENDANCE_STATUS.PRESENT,
+        remarks: request.reason || "",
+      })
+    );
+
+    return { success: true };
 
   }
 
@@ -401,58 +399,25 @@ export const updateAttendanceRecord = async (
 
   const updates = {};
 
-  if (request.requestedCheckIn) {
-
-    updates.checkIn = request.requestedCheckIn;
-
-    updates.checkInTime = new Date(
-      request.requestedCheckIn
-    ).toLocaleTimeString("en-IN", {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-
+  if (request.requestedPunchIn) {
+    updates.punchIn = request.requestedPunchIn;
+    updates.punchInTime = formatTime(request.requestedPunchIn);
+    updates.status = ATTENDANCE_STATUS.PRESENT;
   }
 
-  if (request.requestedCheckOut) {
-
-    updates.checkOut =
-      request.requestedCheckOut;
-
-    updates.checkOutTime = new Date(
-      request.requestedCheckOut
-    ).toLocaleTimeString("en-IN", {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-
+  if (request.requestedPunchOut) {
+    updates.punchOut = request.requestedPunchOut;
+    updates.punchOutTime = formatTime(request.requestedPunchOut);
   }
 
-  const checkIn =
-    updates.checkIn ??
-    attendance.checkIn;
+  const punchIn = updates.punchIn ?? attendance.punchIn;
 
-  const checkOut =
-    updates.checkOut ??
-    attendance.checkOut;
+  const punchOut = updates.punchOut ?? attendance.punchOut;
 
-  if (checkIn && checkOut) {
+  updates.workingHours = calculateWorkingHours(punchIn, punchOut);
 
-    updates.workingHours =
-      calculateWorkingHours(
-        checkIn,
-        checkOut
-      );
+  await update(attendanceRef, updates);
 
-  }
-
-  await update(
-    attendanceRef,
-    updates
-  );
-
-  return {
-    success: true,
-  };
+  return { success: true };
 
 };

@@ -20,7 +20,6 @@ import DailyAttendance from "../pages/attendance/DailyAttendance";
 import MonthlyAttendance from "../pages/attendance/MonthlyAttendance";
 import AttendanceRequests from "../pages/attendance/AttendanceRequests";
 import Regularization from "../pages/attendance/Regularization";
-import ShiftManagement from "../pages/attendance/ShiftManagement";
 import AttendanceReports from "../pages/attendance/AttendanceReports";
 import AttendanceSettings from "../pages/attendance/AttendanceSettings";
 import EmployeeOnboarding from "../pages/onboarding/EmployeeOnboarding/EmployeeOnboarding";
@@ -71,7 +70,6 @@ function AppRoutes(){
                 <Route path="/attendance/monthly" element={<MonthlyAttendance />} />
                 <Route path="/attendance/requests" element={<AttendanceRequests />} />
                 <Route path="/attendance/regularization" element={<Regularization />} />
-                <Route path="/attendance/shifts" element={<ShiftManagement />} />
                 <Route path="/attendance/reports" element={<AttendanceReports />} />
                 <Route path="/attendance/settings" element={<AttendanceSettings />} />
 

@@ -4,159 +4,290 @@ import {
     get,
     set,
     update,
-    remove
+    remove,
+    onValue,
+    push,
 } from "firebase/database";
-import {updateAttendanceRecord} from "./attendanceService";
+import { updateAttendanceRecord } from "./attendanceService";
+import { REQUEST_STATUS } from "../../utils/attendance/attendanceConstants";
 
+/*
+|--------------------------------------------------------------------------
+| Attendance Request Service
+|--------------------------------------------------------------------------
+| The only place that talks to the attendance requests branch.
+|
+| A request stores the employee id and nothing else about the employee; the
+| name, department and designation are resolved from the employees collection
+| wherever they are displayed.
+|
+| companies/{companyCode}/attendance/requests/{requestId}
+|--------------------------------------------------------------------------
+*/
 
-const generateRequestId = () => `REQ_${Date.now()}`;
+const requestsPath = (companyCode) =>
+    `companies/${companyCode}/attendance/requests`;
 
+const requestPath = (companyCode, requestId) =>
+    `${requestsPath(companyCode)}/${requestId}`;
 
-//Creating Attendance Request
+/*
+| Firebase push keys are unique even when two requests are created in the same
+| millisecond, which a timestamp based id cannot guarantee.
+*/
+
+const generateRequestId = (companyCode) =>
+    `REQ_${push(ref(db, requestsPath(companyCode))).key}`;
+
+/*
+| Every action below has to be sure the request is still pending: the list is
+| realtime, so a request can be decided by someone else between the moment it
+| was rendered and the moment the button was pressed.
+*/
+
+const getPendingRequest = async (companyCode, requestId) => {
+
+    const snapshot = await get(
+        ref(db, requestPath(companyCode, requestId))
+    );
+
+    if (!snapshot.exists()) {
+        return {
+            success: false,
+            message: "Request not found.",
+        };
+    }
+
+    const request = snapshot.val();
+
+    if (request.status !== REQUEST_STATUS.PENDING) {
+        return {
+            success: false,
+            message: `This request has already been ${request.status.toLowerCase()}.`,
+        };
+    }
+
+    return {
+        success: true,
+        request,
+    };
+
+};
+
+/*
+|--------------------------------------------------------------------------
+| Subscribe
+|--------------------------------------------------------------------------
+| Newest first, so the list and the dashboard card agree on the order.
+*/
+
+export const subscribeToAttendanceRequests = (
+    companyCode,
+    onData,
+    onError
+) =>
+    onValue(
+        ref(db, requestsPath(companyCode)),
+        (snapshot) => {
+
+            const requests = snapshot.exists()
+                ? Object.values(snapshot.val())
+                : [];
+
+            requests.sort(
+                (a, b) => (b.requestedAt || 0) - (a.requestedAt || 0)
+            );
+
+            onData(requests);
+
+        },
+        onError
+    );
+
+/*
+|--------------------------------------------------------------------------
+| Create
+|--------------------------------------------------------------------------
+*/
+
 export const createAttendanceRequest = async (
     companyCode,
     request
 ) => {
 
-    const requestId = generateRequestId();
+    const requestId = generateRequestId(companyCode);
 
-    await set(
-        ref(
-            db,
-            `companies/${companyCode}/attendance/requests/${requestId}`
-        ),
-        {
-            requestId,
-            ...request,
-            status: "Pending",
-            requestedAt: Date.now(),
-            approvedBy: "",
-            approvedAt: null,
-            remarks: ""
+    await set(ref(db, requestPath(companyCode, requestId)), {
 
-        }
-    );
-    return {
-        success: true
-    };
-};
+        requestId,
 
-//fetching requests for a specific employee
-export const getAttendanceRequests = async (
-    companyCode
-) => {
+        employeeId: request.employeeId,
 
-    const snapshot = await get(
-        ref(
-            db,
-            `companies/${companyCode}/attendance/requests`
-        )
-    );
-    if (!snapshot.exists()) {
-        return [];
-    }
-    return Object.values(snapshot.val());
-};
+        type: request.type,
 
-//Approving Attendance Request
-export const approveAttendanceRequest = async (
-  companyCode,
-  request,
-  hrName
-) => {
+        date: request.date,
 
-  const attendanceResult =
-    await updateAttendanceRecord(
-      companyCode,
-      request
-    );
+        requestedPunchIn: request.requestedPunchIn ?? null,
 
-  if (!attendanceResult.success) {
+        requestedPunchOut: request.requestedPunchOut ?? null,
 
-    return attendanceResult;
+        reason: request.reason || "",
 
-  }
+        status: REQUEST_STATUS.PENDING,
 
-  const requestRef = ref(
-    db,
-    `companies/${companyCode}/attendance/requests/${request.requestId}`
-  );
+        requestedAt: Date.now(),
 
-  await update(requestRef, {
+        approvedBy: "",
 
-    status: "Approved",
+        approvedAt: null,
 
-    approvedBy: hrName,
+        remarks: "",
 
-    approvedAt: Date.now(),
+    });
 
-  });
-
-  return {
-
-    success: true,
-
-  };
+    return { success: true };
 
 };
 
-//rejecting Attendance Request
-export const rejectAttendanceRequest = async (
-    companyCode,
-    requestId,
-    hrName,
-    remarks
-) => {
-    const requestRef = ref(
-        db,
-        `companies/${companyCode}/attendance/requests/${requestId}`
-    );
+/*
+|--------------------------------------------------------------------------
+| Update (pending only)
+|--------------------------------------------------------------------------
+*/
 
-    await update(
-        requestRef,
-        {
-            status: "Rejected",
-            approvedBy: hrName,
-            approvedAt: Date.now(),
-            remarks
-        }
-    );
-    return {
-        success: true
-    };
-
-};
-
-//updating Attendance Request (only pending ones can be edited)
 export const updateAttendanceRequest = async (
     companyCode,
     requestId,
     updates
 ) => {
-    await update(
-        ref(
-            db,
-            `companies/${companyCode}/attendance/requests/${requestId}`
-        ),
-        {
-            ...updates,
-            updatedAt: Date.now(),
-        }
-    );
-    return {
-        success: true
-    };
+
+    const pending = await getPendingRequest(companyCode, requestId);
+
+    if (!pending.success) return pending;
+
+    await update(ref(db, requestPath(companyCode, requestId)), {
+        type: updates.type,
+        date: updates.date,
+        requestedPunchIn: updates.requestedPunchIn ?? null,
+        requestedPunchOut: updates.requestedPunchOut ?? null,
+        reason: updates.reason || "",
+        updatedAt: Date.now(),
+    });
+
+    return { success: true };
+
 };
 
-//deleting Attendance Request
+/*
+|--------------------------------------------------------------------------
+| Delete (pending only)
+|--------------------------------------------------------------------------
+*/
+
 export const deleteAttendanceRequest = async (
     companyCode,
     requestId
 ) => {
-    await remove(
-        ref(
-            db,
-            `companies/${companyCode}/attendance/requests/${requestId}`
-        )
+
+    const pending = await getPendingRequest(companyCode, requestId);
+
+    if (!pending.success) return pending;
+
+    await remove(ref(db, requestPath(companyCode, requestId)));
+
+    return { success: true };
+
+};
+
+/*
+|--------------------------------------------------------------------------
+| Approve
+|--------------------------------------------------------------------------
+| The attendance record is written first. If that write fails the request is
+| left Pending, so a request is never marked Approved without the attendance
+| it promised.
+*/
+
+export const approveAttendanceRequest = async (
+    companyCode,
+    request,
+    approvedBy
+) => {
+
+    const pending = await getPendingRequest(
+        companyCode,
+        request.requestId
     );
+
+    if (!pending.success) return pending;
+
+    let attendanceResult;
+
+    try {
+
+        attendanceResult = await updateAttendanceRecord(
+            companyCode,
+            pending.request
+        );
+
+    } catch (error) {
+
+        console.error("Failed to apply attendance changes:", error);
+
+        return {
+            success: false,
+            message:
+                "Attendance could not be updated. The request is still pending.",
+        };
+
+    }
+
+    if (!attendanceResult?.success) {
+        return attendanceResult;
+    }
+
+    await update(ref(db, requestPath(companyCode, request.requestId)), {
+        status: REQUEST_STATUS.APPROVED,
+        approvedBy,
+        approvedAt: Date.now(),
+        remarks: "",
+    });
+
+    return { success: true };
+
+};
+
+/*
+|--------------------------------------------------------------------------
+| Reject (remarks required)
+|--------------------------------------------------------------------------
+*/
+
+export const rejectAttendanceRequest = async (
+    companyCode,
+    requestId,
+    approvedBy,
+    remarks
+) => {
+
+    if (!remarks?.trim()) {
+        return {
+            success: false,
+            message: "Remarks are required to reject a request.",
+        };
+    }
+
+    const pending = await getPendingRequest(companyCode, requestId);
+
+    if (!pending.success) return pending;
+
+    await update(ref(db, requestPath(companyCode, requestId)), {
+        status: REQUEST_STATUS.REJECTED,
+        approvedBy,
+        approvedAt: Date.now(),
+        remarks: remarks.trim(),
+    });
+
+    return { success: true };
+
 };
