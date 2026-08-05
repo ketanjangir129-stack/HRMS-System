@@ -3,6 +3,7 @@ import { validateField } from "../../utils/validation/validateField";
 import useAuth from "../../hooks/useAuth";
 import { useNavigate } from "react-router-dom";
 import { toast } from 'react-toastify';
+import { Eye, EyeOff } from "lucide-react";
 
 
 const Login = () => {
@@ -12,6 +13,7 @@ const Login = () => {
     password: "",
   });
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
   const [errors, setErrors] = useState({});
@@ -129,7 +131,7 @@ const Login = () => {
             {/* Email */}
             <div className="mb-4">
               <label className="block mb-2 font-medium">
-                Email or Employee Id
+                Email
               </label>
 
               <input
@@ -138,7 +140,7 @@ const Login = () => {
                 value={formData.userId}
                 onChange={handleChange}
                 onBlur={handleBlur}
-                placeholder=""
+                placeholder="Owner Email or Employee ID"
                 className="w-full border rounded-lg p-3"
               />
 
@@ -155,15 +157,30 @@ const Login = () => {
                 Password
               </label>
 
-              <input
-                type="password"
-                name="password"
-                value={formData.password}
-                onChange={handleChange}
-                onBlur={handleBlur}
-                placeholder="********"
-                className="w-full border rounded-lg p-3"
-              />
+              <div className="relative">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  name="password"
+                  value={formData.password}
+                  onChange={handleChange}
+                  onBlur={handleBlur}
+                  placeholder="********"
+                  className="w-full border rounded-lg p-3 pr-12"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((visible) => !visible)}
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                  aria-pressed={showPassword}
+                  className="absolute inset-y-0 right-0 flex w-12 items-center justify-center text-gray-500 transition-colors hover:text-blue-600 cursor-pointer rounded-r-lg"
+                >
+                  {showPassword ? (
+                    <EyeOff className="h-5 w-5" aria-hidden="true" />
+                  ) : (
+                    <Eye className="h-5 w-5" aria-hidden="true" />
+                  )}
+                </button>
+              </div>
               {errors.password && (
                 <p className="text-red-500 text-sm mt-1">
                   {errors.password}

@@ -7,10 +7,14 @@ function DashboardLayout() {
 
   const [search,setSearch] = useState("");
   const [searchPlaceholder, setSearchPlaceholder] = useState("Search...");
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
   return (
     <div className="flex h-screen">
-      <Sidebar />
+      <Sidebar
+        isCollapsed={isSidebarCollapsed}
+        onToggle={() => setIsSidebarCollapsed((isCollapsed) => !isCollapsed)}
+      />
 
       <div className="flex flex-1 flex-col">
         <Navbar search={search} setSearch={setSearch} searchPlaceholder={searchPlaceholder} />

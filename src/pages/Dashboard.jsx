@@ -23,7 +23,7 @@ const Dashboard = () => {
     : 
     currentUser?.personalInfo?.name ||
     currentUser?.employmentInfo?.name ||
-    currentUser?.name;
+    currentUser?.name || "Loading...." ;
 
   return (
     <div className="flex-1 p-2 bg-gray-100 min-h-full">
