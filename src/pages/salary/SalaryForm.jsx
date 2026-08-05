@@ -3,7 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { getEmployeeById } from "../../services/EmployeeService";
 import { calculateSalary } from "../../utils/salary/calculateSalary"
 import { set } from "firebase/database";
-import { createSalary, getSalary, updateSalary } from "../../services/SalaryService";
+import { createSalary, getSalary, editSalary } from "../../services/SalaryService";
 import { toast } from "react-toastify";
 function SalaryForm() {
     const { employeeId } = useParams();
@@ -13,6 +13,29 @@ function SalaryForm() {
     const navigate = useNavigate();
     const companyCode =
         localStorage.getItem('companyCode');
+    const currentUser =
+        JSON.parse(localStorage.getItem("currentUser") || "null");
+
+    // currentUser shape depends on the role:
+    // owner       -> { role, name, email }
+    // employee/HR -> full employee record (personalInfo / employmentInfo / account)
+    const updatedBy = {
+        employeeId:
+            currentUser?.employmentInfo?.employeeId ||
+            currentUser?.email ||
+            "unknown",
+        name:
+            currentUser?.personalInfo?.name ||
+            currentUser?.name ||
+            "Unknown",
+        role:
+            currentUser?.account?.role ||
+            currentUser?.role ||
+            localStorage.getItem("role") ||
+            "unknown",
+    };
+    console.log(updatedBy)
+
     const [earnings, setEarnings] = useState({
         basic: "",
         hra: "",
@@ -37,6 +60,16 @@ function SalaryForm() {
         totalDeduction: 0,
         netSalary: 0,
     });
+    // today's date in YYYY-MM-DD (same format as joiningDate)
+    const getToday = () => {
+        const now = new Date();
+        const month = String(now.getMonth() + 1).padStart(2, "0");
+        const day = String(now.getDate()).padStart(2, "0");
+        return `${now.getFullYear()}-${month}-${day}`;
+    };
+
+    // effective date belongs to the employee whose salary is being assigned/updated,
+    // it is filled in once that employee is loaded
     const [effectiveFrom, setEffectiveFrom] = useState("");
     const [status, setStatus] = useState("Active");
     const salary = {
@@ -57,6 +90,7 @@ function SalaryForm() {
                 employeeId
             );
             setEmployee(data);
+            return data;
         } catch (error) {
             console.error(error);
 
@@ -65,7 +99,11 @@ function SalaryForm() {
             setLoading(false);
         }
     };
-    const loadSalary = async () => {
+    const loadSalary = async (employeeData) => {
+
+        // joining date of the employee this salary belongs to
+        const joiningDate =
+            employeeData?.employmentInfo?.joiningDate || "";
 
         const salary = await getSalary(
             companyCode,
@@ -73,6 +111,8 @@ function SalaryForm() {
         );
 
         if (!salary) {
+
+            setEffectiveFrom(joiningDate);
 
             return;
 
@@ -94,9 +134,9 @@ function SalaryForm() {
 
         });
 
-        setEffectiveFrom(
-            salary.effectiveFrom
-        );
+        // a salary already exists, so this is a revision -
+        // it takes effect from today, not from the joining date
+        setEffectiveFrom(getToday());
 
         setStatus(
             salary.status
@@ -130,36 +170,14 @@ function SalaryForm() {
 
             if (isEditMode) {
 
-                await updateSalary(
-
+                const result = await editSalary(
                     companyCode,
-
                     employeeId,
-
-                    {
-
-                        earnings,
-
-                        deductions,
-
-                        grossSalary:
-                            summary.grossSalary,
-
-                        totalDeduction:
-                            summary.totalDeduction,
-
-                        netSalary:
-                            summary.netSalary,
-
-                        effectiveFrom,
-
-                        status,
-
-                    }
-
+                    salary,
+                    updatedBy
                 );
 
-                alert("Salary updated successfully.");
+                alert(result.message);
 
             }
 
@@ -197,7 +215,7 @@ function SalaryForm() {
                 alert(result.message);
 
             }
-            navigate("/salarydashboard");
+            navigate("/salarydashboard/salary");
         }
         catch (error) {
             console.error(error)
@@ -214,8 +232,8 @@ function SalaryForm() {
 
     useEffect(() => {
         const loadData = async () => {
-            await loadEmployee();
-            await loadSalary();
+            const employeeData = await loadEmployee();
+            await loadSalary(employeeData);
         };
         loadData();
     }, []);

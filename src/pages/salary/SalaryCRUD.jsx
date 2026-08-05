@@ -106,10 +106,9 @@ function SalaryCRUD() {
             <div className="mb-10 text-sm pl-[2px]">
                 <h1 className="text-2xl font-bold mb-2">
 
-                    Create & Update Salary's
-
+                    Create & Update Salaries
                 </h1>
-                <p>Create & Update All Employees Salarys Here</p>
+                <p>create new entries or update existing ones here.</p>
             </div>
 
 

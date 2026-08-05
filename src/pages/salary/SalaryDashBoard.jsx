@@ -1,5 +1,6 @@
 import { useNavigate } from "react-router-dom";
-import { UserPlus, ClipboardList, ClipboardClock } from "lucide-react";
+import { UserPlus, ClipboardList, ClipboardClock  } from "lucide-react";
+import { BsClockHistory } from "react-icons/bs";
 import { TbReportMoney } from "react-icons/tb";
 function OnboardingDashboard() {
 
@@ -14,7 +15,7 @@ function OnboardingDashboard() {
             </h1>
 
             <p className="text-gray-500 mt-2 mb-8">
-                Manage All Employees Salarys Here
+                Manage All Employees Salary Records Efficiently.
             </p>
 
             <div className="grid md:grid-cols-2 gap-6">
@@ -32,7 +33,7 @@ function OnboardingDashboard() {
                     />
 
                     <h2 className="text-xl font-semibold mt-4">
-                        Create & Update Salary's
+                        Create & Update
                     </h2>
 
                     <p className="text-gray-500 mt-2">
@@ -41,7 +42,29 @@ function OnboardingDashboard() {
 
                 </div>
 
-            
+                {/*  Salary History*/}
+                <div
+                    onClick={() => navigate("/salarydashboard/salary")}
+                    className="cursor-pointer bg-white rounded-2xl shadow p-8 hover:shadow-lg transition"
+                >
+
+                  <div>  <BsClockHistory 
+                        size={40}
+                        className="text-blue-600"
+                    /></div>
+
+                    <div>
+                        <h2 className="text-xl font-semibold mt-4">
+                        Salary History
+                    </h2>
+
+                    <p className="text-gray-500 mt-2">
+                        Check Salary History of Employees.
+                    </p>
+                    </div>
+
+                </div>
+
             </div>
 
         </div>
