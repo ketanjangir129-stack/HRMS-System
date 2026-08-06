@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import {
+  FiCalendar,
   FiCheckCircle,
   FiClock,
   FiLoader,
@@ -9,6 +10,7 @@ import {
 import { toast } from "react-toastify";
 import useAttendance from "../../hooks/useAttendance";
 import useAuth from "../../hooks/useAuth";
+import { ATTENDANCE_STATUS } from "../../utils/attendance/attendanceConstants";
 import { formatTime } from "../../utils/attendance/attendanceDate";
 import AttendanceStatusBadge from "./common/AttendanceStatusBadge";
 
@@ -19,6 +21,11 @@ import AttendanceStatusBadge from "./common/AttendanceStatusBadge";
 | The signed in employee's punch in / punch out card. The record comes from a
 | realtime subscription, so the card updates the moment a punch is written
 | without a refresh.
+|
+| Which button is offered is decided by the punch times, not by whether a
+| record exists. An approved leave writes the day in advance, so a day can
+| already have a record that has never been punched: keying off the record
+| would offer Punch Out to somebody who has not arrived yet.
 |--------------------------------------------------------------------------
 */
 
@@ -106,6 +113,23 @@ function TodayAttendanceCard({ className = "" }) {
 
   };
 
+  /*
+  | A full day of approved leave is not worked at all, so the day is reported
+  | rather than offered a punch. A half day still is, so it falls through to
+  | the normal punch in / punch out flow on the record the approval created.
+  */
+
+  const onApprovedLeave =
+    attendance?.status === ATTENDANCE_STATUS.LEAVE;
+
+  const canPunchIn =
+    !onApprovedLeave && !attendance?.punchIn;
+
+  const canPunchOut =
+    !onApprovedLeave &&
+    Boolean(attendance?.punchIn) &&
+    !attendance?.punchOut;
+
   const cardClass = `flex flex-col justify-center rounded-2xl border border-slate-200 bg-white p-6 shadow-sm ${className}`;
 
   if (loading) {
@@ -182,7 +206,14 @@ function TodayAttendanceCard({ className = "" }) {
           </p>
         )}
 
-        {!error && employeeId && !attendance && (
+        {!error && employeeId && onApprovedLeave && (
+          <div className="flex items-center gap-2 font-semibold text-blue-600">
+            <FiCalendar />
+            You are on approved leave today
+          </div>
+        )}
+
+        {!error && employeeId && canPunchIn && (
           <button
             type="button"
             onClick={() => handlePunch(punchIn, "Punched in successfully.")}
@@ -194,7 +225,7 @@ function TodayAttendanceCard({ className = "" }) {
           </button>
         )}
 
-        {!error && employeeId && attendance && !attendance.punchOut && (
+        {!error && employeeId && canPunchOut && (
           <button
             type="button"
             onClick={() => handlePunch(punchOut, "Punched out successfully.")}

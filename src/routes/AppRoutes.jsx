@@ -22,11 +22,14 @@ import AttendanceRequests from "../pages/attendance/AttendanceRequests";
 import Regularization from "../pages/attendance/Regularization";
 import AttendanceReports from "../pages/attendance/AttendanceReports";
 import AttendanceSettings from "../pages/attendance/AttendanceSettings";
+import LeaveDashboard from "../pages/leave/LeaveDashboard";
+import LeaveApprovals from "../pages/leave/LeaveApprovals";
 import EmployeeOnboarding from "../pages/onboarding/EmployeeOnboarding/EmployeeOnboarding";
-import SalaryDashboard from "../pages/salary/SalaryDashBoard"
-import SalaryCRUD from "../pages/salary/SalaryCRUD"
-import SalaryForm from "../pages/salary/SalaryForm"
-import SalaryHistory from "../pages/salary/SalaryHistory"
+import SalaryDashboard from "../pages/salary/SalaryDashBoard";
+import SalaryCRUD from "../pages/salary/SalaryCRUD";
+import SalaryForm from "../pages/salary/SalaryForm";
+import SalaryHistory from "../pages/salary/SalaryHistory";
+
 function AppRoutes(){
     return(
         <Routes>
@@ -73,6 +76,10 @@ function AppRoutes(){
                 <Route path="/attendance/regularization" element={<Regularization />} />
                 <Route path="/attendance/reports" element={<AttendanceReports />} />
                 <Route path="/attendance/settings" element={<AttendanceSettings />} />
+
+                {/* Leave Management Routing */}
+                <Route path="/leave" element={<LeaveDashboard />} />
+                <Route path="/leave/approvals" element={<LeaveApprovals />} />
 
                 {/* Salary Routing */}
                 <Route path="/salarydashboard" element={<SalaryDashboard />} />

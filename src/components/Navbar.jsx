@@ -20,10 +20,12 @@ const Navbar = ({search,setSearch,searchPlaceholder}) => {
     toast.success("Logged Out Successfully");
   };
   return (
-    <div className="h-[70px] bg-white flex justify-between items-center px-8 border-b border-gray-200">
+    <div className="h-[70px] bg-white flex justify-between items-center gap-4 px-4 sm:px-8 border-b border-gray-200">
 
       {/* Search Box */}
-      <div className="w-[700px] h-12 flex items-center px-5 border border-gray-300 rounded-2xl bg-white">
+      {/* Grows to 700px but is allowed to shrink, so a narrow window keeps
+          the search usable instead of pushing the actions off screen. */}
+      <div className="w-full max-w-[700px] min-w-0 h-12 flex items-center px-5 border border-gray-300 rounded-2xl bg-white">
 
           <FaSearch className="text-gray-400 text-lg" />
 

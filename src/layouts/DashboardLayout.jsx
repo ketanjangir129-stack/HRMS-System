@@ -16,7 +16,13 @@ function DashboardLayout() {
         onToggle={() => setIsSidebarCollapsed((isCollapsed) => !isCollapsed)}
       />
 
-      <div className="flex flex-1 flex-col">
+      {/*
+        `min-w-0` is what keeps a wide table inside its own panel. A flex item
+        defaults to `min-width: auto`, so a table wider than the viewport
+        stretches this whole column instead of scrolling, which drags the
+        navbar and every panel out of alignment with it.
+      */}
+      <div className="flex min-w-0 flex-1 flex-col">
         <Navbar search={search} setSearch={setSearch} searchPlaceholder={searchPlaceholder} />
 
         <main className="flex-1 overflow-y-auto bg-gray-100 p-8 hide-scrollbar">

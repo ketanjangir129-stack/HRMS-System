@@ -1,0 +1,126 @@
+.leave-calendar {
+  width: 100%;
+  border: none;
+  font-family: inherit;
+  background: transparent;
+}
+
+/* Navigation */
+
+.leave-calendar .react-calendar__navigation {
+  margin-bottom: 12px;
+  height: 40px;
+}
+
+.leave-calendar .react-calendar__navigation button {
+  font-size: 14px;
+  font-weight: 600;
+  color: #0f172a;
+  min-width: 36px;
+  background: transparent;
+  border-radius: 10px;
+  transition: background 0.2s ease;
+}
+
+.leave-calendar .react-calendar__navigation button:hover,
+.leave-calendar .react-calendar__navigation button:focus {
+  background: #f1f5f9;
+}
+
+.leave-calendar .react-calendar__navigation button:disabled {
+  background: transparent;
+  color: #cbd5e1;
+}
+
+/* Weekdays */
+
+.leave-calendar .react-calendar__month-view__weekdays {
+  text-transform: uppercase;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  color: #94a3b8;
+  padding-bottom: 6px;
+}
+
+.leave-calendar .react-calendar__month-view__weekdays__weekday abbr {
+  text-decoration: none;
+  cursor: default;
+}
+
+/* Tiles */
+
+.leave-calendar .react-calendar__tile {
+  height: 44px;
+  padding: 0;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #334155;
+  background: transparent;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.leave-calendar .react-calendar__tile:hover {
+  background: #f1f5f9;
+}
+
+.leave-calendar .react-calendar__month-view__days__day--neighboringMonth {
+  color: #cbd5e1;
+}
+
+.leave-calendar .react-calendar__tile--now {
+  background: #eff6ff;
+  color: #2563eb;
+  font-weight: 700;
+}
+
+.leave-calendar .react-calendar__tile--active,
+.leave-calendar .react-calendar__tile--active:hover {
+  background: #eef2ff !important;
+  color: #1d4ed8;
+  box-shadow: inset 0 0 0 2px #2563eb;
+}
+
+/* Leave status */
+
+.leave-calendar .approved abbr,
+.leave-calendar .pending abbr,
+.leave-calendar .rejected abbr {
+  width: 30px;
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  color: #ffffff;
+  font-weight: 600;
+  transition: transform 0.2s ease;
+}
+
+.leave-calendar .react-calendar__tile:hover abbr {
+  transform: scale(1.08);
+}
+
+.leave-calendar .approved abbr {
+  background: #10b981;
+}
+
+.leave-calendar .pending abbr {
+  background: #f59e0b;
+}
+
+.leave-calendar .rejected abbr {
+  background: #ef4444;
+}
+
+/* A half day is drawn as a half filled circle, so it reads differently from
+   a full day at a glance. */
+
+.leave-calendar .half-day abbr {
+  background-image: linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 0.45) 50%,
+    transparent 50%
+  );
+}

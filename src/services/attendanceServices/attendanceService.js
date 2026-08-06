@@ -226,10 +226,59 @@ export const punchInEmployee = async (
   const snapshot = await get(attendanceRef);
 
   if (snapshot.exists()) {
+
+    const existing = snapshot.val();
+
+    /*
+    | An approved leave is written into attendance the moment it is approved,
+    | so the day already has a record. Reporting it as "already marked" would
+    | read as though the employee had punched in, which is the opposite of
+    | what happened.
+    */
+
+    if (existing.status === ATTENDANCE_STATUS.LEAVE) {
+      return {
+        success: false,
+        message: "You are on approved leave today.",
+      };
+    }
+
+    /*
+    | Half a day of leave still leaves half a day of work, so the punch is
+    | merged into the record the approval created instead of being refused.
+    |
+    | The status stays Half Day: the session that was taken off does not come
+    | back because the other half was worked.
+    */
+
+    const isUnpunchedHalfDayLeave =
+      existing.status === ATTENDANCE_STATUS.HALF_DAY &&
+      existing.leaveRequestId &&
+      !existing.punchIn;
+
+    if (isUnpunchedHalfDayLeave) {
+
+      const punchIn = Date.now();
+
+      const updates = {
+        punchIn,
+        punchInTime: formatTime(punchIn),
+      };
+
+      await update(attendanceRef, updates);
+
+      return {
+        success: true,
+        data: { ...existing, ...updates },
+      };
+
+    }
+
     return {
       success: false,
       message: "Attendance already marked.",
     };
+
   }
 
   const attendance = buildAttendanceRecord({
@@ -273,6 +322,19 @@ export const punchOutEmployee = async (
   }
 
   const attendance = snapshot.val();
+
+  /*
+  | A record without a punch in is a day booked by leave, not a day that was
+  | started. Punching out of it would stamp a leave day with a time and no
+  | hours to go with it.
+  */
+
+  if (!attendance.punchIn) {
+    return {
+      success: false,
+      message: "Punch in first.",
+    };
+  }
 
   if (attendance.punchOut) {
     return {
@@ -419,5 +481,214 @@ export const updateAttendanceRecord = async (
   await update(attendanceRef, updates);
 
   return { success: true };
+
+};
+
+/*
+|--------------------------------------------------------------------------
+| Leave Synchronisation
+|--------------------------------------------------------------------------
+| Approved leave has to appear on the attendance sheet, otherwise a day
+| somebody was granted off is reported as an absence: the daily list, the
+| monthly report, the calendar and the present rate all read the record, and a
+| day with no record counts as Absent.
+|
+| The leave module owns the decision and calls in here, because this file is
+| the only place that writes to the attendance branch.
+|
+| Two fields tie a record back to the leave that created it:
+|
+|   leaveRequestId    which request booked the day, so a day can be given
+|                     back later without touching days it did not book
+|   leaveStatusBefore what the day was before the leave was written over it,
+|                     so releasing it restores the day instead of guessing
+|
+| Both are only ever set here. A record written by a punch does not carry
+| them, which is exactly how a normal day is told apart from a booked one.
+|--------------------------------------------------------------------------
+*/
+
+const readEmployeeDays = (companyCode, employeeId, dateKeys) =>
+  Promise.all(
+    dateKeys.map((date) =>
+      get(ref(db, recordPath(companyCode, date, employeeId)))
+    )
+  );
+
+/*
+| Every path is written in one multi location update, so a range either lands
+| completely or not at all and a half written leave can never be left behind.
+*/
+
+const writeDays = async (companyCode, updates) => {
+
+  const days = Object.keys(updates).length;
+
+  if (days > 0) {
+    await update(ref(db, recordsPath(companyCode)), updates);
+  }
+
+  return { success: true, days };
+
+};
+
+/*
+|--------------------------------------------------------------------------
+| Book Leave Into Attendance
+|--------------------------------------------------------------------------
+| Called when a leave request is approved.
+|
+| Punch times already on the day are kept. A leave approved after the fact
+| still records that the employee was there, and throwing that away would
+| leave the day with no evidence of when they arrived.
+*/
+
+export const applyLeaveAttendance = async (
+  companyCode,
+  {
+    employeeId,
+    dateKeys = [],
+    status,
+    remarks = "",
+    leaveRequestId = "",
+  }
+) => {
+
+  if (!employeeId || !dateKeys.length || !status) {
+    return {
+      success: false,
+      message: "This leave has no days to record.",
+    };
+  }
+
+  const snapshots = await readEmployeeDays(
+    companyCode,
+    employeeId,
+    dateKeys
+  );
+
+  const updates = {};
+
+  dateKeys.forEach((date, index) => {
+
+    const snapshot = snapshots[index];
+
+    const current = snapshot.exists() ? snapshot.val() : null;
+
+    /*
+    | A day this same request already booked is left untouched. Writing it
+    | again would record the leave status as the status to go back to, and
+    | releasing the leave would then restore the leave.
+    */
+
+    if (current?.leaveRequestId === leaveRequestId) return;
+
+    updates[`${date}/${employeeId}`] = {
+
+      ...buildAttendanceRecord({
+        employeeId,
+        date,
+        punchIn: current?.punchIn || null,
+        punchOut: current?.punchOut || null,
+        status,
+        remarks,
+      }),
+
+      createdAt: current?.createdAt || Date.now(),
+
+      leaveRequestId,
+
+      leaveStatusBefore: current?.status || "",
+
+    };
+
+  });
+
+  return writeDays(companyCode, updates);
+
+};
+
+/*
+|--------------------------------------------------------------------------
+| Release Leave From Attendance
+|--------------------------------------------------------------------------
+| Called when an approved leave request is deleted.
+|
+| Only the days carrying this request's id are given back. A day HR has since
+| marked by hand has lost the link, and is left exactly as HR left it.
+*/
+
+export const clearLeaveAttendance = async (
+  companyCode,
+  {
+    employeeId,
+    dateKeys = [],
+    leaveRequestId = "",
+  }
+) => {
+
+  if (!employeeId || !dateKeys.length || !leaveRequestId) {
+    return { success: true, days: 0 };
+  }
+
+  const snapshots = await readEmployeeDays(
+    companyCode,
+    employeeId,
+    dateKeys
+  );
+
+  const updates = {};
+
+  dateKeys.forEach((date, index) => {
+
+    const snapshot = snapshots[index];
+
+    const current = snapshot.exists() ? snapshot.val() : null;
+
+    if (current?.leaveRequestId !== leaveRequestId) return;
+
+    const path = `${date}/${employeeId}`;
+
+    /*
+    | A day with a punch in was a real day of attendance before the leave was
+    | written over it, so it is rebuilt from its punch times and handed back
+    | its previous status.
+    |
+    | Rebuilding rather than patching is what drops the two leave fields: they
+    | are not part of a record, so an unlinked day carries no trace of the
+    | request that has just been deleted.
+    */
+
+    if (current.punchIn) {
+
+      updates[path] = {
+
+        ...buildAttendanceRecord({
+          employeeId,
+          date,
+          punchIn: current.punchIn,
+          punchOut: current.punchOut || null,
+          /*
+          | An empty status makes the builder derive it from the punch in
+          | again, which covers a day that had no status to begin with.
+          */
+          status: current.leaveStatusBefore || "",
+          remarks: "",
+        }),
+
+        createdAt: current.createdAt || Date.now(),
+
+      };
+
+      return;
+
+    }
+
+    // The day only ever existed because of the leave, so it goes with it.
+    updates[path] = null;
+
+  });
+
+  return writeDays(companyCode, updates);
 
 };

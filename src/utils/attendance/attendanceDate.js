@@ -201,8 +201,19 @@ export const toTimestamp = (dateKey, timeValue) => {
 };
 
 /*
-| A date key cannot be in the future for attendance purposes, which the
-| request form and the manual attendance form both need to check.
+| The latest date a correction request may be raised for.
+|
+| A day that has not finished cannot be corrected: the punch out has not
+| happened yet and the working hours are not final. So the cut off is
+| yesterday, which rules out today and every future date at once.
 */
 
-export const isFutureDate = (dateKey) => dateKey > getDateKey();
+export const getLastCorrectableDate = () => {
+
+  const date = new Date();
+
+  date.setDate(date.getDate() - 1);
+
+  return getDateKey(date);
+
+};

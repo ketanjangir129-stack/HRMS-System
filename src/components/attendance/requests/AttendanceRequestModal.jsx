@@ -2,7 +2,7 @@ import { useState } from "react";
 import { FiFileText, FiLoader, FiX } from "react-icons/fi";
 import { REQUEST_TYPES } from "../../../utils/attendance/attendanceConstants";
 import {
-  getDateKey,
+  getLastCorrectableDate,
   toTimeInputValue,
 } from "../../../utils/attendance/attendanceDate";
 import {
@@ -177,11 +177,12 @@ function RequestForm({
               </Field>
 
               <Field label="Date" error={errors.date} required>
+                {/* Today is still in progress, so corrections stop at yesterday. */}
                 <input
                   type="date"
                   name="date"
                   value={form.date}
-                  max={getDateKey()}
+                  max={getLastCorrectableDate()}
                   onChange={handleChange}
                   className={fieldClass}
                 />

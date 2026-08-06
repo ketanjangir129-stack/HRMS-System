@@ -1,4 +1,4 @@
-import { MdDashboard } from "react-icons/md";
+import { MdDashboard, MdOutlineBeachAccess } from "react-icons/md";
 import { MdChevronLeft, MdChevronRight } from "react-icons/md";
 import { FaBuilding } from "react-icons/fa";
 import { BsFillPersonLinesFill,BsCalendarCheck } from "react-icons/bs";
@@ -36,12 +36,15 @@ const menuItems = [
     icon: BsCalendarCheck,
   },
   {
+    label: "Leave",
+    path: "/leave",
+    icon: MdOutlineBeachAccess,
+  },
+  {
     label: "Salary",
     path: "/salarydashboard",
     icon: GiTakeMyMoney,
   },
-  
-  
 ];
 
 function Sidebar({ isCollapsed, onToggle }) {

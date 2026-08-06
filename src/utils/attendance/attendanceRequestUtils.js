@@ -4,8 +4,7 @@ import {
   REQUEST_TYPES,
 } from "./attendanceConstants";
 import {
-  getDateKey,
-  isFutureDate,
+  getLastCorrectableDate,
   toTimestamp,
 } from "./attendanceDate";
 import { searchRows } from "./attendanceTable";
@@ -99,8 +98,9 @@ export const validateRequestForm = (form = {}) => {
 
   if (!form.date) {
     errors.date = "Please select a date.";
-  } else if (isFutureDate(form.date)) {
-    errors.date = "Attendance date cannot be in the future.";
+  } else if (form.date > getLastCorrectableDate()) {
+    errors.date =
+      "Attendance can only be corrected from the next day onwards.";
   }
 
   const requires = getRequestType(form.type)?.requires;
@@ -164,7 +164,7 @@ export const validateRequestForm = (form = {}) => {
 export const getInitialRequestForm = (currentUser) => ({
   employeeId: getCurrentEmployeeId(currentUser),
   type: "",
-  date: getDateKey(),
+  date: getLastCorrectableDate(),
   requestedPunchIn: "",
   requestedPunchOut: "",
   reason: "",
@@ -177,7 +177,7 @@ export const getInitialRequestForm = (currentUser) => ({
 export const toRequestForm = (request = {}, toTimeValue) => ({
   employeeId: request.employeeId || "",
   type: request.type || "",
-  date: request.date || getDateKey(),
+  date: request.date || getLastCorrectableDate(),
   requestedPunchIn: toTimeValue(request.requestedPunchIn),
   requestedPunchOut: toTimeValue(request.requestedPunchOut),
   reason: request.reason || "",
