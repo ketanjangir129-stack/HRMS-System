@@ -213,17 +213,22 @@ export const editSalary = async (
         message : "Salary updated successfully."
     }
 }
-export const getAllSalaryHistory = async (
-    companyCode,
-    employeeId
+// a history record holds the salary before the change, so the structure a
+// revision produced is the next newer record - or the live salary for the latest one
+export const getSalaryRevisions = async (
+    companyCode
 ) => {
 
-    const snapshot = await get(
-        ref(
-            db,
-            `companies/${companyCode}/salaryHistory`
-        )
-    );
+    const [snapshot, salaries, employees] = await Promise.all([
+        get(
+            ref(
+                db,
+                `companies/${companyCode}/salaryHistory`
+            )
+        ),
+        getAllSalary(companyCode),
+        getEmployees(companyCode),
+    ]);
 
     if (!snapshot.exists()) {
 
@@ -231,20 +236,74 @@ export const getAllSalaryHistory = async (
 
     }
 
-    const data = snapshot.val();
+    const historyByEmployee = snapshot.val();
 
-    return Object.keys(data)
-        .map((id) => ({
+    const currentSalaries = {};
 
-            id,
+    salaries.forEach((salary) => {
+        currentSalaries[salary.employeeId] = salary;
+    });
 
-            ...data[id],
+    const revisions = [];
 
-        }))
-        .sort(
-            (a, b) =>
-                b.updatedAt - a.updatedAt
-        );
+    Object.keys(historyByEmployee).forEach((employeeId) => {
+
+        const records = Object.keys(
+            historyByEmployee[employeeId]
+        )
+            .map((id) => ({
+                id,
+                ...historyByEmployee[employeeId][id],
+            }))
+            .sort(
+                (a, b) =>
+                    b.updatedAt - a.updatedAt
+            );
+
+        const employee = employees?.[employeeId];
+
+        records.forEach((record, index) => {
+
+            const current =
+                index === 0
+                    ? currentSalaries[employeeId]
+                    : records[index - 1];
+
+            revisions.push({
+
+                id: `${employeeId}-${record.id}`,
+
+                employeeId,
+
+                employeeName:
+                    employee?.personalInfo?.name || employeeId,
+
+                department:
+                    employee?.employmentInfo?.department || "—",
+
+                designation:
+                    employee?.employmentInfo?.designation || "—",
+
+                revisionNumber: records.length - index,
+
+                updatedAt: record.updatedAt,
+
+                updatedBy: record.updatedBy,
+
+                previous: record,
+
+                current: current || null,
+
+            });
+
+        });
+
+    });
+
+    return revisions.sort(
+        (a, b) =>
+            b.updatedAt - a.updatedAt
+    );
 
 };
 export const getSalaryHistory = async (

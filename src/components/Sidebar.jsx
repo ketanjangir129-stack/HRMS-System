@@ -5,7 +5,7 @@ import { BsFillPersonLinesFill,BsCalendarCheck } from "react-icons/bs";
 import { PiPersonSimpleSnowboardLight } from "react-icons/pi";
 import { GiTakeMyMoney } from "react-icons/gi";
 import { NavLink } from "react-router-dom";
-
+import {BadgeIndianRupee} from "lucide-react"
 
 const menuItems = [
   {
@@ -44,6 +44,11 @@ const menuItems = [
     label: "Salary",
     path: "/salarydashboard",
     icon: GiTakeMyMoney,
+  },
+   {
+    label: "Payroll Management",
+    path: "/payrolldashboard",
+    icon: BadgeIndianRupee ,
   },
 ];
 

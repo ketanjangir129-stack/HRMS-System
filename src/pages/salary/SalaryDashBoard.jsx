@@ -19,14 +19,14 @@ function SalaryDashboard() {
             path: "/salarydashboard/salary",
         },
         {
-            title: "Salary History",
+            title: "Revision History",
             description:
                 "Track every revision made to an employee's salary.",
-            hint: "Pick an employee to view revisions",
+            hint: "What changed, by whom and when",
             icon: <BsClockHistory size={22} />,
             color: "bg-emerald-50 text-emerald-600",
             bar: "bg-emerald-500",
-            path: "/salarydashboard/salary",
+            path: "/salarydashboard/salary/revisions",
         },
     ];
 
