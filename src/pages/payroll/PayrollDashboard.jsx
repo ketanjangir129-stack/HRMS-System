@@ -1,4 +1,12 @@
+import { useState,useEffect } from "react";
+import useAuth from "../../hooks/useAuth";
+
 function PayrolllDashboard() {
+const {company} = useAuth();
+const [employees, setemployees] = useState([]);
+const [filteredEmployees, setFilterEmployees] = useState([]);
+
+
     return (
         <div className="p-6 space-y-6">
             <h1 className="text-2xl font-bold">
