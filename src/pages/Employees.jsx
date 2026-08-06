@@ -49,6 +49,12 @@ function Employees() {
                     designation:
                         employee.employmentInfo?.designation ||
                         "",
+
+                    // Purane records mein status top level par bhi ho sakta hai
+                    status:
+                        employee.account?.status ||
+                        employee.status ||
+                        "Active",
                 };
             });
             setEmployees(employeeArray);
@@ -95,6 +101,8 @@ function Employees() {
 
                 <button
                     onClick={() => navigate("/employees/add")}
+                    title="Add Employee"
+                    aria-label="Add Employee"
                     className="group inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-indigo-600/20 transition-all duration-200 hover:-translate-y-0.5 hover:bg-indigo-700 hover:shadow-lg hover:shadow-indigo-600/30 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:ring-offset-2 active:translate-y-0"
                 >
                     <UserPlus className="h-4 w-4 transition-transform duration-200 group-hover:scale-110" />
@@ -113,19 +121,20 @@ function Employees() {
                             <th className="px-4 py-3 text-center">Email</th>
                             <th className="px-4 py-3 text-center">Department</th>
                             <th className="px-4 py-3 text-center">Designation</th>
+                            <th className="px-4 py-3 text-center">Status</th>
                         </tr>
                     </thead>
 
                     <tbody>
                         {loading ? (
                             <tr>
-                                <td colSpan={5} className="px-6 py-12">
+                                <td colSpan={6} className="px-6 py-12">
                                     <Loader text="Loading employees..." />
                                 </td>
                             </tr>
                         ) : error ? (
                             <tr>
-                                <td colSpan={5} className="px-6 py-12 text-center">
+                                <td colSpan={6} className="px-6 py-12 text-center">
                                     <p className="text-red-600">{error}</p>
                                     <button
                                         onClick={() => {
@@ -140,7 +149,7 @@ function Employees() {
                             </tr>
                         ) : filteredEmployees.length === 0 ? (
                             <tr>
-                                <td colSpan={5} className="px-6 py-12 text-center text-gray-400">
+                                <td colSpan={6} className="px-6 py-12 text-center text-gray-400">
                                     {search
                                         ? "No employees match your search."
                                         : "No employees yet."}
@@ -154,23 +163,42 @@ function Employees() {
                                 className="hover:bg-gray-50 transition cursor-pointer"
                             >
                                 <td className="px-4 py-3 border-b text-center">
-                                    {emp.employeeId}
+                                    {emp.employeeId || <span className="text-gray-300">—</span>}
                                 </td>
 
                                 <td className="px-4 py-3 border-b text-center">
-                                    {emp.name}
+                                    {emp.name || <span className="text-gray-300">—</span>}
                                 </td>
 
                                 <td className="px-4 py-3 border-b text-center">
-                                    {emp.email}
+                                    {emp.email || <span className="text-gray-300">—</span>}
                                 </td>
 
                                 <td className="px-4 py-3 border-b text-center">
-                                    {emp.department}
+                                    {emp.department || <span className="text-gray-300">—</span>}
                                 </td>
 
                                 <td className="px-4 py-3 border-b text-center">
-                                    {emp.designation}
+                                    {emp.designation || <span className="text-gray-300">—</span>}
+                                </td>
+
+                                <td className="px-4 py-3 border-b text-center">
+                                    <span
+                                        className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ${
+                                            emp.status.toLowerCase() === "active"
+                                                ? "bg-emerald-50 text-emerald-700"
+                                                : "bg-rose-50 text-rose-700"
+                                        }`}
+                                    >
+                                        <span
+                                            className={`h-1.5 w-1.5 rounded-full ${
+                                                emp.status.toLowerCase() === "active"
+                                                    ? "bg-emerald-500"
+                                                    : "bg-rose-500"
+                                            }`}
+                                        />
+                                        {emp.status}
+                                    </span>
                                 </td>
                             </tr>
                         ))

@@ -127,9 +127,10 @@ export const rules = {
   },
   accountNumber: {
     required: true,
-    // Indian bank account numbers 9-18 digits ke beech hote hain
-    pattern: /^\d{9,18}$/,
-    message: "Account number must be 9-18 digits.",
+    // Onboarding wizard jitna hi dheela (6-18 digits), taaki approve hue
+    // records details page par edit karte waqt reject na hon
+    pattern: /^\d{6,18}$/,
+    message: "Account number must be 6-18 digits.",
   },
   ifsc: {
     required: true,
@@ -140,8 +141,8 @@ export const rules = {
 
   aadhaar: {
     required: true,
-    // 12 digits, pehla digit 0 ya 1 nahi hota
-    pattern: /^[2-9]\d{11}$/,
+    // Onboarding wizard jaisa hi — koi bhi 12 digits
+    pattern: /^\d{12}$/,
     message: "Aadhaar number must be 12 digits.",
   },
   pan: {
@@ -163,5 +164,50 @@ export const rules = {
     // Human input like "Full Time", "Part-Time", "Contract".
     pattern: /^[A-Za-z][A-Za-z ]{1,49}(-[A-Za-z ]{1,49})?$/,
     message: "Enter a valid employee type.",
+  },
+
+  // task module — Tasks page ke create/edit form ke liye
+  taskTitle: {
+    required: true,
+    // Letter ya digit se shuru, 5-100 characters
+    pattern: /^[A-Za-z0-9][A-Za-z0-9 .,'()\-/&]{4,99}$/,
+    message: "Task title must be 5-100 characters.",
+  },
+
+  taskAssignee: {
+    required: true,
+    message: "Please select an employee.",
+  },
+
+  taskDescription: {
+    required: false,
+    // Newline bhi allowed — isliye [\s\S]
+    pattern: /^[\s\S]{0,500}$/,
+    message: "Description cannot exceed 500 characters.",
+  },
+
+  taskDueDate: {
+    required: true,
+    // HTML date input value format: YYYY-MM-DD
+    pattern: /^\d{4}-\d{2}-\d{2}$/,
+    message: "Please select a valid due date.",
+    // Guzri hui date par task assign nahi ho sakta
+    validate: (value) => {
+      // "T00:00:00" lagana zaroori hai, warna date UTC maani jaati hai
+      const dueDate = new Date(`${value}T00:00:00`);
+
+      if (Number.isNaN(dueDate.getTime())) {
+        return "Please select a valid due date.";
+      }
+
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      if (dueDate < today) {
+        return "Due date cannot be in the past.";
+      }
+
+      return "";
+    },
   },
 };

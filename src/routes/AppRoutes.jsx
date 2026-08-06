@@ -30,6 +30,7 @@ import SalaryCRUD from "../pages/salary/SalaryCRUD";
 import SalaryForm from "../pages/salary/SalaryForm";
 import SalaryHistory from "../pages/salary/SalaryHistory";
 import PayrolllDashboard from "../pages/payroll/PayrollDashboard";
+import Tasks from "../pages/Tasks";
 function AppRoutes(){
     return(
         <Routes>
@@ -89,6 +90,9 @@ function AppRoutes(){
                 <Route path="/salarydashboard/salary/edit/:employeeId" element={<SalaryForm />} />
                 {/* payroll Routing */}
                  <Route path="/payrolldashboard" element={<PayrolllDashboard />} />
+
+                {/* Tasks */}
+                <Route path="/tasks" element={<Tasks />} />
                
                 
             </Route>

@@ -1,6 +1,6 @@
 import { MdDashboard, MdOutlineBeachAccess } from "react-icons/md";
 import { MdChevronLeft, MdChevronRight } from "react-icons/md";
-import { FaBuilding } from "react-icons/fa";
+import { FaBuilding, FaTasks } from "react-icons/fa";
 import { BsFillPersonLinesFill,BsCalendarCheck } from "react-icons/bs";
 import { PiPersonSimpleSnowboardLight } from "react-icons/pi";
 import { GiTakeMyMoney } from "react-icons/gi";
@@ -49,6 +49,11 @@ const menuItems = [
     label: "Payroll Management",
     path: "/payrolldashboard",
     icon: BadgeIndianRupee ,
+  },
+  {
+    label: "Tasks",
+    path: "/tasks",
+    icon: FaTasks,
   },
 ];
 

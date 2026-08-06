@@ -1,10 +1,17 @@
-import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
-import { getEmployeeById, updateEmployee, uploadResume } from "../services/EmployeeService";
+import { useEffect, useMemo, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
+import {
+  getEmployeeById,
+  updateEmployee,
+  updateEmployeeSection,
+  uploadResume,
+} from "../services/EmployeeService";
+// import { getSalary } from "../services/SalaryService";
 import { getDepartments } from "../services/departmentService";
 import { validateField } from "../utils/validation/validateField";
 import { rules } from "../utils/validation/rules";
 import {
+  ArrowLeft,
   BadgeCheck,
   BriefcaseBusiness,
   ChevronDown,
@@ -17,19 +24,27 @@ import {
   Mail,
   Pencil,
   Phone,
+  Power,
   UserRound,
-  WalletCards,
+  X,
 } from "lucide-react";
- 
+
 function EmployeesDetails() {
     const companyCode = localStorage.getItem("companyCode");
     const { id } = useParams();
- 
+    const navigate = useNavigate();
+
     const [employee, setEmployee] = useState(null);
 
-    // Add Employee jaisa hi source — departments list + selected dept ke designations
+    // Salary ab sidebar ke apne module se dikhti hai — is page par nahi.
+    // undefined = load ho raha hai, null = assign nahi hui
+    // const [salary, setSalary] = useState(undefined);
+
+    // Activate / Deactivate ke waqt button disable rakhne ke liye
+    const [statusUpdating, setStatusUpdating] = useState(false);
+
+    // Add Employee jaisa hi source
     const [departments, setDepartments] = useState([]);
-    const [designations, setDesignations] = useState([]);
 
     // Which card is currently being edited + its working copy
     const [editingSection, setEditingSection] = useState(null);
@@ -40,6 +55,9 @@ function EmployeesDetails() {
     const [resumeFile, setResumeFile] = useState(null);
     const [errors, setErrors] = useState({});
     const [loadError, setLoadError] = useState("");
+
+    // Save / status-change fail hone par upar dikhne wala banner (alert ki jagah)
+    const [actionError, setActionError] = useState("");
 
     // Every section starts collapsed — the user opens what they need.
     const [expanded, setExpanded] = useState({});
@@ -54,85 +72,98 @@ function EmployeesDetails() {
     const toggleReveal = (fieldId) =>
         setRevealed((prev) => ({ ...prev, [fieldId]: !prev[fieldId] }));
 
+    // Salary card ke amounts — khaali ya galat value par dash dikhao
+    // const formatAmount = (value) => {
+    //     const amount = Number(value);
+    //
+    //     if (value === "" || value === null || value === undefined || Number.isNaN(amount)) {
+    //         return <span className="text-gray-300">—</span>;
+    //     }
+    //
+    //     return `₹ ${amount.toLocaleString("en-IN")}`;
+    // };
+
     // Keep the last 4 characters visible, mask the rest
     const maskValue = (value) => {
         const text = String(value);
         return text.length <= 4 ? "X".repeat(text.length) : "X".repeat(text.length - 4) + text.slice(-4);
     };
  
-    useEffect(() => {
-        loadEmployee();
-        loadDepartments();
-    }, []);
+    // const loadSalary = async () => {
+    //     try {
+    //         setSalary(await getSalary(companyCode, id));
+    //     } catch (error) {
+    //         console.error("Failed to load salary:", error);
+    //         setSalary(null);
+    //     }
+    // };
 
     const loadDepartments = async () => {
-        const data = await getDepartments(companyCode);
+        try {
+            const data = await getDepartments(companyCode);
 
-        if (!data) {
+            if (!data) {
+                setDepartments([]);
+                return;
+            }
+
+            const departmentArray = Object.keys(data).map((key) => ({
+                id: key,
+                ...data[key],
+            }));
+
+            setDepartments(departmentArray);
+        } catch (error) {
+            // Pura page fail na ho — sirf dropdown khaali rahega
+            console.error("Failed to load departments:", error);
             setDepartments([]);
-            return;
         }
-
-        const departmentArray = Object.keys(data).map((key) => ({
-            id: key,
-            ...data[key],
-        }));
-
-        setDepartments(departmentArray);
     };
 
-    // Chune hue department ke hisaab se designation options set karo
-    const loadDesignationsFor = (departmentName) => {
-        const dept = departments.find((item) => item.name === departmentName);
+    // Chune hue department ke designations — state nahi, derived value.
+    // Isse departments baad me load hon tab bhi dropdown apne aap bhar jaata hai.
+    const designations = useMemo(() => {
+        const dept = departments.find((item) => item.name === formData.department);
 
-        const designationArray = dept?.designations
+        return dept?.designations
             ? Object.keys(dept.designations).map((key) => ({
                 id: key,
                 ...dept.designations[key],
             }))
             : [];
+    }, [departments, formData.department]);
 
-        setDesignations(designationArray);
-    };
-
-    // Department badla → designation reset + uske naye options load
+    // Department badla → designation reset (naye options apne aap aa jayenge)
     const handleDepartmentChange = (value) => {
         setFormData((prev) => ({ ...prev, department: value, designation: "" }));
         setErrors((prev) => ({ ...prev, department: "" }));
-        loadDesignationsFor(value);
     };
 
     const loadEmployee = async () => {
-        setLoadError("");
         try {
         const data = await getEmployeeById(companyCode, id);
 
-        // Employee mila hi nahi (galat id / delete ho gaya)]
+        // Employee mila hi nahi (galat id / delete ho gaya)
         if (!data) {
             setLoadError("Employee not found.");
             return;
         }
 
-        const formattedEmployee = {
-            personalInfo: (() => {
-                
-                const { city, state, pincode, ...rest } = data.personalInfo || {};
-                return {
-                    ...rest,
-                    name: data.personalInfo?.name || data.employmentInfo?.name || "",
-                    email: data.personalInfo?.email || data.employmentInfo?.email || "",
-                    mobile: data.personalInfo?.mobile || data.employmentInfo?.mobile || "",
-                    gender: data.personalInfo?.gender || "",
-                    dob: data.personalInfo?.dob || "",
-                    address: [rest.address, city, state, pincode]
-                        .map((part) => (part ? String(part).replace(/\s+/g, " ").trim() : ""))
-                        .filter(Boolean)
-                        .join(", ")
-                        .replace(/(,\s*)+/g, ", ")
-                        .trim(),
-                };
-            })(),
+        setLoadError("");
 
+        const formattedEmployee = {
+            // Purane onboarding records me naam/email/mobile employmentInfo me the.
+            // city/state/pincode ko address me jodte the — usse woh pehli hi save par
+            // gayab ho jaate the, isliye ab alag fields hi rehte hain.
+            personalInfo: {
+                ...(data.personalInfo || {}),
+                name: data.personalInfo?.name || data.employmentInfo?.name || "",
+                email: data.personalInfo?.email || data.employmentInfo?.email || "",
+                mobile: data.personalInfo?.mobile || data.employmentInfo?.mobile || "",
+                gender: data.personalInfo?.gender || "",
+                dob: data.personalInfo?.dob || "",
+                address: data.personalInfo?.address || "",
+            },
 
             employmentInfo: {
                 ...data.employmentInfo,
@@ -166,7 +197,8 @@ function EmployeesDetails() {
                 };
             })(),
 
-            salaryInfo: data.salaryInfo || {},
+            // salaryInfo yahan jaan-boojh kar nahi rakha — salary sirf
+            // companies/{code}/salaries/{employeeId} se aati hai
 
             account: {
                 ...data.account,
@@ -181,17 +213,20 @@ function EmployeesDetails() {
         }
     };
 
+    // id badalne par (ek details page se doosre par jaana) sab dobara load ho
+    useEffect(() => {
+        loadEmployee();
+        loadDepartments();
+        // loadSalary();
+    }, [id]);
+
     const startEdit = (sectionId) => {
         setFormData({ ...(employee[sectionId] || {}) });
         setEditingSection(sectionId);
         setExpanded((prev) => ({ ...prev, [sectionId]: true }));
         setErrors({});
         setResumeFile(null);
-
-        // Employment edit khulte hi maujooda department ke designations dikha do
-        if (sectionId === "employmentInfo") {
-            loadDesignationsFor(employee.employmentInfo?.department);
-        }
+        setActionError("");
     };
 
     const cancelEdit = () => {
@@ -272,6 +307,7 @@ function EmployeesDetails() {
         }
 
         setSaving(true);
+        setActionError("");
         try {
             const sectionData = { ...formData };
 
@@ -280,19 +316,64 @@ function EmployeesDetails() {
                 sectionData.resume = await uploadResume(companyCode, id, resumeFile);
             }
 
-            await updateEmployee(companyCode, id, { [sectionId]: sectionData });
-            setEmployee((prev) => ({ ...prev, [sectionId]: sectionData }));
+            const result = await updateEmployeeSection(
+                companyCode,
+                id,
+                sectionId,
+                sectionData
+            );
+
+            // Email/mobile kisi aur employee ka nikla — us field par error dikhao
+            if (!result.success) {
+                setErrors((prev) => ({ ...prev, [result.field]: result.message }));
+                return;
+            }
+
+            setEmployee((prev) => ({ ...prev, [sectionId]: result.data }));
             setEditingSection(null);
             setResumeFile(null);
             setErrors({});
         } catch (error) {
             console.error(error);
-            alert("Failed to save changes");
+            // Edit mode khula rehta hai taaki user ki bhari hui value na khoye
+            setActionError("Failed to save changes. Please try again.");
         } finally {
             setSaving(false);
         }
     };
- 
+
+    // Deactivate karne par employee login nahi kar payega (authService Active hi maanta hai).
+    // Isliye ye normal edit form ka hissa nahi hai — alag button + confirm.
+    const toggleEmployeeStatus = async () => {
+        const currentStatus = employee.account?.status || "Active";
+        const nextStatus =
+            currentStatus.toLowerCase() === "active" ? "Inactive" : "Active";
+
+        const name = employee.personalInfo?.name || employee.employmentInfo?.employeeId || "this employee";
+
+        const message =
+            nextStatus === "Inactive"
+                ? `Deactivate ${name}? They will no longer be able to log in to the portal.`
+                : `Activate ${name}? They will be able to log in again.`;
+
+        if (!window.confirm(message)) return;
+
+        setStatusUpdating(true);
+        setActionError("");
+        try {
+            // account node poora replace hota hai, isliye baaki fields saath bhejna zaroori hai
+            const nextAccount = { ...employee.account, status: nextStatus };
+
+            await updateEmployee(companyCode, id, { account: nextAccount });
+            setEmployee((prev) => ({ ...prev, account: nextAccount }));
+        } catch (error) {
+            console.error("Failed to update status:", error);
+            setActionError("Status update failed. Please try again.");
+        } finally {
+            setStatusUpdating(false);
+        }
+    };
+
     // Load fail hua ya employee mila nahi → error + Retry (infinite spinner se bachne ke liye)
     if (loadError) {
         return (
@@ -345,9 +426,18 @@ function EmployeesDetails() {
                 { key: "name", label: "Name" },
                 { key: "email", label: "Email" },
                 { key: "mobile", label: "Mobile" },
-                { key: "gender", label: "Gender", type:"select" , options:["Male", "Female", "Prefer not to say"] },
+                { key: "alternateMobile", label: "Alternate Mobile" },
+                // Onboarding "Other" bhejta hai, Add Employee form "Prefer not to say" —
+                // dono rakhe hain taaki edit par kisi ki value na ude
+                { key: "gender", label: "Gender", type:"select" , options:["Male", "Female", "Other", "Prefer not to say"] },
                 { key: "dob", label: "DOB", type:"date" },
-                { key: "address", label: "Address" },
+                { key: "fatherName", label: "Father Name" },
+                { key: "motherName", label: "Mother Name" },
+                { key: "maritalStatus", label: "Marital Status", type: "select", options: ["Single", "Married", "Divorced", "Widowed"] },
+                { key: "city", label: "City" },
+                { key: "state", label: "State" },
+                { key: "pincode", label: "Pincode" },
+                { key: "address", label: "Address", full: true },
             ],
         },
         {
@@ -363,17 +453,14 @@ function EmployeesDetails() {
                 { key: "employeeType", label: "Employee Type" },
             ],
         },
-        {
-            section: "salaryInfo",
-            icon: WalletCards,
-            title: "Salary Information",
-            accent: "bg-emerald-50 text-emerald-600",
-            fields: [
-                { key: "basicSalary", label: "Basic Salary" },
-                { key: "bonus", label: "Bonus" },
-                { key: "hra", label: "HRA" },
-            ],
-        },
+        // Salary ab sidebar ke apne module se — yahan card nahi dikhta
+        // {
+        //     section: "salary",
+        //     icon: WalletCards,
+        //     title: "Salary Information",
+        //     accent: "bg-emerald-50 text-emerald-600",
+        //     custom: true,
+        // },
         {
             section: "account",
             icon: BadgeCheck,
@@ -393,6 +480,7 @@ function EmployeesDetails() {
             title: "Bank Information",
             accent: "bg-sky-50 text-sky-600",
             fields: [
+                { key: "accountHolderName", label: "Account Holder Name" },
                 { key: "bankName", label: "Bank Name" },
                 { key: "branch", label: "Branch" },
                 { key: "accountNumber", label: "Account Number", masked: true },
@@ -408,6 +496,8 @@ function EmployeesDetails() {
                 { key: "resume", label: "Resume", type: "file" },
                 { key: "aadhaar", label: "Aadhaar Number", masked: true },
                 { key: "pan", label: "PAN Number", masked: true },
+                { key: "uan", label: "UAN Number", masked: true },
+                { key: "esic", label: "ESIC Number", masked: true },
             ],
         },
     ];
@@ -415,7 +505,29 @@ function EmployeesDetails() {
 
     return (
         <div className="w-full space-y-6">
- 
+
+                <button
+                    type="button"
+                    onClick={() => navigate("/employees")}
+                    className="inline-flex items-center gap-1.5 rounded-lg px-2 py-1 text-sm font-medium text-gray-500 transition hover:bg-gray-100 hover:text-gray-700"
+                >
+                    <ArrowLeft className="h-4 w-4" /> Back to Employees
+                </button>
+
+                {actionError && (
+                    <div className="flex items-center justify-between gap-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                        <span>{actionError}</span>
+                        <button
+                            type="button"
+                            onClick={() => setActionError("")}
+                            aria-label="Dismiss error"
+                            className="shrink-0 rounded p-1 transition hover:bg-red-100"
+                        >
+                            <X className="h-4 w-4" />
+                        </button>
+                    </div>
+                )}
+
                 {/* Gradient profile header */}
                 <div className="rounded-3xl bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-500 px-8 py-8 text-white shadow-lg">
                     {/* Left: avatar + name/dept · Right: contact details */}
@@ -443,6 +555,20 @@ function EmployeesDetails() {
                                         />
                                         {status}
                                     </span>
+
+                                    <button
+                                        type="button"
+                                        onClick={toggleEmployeeStatus}
+                                        disabled={statusUpdating}
+                                        className="inline-flex items-center gap-1.5 rounded-full border border-white/40 px-3 py-1 text-xs font-semibold text-white transition hover:bg-white/15 disabled:cursor-not-allowed disabled:opacity-60"
+                                    >
+                                        <Power className="h-3.5 w-3.5" />
+                                        {statusUpdating
+                                            ? "Updating…"
+                                            : isActive
+                                            ? "Deactivate"
+                                            : "Activate"}
+                                    </button>
                                 </div>
                                 <div className="mt-1 flex items-center text-white/80">
                                     {employee.employmentInfo?.department
@@ -512,6 +638,95 @@ function EmployeesDetails() {
                                         )}
                                     </span>
                                 </button>
+
+                                {/* Salary ab sidebar ke apne module se dikhti hai.
+                                    Yahan ka summary card comment kar diya gaya hai —
+                                    wapas chahiye to `salary` section (sections array),
+                                    salary state, loadSalary aur formatAmount bhi uncomment karna.
+
+                                {isOpen && section.custom === true && (
+                                    <div className="px-6 py-4">
+                                        {salary === undefined ? (
+                                            <p className="text-sm text-gray-400">
+                                                Loading salary…
+                                            </p>
+                                        ) : salary === null ? (
+                                            <div className="flex flex-col items-start gap-3">
+                                                <p className="text-sm text-gray-500">
+                                                    Is employee ki salary abhi assign nahi hui hai.
+                                                </p>
+                                                <button
+                                                    type="button"
+                                                    onClick={() =>
+                                                        navigate(
+                                                            `/salarydashboard/salary/create/${id}`
+                                                        )
+                                                    }
+                                                    className="rounded-lg bg-emerald-600 px-4 py-1.5 text-sm font-medium text-white transition hover:bg-emerald-700"
+                                                >
+                                                    Assign Salary
+                                                </button>
+                                            </div>
+                                        ) : (
+                                            <>
+                                                <div className="grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-2">
+                                                    {[
+                                                        { label: "Basic", value: salary.earnings?.basic },
+                                                        { label: "Gross Salary", value: salary.grossSalary },
+                                                        { label: "Total Deduction", value: salary.totalDeduction },
+                                                        { label: "Net Salary", value: salary.netSalary },
+                                                    ].map((item) => (
+                                                        <div key={item.label} className="flex flex-col gap-1.5">
+                                                            <p className="text-xs font-medium uppercase tracking-wide text-gray-400">
+                                                                {item.label}
+                                                            </p>
+                                                            <p className="text-sm font-medium text-gray-800">
+                                                                {formatAmount(item.value)}
+                                                            </p>
+                                                        </div>
+                                                    ))}
+
+                                                    <div className="flex flex-col gap-1.5">
+                                                        <p className="text-xs font-medium uppercase tracking-wide text-gray-400">
+                                                            Effective From
+                                                        </p>
+                                                        <p className="text-sm font-medium text-gray-800">
+                                                            {salary.effectiveFrom || (
+                                                                <span className="text-gray-300">—</span>
+                                                            )}
+                                                        </p>
+                                                    </div>
+
+                                                    <div className="flex flex-col gap-1.5">
+                                                        <p className="text-xs font-medium uppercase tracking-wide text-gray-400">
+                                                            Salary Status
+                                                        </p>
+                                                        <p className="text-sm font-medium text-gray-800">
+                                                            {salary.status || (
+                                                                <span className="text-gray-300">—</span>
+                                                            )}
+                                                        </p>
+                                                    </div>
+                                                </div>
+
+                                                <div className="flex items-center justify-end pt-4">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() =>
+                                                            navigate(
+                                                                `/salarydashboard/salary/edit/${id}`
+                                                            )
+                                                        }
+                                                        className="flex items-center gap-1.5 rounded-lg border border-emerald-200 px-3 py-1.5 text-sm font-medium text-emerald-700 transition hover:bg-emerald-50"
+                                                    >
+                                                        <Pencil className="h-3.5 w-3.5" /> Manage Salary
+                                                    </button>
+                                                </div>
+                                            </>
+                                        )}
+                                    </div>
+                                )}
+                                */}
 
                                 {isOpen && (
                                     <div className="px-6 py-4">

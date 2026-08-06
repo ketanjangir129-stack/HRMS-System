@@ -33,11 +33,8 @@ function EmployeeForm() {
       branch: "",
     },
 
-    salaryInfo: {
-      basicSalary: "",
-      hra: "",
-      bonus: "",
-    },
+    // salaryInfo yahan nahi — salary Salary module se assign hoti hai
+    // (companies/{code}/salaries/{employeeId})
 
     documents: {
       aadhaar: "",
@@ -58,25 +55,31 @@ function EmployeeForm() {
   const [saving, setSaving] = useState(false);
   const navigate = useNavigate();
 
+  const loadDepartments = async () => {
+    try {
+      const data = await getDepartments(companyCode);
+
+      if (!data) {
+        setDepartments([]);
+        return;
+      }
+
+      const departmentArray = Object.keys(data).map((key) => ({
+        id: key,
+        ...data[key],
+      }));
+
+      setDepartments(departmentArray);
+    } catch (error) {
+      // Form khulа rahe — sirf department dropdown khaali hoga
+      console.error("Failed to load departments:", error);
+      setDepartments([]);
+    }
+  };
+
   useEffect(() => {
     loadDepartments();
   }, []);
-
-  const loadDepartments = async () => {
-    const data = await getDepartments(companyCode);
-
-    if (!data) {
-      setDepartments([]);
-      return;
-    }
-
-    const departmentArray = Object.keys(data).map((key) => ({
-      id: key,
-      ...data[key],
-    }));
-
-    setDepartments(departmentArray);
-  };
 
 
   const handleChange = (e) => {
@@ -317,7 +320,7 @@ function EmployeeForm() {
               <option value="">Select Gender</option>
               <option value="Male">Male</option>
               <option value="Female">Female</option>
-              <option value="Prefer not to say">Prefer not to say</option>
+              <option value="Other">Other</option>
             </select>
 
             {errors.gender && (
@@ -388,9 +391,14 @@ function EmployeeForm() {
               value={employee.employmentInfo.designation}
               onChange={handleChange}
               onBlur={handleBlur}
-              className="w-full border rounded-lg p-3"
+              disabled={!employee.employmentInfo.department}
+              className="w-full border rounded-lg p-3 disabled:cursor-not-allowed disabled:bg-gray-50"
             >
-              <option value="">Select Designation</option>
+              <option value="">
+                {employee.employmentInfo.department
+                  ? "Select Designation"
+                  : "Select Department first"}
+              </option>
 
               {designations.map((des) => (
                 <option key={des.id} value={des.name}>
@@ -474,6 +482,15 @@ function EmployeeForm() {
         </div>
 
         <div className="flex justify-end gap-4 mt-8">
+
+          <button
+            type="button"
+            onClick={() => navigate("/employees")}
+            disabled={saving}
+            className="px-6 py-3 text-gray-600 rounded-lg transition hover:bg-gray-100 disabled:opacity-50"
+          >
+            Cancel
+          </button>
 
           <button
             type="submit"
