@@ -6,6 +6,7 @@ import AttendanceSummaryCards from "../../components/attendance/AttendanceSummar
 import MonthlyAttendanceTable from "../../components/attendance/MonthlyAttendanceTable";
 import useAuth from "../../hooks/useAuth";
 import useEmployeeDirectory from "../../hooks/useEmployeeDirectory";
+import useHolidayDates from "../../hooks/useHolidayDates";
 import useMonthlyAttendance from "../../hooks/useMonthlyAttendance";
 import {
   getMonthLabel,
@@ -22,6 +23,10 @@ import {
 |--------------------------------------------------------------------------
 | Company wide totals per employee for the selected month. Search comes from
 | the header search bar.
+|
+| Declared holidays are left out of the totals: a day the office was closed
+| is not a working day, and counting it would drag every attendance rate down
+| by a day nobody was expected in.
 |--------------------------------------------------------------------------
 */
 
@@ -53,6 +58,11 @@ function MonthlyAttendance() {
     reload: reloadRecords,
   } = useMonthlyAttendance(companyCode, year, month);
 
+  const { holidayDates, reload: reloadHolidays } = useHolidayDates(
+    companyCode,
+    useMemo(() => [year], [year])
+  );
+
   useEffect(() => {
     setSearchPlaceholder("Search employees by name, ID or department...");
 
@@ -63,8 +73,8 @@ function MonthlyAttendance() {
   }, [setSearch, setSearchPlaceholder]);
 
   const rows = useMemo(
-    () => buildMonthlyReport(directory, records),
-    [directory, records]
+    () => buildMonthlyReport(directory, records, holidayDates),
+    [directory, records, holidayDates]
   );
 
   const summary = useMemo(() => getMonthlySummary(rows), [rows]);
@@ -86,6 +96,7 @@ function MonthlyAttendance() {
   const handleRetry = () => {
     reloadDirectory();
     reloadRecords();
+    reloadHolidays();
   };
 
   return (

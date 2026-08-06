@@ -2,6 +2,10 @@ import { ATTENDANCE_STATUS } from "../attendance/attendanceConstants";
 import { getDateKey } from "../attendance/attendanceDate";
 import { searchRows } from "../attendance/attendanceTable";
 import {
+  getWorkingDayBreakdown,
+  isNonWorkingDay,
+} from "../holiday/holidayUtils";
+import {
   HALF_DAY_SESSION,
   LEAVE_REQUEST_TYPE,
   LEAVE_STATUS,
@@ -178,6 +182,16 @@ export const calculateLeaveBalance = (
 |--------------------------------------------------------------------------
 | Calculate Leave Days
 |--------------------------------------------------------------------------
+| What a request actually costs the employee's balance.
+|
+| `holidayDates` are the days the company has declared closed. They are not
+| charged, and neither are the weekly offs: a range that runs from a Friday
+| to the following Monday over a Saturday holiday and a Sunday costs two
+| days, not four. Leaving them in would spend leave on days the office was
+| shut anyway.
+|
+| Omitting the argument keeps the plain calendar count, so any caller that
+| has not loaded the holiday calendar behaves exactly as it did before.
 */
 
 export const calculateLeaveDays = ({
@@ -185,27 +199,98 @@ export const calculateLeaveDays = ({
   fromDate,
   toDate,
   durationType,
+  holidayDates = null,
 }) => {
 
   if (!fromDate) return 0;
+
+  const skipsNonWorkingDays = holidayDates !== null;
 
   // Half Day
   if (
     requestType === LEAVE_REQUEST_TYPE.HALF_DAY ||
     durationType === LEAVE_REQUEST_TYPE.HALF_DAY
   ) {
+
+    /*
+    | Half of a day that is not worked is still nothing, so a half day on a
+    | holiday costs zero and is refused by the validation below.
+    */
+    if (
+      skipsNonWorkingDays &&
+      isNonWorkingDay(fromDate, holidayDates)
+    ) {
+      return 0;
+    }
+
     return 0.5;
+
   }
 
   // Single Day
   if (requestType === LEAVE_REQUEST_TYPE.SINGLE_DAY) {
+
+    if (
+      skipsNonWorkingDays &&
+      isNonWorkingDay(fromDate, holidayDates)
+    ) {
+      return 0;
+    }
+
     return 1;
+
   }
 
   // Multiple Days
   if (!toDate) return 0;
 
-  return countDaysInclusive(fromDate, toDate);
+  if (!skipsNonWorkingDays) {
+    return countDaysInclusive(fromDate, toDate);
+  }
+
+  return getWorkingDayBreakdown(
+    fromDate,
+    toDate,
+    holidayDates
+  ).workingDays.length;
+
+};
+
+/*
+| The same range, described rather than counted: how many calendar days it
+| covers, which of them are holidays and which are weekly offs.
+|
+| The apply modal shows it so an employee can see why five days off cost
+| three, instead of being told a number that looks wrong.
+*/
+
+export const getLeaveDaysBreakdown = ({
+  requestType,
+  fromDate,
+  toDate,
+  holidayDates = [],
+}) => {
+
+  if (!fromDate) {
+    return {
+      totalDays: 0,
+      workingDays: [],
+      holidayDays: [],
+      weeklyOffDays: [],
+      skippedDays: 0,
+    };
+  }
+
+  const end =
+    requestType === LEAVE_REQUEST_TYPE.MULTIPLE_DAY
+      ? toDate || fromDate
+      : fromDate;
+
+  return getWorkingDayBreakdown(
+    fromDate,
+    end,
+    holidayDates
+  );
 
 };
 
@@ -224,6 +309,7 @@ export const validateLeaveRequest = ({
   halfDaySession,
   reason,
   availableBalance,
+  holidayDates = null,
 }) => {
 
   if (!requestType) {
@@ -268,10 +354,26 @@ export const validateLeaveRequest = ({
       fromDate,
       toDate,
       durationType,
+      holidayDates,
     });
 
+  /*
+  | A duration of zero has two different causes once holidays are applied, so
+  | they are reported separately: an empty range is a mistake in the dates,
+  | while a range made entirely of holidays is simply nothing to apply for.
+  */
   if (days <= 0) {
-    return "Invalid leave duration.";
+
+    if (holidayDates === null) {
+      return "Invalid leave duration.";
+    }
+
+    if (requestType === LEAVE_REQUEST_TYPE.MULTIPLE_DAY) {
+      return "The selected range has no working days. Holidays and weekly offs do not need a leave request.";
+    }
+
+    return "The selected date is a holiday or a weekly off. No leave is needed for it.";
+
   }
 
   if (days > availableBalance) {
@@ -559,6 +661,27 @@ export const getLeaveDateKeys = (request = {}) => {
   return keys;
 
 };
+
+/*
+| The days of a request that are actually charged as leave, which is what
+| gets written onto the attendance sheet when it is approved.
+|
+| A holiday inside a range is not leave: the office was closed, the balance
+| was not charged for it, and marking the day "Leave" would report a day off
+| twice over.
+|
+| Releasing still uses `getLeaveDateKeys`, the full calendar range. Clearing
+| only touches days carrying the request's own id, so passing the wider set
+| is safe and repairs a range booked before the holiday calendar changed.
+*/
+
+export const getLeaveWorkingDateKeys = (
+  request = {},
+  holidayDates = []
+) =>
+  getLeaveDateKeys(request).filter(
+    (dateKey) => !isNonWorkingDay(dateKey, holidayDates)
+  );
 
 /*
 | A `{ "YYYY-MM-DD": "approved" }` map for the calendar tiles.

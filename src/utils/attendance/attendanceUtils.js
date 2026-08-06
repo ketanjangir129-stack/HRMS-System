@@ -240,7 +240,8 @@ export const getInitials = (name = "") =>
 
 export const getAttendanceSummary = (
     attendance = [],
-    totalEmployees = null
+    totalEmployees = null,
+    { isHoliday = false } = {}
 ) => {
 
     const summary = {
@@ -250,6 +251,7 @@ export const getAttendanceSummary = (
         leave: 0,
         halfDay: 0,
         total: attendance.length,
+        isHoliday,
     };
 
     attendance.forEach((employee) => {
@@ -287,6 +289,11 @@ export const getAttendanceSummary = (
     | Anyone on the roster without a record for the day is absent, which also
     | covers records explicitly marked Absent. Half days are attendance, so
     | they are excluded from that count the same way the other statuses are.
+    |
+    | On a declared holiday that rule is dropped: the office was closed, so a
+    | day with no record is not an absence and the roster is not turned into
+    | one. Records that do exist are still counted, because somebody who came
+    | in on a holiday was present.
     */
     if (
         typeof totalEmployees === "number" &&
@@ -295,14 +302,18 @@ export const getAttendanceSummary = (
 
         summary.total = totalEmployees;
 
-        summary.absent = Math.max(
-            totalEmployees -
-            summary.present -
-            summary.late -
-            summary.leave -
-            summary.halfDay,
-            0
-        );
+        if (!isHoliday) {
+
+            summary.absent = Math.max(
+                totalEmployees -
+                summary.present -
+                summary.late -
+                summary.leave -
+                summary.halfDay,
+                0
+            );
+
+        }
 
     }
 
@@ -375,12 +386,14 @@ const averagePunchInTime = (punchIns = []) => {
 
 export const getAttendanceAnalytics = (
     attendance = [],
-    totalEmployees = null
+    totalEmployees = null,
+    options = {}
 ) => {
 
     const summary = getAttendanceSummary(
         attendance,
-        totalEmployees
+        totalEmployees,
+        options
     );
 
     const punchIns = attendance
@@ -499,9 +512,27 @@ export const getAttendanceActivities = (attendance = []) => {
 |--------------------------------------------------------------------------
 */
 
-export const getAttendanceCalendar = (history = []) => {
+/*
+| `holidayDates` marks the days the office was closed. A holiday the employee
+| worked anyway still shows the record: the tile only falls back to "holiday"
+| when there is nothing else to show for the day, which is the same rule the
+| reports use.
+*/
+
+export const getAttendanceCalendar = (
+    history = [],
+    holidayDates = []
+) => {
 
     const calendar = {};
+
+    holidayDates.forEach((date) => {
+
+        if (!date) return;
+
+        calendar[date] = "holiday";
+
+    });
 
     history.forEach((record) => {
 
@@ -535,7 +566,39 @@ export const buildDailyReport = (records = [], directory = {}) =>
 | `monthRecords` is the raw `{ [date]: { [employeeId]: record } }` tree.
 */
 
-export const buildMonthlyReport = (directory = {}, monthRecords = {}) => {
+/*
+| `holidayDates` are the days the office was closed. They are left out of the
+| totals entirely: a holiday is not a working day, so counting it would drag
+| every attendance rate down by a day the employee was never expected in.
+|
+| Omitting the argument keeps the original record based counting, so a caller
+| that has not loaded the holiday calendar behaves exactly as it did before.
+*/
+
+export const buildMonthlyReport = (
+    directory = {},
+    monthRecords = {},
+    holidayDates = []
+) => {
+
+    const holidays = new Set(holidayDates);
+
+    /*
+    | Only the holidays that fall inside the month being reported, so the
+    | count on each row describes this month and not the whole year.
+    |
+    | The month is read off the records tree, whose keys are all days of the
+    | one month that was fetched. A month with no records at all reports no
+    | holidays, which is the honest answer: there is nothing to report on.
+    */
+    const monthPrefix =
+        Object.keys(monthRecords)[0]?.slice(0, 7) || "";
+
+    const monthHolidays = monthPrefix
+        ? holidayDates.filter((date) =>
+            String(date).startsWith(monthPrefix)
+        ).length
+        : 0;
 
     const report = Object.values(directory).map((employee) => {
 
@@ -549,7 +612,9 @@ export const buildMonthlyReport = (directory = {}, monthRecords = {}) => {
             totalMinutes: 0,
         };
 
-        Object.values(monthRecords).forEach((dayRecords) => {
+        Object.entries(monthRecords).forEach(([date, dayRecords]) => {
+
+            if (holidays.has(date)) return;
 
             const record = dayRecords?.[employee.employeeId];
 
@@ -605,6 +670,8 @@ export const buildMonthlyReport = (directory = {}, monthRecords = {}) => {
             halfDay: summary.halfDay,
             workingDays: summary.workingDays,
 
+            holidays: monthHolidays,
+
             attendanceRate:
                 summary.workingDays === 0
                     ? 0
@@ -630,12 +697,20 @@ export const buildMonthlyReport = (directory = {}, monthRecords = {}) => {
 |--------------------------------------------------------------------------
 | A day by day row for a single employee. Days without a record are reported
 | as Absent so gaps in the month are visible instead of missing.
+|
+| `holidayMap` is a `{ "YYYY-MM-DD": holiday }` lookup. A day with no record
+| that falls on a declared holiday is reported as a Holiday instead, named by
+| its remark, because the office was closed and nobody was expected in.
+|
+| A holiday the employee actually worked keeps its record: the punch happened
+| and the hours are real, whatever the calendar says about the day.
 */
 
 export const buildEmployeeReport = (
     employeeId,
     monthRecords = {},
-    dateKeys = []
+    dateKeys = [],
+    holidayMap = {}
 ) => {
 
     const today = getDateKey();
@@ -648,14 +723,18 @@ export const buildEmployeeReport = (
 
             if (!record) {
 
+                const holiday = holidayMap?.[date];
+
                 return {
                     date,
                     employeeId,
                     punchIn: null,
                     punchOut: null,
                     workingHours: "",
-                    status: ATTENDANCE_STATUS.ABSENT,
-                    remarks: "",
+                    status: holiday
+                        ? ATTENDANCE_STATUS.HOLIDAY
+                        : ATTENDANCE_STATUS.ABSENT,
+                    remarks: holiday?.name || "",
                 };
 
             }

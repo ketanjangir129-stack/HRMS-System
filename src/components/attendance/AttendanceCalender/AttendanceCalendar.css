@@ -87,7 +87,8 @@
 .attendance-calendar .present abbr,
 .attendance-calendar .late abbr,
 .attendance-calendar .absent abbr,
-.attendance-calendar .leave abbr {
+.attendance-calendar .leave abbr,
+.attendance-calendar .holiday abbr {
   width: 30px;
   height: 30px;
   display: inline-flex;
@@ -117,4 +118,11 @@
 
 .attendance-calendar .leave abbr {
   background: #3b82f6;
+}
+
+/* A declared company holiday: a day nobody was expected in, so it is drawn
+   apart from the four statuses a working day can end up with. */
+
+.attendance-calendar .holiday abbr {
+  background: #14b8a6;
 }

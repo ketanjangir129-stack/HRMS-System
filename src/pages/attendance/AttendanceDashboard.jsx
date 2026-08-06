@@ -11,11 +11,13 @@ import AttendanceTodayTable from "../../components/attendance/AttendanceTodayTab
 import MarkAttendanceModal from "../../components/attendance/MarkAttendanceModal";
 import TodayAttendanceCard from "../../components/attendance/TodayAttendanceCard";
 import RejectRequestModal from "../../components/attendance/requests/RejectRequestModal";
+import HolidayNotice from "../../components/holiday/HolidayNotice";
 import useAttendanceHistory from "../../hooks/useAttendanceHistory";
 import useAttendanceRequests from "../../hooks/useAttendanceRequests";
 import useAuth from "../../hooks/useAuth";
 import useDailyAttendance from "../../hooks/useDailyAttendance";
 import useEmployeeDirectory from "../../hooks/useEmployeeDirectory";
+import useHolidayDates from "../../hooks/useHolidayDates";
 import { getDateKey } from "../../utils/attendance/attendanceDate";
 import {
   attachEmployeeDetails,
@@ -91,6 +93,22 @@ function AttendanceDashboard() {
   );
 
   /*
+  | Today's year for the summary and the calendar's year for the tiles: the
+  | calendar can be browsed into another year, and both are needed at once.
+  */
+  const holidayYears = useMemo(
+    () => [today.getFullYear(), calendarMonth.year],
+    [today, calendarMonth.year]
+  );
+
+  const { holidayMap, holidayDates } = useHolidayDates(
+    companyCode,
+    holidayYears
+  );
+
+  const todayHoliday = holidayMap[getDateKey()] || null;
+
+  /*
   | Attendance and requests are joined with the directory once, so the table,
   | the activity feed and the request card all read the same resolved names.
   */
@@ -112,14 +130,23 @@ function AttendanceDashboard() {
 
   }, [requests, directory, currentUser]);
 
+  /*
+  | On a declared holiday the roster is not turned into a list of absences,
+  | so both the cards and the analytics are told what kind of day it is.
+  */
+  const holidayOptions = useMemo(
+    () => ({ isHoliday: Boolean(todayHoliday) }),
+    [todayHoliday]
+  );
+
   const summary = useMemo(
-    () => getAttendanceSummary(records, activeCount),
-    [records, activeCount]
+    () => getAttendanceSummary(records, activeCount, holidayOptions),
+    [records, activeCount, holidayOptions]
   );
 
   const analytics = useMemo(
-    () => getAttendanceAnalytics(records, activeCount),
-    [records, activeCount]
+    () => getAttendanceAnalytics(records, activeCount, holidayOptions),
+    [records, activeCount, holidayOptions]
   );
 
   const activities = useMemo(
@@ -204,6 +231,8 @@ function AttendanceDashboard() {
         canMarkAttendance={isApprover(currentUser)}
       />
 
+      <HolidayNotice holiday={todayHoliday} label="Today" />
+
       <div className="grid grid-cols-1 items-stretch gap-6 xl:grid-cols-12">
 
         <div className="xl:col-span-5">
@@ -244,6 +273,7 @@ function AttendanceDashboard() {
         <div className="xl:col-span-4">
           <AttendanceCalendar
             history={history}
+            holidayDates={holidayDates}
             loading={calendarLoading}
             onMonthChange={handleMonthChange}
           />

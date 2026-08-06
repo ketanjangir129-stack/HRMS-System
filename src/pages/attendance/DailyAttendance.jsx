@@ -5,9 +5,11 @@ import AttendancePageHeader from "../../components/attendance/AttendancePageHead
 import AttendanceRecordsTable from "../../components/attendance/AttendanceRecordsTable";
 import AttendanceSummaryCards from "../../components/attendance/AttendanceSummaryCards";
 import MarkAttendanceModal from "../../components/attendance/MarkAttendanceModal";
+import HolidayNotice from "../../components/holiday/HolidayNotice";
 import useAuth from "../../hooks/useAuth";
 import useDailyAttendance from "../../hooks/useDailyAttendance";
 import useEmployeeDirectory from "../../hooks/useEmployeeDirectory";
+import useHolidayDates from "../../hooks/useHolidayDates";
 import { getDateKey } from "../../utils/attendance/attendanceDate";
 import { isApprover } from "../../utils/attendance/attendanceRequestUtils";
 import {
@@ -21,6 +23,10 @@ import {
 |--------------------------------------------------------------------------
 | Today's punch in and punch out records, kept in realtime. Search comes from
 | the header search bar.
+|
+| On a declared holiday nobody is counted absent: the office was closed, so
+| the roster is not turned into a list of absences and the banner says why
+| the day is empty.
 |--------------------------------------------------------------------------
 */
 
@@ -47,6 +53,18 @@ function DailyAttendance() {
   const { attendance, loading, error, markAttendance } =
     useDailyAttendance(companyCode);
 
+  const today = getDateKey();
+
+  /*
+  | Only the running year is loaded: this page never shows another one.
+  */
+  const { holidayMap } = useHolidayDates(
+    companyCode,
+    useMemo(() => [new Date().getFullYear()], [])
+  );
+
+  const todayHoliday = holidayMap[today] || null;
+
   useEffect(() => {
     setSearchPlaceholder("Search employees by name, ID or department...");
 
@@ -62,8 +80,11 @@ function DailyAttendance() {
   );
 
   const summary = useMemo(
-    () => getAttendanceSummary(records, activeCount),
-    [records, activeCount]
+    () =>
+      getAttendanceSummary(records, activeCount, {
+        isHoliday: Boolean(todayHoliday),
+      }),
+    [records, activeCount, todayHoliday]
   );
 
   return (
@@ -88,6 +109,8 @@ function DailyAttendance() {
 
       <div className="mt-6 space-y-6">
 
+        <HolidayNotice holiday={todayHoliday} label="Today" />
+
         <AttendanceSummaryCards summary={summary} />
 
         <AttendanceRecordsTable
@@ -98,7 +121,11 @@ function DailyAttendance() {
           search={search}
           departments={departments}
           live
-          emptyMessage="No employee has punched in today."
+          emptyMessage={
+            todayHoliday
+              ? `Today is a holiday for ${todayHoliday.name}, so no attendance is expected.`
+              : "No employee has punched in today."
+          }
           exportName="daily-attendance"
         />
 
@@ -110,7 +137,7 @@ function DailyAttendance() {
         onSave={markAttendance}
         employees={activeEmployees}
         dayRecords={records}
-        recordsDate={getDateKey()}
+        recordsDate={today}
       />
 
     </div>

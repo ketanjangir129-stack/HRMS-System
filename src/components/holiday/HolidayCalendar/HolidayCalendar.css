@@ -1,0 +1,137 @@
+.holiday-calendar {
+  width: 100%;
+  border: none;
+  font-family: inherit;
+  background: transparent;
+}
+
+/* Navigation */
+
+.holiday-calendar .react-calendar__navigation {
+  margin-bottom: 12px;
+  height: 40px;
+}
+
+.holiday-calendar .react-calendar__navigation button {
+  font-size: 14px;
+  font-weight: 600;
+  color: #0f172a;
+  min-width: 36px;
+  background: transparent;
+  border-radius: 10px;
+  transition: background 0.2s ease;
+}
+
+.holiday-calendar .react-calendar__navigation button:hover,
+.holiday-calendar .react-calendar__navigation button:focus {
+  background: #f1f5f9;
+}
+
+.holiday-calendar .react-calendar__navigation button:disabled {
+  background: transparent;
+  color: #cbd5e1;
+}
+
+/* Weekdays */
+
+.holiday-calendar .react-calendar__month-view__weekdays {
+  text-transform: uppercase;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  color: #94a3b8;
+  padding-bottom: 6px;
+}
+
+.holiday-calendar .react-calendar__month-view__weekdays__weekday abbr {
+  text-decoration: none;
+  cursor: default;
+}
+
+/* Tiles */
+
+.holiday-calendar .react-calendar__tile {
+  height: 44px;
+  padding: 0;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #334155;
+  background: transparent;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.holiday-calendar .react-calendar__tile:hover {
+  background: #f1f5f9;
+}
+
+.holiday-calendar .react-calendar__month-view__days__day--neighboringMonth {
+  color: #cbd5e1;
+}
+
+.holiday-calendar .react-calendar__tile--now {
+  background: #eff6ff;
+  color: #2563eb;
+  font-weight: 700;
+}
+
+.holiday-calendar .react-calendar__tile--active,
+.holiday-calendar .react-calendar__tile--active:hover {
+  background: #eef2ff !important;
+  color: #1d4ed8;
+  box-shadow: inset 0 0 0 2px #2563eb;
+}
+
+/* Holiday types */
+
+.holiday-calendar .holiday-national abbr,
+.holiday-calendar .holiday-festival abbr,
+.holiday-calendar .holiday-company abbr {
+  width: 30px;
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  color: #ffffff;
+  font-weight: 600;
+  transition: transform 0.2s ease;
+}
+
+.holiday-calendar .react-calendar__tile:hover abbr {
+  transform: scale(1.08);
+}
+
+.holiday-calendar .holiday-national abbr {
+  background: #3b82f6;
+}
+
+.holiday-calendar .holiday-festival abbr {
+  background: #f59e0b;
+}
+
+.holiday-calendar .holiday-company abbr {
+  background: #8b5cf6;
+}
+
+/* An optional holiday is drawn as an outline rather than a filled circle, so
+   a day the office is closed reads differently from a day that may be taken
+   off at a glance. */
+
+.holiday-calendar .holiday-optional abbr {
+  background: #ffffff !important;
+  color: #334155;
+  box-shadow: inset 0 0 0 2px currentColor;
+}
+
+.holiday-calendar .holiday-optional.holiday-national abbr {
+  color: #3b82f6;
+}
+
+.holiday-calendar .holiday-optional.holiday-festival abbr {
+  color: #f59e0b;
+}
+
+.holiday-calendar .holiday-optional.holiday-company abbr {
+  color: #8b5cf6;
+}

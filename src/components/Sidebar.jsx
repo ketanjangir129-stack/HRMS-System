@@ -1,4 +1,4 @@
-import { MdDashboard, MdOutlineBeachAccess } from "react-icons/md";
+import { MdDashboard, MdOutlineBeachAccess, MdOutlineCelebration } from "react-icons/md";
 import { MdChevronLeft, MdChevronRight } from "react-icons/md";
 import { FaBuilding, FaTasks } from "react-icons/fa";
 import { BsFillPersonLinesFill,BsCalendarCheck } from "react-icons/bs";
@@ -41,6 +41,11 @@ const menuItems = [
     icon: MdOutlineBeachAccess,
   },
   {
+    label: "Holidays",
+    path: "/holidays",
+    icon: MdOutlineCelebration,
+  },
+  {
     label: "Salary",
     path: "/salarydashboard",
     icon: GiTakeMyMoney,
@@ -66,7 +71,7 @@ function Sidebar({ isCollapsed, onToggle }) {
     >
 
       {/* Logo */}
-      <div className={`h-[95px] border-b border-gray-200 flex items-center ${isCollapsed ? "justify-center px-3" : "justify-between px-6"}`}>
+      <div className={`h-[95px] shrink-0 border-b border-gray-200 flex items-center ${isCollapsed ? "justify-center px-3" : "justify-between px-6"}`}>
 
           <div className="flex items-center gap-3 overflow-hidden">
 
@@ -91,7 +96,16 @@ function Sidebar({ isCollapsed, onToggle }) {
       </div>
 
       {/* Navigation */}
-      <nav className={`flex-1 ${isCollapsed ? "p-3 pt-5" : "p-5"}`}>
+      {/*
+        The menu is the only part that scrolls: the logo and the collapse
+        button stay put while the links move under them.
+
+        `min-h-0` is what makes that work. A flex child defaults to
+        `min-height: auto`, which refuses to shrink below its content, so
+        without it the nav would push the collapse button off screen instead
+        of scrolling.
+      */}
+      <nav className={`flex-1 min-h-0 overflow-y-auto hide-scrollbar ${isCollapsed ? "p-3 pt-5" : "p-5"}`}>
         <ul className="space-y-2">
 
           {menuItems.map((item) => {
@@ -118,7 +132,7 @@ function Sidebar({ isCollapsed, onToggle }) {
         </ul>
       </nav>
 
-      <div className={`border-t border-gray-200 p-4 ${isCollapsed ? "flex justify-center" : ""}`}>
+      <div className={`shrink-0 border-t border-gray-200 p-4 ${isCollapsed ? "flex justify-center" : ""}`}>
         <button
           type="button"
           onClick={onToggle}

@@ -19,6 +19,7 @@ import {
   calculateLeaveDays,
   calculateRemainingBalance,
   formatLeaveDuration,
+  getLeaveDaysBreakdown,
   validateLeaveRequest,
 } from "../../utils/leave/leaveUtils";
 
@@ -36,6 +37,10 @@ import {
 | The applied balance is `available`, not `remaining`: days already sitting
 | in pending requests are spoken for even though they have not been approved
 | yet, and counting them twice would let the balance be overdrawn.
+|
+| Declared holidays and weekly offs inside the range are not charged, and the
+| preview says how many were skipped: a five day range that costs three days
+| looks like a bug unless the reason is on screen.
 |--------------------------------------------------------------------------
 */
 
@@ -49,6 +54,7 @@ function ApplyLeaveForm({
   balance,
   onSubmit,
   submitting = false,
+  holidayDates = [],
 }) {
 
   const [requestType, setRequestType] = useState(LEAVE_REQUEST_TYPE.SINGLE_DAY);
@@ -82,6 +88,18 @@ function ApplyLeaveForm({
     fromDate,
     toDate,
     durationType,
+    holidayDates,
+  });
+
+  /*
+  | What the range covers against what it costs, so the days that were left
+  | out can be named instead of silently disappearing from the total.
+  */
+  const breakdown = getLeaveDaysBreakdown({
+    requestType,
+    fromDate,
+    toDate,
+    holidayDates,
   });
 
   const availableBalance = balance?.available ?? 0;
@@ -137,6 +155,8 @@ function ApplyLeaveForm({
       reason,
 
       availableBalance,
+
+      holidayDates,
 
     });
 
@@ -416,6 +436,33 @@ function ApplyLeaveForm({
                 </div>
 
               </div>
+
+              {/*
+              | Only shown once something was actually skipped, so a plain
+              | range is not cluttered with a line that says "nothing was
+              | excluded".
+              */}
+              {breakdown.skippedDays > 0 && (
+
+                <p className="mt-3 text-xs text-slate-500">
+                  {breakdown.totalDays} day
+                  {breakdown.totalDays === 1 ? "" : "s"} selected ·{" "}
+                  {[
+                    breakdown.holidayDays.length > 0 &&
+                      `${breakdown.holidayDays.length} holiday${
+                        breakdown.holidayDays.length === 1 ? "" : "s"
+                      }`,
+                    breakdown.weeklyOffDays.length > 0 &&
+                      `${breakdown.weeklyOffDays.length} weekly off${
+                        breakdown.weeklyOffDays.length === 1 ? "" : "s"
+                      }`,
+                  ]
+                    .filter(Boolean)
+                    .join(" and ")}{" "}
+                  not charged
+                </p>
+
+              )}
 
             </div>
 

@@ -14,11 +14,15 @@ import {
   getLeaveAttendanceStatus,
   getLeaveDateKeys,
   getLeaveRequestYear,
+  getLeaveWorkingDateKeys,
+  parseLeaveDate,
 } from "../../utils/leave/leaveUtils";
 import {
   applyLeaveAttendance,
   clearLeaveAttendance,
 } from "../attendanceServices/attendanceService";
+import { getHolidaysForYears } from "../holidayServices/holidayService";
+import { getHolidayDates } from "../../utils/holiday/holidayUtils";
 
 const DEFAULT_SETTINGS = {
   annualLeaves: 12,
@@ -188,15 +192,54 @@ const changeLeaveUsage = async (
 | released under the same id it was booked with.
 */
 
-const toAttendancePayload = (request) => ({
+const toAttendancePayload = (request, dateKeys) => ({
 
   employeeId: request?.employeeId,
 
-  dateKeys: getLeaveDateKeys(request),
+  dateKeys: dateKeys || getLeaveDateKeys(request),
 
   leaveRequestId: request?.requestId,
 
 });
+
+/*
+|--------------------------------------------------------------------------
+| Holidays Of A Request
+|--------------------------------------------------------------------------
+| The declared holidays of every year the request touches, so a range that
+| runs across new year is priced against both calendars.
+|
+| A failure here is swallowed on purpose: an unreachable holiday calendar
+| must not block an approval. The worst case is that a holiday inside the
+| range is written onto the attendance sheet as leave, which is what the
+| module did before holidays existed and is repaired the next time the
+| request is re-approved.
+*/
+
+const getRequestHolidayDates = async (companyCode, request) => {
+
+  try {
+
+    const years = [
+      parseLeaveDate(request?.fromDate)?.getFullYear(),
+      parseLeaveDate(request?.toDate)?.getFullYear(),
+    ].filter(Boolean);
+
+    if (!companyCode || years.length === 0) return [];
+
+    return getHolidayDates(
+      await getHolidaysForYears(companyCode, years)
+    );
+
+  } catch (error) {
+
+    console.error("Failed to load holidays for leave request:", error);
+
+    return [];
+
+  }
+
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -427,9 +470,22 @@ export const approveLeaveRequest = async (
 
         try {
 
+            /*
+            | Only the working days of the range are written. A declared
+            | holiday inside it was never charged to the balance, so marking
+            | it "Leave" would report a day the office was closed as a day of
+            | leave and count it twice.
+            */
+
+            const holidayDates =
+                await getRequestHolidayDates(companyCode, request);
+
+            const workingDateKeys =
+                getLeaveWorkingDateKeys(request, holidayDates);
+
             await applyLeaveAttendance(companyCode, {
 
-                ...toAttendancePayload(request),
+                ...toAttendancePayload(request, workingDateKeys),
 
                 status: getLeaveAttendanceStatus(request),
 

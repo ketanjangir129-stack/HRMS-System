@@ -24,6 +24,7 @@ import AttendanceReports from "../pages/attendance/AttendanceReports";
 import AttendanceSettings from "../pages/attendance/AttendanceSettings";
 import LeaveDashboard from "../pages/leave/LeaveDashboard";
 import LeaveApprovals from "../pages/leave/LeaveApprovals";
+import HolidayDashboard from "../pages/holiday/HolidayDashboard";
 import EmployeeOnboarding from "../pages/onboarding/EmployeeOnboarding/EmployeeOnboarding";
 import SalaryDashboard from "../pages/salary/SalaryDashBoard";
 import SalaryCRUD from "../pages/salary/SalaryCRUD";
@@ -82,6 +83,9 @@ function AppRoutes(){
                 {/* Leave Management Routing */}
                 <Route path="/leave" element={<LeaveDashboard />} />
                 <Route path="/leave/approvals" element={<LeaveApprovals />} />
+
+                {/* Holiday Management Routing */}
+                <Route path="/holidays" element={<HolidayDashboard />} />
 
                 {/* Salary Routing */}
                 <Route path="/salarydashboard" element={<SalaryDashboard />} />

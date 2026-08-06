@@ -23,19 +23,25 @@ const LEGEND = [
   { label: "Late", color: "bg-amber-500" },
   { label: "Absent", color: "bg-red-500" },
   { label: "Leave", color: "bg-blue-500" },
+  { label: "Holiday", color: "bg-teal-500" },
 ];
 
 function AttendanceCalendar({
   history = [],
+  holidayDates = [],
   loading = false,
   onMonthChange,
 }) {
 
   const [value, setValue] = useState(() => new Date());
 
+  /*
+  | Declared holidays are drawn under the records, so a day the office was
+  | closed reads as a holiday instead of as a gap in the month.
+  */
   const attendanceByDate = useMemo(
-    () => getAttendanceCalendar(history),
-    [history]
+    () => getAttendanceCalendar(history, holidayDates),
+    [history, holidayDates]
   );
 
   const handleActiveStartDateChange = ({ activeStartDate, view }) => {

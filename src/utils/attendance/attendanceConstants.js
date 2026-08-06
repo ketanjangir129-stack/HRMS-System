@@ -20,6 +20,13 @@ export const ATTENDANCE_STATUS = {
   ABSENT: "Absent",
   LEAVE: "Leave",
   HALF_DAY: "Half Day",
+  /*
+  | A declared company holiday. Never stored on a record and never offered in
+  | the manual attendance form: it is derived from the holiday calendar for a
+  | day that has no record, so a day the office was closed is not reported as
+  | an absence.
+  */
+  HOLIDAY: "Holiday",
 };
 
 export const ATTENDANCE_STATUS_OPTIONS = [
@@ -36,6 +43,7 @@ export const STATUS_BADGES = {
   [ATTENDANCE_STATUS.ABSENT]: "bg-red-50 text-red-700 ring-red-200",
   [ATTENDANCE_STATUS.LEAVE]: "bg-blue-50 text-blue-700 ring-blue-200",
   [ATTENDANCE_STATUS.HALF_DAY]: "bg-purple-50 text-purple-700 ring-purple-200",
+  [ATTENDANCE_STATUS.HOLIDAY]: "bg-teal-50 text-teal-700 ring-teal-200",
 };
 
 export const STATUS_DOTS = {
@@ -44,6 +52,7 @@ export const STATUS_DOTS = {
   [ATTENDANCE_STATUS.ABSENT]: "bg-red-500",
   [ATTENDANCE_STATUS.LEAVE]: "bg-blue-500",
   [ATTENDANCE_STATUS.HALF_DAY]: "bg-purple-500",
+  [ATTENDANCE_STATUS.HOLIDAY]: "bg-teal-500",
 };
 
 export const FALLBACK_BADGE = "bg-slate-100 text-slate-700 ring-slate-200";

@@ -9,9 +9,11 @@ import { MonthNavigator } from "../../components/attendance/common/AttendancePan
 import DepartmentReportTable from "../../components/attendance/reports/DepartmentReportTable";
 import EmployeeReportTable from "../../components/attendance/reports/EmployeeReportTable";
 import ReportTabs from "../../components/attendance/reports/ReportTabs";
+import HolidayNotice from "../../components/holiday/HolidayNotice";
 import useAuth from "../../hooks/useAuth";
 import useDailyAttendance from "../../hooks/useDailyAttendance";
 import useEmployeeDirectory from "../../hooks/useEmployeeDirectory";
+import useHolidayDates from "../../hooks/useHolidayDates";
 import useMonthlyAttendance from "../../hooks/useMonthlyAttendance";
 import { REPORT_TYPE } from "../../utils/attendance/attendanceConstants";
 import {
@@ -35,9 +37,13 @@ import {
 | Attendance Reports
 |--------------------------------------------------------------------------
 | Daily, monthly, employee and department reports over one shared data load:
-| the employee directory plus either the selected day or the selected month.
-| Every table is derived from that with the attendance utilities, so nothing
-| is fetched or calculated twice.
+| the employee directory, the holiday calendar, plus either the selected day
+| or the selected month. Every table is derived from that with the attendance
+| utilities, so nothing is fetched or calculated twice.
+|
+| Holidays are left out of every total: a day the office was closed is not a
+| working day, so it neither counts against an attendance rate nor turns into
+| an absence on the day by day report.
 |
 | Search comes from the header search bar.
 |--------------------------------------------------------------------------
@@ -94,6 +100,24 @@ function AttendanceReports() {
     month
   );
 
+  /*
+  | The daily tab reads the selected day's year, the other three read the
+  | month's. Both are requested together so switching tabs does not refetch.
+  */
+  const {
+    holidayDates,
+    holidayMap,
+    reload: reloadHolidays,
+  } = useHolidayDates(
+    companyCode,
+    useMemo(
+      () => [Number(String(date).slice(0, 4)), year],
+      [date, year]
+    )
+  );
+
+  const selectedDayHoliday = holidayMap[date] || null;
+
   useEffect(() => {
     setSearchPlaceholder("Search by employee, ID or department...");
 
@@ -120,8 +144,8 @@ function AttendanceReports() {
   );
 
   const monthlyRows = useMemo(
-    () => buildMonthlyReport(directory, monthRecords),
-    [directory, monthRecords]
+    () => buildMonthlyReport(directory, monthRecords, holidayDates),
+    [directory, monthRecords, holidayDates]
   );
 
   const departmentRows = useMemo(
@@ -135,18 +159,21 @@ function AttendanceReports() {
         ? buildEmployeeReport(
           selectedEmployeeId,
           monthRecords,
-          getMonthDateKeys(year, month)
+          getMonthDateKeys(year, month),
+          holidayMap
         )
         : [],
-    [selectedEmployeeId, monthRecords, year, month]
+    [selectedEmployeeId, monthRecords, year, month, holidayMap]
   );
 
   const summary = useMemo(
     () =>
       isDaily
-        ? getAttendanceSummary(dailyRows, activeCount)
+        ? getAttendanceSummary(dailyRows, activeCount, {
+          isHoliday: Boolean(selectedDayHoliday),
+        })
         : getMonthlySummary(monthlyRows),
-    [isDaily, dailyRows, activeCount, monthlyRows]
+    [isDaily, dailyRows, activeCount, monthlyRows, selectedDayHoliday]
   );
 
   const employees = useMemo(
@@ -177,6 +204,7 @@ function AttendanceReports() {
   const reloadMonthly = () => {
     reloadDirectory();
     reloadMonth();
+    reloadHolidays();
   };
 
   const monthToolbar = (
@@ -224,6 +252,11 @@ function AttendanceReports() {
 
             </div>
 
+            <HolidayNotice
+              holiday={selectedDayHoliday}
+              label="The selected day"
+            />
+
             <AttendanceRecordsTable
               records={dailyRows}
               loading={directoryLoading || dayLoading}
@@ -234,7 +267,11 @@ function AttendanceReports() {
               title="Daily Report"
               subtitle="Punch in and punch out for the selected day"
               exportName={`daily-attendance-${date}`}
-              emptyMessage="No attendance was recorded on this day."
+              emptyMessage={
+                selectedDayHoliday
+                  ? `The office was closed for ${selectedDayHoliday.name}, so no attendance was expected.`
+                  : "No attendance was recorded on this day."
+              }
             />
           </>
         )}

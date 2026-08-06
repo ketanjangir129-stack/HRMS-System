@@ -10,6 +10,7 @@ import LeaveHistoryTable from "../../components/leave/LeaveHistoryTable";
 import LeaveRequestDetailModal from "../../components/leave/LeaveRequestDetailModal";
 import RecentLeaveRequests from "../../components/leave/RecentLeaveRequests";
 import useAuth from "../../hooks/useAuth";
+import useHolidayDates from "../../hooks/useHolidayDates";
 import useLeaveBalance from "../../hooks/useLeaveBalance";
 import useLeaveRequests from "../../hooks/useLeaveRequests";
 import {
@@ -37,6 +38,10 @@ import {
 | pending requests are computed here and handed to the balance hook. Without
 | that an employee could apply twice for the same days before either request
 | was reviewed.
+|
+| The holiday calendar is loaded here as well and handed to the apply modal,
+| which prices a range against it: a day the company has declared closed is
+| not charged to the balance.
 |--------------------------------------------------------------------------
 */
 
@@ -102,6 +107,19 @@ function LeaveDashboard() {
         pendingDays
     );
 
+    /*
+    | The selected year and the one after it: a range applied for in late
+    | December runs into January, and both calendars have to be known before
+    | the days can be priced.
+    */
+    const {
+        holidayDates,
+        reload: reloadHolidays,
+    } = useHolidayDates(
+        companyCode,
+        useMemo(() => [year, year + 1], [year])
+    );
+
     const pendingCount = useMemo(
         () => requests.filter(isPendingLeave).length,
         [requests]
@@ -112,6 +130,7 @@ function LeaveDashboard() {
     const handleRefresh = () => {
         reloadBalance();
         reloadRequests();
+        reloadHolidays();
     };
 
     /*
@@ -259,6 +278,7 @@ function LeaveDashboard() {
                 balance={balance}
                 onSubmit={handleApply}
                 submitting={submitting}
+                holidayDates={holidayDates}
             />
 
             <LeaveRequestDetailModal
