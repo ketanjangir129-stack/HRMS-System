@@ -279,15 +279,15 @@ function AttendanceDashboard() {
           />
         </div>
 
-        <div className="xl:col-span-4">
-          <AttendanceAnalytics analytics={analytics} />
-        </div>
-
-        <div className="lg:col-span-2 xl:col-span-4">
+         <div className="lg:col-span-2 xl:col-span-4 self-start">
           <AttendanceRecentActivity
             activities={activities}
             loading={attendanceLoading || directoryLoading}
           />
+        </div>
+
+        <div className="xl:col-span-4 self-start">
+          <AttendanceAnalytics analytics={analytics} />
         </div>
 
       </div>
@@ -295,7 +295,7 @@ function AttendanceDashboard() {
       {/* Requests */}
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-12">
 
-        <div className="xl:col-span-7">
+        <div className="xl:col-span-12 self-start">
           <AttendanceRequests
             requests={detailedRequests}
             loading={requestsLoading || directoryLoading}

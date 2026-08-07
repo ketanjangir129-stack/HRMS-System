@@ -1,6 +1,7 @@
 import Loader from "../common/Loader";
 import DepartmentCard from "./DepartmentCard";
 import { FiGrid, FiSearch } from "react-icons/fi";
+import DepartmentSkeleton from "../../components/skeletons/DepartmentSkeleton";
 
 function DepartmentList({
     departments,
@@ -16,9 +17,7 @@ function DepartmentList({
 
     if (loading) {
         return (
-            <div className="flex justify-center items-center h-96">
-                <Loader text="Loading Departments"/>
-            </div>
+            <DepartmentSkeleton />
         );
     }
 

@@ -4,7 +4,7 @@ import { useNavigate,useOutletContext } from "react-router-dom";
 import { searchEmployees } from "../utils/search/searchEmployees";
 import Loader from "../components/common/Loader";
 import { UserPlus } from "lucide-react";
- 
+
 function Employees() {
     const navigate = useNavigate();
     const companyCode = localStorage.getItem("companyCode");
