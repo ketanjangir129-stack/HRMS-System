@@ -23,6 +23,10 @@ import {
 } from "../attendanceServices/attendanceService";
 import { getHolidaysForYears } from "../holidayServices/holidayService";
 import { getHolidayDates } from "../../utils/holiday/holidayUtils";
+import {
+  getDateKey,
+  getMonthPath,
+} from "../../utils/attendance/attendanceDate";
 
 const DEFAULT_SETTINGS = {
   annualLeaves: 12,
@@ -32,6 +36,54 @@ const DEFAULT_SETTINGS = {
 };
 
 /*
+|--------------------------------------------------------------------------
+| Where A Request Lives
+|--------------------------------------------------------------------------
+| companies/{companyCode}/leave/requests/{year}/{Month}/{appliedDate}/{employeeId}
+|
+| Keyed the way an attendance record is: a year, a month, a date, then the
+| employee. The date here is the day the request was raised, not the days it
+| asks for, because a request can span a range and only one node holds it.
+|
+| One employee therefore has one request per day of applying: applying twice
+| on the same day replaces the earlier request.
+|
+| `appliedDate` is stored on the request as well as being its key. Deriving it
+| from `requestedAt` on every read would rebuild the key from a timestamp in
+| whatever timezone the reader happens to be in, and a request raised late in
+| the evening would then be looked for under the wrong day.
+|
+| The year and month are not stored: they are the nodes the request lives in,
+| and deriving them from `appliedDate` is the only way they can never
+| disagree.
+*/
+
+const requestsPath = (companyCode) =>
+  `companies/${companyCode}/leave/requests`;
+
+const requestPath = (companyCode, appliedDate, employeeId) =>
+  `${requestsPath(companyCode)}/${getMonthPath(appliedDate)}/${appliedDate}/${employeeId}`;
+
+/*
+| The address of a request. Requests written before this tree was keyed by
+| date have no `appliedDate`, so it falls back to the day they were raised.
+*/
+
+const requestKeys = (request) => ({
+
+  appliedDate:
+    request?.appliedDate ||
+    (request?.requestedAt ? getDateKey(request.requestedAt) : ""),
+
+  employeeId: request?.employeeId,
+
+});
+
+/*
+| The id stays a field of the request rather than its key: nothing addresses a
+| request by it any more, but it is what links an approved leave to the
+| attendance days it booked, and that link has to stay unique per request.
+|
 | Push keys are generated from the timestamp plus a random component, so two
 | people applying in the same millisecond cannot end up with the same id.
 */
@@ -41,7 +93,7 @@ const generateLeaveRequestId = (companyCode) => {
   const key = push(
     ref(
       db,
-      `companies/${companyCode}/leave/requests`
+      requestsPath(companyCode)
     )
   ).key;
 
@@ -254,14 +306,33 @@ export const createLeaveRequest = async (
 
     try {
 
+        const employeeId = request?.employeeId;
+
+        /*
+        | The employee is half the address now, so a request without one is
+        | refused here instead of being written to a path that would overwrite
+        | the whole day.
+        */
+
+        if (!employeeId) {
+            return {
+                success: false,
+                message: "An employee is required to raise a leave request.",
+            };
+        }
+
         const requestId =
             generateLeaveRequestId(companyCode);
+
+        const requestedAt = Date.now();
+
+        const appliedDate = getDateKey(requestedAt);
 
         await set(
 
             ref(
                 db,
-                `companies/${companyCode}/leave/requests/${requestId}`
+                requestPath(companyCode, appliedDate, employeeId)
             ),
 
             {
@@ -269,9 +340,11 @@ export const createLeaveRequest = async (
 
                 ...request,
 
+                appliedDate,
+
                 status: LEAVE_STATUS.PENDING,
 
-                requestedAt: Date.now(),
+                requestedAt,
 
                 approvedBy: "",
 
@@ -303,6 +376,9 @@ export const createLeaveRequest = async (
 |--------------------------------------------------------------------------
 | Get Leave Requests
 |--------------------------------------------------------------------------
+| The year, month and date buckets are flattened away here: every page above
+| works on a plain list of requests and none of them cares which node a
+| request is filed under.
 */
 
 export const getLeaveRequests = async (
@@ -315,7 +391,7 @@ export const getLeaveRequests = async (
 
             ref(
                 db,
-                `companies/${companyCode}/leave/requests`
+                requestsPath(companyCode)
             )
 
         );
@@ -326,6 +402,12 @@ export const getLeaveRequests = async (
 
         return Object.values(
             snapshot.val()
+        ).flatMap(
+            (months) => Object.values(months || {}).flatMap(
+                (dates) => Object.values(dates || {}).flatMap(
+                    (employees) => Object.values(employees || {})
+                )
+            )
         );
 
     } catch (error) {
@@ -372,22 +454,20 @@ export const approveLeaveRequest = async (
 
     try {
 
-        const requestId = request?.requestId;
+        const { appliedDate, employeeId } = requestKeys(request);
 
-        if (!requestId) {
+        if (!getMonthPath(appliedDate) || !employeeId) {
             return {
                 success: false,
                 message: "Leave request not found.",
             };
         }
 
-        const employeeId = request?.employeeId;
-
         const year = getLeaveRequestYear(request);
 
         const days = Number(request?.days) || 0;
 
-        if (!employeeId || !year || days <= 0) {
+        if (!year || days <= 0) {
             return {
                 success: false,
                 message: "This leave request is incomplete and cannot be approved.",
@@ -396,7 +476,7 @@ export const approveLeaveRequest = async (
 
         const requestRef = ref(
             db,
-            `companies/${companyCode}/leave/requests/${requestId}`
+            requestPath(companyCode, appliedDate, employeeId)
         );
 
         const snapshot = await get(requestRef);
@@ -537,16 +617,25 @@ export const approveLeaveRequest = async (
 
 export const rejectLeaveRequest = async (
     companyCode,
-    requestId,
+    request,
     approver,
     remarks
 ) => {
 
     try {
 
+        const { appliedDate, employeeId } = requestKeys(request);
+
+        if (!getMonthPath(appliedDate) || !employeeId) {
+            return {
+                success: false,
+                message: "Leave request not found.",
+            };
+        }
+
         const requestRef = ref(
             db,
-            `companies/${companyCode}/leave/requests/${requestId}`
+            requestPath(companyCode, appliedDate, employeeId)
         );
 
         const snapshot = await get(requestRef);
@@ -608,9 +697,9 @@ export const deleteLeaveRequest = async (
 
     try {
 
-        const requestId = request?.requestId;
+        const { appliedDate, employeeId } = requestKeys(request);
 
-        if (!requestId) {
+        if (!getMonthPath(appliedDate) || !employeeId) {
             return {
                 success: false,
                 message: "Leave request not found.",
@@ -641,7 +730,7 @@ export const deleteLeaveRequest = async (
 
             ref(
                 db,
-                `companies/${companyCode}/leave/requests/${requestId}`
+                requestPath(companyCode, appliedDate, employeeId)
             )
 
         );
@@ -652,11 +741,11 @@ export const deleteLeaveRequest = async (
 
             const days = Number(request?.days) || 0;
 
-            if (request.employeeId && year && days > 0) {
+            if (year && days > 0) {
 
                 await changeLeaveUsage(
                     companyCode,
-                    request.employeeId,
+                    employeeId,
                     year,
                     -days
                 );

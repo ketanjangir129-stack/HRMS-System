@@ -128,7 +128,7 @@ function AttendanceRequests() {
     try {
 
       const result = editRequest
-        ? await update(editRequest.requestId, payload)
+        ? await update(editRequest, payload)
         : await create(payload);
 
       if (!result?.success) {
@@ -194,14 +194,14 @@ function AttendanceRequests() {
 
   const handleReject = async (remarks) => {
 
-    if (!rejectRequest?.requestId) return;
+    if (!rejectRequest) return;
 
     setRejecting(true);
 
     try {
 
       const result = await reject(
-        rejectRequest.requestId,
+        rejectRequest,
         actorName,
         remarks
       );
@@ -236,11 +236,11 @@ function AttendanceRequests() {
 
   const handleDelete = async () => {
 
-    if (!deleteRequest?.requestId) return;
+    if (!deleteRequest) return;
 
     try {
 
-      const result = await remove(deleteRequest.requestId);
+      const result = await remove(deleteRequest);
 
       if (!result?.success) {
         toast.error(result?.message || "Failed to delete request.");

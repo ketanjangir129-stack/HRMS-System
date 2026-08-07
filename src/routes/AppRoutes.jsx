@@ -18,6 +18,7 @@ import ReviewOnboarding from "../pages/onboarding/ReviewOnboarding"
 import AttendanceDashboard from "../pages/attendance/AttendanceDashboard";
 import DailyAttendance from "../pages/attendance/DailyAttendance";
 import MonthlyAttendance from "../pages/attendance/MonthlyAttendance";
+import MyAttendance from "../pages/attendance/MyAttendance";
 import AttendanceRequests from "../pages/attendance/AttendanceRequests";
 import Regularization from "../pages/attendance/Regularization";
 import AttendanceReports from "../pages/attendance/AttendanceReports";
@@ -74,6 +75,7 @@ function AppRoutes(){
                 {/* Attendance Routing */}
                 <Route path="/attendance" element={<AttendanceDashboard />} />
                 <Route path="/attendance/daily" element={<DailyAttendance />} />
+                <Route path="/attendance/my" element={<MyAttendance />} />
                 <Route path="/attendance/monthly" element={<MonthlyAttendance />} />
                 <Route path="/attendance/requests" element={<AttendanceRequests />} />
                 <Route path="/attendance/regularization" element={<Regularization />} />

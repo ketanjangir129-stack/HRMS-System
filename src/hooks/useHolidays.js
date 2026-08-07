@@ -6,10 +6,7 @@ import {
   getHolidays,
   updateHoliday as updateHolidayRecord,
 } from "../services/holidayServices/holidayService";
-import {
-  getHolidayYear,
-  sortHolidays,
-} from "../utils/holiday/holidayUtils";
+import { sortHolidays } from "../utils/holiday/holidayUtils";
 
 /*
 |--------------------------------------------------------------------------
@@ -139,19 +136,17 @@ function useHolidays(companyCode, year) {
   |--------------------------------------------------------------------------
   | Update Holiday
   |--------------------------------------------------------------------------
-  | The year the record currently lives under is derived from the holiday
-  | being edited, not from the year on screen: they are the same today, but
-  | reading it from the record is what keeps a move to another year correct.
+  | The date the record currently lives under is read from the holiday being
+  | edited, not from the screen: it is what decides the year and month nodes
+  | the record sits in today, and so what keeps a move to another month or
+  | year correct.
   */
 
   const updateHoliday = async (holiday, updates) => {
 
-    const currentYear =
-      getHolidayYear(holiday?.date) || year;
-
     const result = await updateHolidayRecord(
       companyCode,
-      currentYear,
+      holiday?.date,
       holiday?.holidayId,
       updates
     );
@@ -172,12 +167,9 @@ function useHolidays(companyCode, year) {
 
   const deleteHoliday = async (holiday) => {
 
-    const currentYear =
-      getHolidayYear(holiday?.date) || year;
-
     const result = await deleteHolidayRecord(
       companyCode,
-      currentYear,
+      holiday?.date,
       holiday?.holidayId
     );
 

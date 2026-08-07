@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { FiClock } from "react-icons/fi";
-import { useOutletContext } from "react-router-dom";
+import { FiClock, FiLock, FiUser } from "react-icons/fi";
+import { Link, useOutletContext } from "react-router-dom";
 import AttendancePageHeader from "../../components/attendance/AttendancePageHeader";
 import AttendanceSummaryCards from "../../components/attendance/AttendanceSummaryCards";
 import MonthlyAttendanceTable from "../../components/attendance/MonthlyAttendanceTable";
@@ -12,6 +12,7 @@ import {
   getMonthLabel,
   shiftMonth,
 } from "../../utils/attendance/attendanceDate";
+import { isApprover } from "../../utils/attendance/attendanceRequestUtils";
 import {
   buildMonthlyReport,
   getMonthlySummary,
@@ -24,6 +25,14 @@ import {
 | Company wide totals per employee for the selected month. Search comes from
 | the header search bar.
 |
+| The whole company's month is on this page, so it is only opened for the
+| roles that are meant to see it. Everyone else has their own month on
+| `/attendance/my`.
+|
+| The restriction is not only a screen: the company code is withheld from
+| the three hooks below, so an employee who reaches this route never fetches
+| the directory or anybody else's records in the first place.
+|
 | Declared holidays are left out of the totals: a day the office was closed
 | is not a working day, and counting it would drag every attendance rate down
 | by a day nobody was expected in.
@@ -32,9 +41,11 @@ import {
 
 function MonthlyAttendance() {
 
-  const { company } = useAuth();
+  const { company, currentUser } = useAuth();
 
-  const companyCode = company?.companyCode;
+  const canView = isApprover(currentUser);
+
+  const companyCode = canView ? company?.companyCode : "";
 
   const { search, setSearch, setSearchPlaceholder } = useOutletContext();
 
@@ -98,6 +109,57 @@ function MonthlyAttendance() {
     reloadRecords();
     reloadHolidays();
   };
+
+  /*
+  |--------------------------------------------------------------------------
+  | Access
+  |--------------------------------------------------------------------------
+  | Rather than a dead end, the employee is pointed at the page that answers
+  | what they came here for: their own month.
+  */
+
+  if (!canView) {
+
+    return (
+
+      <div className="p-2">
+
+        <AttendancePageHeader
+          title="Monthly Attendance"
+          subtitle="Company-wide monthly attendance"
+          icon={<FiClock />}
+        />
+
+        <div className="mt-6 flex flex-col items-center justify-center rounded-2xl border border-slate-200 bg-white px-6 py-20 text-center shadow-sm">
+
+          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-amber-50 text-amber-600">
+            <FiLock size={28} />
+          </div>
+
+          <h3 className="mt-5 text-xl font-semibold text-slate-900">
+            Monthly attendance is restricted
+          </h3>
+
+          <p className="mt-2 max-w-sm text-sm text-slate-500">
+            Only HR and the company owner can see every employee's month. Your
+            own attendance is on My Attendance.
+          </p>
+
+          <Link
+            to="/attendance/my"
+            className="mt-6 inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-md shadow-blue-600/20 transition-all duration-200 hover:-translate-y-0.5 hover:bg-blue-700 hover:shadow-lg hover:shadow-blue-600/30"
+          >
+            <FiUser />
+            View My Attendance
+          </Link>
+
+        </div>
+
+      </div>
+
+    );
+
+  }
 
   return (
     <div className="p-2">

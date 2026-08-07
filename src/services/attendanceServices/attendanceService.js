@@ -5,14 +5,11 @@ import {
   set,
   update,
   onValue,
-  query,
-  orderByKey,
-  startAt,
-  endAt,
 } from "firebase/database";
 import {
   getDateKey,
-  getMonthPrefix,
+  getMonthPath,
+  getMonthNode,
   formatTime,
 } from "../../utils/attendance/attendanceDate";
 import {
@@ -32,15 +29,32 @@ import { ATTENDANCE_STATUS } from "../../utils/attendance/attendanceConstants";
 | `companies/{companyCode}/employees/{employeeId}` whenever a name, department
 | or designation has to be shown.
 |
-| companies/{companyCode}/attendance/records/{YYYY-MM-DD}/{employeeId}
+| companies/{companyCode}/attendance/records/{year}/{Month}/{YYYY-MM-DD}/{employeeId}
+|
+| The year and the month a day belongs to are nodes of their own, so a month
+| of attendance is one read of one node. Neither is ever stored on a record:
+| they are the nodes the record lives in, and deriving them from the date is
+| the only way they can never disagree.
+|
+| The day itself stays a full `YYYY-MM-DD` key rather than a day number, so a
+| month reads back as `{ [date]: { [employeeId]: record } }` and every report
+| that looks a day up by its date key keeps working unchanged.
 |--------------------------------------------------------------------------
 */
 
 const recordsPath = (companyCode) =>
   `companies/${companyCode}/attendance/records`;
 
+/*
+| The path of one day, relative to the records root. Every write below goes
+| through here, so the month node is decided in exactly one place.
+*/
+
+const dayPath = (date, employeeId) =>
+  `${getMonthPath(date)}/${date}/${employeeId}`;
+
 const recordPath = (companyCode, date, employeeId) =>
-  `${recordsPath(companyCode)}/${date}/${employeeId}`;
+  `${recordsPath(companyCode)}/${dayPath(date, employeeId)}`;
 
 /*
 | Firebase rejects `undefined`, so every field is written explicitly.
@@ -86,25 +100,16 @@ const buildAttendanceRecord = ({
 /*
 | Every record of a single month as `{ [date]: { [employeeId]: record } }`.
 |
-| Date keys are ordered, so the month is selected with a key range instead of
-| downloading the whole records tree. `\uf8ff` is the highest code point
-| Firebase orders on and makes the range cover every day of the prefix.
+| A month is a node, so it is read directly. This used to be a key range over
+| the whole records tree, which had to be ordered and filtered by Firebase on
+| every read; now the month is simply fetched.
 */
 
-const MONTH_RANGE_END = "\uf8ff";
-
-const monthQuery = (companyCode, year, month) => {
-
-  const prefix = getMonthPrefix(year, month);
-
-  return query(
-    ref(db, recordsPath(companyCode)),
-    orderByKey(),
-    startAt(prefix),
-    endAt(`${prefix}${MONTH_RANGE_END}`)
+const monthRef = (companyCode, year, month) =>
+  ref(
+    db,
+    `${recordsPath(companyCode)}/${getMonthNode(year, month)}`
   );
-
-};
 
 export const getMonthlyAttendanceRecords = async (
   companyCode,
@@ -113,7 +118,7 @@ export const getMonthlyAttendanceRecords = async (
 ) => {
 
   const snapshot = await get(
-    monthQuery(companyCode, year, month)
+    monthRef(companyCode, year, month)
   );
 
   return snapshot.exists() ? snapshot.val() : {};
@@ -136,7 +141,10 @@ export const subscribeToDailyAttendance = (
   onError
 ) =>
   onValue(
-    ref(db, `${recordsPath(companyCode)}/${date}`),
+    ref(
+      db,
+      `${recordsPath(companyCode)}/${getMonthPath(date)}/${date}`
+    ),
     (snapshot) => {
       onData(
         snapshot.exists() ? Object.values(snapshot.val()) : []
@@ -173,7 +181,7 @@ export const subscribeToEmployeeAttendanceHistory = (
   onError
 ) =>
   onValue(
-    monthQuery(companyCode, year, month),
+    monthRef(companyCode, year, month),
     (snapshot) => {
 
       const history = [];
@@ -583,7 +591,7 @@ export const applyLeaveAttendance = async (
 
     if (current?.leaveRequestId === leaveRequestId) return;
 
-    updates[`${date}/${employeeId}`] = {
+    updates[dayPath(date, employeeId)] = {
 
       ...buildAttendanceRecord({
         employeeId,
@@ -647,7 +655,7 @@ export const clearLeaveAttendance = async (
 
     if (current?.leaveRequestId !== leaveRequestId) return;
 
-    const path = `${date}/${employeeId}`;
+    const path = dayPath(date, employeeId);
 
     /*
     | A day with a punch in was a real day of attendance before the leave was

@@ -186,7 +186,7 @@ function LeaveDashboard() {
 
     const handleDelete = async () => {
 
-        if (!deleteRequest?.requestId) return;
+        if (!deleteRequest) return;
 
         try {
 

@@ -175,11 +175,14 @@ function useLeaveRequests(
   |--------------------------------------------------------------------------
   | Reject Request
   |--------------------------------------------------------------------------
+  | Requests are stored under the day they were raised and the employee who
+  | raised them, so the request itself is passed on rather than only its id:
+  | those two fields are what locates it.
   */
 
   const rejectRequest =
     async (
-      requestId,
+      request,
       approver,
       remarks
     ) => {
@@ -187,7 +190,7 @@ function useLeaveRequests(
       const result =
         await rejectLeaveRequest(
           companyCode,
-          requestId,
+          request,
           approver,
           remarks
         );

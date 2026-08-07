@@ -5,18 +5,34 @@ import {
   FiCalendar,
 } from "react-icons/fi";
 
+/*
+| The cards count employees on the company wide views and days on an
+| employee's own month, so the captions are overridable. Leaving them out
+| keeps the wording every existing screen already shows.
+*/
+
+const DEFAULT_SUBTITLES = {
+  present: "Employees Present",
+  absent: "Employees Absent",
+  late: "Late Arrivals",
+  leave: "Employees On Leave",
+};
+
 function AttendanceSummaryCards({
   summary,
   gridClassName = "grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-4",
   compact = false,
+  subtitles,
 }) {
+
+  const caption = { ...DEFAULT_SUBTITLES, ...subtitles };
 
   const cards = [
     {
       title: "Present",
       value: summary.present,
       percentage: summary.presentPercentage,
-      subtitle: "Employees Present",
+      subtitle: caption.present,
       icon: <FiCheckCircle />,
       iconBg: "bg-emerald-50",
       iconColor: "text-emerald-600",
@@ -26,7 +42,7 @@ function AttendanceSummaryCards({
       title: "Absent",
       value: summary.absent,
       percentage: summary.absentPercentage,
-      subtitle: "Employees Absent",
+      subtitle: caption.absent,
       icon: <FiXCircle />,
       iconBg: "bg-red-50",
       iconColor: "text-red-600",
@@ -36,7 +52,7 @@ function AttendanceSummaryCards({
       title: "Late",
       value: summary.late,
       percentage: summary.latePercentage,
-      subtitle: "Late Arrivals",
+      subtitle: caption.late,
       icon: <FiClock />,
       iconBg: "bg-amber-50",
       iconColor: "text-amber-600",
@@ -46,7 +62,7 @@ function AttendanceSummaryCards({
       title: "On Leave",
       value: summary.leave,
       percentage: summary.leavePercentage,
-      subtitle: "Employees On Leave",
+      subtitle: caption.leave,
       icon: <FiCalendar />,
       iconBg: "bg-blue-50",
       iconColor: "text-blue-600",

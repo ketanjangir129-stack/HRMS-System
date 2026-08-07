@@ -9,6 +9,7 @@ import {
 } from "firebase/database";
 import {
   getDateKey,
+  getMonthPath,
   parseDateKey,
 } from "../../utils/attendance/attendanceDate";
 import {
@@ -26,12 +27,17 @@ import { getHolidayYear } from "../../utils/holiday/holidayUtils";
 |--------------------------------------------------------------------------
 | The only place that talks to the holiday branch of the database.
 |
-| companies/{companyCode}/holidays/{year}/{holidayId}
+| companies/{companyCode}/holidays/{year}/{Month}/{holidayId}
 |
-| Holidays are filed under the year they fall in, so a dashboard only ever
-| downloads the year it is showing instead of the whole history. The year is
-| never stored on the record: it is the node the record lives in, and deriving
-| it from the date is the only way the two can never disagree.
+| Holidays are filed under the year they fall in and then under their month,
+| so a dashboard only ever downloads the year it is showing instead of the
+| whole history, and a single month can be read on its own. Neither the year
+| nor the month is stored on the record: they are the nodes the record lives
+| in, and deriving them from the date is the only way they can never disagree.
+|
+| The year stays the outer node because everything that reads this tree - the
+| table, the calendar, the upcoming list and every leave range - wants a whole
+| year at once, and that has to stay one read.
 |
 | Every write goes through `validateHolidayInput` first and then through the
 | duplicate check, because a second holiday on the same date would be counted
@@ -45,8 +51,24 @@ const holidaysPath = (companyCode) =>
 const yearPath = (companyCode, year) =>
   `${holidaysPath(companyCode)}/${year}`;
 
-const holidayPath = (companyCode, year, holidayId) =>
-  `${yearPath(companyCode, year)}/${holidayId}`;
+/*
+| A holiday is addressed by its date, because the date is what decides both
+| the year and the month node it is filed under.
+*/
+
+const holidayPath = (companyCode, date, holidayId) =>
+  `${holidaysPath(companyCode)}/${getMonthPath(date)}/${holidayId}`;
+
+/*
+| Every holiday of a year, flattened out of its month nodes. The duplicate
+| check and every read below work on a plain list, so none of them has to know
+| the tree is nested.
+*/
+
+const flattenYear = (months) =>
+  Object.values(months || {}).flatMap(
+    (holidays) => Object.values(holidays || {})
+  );
 
 /*
 | Push keys are generated from the timestamp plus a random component, so two
@@ -189,13 +211,13 @@ const normalizeName = (value = "") =>
     .replace(/\s+/g, " ");
 
 const findDuplicate = (
-  holidays = {},
+  holidays = [],
   { date, name, ignoreId }
 ) => {
 
   const nameKey = normalizeName(name);
 
-  const clash = Object.values(holidays).find((holiday) => {
+  const clash = holidays.find((holiday) => {
 
     if (holiday?.holidayId === ignoreId) return false;
 
@@ -290,7 +312,7 @@ export const createHoliday = async (
     );
 
     const duplicate = findDuplicate(
-      snapshot.exists() ? snapshot.val() : {},
+      flattenYear(snapshot.val()),
       { date, name: holiday.name }
     );
 
@@ -304,7 +326,7 @@ export const createHoliday = async (
     const holidayId = generateHolidayId(companyCode);
 
     await set(
-      ref(db, holidayPath(companyCode, year, holidayId)),
+      ref(db, holidayPath(companyCode, date, holidayId)),
       buildHolidayRecord({
         ...holiday,
         holidayId,
@@ -334,22 +356,26 @@ export const createHoliday = async (
 |--------------------------------------------------------------------------
 | Get Holiday
 |--------------------------------------------------------------------------
+| The date says which year and which month node to look in, so a single
+| holiday is still answered without walking the tree.
 */
 
 export const getHoliday = async (
   companyCode,
-  year,
+  date,
   holidayId
 ) => {
 
   try {
+
+    const year = getHolidayYear(date);
 
     if (!companyCode || !year || !holidayId) {
       return null;
     }
 
     const snapshot = await get(
-      ref(db, holidayPath(companyCode, year, holidayId))
+      ref(db, holidayPath(companyCode, date, holidayId))
     );
 
     return snapshot.exists() ? snapshot.val() : null;
@@ -370,9 +396,10 @@ export const getHoliday = async (
 |--------------------------------------------------------------------------
 | Get Holidays
 |--------------------------------------------------------------------------
-| Every holiday of one year, as a plain array. Ordering and grouping are left
-| to the holiday utilities so the same fetch serves the table, the calendar
-| and the upcoming list.
+| Every holiday of one year, as a plain array. The month nodes are flattened
+| away here, and ordering and grouping are left to the holiday utilities, so
+| the same single read still serves the table, the calendar and the upcoming
+| list.
 */
 
 export const getHolidays = async (
@@ -394,7 +421,7 @@ export const getHolidays = async (
       return [];
     }
 
-    return Object.values(snapshot.val());
+    return flattenYear(snapshot.val());
 
   } catch (error) {
 
@@ -444,23 +471,26 @@ export const getHolidaysForYears = async (
 |--------------------------------------------------------------------------
 | Update Holiday
 |--------------------------------------------------------------------------
-| `currentYear` is the year the record lives under today, which is not always
-| the year it is being moved to: editing the date of a holiday from the 31st
-| of December to the 1st of January changes the node it belongs in.
+| `currentDate` is the date the record is filed under today, which is not
+| always the date it is being moved to: editing a holiday from the 31st of
+| January to the 1st of February changes the node it belongs in, and so does
+| any edit that crosses a new year.
 |
-| A move is written as a create in the new year followed by a remove from the
+| A move is written as a create at the new node followed by a remove from the
 | old one. Doing it in that order means a failure leaves the holiday readable
-| in both years rather than in neither, and re-saving repairs it.
+| in both places rather than in neither, and re-saving repairs it.
 */
 
 export const updateHoliday = async (
   companyCode,
-  currentYear,
+  currentDate,
   holidayId,
   updates
 ) => {
 
   try {
+
+    const currentYear = getHolidayYear(currentDate);
 
     if (!companyCode || !currentYear || !holidayId) {
       return {
@@ -480,7 +510,7 @@ export const updateHoliday = async (
 
     const currentRef = ref(
       db,
-      holidayPath(companyCode, currentYear, holidayId)
+      holidayPath(companyCode, currentDate, holidayId)
     );
 
     const snapshot = await get(currentRef);
@@ -503,7 +533,7 @@ export const updateHoliday = async (
     );
 
     const duplicate = findDuplicate(
-      yearSnapshot.exists() ? yearSnapshot.val() : {},
+      flattenYear(yearSnapshot.val()),
       {
         date,
         name: updates.name,
@@ -527,7 +557,13 @@ export const updateHoliday = async (
       createdBy: existing.createdBy,
     });
 
-    if (Number(year) === Number(currentYear)) {
+    /*
+    | The month node is what a record is addressed by, so the two dates are
+    | compared on their month rather than on their year: a move from January
+    | to February stays inside the year but still changes the node.
+    */
+
+    if (getMonthPath(date) === getMonthPath(currentDate)) {
 
       await update(currentRef, record);
 
@@ -539,7 +575,7 @@ export const updateHoliday = async (
     }
 
     await set(
-      ref(db, holidayPath(companyCode, year, holidayId)),
+      ref(db, holidayPath(companyCode, date, holidayId)),
       record
     );
 
@@ -571,11 +607,13 @@ export const updateHoliday = async (
 
 export const deleteHoliday = async (
   companyCode,
-  year,
+  date,
   holidayId
 ) => {
 
   try {
+
+    const year = getHolidayYear(date);
 
     if (!companyCode || !year || !holidayId) {
       return {
@@ -586,7 +624,7 @@ export const deleteHoliday = async (
 
     const holidayRef = ref(
       db,
-      holidayPath(companyCode, year, holidayId)
+      holidayPath(companyCode, date, holidayId)
     );
 
     const snapshot = await get(holidayRef);

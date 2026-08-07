@@ -178,14 +178,14 @@ function LeaveApprovals() {
 
   const handleReject = async (remarks) => {
 
-    if (!rejectRequest?.requestId) return;
+    if (!rejectRequest) return;
 
     setRejecting(true);
 
     try {
 
       const result = await rejectLeave(
-        rejectRequest.requestId,
+        rejectRequest,
         actorName,
         remarks
       );
@@ -214,7 +214,7 @@ function LeaveApprovals() {
 
   const handleDelete = async () => {
 
-    if (!deleteRequest?.requestId) return;
+    if (!deleteRequest) return;
 
     try {
 

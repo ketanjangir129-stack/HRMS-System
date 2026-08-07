@@ -15,6 +15,9 @@ import {
 | Realtime list plus the request actions. Every action resolves to the
 | service result `{ success, message }`, so callers decide which toast to
 | show without knowing anything about Firebase.
+|
+| Requests are stored under their date and employee id, so the actions take
+| the whole request rather than an id: those two fields are what locates it.
 |--------------------------------------------------------------------------
 */
 
@@ -70,8 +73,8 @@ function useAttendanceRequests(companyCode) {
   );
 
   const update = useCallback(
-    (requestId, updates) =>
-      updateAttendanceRequest(companyCode, requestId, updates),
+    (request, updates) =>
+      updateAttendanceRequest(companyCode, request, updates),
     [companyCode]
   );
 
@@ -82,13 +85,13 @@ function useAttendanceRequests(companyCode) {
   );
 
   const reject = useCallback(
-    (requestId, approvedBy, remarks) =>
-      rejectAttendanceRequest(companyCode, requestId, approvedBy, remarks),
+    (request, approvedBy, remarks) =>
+      rejectAttendanceRequest(companyCode, request, approvedBy, remarks),
     [companyCode]
   );
 
   const remove = useCallback(
-    (requestId) => deleteAttendanceRequest(companyCode, requestId),
+    (request) => deleteAttendanceRequest(companyCode, request),
     [companyCode]
   );
 

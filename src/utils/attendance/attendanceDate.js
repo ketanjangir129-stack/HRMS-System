@@ -35,11 +35,56 @@ export const getDateKey = (value = new Date()) => {
 };
 
 /*
-| The `YYYY-MM` prefix used to select a single month out of the records tree.
+|--------------------------------------------------------------------------
+| Month Nodes
+|--------------------------------------------------------------------------
+| Records, requests and holidays are all filed under `{year}/{Month}`, so a
+| year opens into twelve named months and a month opens into its days.
+|
+| The month is named rather than numbered, which means Firebase hands the
+| twelve back in alphabetical order. Nothing relies on that order: a month is
+| always read as its own node, and every list that spans months is sorted by
+| the dates on the records themselves once it has been flattened.
 */
 
-export const getMonthPrefix = (year, month) =>
-  `${year}-${String(month).padStart(2, "0")}`;
+/*
+| Built from a year and a 1 based month number, the way the month pickers
+| count them.
+*/
+
+export const getMonthNode = (year, month) => {
+
+  const name = MONTHS[Number(month) - 1];
+
+  return name ? `${year}/${name}` : "";
+
+};
+
+/*
+| The node a single `YYYY-MM-DD` key belongs to.
+|
+| The year and month are taken off the front of the key rather than parsed
+| into a Date and read back: the key already is local time, and a round trip
+| through Date would reintroduce the timezone shift `getDateKey` exists to
+| avoid.
+|
+| A key that is not a date at all returns nothing, so a bad value is caught by
+| the callers that check it instead of building a path out of rubbish.
+*/
+
+const DATE_KEY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+
+export const getMonthPath = (dateKey) => {
+
+  const key = String(dateKey || "");
+
+  if (!DATE_KEY_PATTERN.test(key)) return "";
+
+  const [year, month] = key.split("-");
+
+  return getMonthNode(year, month);
+
+};
 
 /*
 | A `YYYY-MM-DD` key parsed back into a local Date. `new Date("2026-08-05")` is

@@ -190,14 +190,14 @@ function AttendanceDashboard() {
 
   const handleReject = async (remarks) => {
 
-    if (!rejectRequest?.requestId) return;
+    if (!rejectRequest) return;
 
     setRejecting(true);
 
     try {
 
       const result = await reject(
-        rejectRequest.requestId,
+        rejectRequest,
         actorName,
         remarks
       );
@@ -249,23 +249,23 @@ function AttendanceDashboard() {
 
       </div>
 
-      {/* Today */}
-      <div className="grid grid-cols-1 gap-6 xl:grid-cols-12">
+      {/*
+      | Today
+      |
+      | The table gets the row to itself. Its six columns never fitted beside
+      | another card: the status of a day sat behind a horizontal scrollbar,
+      | and sharing a row also stretched the card to the height of whatever
+      | was next to it, which left a block of empty white below a single row
+      | of attendance.
+      */}
+      <AttendanceTodayTable
+        attendance={records}
+        loading={attendanceLoading || directoryLoading}
+        error={attendanceError || directoryError}
+        onRetry={reloadDirectory}
+      />
 
-        <div className="xl:col-span-8">
-          <AttendanceTodayTable
-            attendance={records}
-            loading={attendanceLoading || directoryLoading}
-            error={attendanceError || directoryError}
-            onRetry={reloadDirectory}
-          />
-        </div>
-
-        <div className="xl:col-span-4">
-          <AttendanceQuickActions />
-        </div>
-
-      </div>
+      <AttendanceQuickActions />
 
       {/* Insights */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 xl:grid-cols-12">

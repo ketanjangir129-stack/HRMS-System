@@ -5,16 +5,30 @@ import {
   FiClock,
   FiFileText,
   FiSettings,
+  FiUser,
 } from "react-icons/fi";
 import { useNavigate } from "react-router-dom";
+import useAuth from "../../hooks/useAuth";
+import { isApprover } from "../../utils/attendance/attendanceRequestUtils";
 
 /*
 |--------------------------------------------------------------------------
 | Quick Actions
 |--------------------------------------------------------------------------
+| An action marked `approverOnly` opens a screen that holds the whole
+| company's attendance, so it is left out for everyone else rather than
+| offered and then refused on arrival.
+|--------------------------------------------------------------------------
 */
 
 const ACTIONS = [
+  {
+    title: "My Attendance",
+    description: "Your month, day by day",
+    icon: <FiUser size={20} />,
+    color: "bg-indigo-50 text-indigo-600",
+    path: "/attendance/my",
+  },
   {
     title: "Daily Attendance",
     description: "View today's attendance",
@@ -24,10 +38,11 @@ const ACTIONS = [
   },
   {
     title: "Monthly Attendance",
-    description: "Monthly attendance records",
+    description: "Every employee's month",
     icon: <FiClock size={20} />,
     color: "bg-emerald-50 text-emerald-600",
     path: "/attendance/monthly",
+    approverOnly: true,
   },
   {
     title: "Requests",
@@ -56,6 +71,14 @@ function AttendanceQuickActions() {
 
   const navigate = useNavigate();
 
+  const { currentUser } = useAuth();
+
+  const canReview = isApprover(currentUser);
+
+  const actions = ACTIONS.filter(
+    (action) => canReview || !action.approverOnly
+  );
+
   return (
     <div className="h-full rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
 
@@ -72,10 +95,16 @@ function AttendanceQuickActions() {
 
       </div>
 
-      {/* Cards */}
-      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+      {/*
+      | Cards
+      |
+      | Three across at most. The list is five or six actions depending on the
+      | role, and spreading them any thinner leaves a column too narrow to
+      | hold "Monthly Attendance" on one line.
+      */}
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
 
-        {ACTIONS.map((action) => (
+        {actions.map((action) => (
 
           <button
             key={action.title}
@@ -94,11 +123,11 @@ function AttendanceQuickActions() {
 
               <div className="min-w-0">
 
-                <p className="truncate text-sm font-semibold text-slate-800 transition-colors group-hover:text-blue-600">
+                <p className="text-sm font-semibold text-slate-800 transition-colors group-hover:text-blue-600">
                   {action.title}
                 </p>
 
-                <p className="truncate text-xs text-slate-500">
+                <p className="text-xs text-slate-500">
                   {action.description}
                 </p>
 
