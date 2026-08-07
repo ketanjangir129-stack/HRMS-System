@@ -51,7 +51,7 @@ const menuItems = [
     icon: GiTakeMyMoney,
   },
    {
-    label: "Payroll Management",
+    label: "Payroll",
     path: "/payrolldashboard",
     icon: BadgeIndianRupee ,
   },

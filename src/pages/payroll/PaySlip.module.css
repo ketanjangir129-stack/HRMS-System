@@ -1,0 +1,400 @@
+/*
+|--------------------------------------------------------------------------
+| Payslip
+|--------------------------------------------------------------------------
+| The sheet is drawn once at a fixed design width and then scaled to fit
+| whatever room it has, so every screen shows the identical layout — nothing
+| stacks, rewraps or changes proportion, it just gets bigger or smaller.
+|
+| The scale fits the design into the visible area on BOTH axes, so the whole
+| payslip is on screen at once with nothing to scroll. Custom properties set
+| from the component drive it:
+|   --payslip-width       the design width the sheet is authored at
+|   --payslip-height      the sheet's measured, pre-transform height
+|   --payslip-scale       the factor that fits the design on screen
+|   --payslip-print-zoom  the factor that fits it onto one printed page
+|
+| `.page` deliberately has no min-height: it must be free to end above the
+| fold, and the shell's `main` already paints the same grey behind it.
+*/
+
+.page {
+  padding: 1.5rem 0.75rem;
+  background: #f3f4f6;
+}
+
+@media (min-width: 640px) {
+  .page {
+    padding: 2.5rem 1.5rem;
+  }
+}
+
+.frame {
+  width: 100%;
+  max-width: 1200px;
+  margin-inline: auto;
+}
+
+/*
+| A transform is painted after layout, so the scaled sheet takes up no room
+| of its own. This placeholder is given the scaled size by hand, otherwise
+| the page reserves the full unscaled box and leaves a gap underneath.
+*/
+.canvas {
+  margin-inline: auto;
+  width: calc(var(--payslip-width) * var(--payslip-scale));
+  height: calc(var(--payslip-height) * var(--payslip-scale));
+}
+
+.sheet {
+  width: var(--payslip-width);
+  transform: scale(var(--payslip-scale));
+  transform-origin: top left;
+  background: #fff;
+  box-shadow:
+    0 10px 15px -3px rgb(0 0 0 / 0.1),
+    0 4px 6px -4px rgb(0 0 0 / 0.1);
+}
+
+/*
+|--------------------------------------------------------------------------
+| Toolbar
+|--------------------------------------------------------------------------
+*/
+
+.toolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 1rem;
+}
+
+.downloadButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.625rem 1rem;
+  border: none;
+  border-radius: 0.75rem;
+  background: #2563eb;
+  color: #fff;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow:
+    0 4px 6px -1px rgb(37 99 235 / 0.2),
+    0 2px 4px -2px rgb(37 99 235 / 0.2);
+  transition: all 200ms;
+}
+
+.downloadButton:hover {
+  background: #1d4ed8;
+  transform: translateY(-0.125rem);
+  box-shadow:
+    0 10px 15px -3px rgb(37 99 235 / 0.3),
+    0 4px 6px -4px rgb(37 99 235 / 0.3);
+}
+
+.downloadButton:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 2px #fff,
+    0 0 0 4px #60a5fa;
+}
+
+.downloadButton:active {
+  transform: translateY(0);
+}
+
+/*
+|--------------------------------------------------------------------------
+| Header
+|--------------------------------------------------------------------------
+*/
+
+.header {
+  position: relative;
+  display: flex;
+  height: 9rem;
+}
+
+.headerLeft {
+  position: relative;
+  width: 35%;
+  padding: 2rem;
+  background: #b6a7cb;
+  color: #fff;
+}
+
+.companyName {
+  font-size: 1.5rem;
+  line-height: 2rem;
+  font-weight: 700;
+}
+
+.companyLine {
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+}
+
+.companyLine:first-of-type {
+  margin-top: 0.25rem;
+}
+
+.triangle {
+  position: absolute;
+  right: -30px;
+  bottom: 0;
+  width: 0;
+  height: 0;
+  border-top: 30px solid transparent;
+  border-left: 30px solid #4c3a63;
+}
+
+.headerRight {
+  position: relative;
+  flex: 1 1 0%;
+  background: #4c3a63;
+}
+
+.logo {
+  position: absolute;
+  top: 1.5rem;
+  right: 2.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 7rem;
+  height: 7rem;
+  border-radius: 9999px;
+  background: #8d6ab5;
+  color: #fff;
+}
+
+.logoTop {
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  letter-spacing: 0.025em;
+}
+
+.logoMain {
+  font-size: 1.5rem;
+  line-height: 2rem;
+  font-weight: 700;
+}
+
+/*
+|--------------------------------------------------------------------------
+| Body
+|--------------------------------------------------------------------------
+*/
+
+.title {
+  margin-top: 2.5rem;
+  text-align: center;
+  font-size: 1.875rem;
+  line-height: 2.25rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+/* Every block down the sheet shares the same inset column. */
+.section {
+  width: 80%;
+  margin-inline: auto;
+  margin-top: 2rem;
+}
+
+.employee {
+  composes: section;
+  margin-top: 2.5rem;
+  font-size: 15px;
+}
+
+.employee p + p {
+  margin-top: 0.25rem;
+}
+
+.employee span {
+  font-weight: 700;
+}
+
+.summaryGrid {
+  composes: section;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.5rem;
+}
+
+.netSalary {
+  composes: section;
+  padding-bottom: 2.5rem;
+}
+
+/*
+|--------------------------------------------------------------------------
+| Tables
+|--------------------------------------------------------------------------
+*/
+
+.amountTable {
+  width: 100%;
+  border: 1px solid #000;
+  border-collapse: collapse;
+  font-size: 15px;
+}
+
+.amountTable th,
+.amountTable td {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #000;
+}
+
+.amountTable thead tr {
+  background: #ddd6e9;
+}
+
+.amountTable th:first-child {
+  text-align: left;
+}
+
+.amountTable th:last-child,
+.amountTable td:last-child {
+  text-align: right;
+}
+
+.totalRow {
+  font-weight: 700;
+}
+
+.card {
+  border: 1px solid #000;
+}
+
+.cardHeading {
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid #000;
+  background: #ddd6e9;
+  font-weight: 700;
+}
+
+.cardTable {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.cardTable td {
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid #000;
+}
+
+.cardTable td:first-child {
+  border-right: 1px solid #000;
+}
+
+.cardTable tr:last-child td {
+  border-bottom: none;
+}
+
+.cardTable td:last-child {
+  text-align: right;
+}
+
+.positive {
+  color: #16a34a;
+  font-weight: 600;
+}
+
+.negative {
+  color: #dc2626;
+  font-weight: 600;
+}
+
+.netSalaryTable {
+  width: 100%;
+  border: 1px solid #000;
+  border-collapse: collapse;
+}
+
+.netSalaryTable tr {
+  background: #ddd6e9;
+  font-weight: 700;
+}
+
+.netSalaryTable td {
+  padding: 0.75rem;
+  border: 1px solid #000;
+}
+
+.netSalaryTable td:last-child {
+  text-align: right;
+}
+
+/*
+|--------------------------------------------------------------------------
+| Print
+|--------------------------------------------------------------------------
+| The payslip renders inside the dashboard shell, so printing has to strip
+| the sidebar and navbar away first. `:has(.sheet)` matches every ancestor
+| of the sheet: those collapse to plain blocks (the shell's full-height,
+| scrolling `main` would otherwise clip the sheet to one screen) and each of
+| their other children is dropped.
+|
+| The on-screen transform is thrown away and replaced with `zoom`, which the
+| printer paginates correctly where a transform does not. Its factor is sized
+| against the A4 printable area by the component, so the payslip always lands
+| on a single page.
+*/
+
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 10mm;
+  }
+
+  html,
+  body {
+    height: auto !important;
+    overflow: visible !important;
+    background: #fff !important;
+  }
+
+  body:has(.sheet) > *:not(:has(.sheet)):not(.sheet),
+  body :has(.sheet) > *:not(:has(.sheet)):not(.sheet) {
+    display: none !important;
+  }
+
+  body :has(.sheet) {
+    display: block !important;
+    width: auto !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow: visible !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #fff !important;
+  }
+
+  .sheet {
+    width: var(--payslip-width) !important;
+    transform: none !important;
+    zoom: var(--payslip-print-zoom, 0.89);
+    margin: 0 !important;
+    box-shadow: none !important;
+  }
+
+  /* Keep the header/table fills instead of letting the browser drop them. */
+  .sheet,
+  .sheet * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .sheet table,
+  .sheet .card {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+}

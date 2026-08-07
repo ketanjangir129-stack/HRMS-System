@@ -33,6 +33,7 @@ import SalaryForm from "../pages/salary/SalaryForm";
 import SalaryHistory from "../pages/salary/SalaryHistory";
 import SalaryRevisions from "../pages/salary/SalaryRevisions";
 import PayrolllDashboard from "../pages/payroll/PayrollDashboard";
+import PaySlip from "../pages/payroll/PaySlip";
 import Tasks from "../pages/Tasks";
 function AppRoutes(){
     return(
@@ -98,6 +99,7 @@ function AppRoutes(){
                 <Route path="/salarydashboard/salary/edit/:employeeId" element={<SalaryForm />} />
                 {/* payroll Routing */}
                  <Route path="/payrolldashboard" element={<PayrolllDashboard />} />
+                 <Route path="/payrolldashboard/payslip/:employeeId" element={<PaySlip />} />
 
                 {/* Tasks */}
                 <Route path="/tasks" element={<Tasks />} />
