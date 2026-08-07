@@ -2,7 +2,12 @@ import {db} from "../firebase/firebase";
 import {ref, get, push, set, update, remove} from "firebase/database";
 
 export const TASK_STATUSES = ["To Do", "In Progress", "Completed"];
+
+// Naya task hamesha pehle status se shuru hota hai
 export const DEFAULT_TASKS_STATUS = TASK_STATUSES[0];
+
+// Aakhri status — "pending hai ya nahi" ka check isi se hota hai
+export const COMPLETED_STATUS = TASK_STATUSES[TASK_STATUSES.length - 1];
 
 const tasksPath = (companyCode) => `companies/${companyCode}/tasks`;
 const taskPath = (companyCode, taskId) => `${tasksPath(companyCode)}/${taskId}`;
@@ -30,6 +35,15 @@ export const createTask = async (companyCode, task) => {
   };
   await set(ref(db, taskPath(companyCode, taskId)), newTask);
   return {id:taskId, ...newTask};
+};
+
+// Task edit — title, description, assignedTo, dueDate, priority badalne ke liye.
+// status yahan nahi aata, uska apna function hai (updateTaskStatus).
+export const updateTask = async (companyCode, taskId, task) => {
+  await update(ref(db, taskPath(companyCode, taskId)), {
+    ...task,
+    updatedAt: Date.now(),
+  });
 };
 
 export const updateTaskStatus = async (companyCode, taskId, status) => {

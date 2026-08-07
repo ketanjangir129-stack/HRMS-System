@@ -34,7 +34,7 @@ import SalaryHistory from "../pages/salary/SalaryHistory";
 import SalaryRevisions from "../pages/salary/SalaryRevisions";
 import PayrolllDashboard from "../pages/payroll/PayrollDashboard";
 import PaySlip from "../pages/payroll/PaySlip";
-import Tasks from "../pages/Tasks";
+import AllTasks from "../pages/tasks/AllTasks";
 function AppRoutes(){
     return(
         <Routes>
@@ -102,7 +102,7 @@ function AppRoutes(){
                  <Route path="/payrolldashboard/payslip/:employeeId" element={<PaySlip />} />
 
                 {/* Tasks */}
-                <Route path="/tasks" element={<Tasks />} />
+                <Route path="/tasks" element={<AllTasks />} />
                
                 
             </Route>
