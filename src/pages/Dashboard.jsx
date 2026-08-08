@@ -9,10 +9,15 @@ import {
   FaShieldAlt,
 } from "react-icons/fa";
 import useAuth from "../hooks/useAuth";
+import useRoleAccess from "../hooks/useRoleAccess";
 import EmployeeTasks from "../components/Tasks"
 import QuickLinks from "../components/QuickLinks";
 const Dashboard = () => {
   const { company, currentUser } = useAuth();
+  const { canAccessSection } = useRoleAccess();
+
+  const showTasks = canAccessSection("dashboard.tasks");
+  const showQuickLinks = canAccessSection("dashboard.quickLinks");
   const today = new Date().toLocaleDateString("en-US", {
     weekday: "long",
     year: "numeric",
@@ -46,12 +51,21 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* Cards */}
-      <div className="grid grid-cols-2 gap-6">
+      {/*
+        Cards
+
+        A withheld card is not rendered at all, so the grid drops to a single
+        column rather than leaving the empty half its slot would keep.
+      */}
+      <div
+        className={`grid gap-6 ${
+          showTasks && showQuickLinks ? "grid-cols-2" : "grid-cols-1"
+        }`}
+      >
         {/* Today's Tasks */}
-        <EmployeeTasks />
+        {showTasks && <EmployeeTasks />}
         {/* Quick Find */}
-        <QuickLinks />
+        {showQuickLinks && <QuickLinks />}
 
       </div>
     </div>

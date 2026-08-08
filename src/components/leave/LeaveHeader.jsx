@@ -12,8 +12,9 @@ import { useNavigate } from "react-router-dom";
 | Balances are kept per year, so the selector drives every panel below it
 | rather than only the balance cards.
 |
-| The approvals shortcut is only rendered for reviewers: employees have no
-| queue to open.
+| The approvals shortcut and the apply action are each rendered only when the
+| role holds the matching permission, so neither is offered when the screen
+| behind it is withheld.
 |--------------------------------------------------------------------------
 */
 
@@ -24,6 +25,7 @@ function LeaveHeader({
   onRefresh,
   loading,
   canReview = false,
+  canApply = true,
   pendingCount = 0,
 }) {
 
@@ -126,17 +128,21 @@ function LeaveHeader({
 
         )}
 
-        <button
-          type="button"
-          onClick={onApplyLeave}
-          className="inline-flex cursor-pointer items-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-blue-600/20 transition-all duration-200 hover:-translate-y-0.5 hover:bg-blue-700 hover:shadow-lg hover:shadow-blue-600/30 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 active:translate-y-0"
-        >
+        {canApply && (
 
-          <FiPlus />
+          <button
+            type="button"
+            onClick={onApplyLeave}
+            className="inline-flex cursor-pointer items-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-blue-600/20 transition-all duration-200 hover:-translate-y-0.5 hover:bg-blue-700 hover:shadow-lg hover:shadow-blue-600/30 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 active:translate-y-0"
+          >
 
-          Apply Leave
+            <FiPlus />
 
-        </button>
+            Apply Leave
+
+          </button>
+
+        )}
 
       </div>
 

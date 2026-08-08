@@ -4,65 +4,139 @@ import { FaBuilding, FaTasks } from "react-icons/fa";
 import { BsFillPersonLinesFill,BsCalendarCheck } from "react-icons/bs";
 import { PiPersonSimpleSnowboardLight } from "react-icons/pi";
 import { GiTakeMyMoney } from "react-icons/gi";
+import { FiSettings } from "react-icons/fi";
 import { NavLink } from "react-router-dom";
 import {BadgeIndianRupee} from "lucide-react"
+import { useMemo } from "react";
+import useRoleAccess from "../hooks/useRoleAccess";
+
+/*
+| Every item carries the permission it is offered under, so the menu is
+| filtered against the company's Roles & Access configuration rather than
+| styled away: a link the role cannot open is not in the list at all.
+|
+| `ownerOnly` is the one exception that is not configurable - Settings is
+| where the permissions themselves are edited, so it can only ever belong to
+| the owner.
+*/
 
 const menuItems = [
   {
     label: "Dashboard",
     path: "/dashboard",
     icon: MdDashboard,
+    permission: "dashboard",
   },
   {
     label: "Departments",
     path: "/departments",
     icon: FaBuilding,
+    permission: "departments",
   },
-  
+
   {
     label: "Employees",
     path: "/employees",
     icon: BsFillPersonLinesFill,
+    permission: "employees",
   },
 
   {
     label: "On-boarding",
     path: "/OnboardDashboard",
     icon: PiPersonSimpleSnowboardLight,
+    permission: "onboarding",
   },
   {
     label: "Attendance",
     path: "/attendance",
     icon: BsCalendarCheck,
+    permission: "attendance",
   },
   {
     label: "Leave",
     path: "/leave",
     icon: MdOutlineBeachAccess,
+    permission: "leave",
   },
   {
     label: "Holidays",
     path: "/holidays",
     icon: MdOutlineCelebration,
+    permission: "holidays",
   },
   {
     label: "Salary",
     path: "/salarydashboard",
     icon: GiTakeMyMoney,
+    permission: "salary",
   },
    {
     label: "Payroll",
     path: "/payrolldashboard",
     icon: BadgeIndianRupee ,
+    permission: "payroll",
   },
   {
     label: "Tasks",
     path: "/tasks",
     icon: FaTasks,
+    permission: "tasks",
+  },
+  {
+    label: "Settings",
+    path: "/settings",
+    icon: FiSettings,
+    ownerOnly: true,
   },
 ];
 
+/*
+| Stand-ins for the links while the configuration is read. Rendering the full
+| menu first would show links that are about to disappear, and rendering
+| nothing would make the sidebar collapse and jump.
+*/
+
+function SidebarSkeleton({ isCollapsed }) {
+  return (
+    <ul className="space-y-2">
+
+      {Array.from({ length: 8 }).map((_, index) => (
+
+        <li key={index}>
+          <div
+            className={`flex h-[52px] items-center rounded-xl bg-slate-100 ${
+              isCollapsed ? "justify-center px-2" : "gap-4 px-[18px]"
+            }`}
+          >
+
+            <span className="h-5 w-5 shrink-0 animate-pulse rounded-md bg-slate-200" />
+
+            {!isCollapsed && (
+              <span className="h-4 w-28 animate-pulse rounded-md bg-slate-200" />
+            )}
+
+          </div>
+        </li>
+
+      ))}
+
+    </ul>
+  );
+}
+
 function Sidebar({ isCollapsed, onToggle }) {
+
+  const { canAccessPage, isOwner, loading } = useRoleAccess();
+
+  const visibleItems = useMemo(
+    () =>
+      menuItems.filter((item) =>
+        item.ownerOnly ? isOwner : canAccessPage(item.permission)
+      ),
+    [canAccessPage, isOwner]
+  );
+
   return (
     <aside
       className={`h-screen bg-white border-r border-gray-200 flex flex-col transition-all duration-300 ease-in-out ${
@@ -106,30 +180,41 @@ function Sidebar({ isCollapsed, onToggle }) {
         of scrolling.
       */}
       <nav className={`flex-1 min-h-0 overflow-y-auto hide-scrollbar ${isCollapsed ? "p-3 pt-5" : "p-5"}`}>
-        <ul className="space-y-2">
 
-          {menuItems.map((item) => {
-            const Icon = item.icon;
+        {loading ? (
 
-            return (
-              <li key={item.path}>
-                <NavLink
-                  to={item.path}
-                  className={({ isActive }) =>
-                    `flex items-center h-[52px] rounded-xl transition-all duration-200 font-semibold
-                      ${isCollapsed ? "justify-center px-2" : "gap-4 px-[18px]"}
-                      ${isActive ? "bg-gray-100 text-gray-900 "
-                      : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
-                  }`}
-                >
-                  <Icon className="text-lg flex-shrink-0" size={20} />
-                  {!isCollapsed && <span className="whitespace-nowrap">{item.label}</span>}
-                </NavLink>
-              </li>
-            );
-          })}
+          <SidebarSkeleton isCollapsed={isCollapsed} />
 
-        </ul>
+        ) : (
+
+          <ul className="space-y-2">
+
+            {visibleItems.map((item) => {
+              const Icon = item.icon;
+
+              return (
+                <li key={item.path}>
+                  <NavLink
+                    to={item.path}
+                    className={({ isActive }) =>
+                      `flex items-center h-[52px] rounded-xl transition-all duration-200 font-semibold
+                        ${isCollapsed ? "justify-center px-2" : "gap-4 px-[18px]"}
+                        ${isActive ? "bg-gray-100 text-gray-900 "
+                        : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
+                    }`}
+                    title={isCollapsed ? item.label : undefined}
+                  >
+                    <Icon className="text-lg flex-shrink-0" size={20} />
+                    {!isCollapsed && <span className="whitespace-nowrap">{item.label}</span>}
+                  </NavLink>
+                </li>
+              );
+            })}
+
+          </ul>
+
+        )}
+
       </nav>
 
       <div className={`shrink-0 border-t border-gray-200 p-4 ${isCollapsed ? "flex justify-center" : ""}`}>

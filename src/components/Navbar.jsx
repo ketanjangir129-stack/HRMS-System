@@ -8,10 +8,12 @@ import {
 import { useNavigate } from "react-router-dom";
 import { AiOutlineLogout } from "react-icons/ai";
 import useAuth from "../hooks/useAuth";
+import useRoleAccess from "../hooks/useRoleAccess";
 import { toast } from "react-toastify";
 
 const Navbar = ({search,setSearch,searchPlaceholder}) => {
   const { logout } = useAuth();
+  const { isOwner } = useRoleAccess();
   const navigate = useNavigate();
 
   const handleLogout = async () => {
@@ -61,8 +63,19 @@ const Navbar = ({search,setSearch,searchPlaceholder}) => {
             3
           </span>
         </div>
-        {/* Settings */}
-        <FaCog className="text-xl text-gray-600 cursor-pointer" />
+        {/* Settings - the cog is where Roles & Access lives, so it is the
+            owner's only. */}
+        {isOwner && (
+          <button
+            type="button"
+            onClick={() => navigate("/settings")}
+            aria-label="Settings"
+            title="Settings"
+            className="cursor-pointer text-gray-600 transition-colors hover:text-blue-600"
+          >
+            <FaCog className="text-xl" />
+          </button>
+        )}
 
         {/* Profile */}
         <div className="flex items-center gap-3 cursor-pointer">

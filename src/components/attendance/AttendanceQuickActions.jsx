@@ -2,22 +2,21 @@ import {
   FiBarChart2,
   FiCalendar,
   FiChevronRight,
-  FiClock,
   FiFileText,
   FiSettings,
   FiUser,
 } from "react-icons/fi";
 import { useNavigate } from "react-router-dom";
-import useAuth from "../../hooks/useAuth";
-import { isApprover } from "../../utils/attendance/attendanceRequestUtils";
+import useRoleAccess from "../../hooks/useRoleAccess";
 
 /*
 |--------------------------------------------------------------------------
 | Quick Actions
 |--------------------------------------------------------------------------
-| An action marked `approverOnly` opens a screen that holds the whole
-| company's attendance, so it is left out for everyone else rather than
-| offered and then refused on arrival.
+| Every action is a route, and every route is guarded, so each one is offered
+| under the same permission that lets it open. An action the role cannot use
+| is left out rather than shown and then refused on arrival, and the card
+| disappears entirely once nothing is left in it.
 |--------------------------------------------------------------------------
 */
 
@@ -28,6 +27,7 @@ const ACTIONS = [
     icon: <FiUser size={20} />,
     color: "bg-indigo-50 text-indigo-600",
     path: "/attendance/my",
+    permission: "attendance.myAttendance",
   },
   {
     title: "Daily Attendance",
@@ -35,6 +35,7 @@ const ACTIONS = [
     icon: <FiCalendar size={20} />,
     color: "bg-blue-50 text-blue-600",
     path: "/attendance/daily",
+    permission: "attendance.daily",
   },
   // {
   //   title: "Monthly Attendance",
@@ -42,7 +43,7 @@ const ACTIONS = [
   //   icon: <FiClock size={20} />,
   //   color: "bg-emerald-50 text-emerald-600",
   //   path: "/attendance/monthly",
-  //   approverOnly: true,
+  //   permission: "attendance.monthly",
   // },
   {
     title: "Requests",
@@ -50,6 +51,7 @@ const ACTIONS = [
     icon: <FiFileText size={20} />,
     color: "bg-amber-50 text-amber-600",
     path: "/attendance/requests",
+    permission: "attendance.requests",
   },
   {
     title: "Reports",
@@ -57,6 +59,7 @@ const ACTIONS = [
     icon: <FiBarChart2 size={20} />,
     color: "bg-pink-50 text-pink-600",
     path: "/attendance/reports",
+    permission: "attendance.reports",
   },
   {
     title: "Settings",
@@ -64,6 +67,7 @@ const ACTIONS = [
     icon: <FiSettings size={20} />,
     color: "bg-slate-100 text-slate-600",
     path: "/attendance/settings",
+    permission: "attendance.settings",
   },
 ];
 
@@ -71,13 +75,13 @@ function AttendanceQuickActions() {
 
   const navigate = useNavigate();
 
-  const { currentUser } = useAuth();
-
-  const canReview = isApprover(currentUser);
+  const { canAccessSection } = useRoleAccess();
 
   const actions = ACTIONS.filter(
-    (action) => canReview || !action.approverOnly
+    (action) => canAccessSection(action.permission)
   );
+
+  if (actions.length === 0) return null;
 
   return (
     <div className="h-full rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">

@@ -19,6 +19,7 @@ import useAuth from "../../hooks/useAuth";
 import useDailyAttendance from "../../hooks/useDailyAttendance";
 import useEmployeeDirectory from "../../hooks/useEmployeeDirectory";
 import useHolidayDates from "../../hooks/useHolidayDates";
+import useRoleAccess from "../../hooks/useRoleAccess";
 import { getDateKey } from "../../utils/attendance/attendanceDate";
 import {
   attachEmployeeDetails,
@@ -45,13 +46,50 @@ import {
 |--------------------------------------------------------------------------
 */
 
+const INSIGHT_SPANS = {
+  1: "xl:col-span-12",
+  2: "xl:col-span-6",
+  3: "xl:col-span-4",
+};
+
 function AttendanceDashboard() {
 
   const { company, currentUser } = useAuth();
 
+  const { canAccessSection } = useRoleAccess();
+
   const companyCode = company?.companyCode;
 
   const employeeId = getCurrentEmployeeId(currentUser);
+
+  /*
+  | Which panels this role is allowed to see. A withheld panel is left out of
+  | the tree rather than hidden with a class, so its data is never rendered.
+  |
+  | The punch card is not one of them: it is the signed in user's own
+  | attendance, which is the reason an employee opens this page at all.
+  */
+  const showSummary = canAccessSection("attendance.summary");
+  const showToday = canAccessSection("attendance.today");
+  const showCalendar = canAccessSection("attendance.calendar");
+  const showActivity = canAccessSection("attendance.recentActivity");
+  const showAnalytics = canAccessSection("attendance.analytics");
+  const showRequests = canAccessSection("attendance.requests");
+
+  /*
+  | The insights row holds up to three panels across twelve columns. The span
+  | is divided between however many survived the checks above, so two panels
+  | are two halves rather than two thirds and a gap.
+  */
+  const insightCount =
+    Number(showCalendar) + Number(showActivity) + Number(showAnalytics);
+
+  /*
+  | Written out rather than computed into a template string: Tailwind builds
+  | its stylesheet by scanning the source for whole class names, and a class
+  | assembled at runtime is never in the output.
+  */
+  const insightSpan = INSIGHT_SPANS[insightCount] || "";
 
   const [markOpen, setMarkOpen] = useState(false);
   const [rejectRequest, setRejectRequest] = useState(null);
@@ -251,17 +289,19 @@ function AttendanceDashboard() {
 
       <div className="grid grid-cols-1 items-stretch gap-6 xl:grid-cols-12">
 
-        <div className="xl:col-span-5">
+        <div className={showSummary ? "xl:col-span-5" : "xl:col-span-12"}>
           <TodayAttendanceCard className="h-full" />
         </div>
 
-        <div className="xl:col-span-7">
-          <AttendanceSummaryCards
-            summary={summary}
-            compact
-            gridClassName="grid-cols-1 sm:grid-cols-2 sm:grid-rows-2"
-          />
-        </div>
+        {showSummary && (
+          <div className="xl:col-span-7">
+            <AttendanceSummaryCards
+              summary={summary}
+              compact
+              gridClassName="grid-cols-1 sm:grid-cols-2 sm:grid-rows-2"
+            />
+          </div>
+        )}
 
       </div>
 
@@ -274,54 +314,66 @@ function AttendanceDashboard() {
       | was next to it, which left a block of empty white below a single row
       | of attendance.
       */}
-      <AttendanceTodayTable
-        attendance={records}
-        loading={attendanceLoading || directoryLoading}
-        error={attendanceError || directoryError}
-        onRetry={reloadDirectory}
-      />
+      {showToday && (
+        <AttendanceTodayTable
+          attendance={records}
+          loading={attendanceLoading || directoryLoading}
+          error={attendanceError || directoryError}
+          onRetry={reloadDirectory}
+        />
+      )}
 
       <AttendanceQuickActions />
 
       {/* Insights */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 xl:grid-cols-12">
+      {insightCount > 0 && (
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 xl:grid-cols-12">
 
-        <div className="xl:col-span-4">
-          <AttendanceCalendar
-            history={history}
-            holidayDates={holidayDates}
-            loading={calendarLoading}
-            onMonthChange={handleMonthChange}
-          />
+          {showCalendar && (
+            <div className={insightSpan}>
+              <AttendanceCalendar
+                history={history}
+                holidayDates={holidayDates}
+                loading={calendarLoading}
+                onMonthChange={handleMonthChange}
+              />
+            </div>
+          )}
+
+          {showActivity && (
+            <div className={`lg:col-span-2 self-start ${insightSpan}`}>
+              <AttendanceRecentActivity
+                activities={activities}
+                loading={attendanceLoading || directoryLoading}
+              />
+            </div>
+          )}
+
+          {showAnalytics && (
+            <div className={`self-start ${insightSpan}`}>
+              <AttendanceAnalytics analytics={analytics} />
+            </div>
+          )}
+
         </div>
-
-         <div className="lg:col-span-2 xl:col-span-4 self-start">
-          <AttendanceRecentActivity
-            activities={activities}
-            loading={attendanceLoading || directoryLoading}
-          />
-        </div>
-
-        <div className="xl:col-span-4 self-start">
-          <AttendanceAnalytics analytics={analytics} />
-        </div>
-
-      </div>
+      )}
 
       {/* Requests */}
-      <div className="grid grid-cols-1 gap-6 xl:grid-cols-12">
+      {showRequests && (
+        <div className="grid grid-cols-1 gap-6 xl:grid-cols-12">
 
-        <div className="xl:col-span-12 self-start">
-          <AttendanceRequests
-            requests={detailedRequests}
-            loading={requestsLoading || directoryLoading}
-            currentUser={currentUser}
-            onApprove={handleApprove}
-            onReject={setRejectRequest}
-          />
+          <div className="xl:col-span-12 self-start">
+            <AttendanceRequests
+              requests={detailedRequests}
+              loading={requestsLoading || directoryLoading}
+              currentUser={currentUser}
+              onApprove={handleApprove}
+              onReject={setRejectRequest}
+            />
+          </div>
+
         </div>
-
-      </div>
+      )}
 
       <MarkAttendanceModal
         open={markOpen}

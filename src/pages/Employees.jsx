@@ -4,10 +4,16 @@ import { useNavigate,useOutletContext } from "react-router-dom";
 import { searchEmployees } from "../utils/search/searchEmployees";
 import Loader from "../components/common/Loader";
 import { UserPlus } from "lucide-react";
+import useRoleAccess from "../hooks/useRoleAccess";
 
 function Employees() {
     const navigate = useNavigate();
     const companyCode = localStorage.getItem("companyCode");
+    const { canAccessSection } = useRoleAccess();
+
+    // Both open a guarded route, so neither is offered without its permission.
+    const canAdd = canAccessSection("employees.add");
+    const canOpenDetails = canAccessSection("employees.details");
  
     const [employees, setEmployees] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -99,15 +105,17 @@ function Employees() {
                     </p>
                 </div>
 
-                <button
-                    onClick={() => navigate("/employees/add")}
-                    title="Add Employee"
-                    aria-label="Add Employee"
-                    className="group inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-indigo-600/20 transition-all duration-200 hover:-translate-y-0.5 hover:bg-indigo-700 hover:shadow-lg hover:shadow-indigo-600/30 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:ring-offset-2 active:translate-y-0"
-                >
-                    <UserPlus className="h-4 w-4 transition-transform duration-200 group-hover:scale-110" />
-                
-                </button>
+                {canAdd && (
+                    <button
+                        onClick={() => navigate("/employees/add")}
+                        title="Add Employee"
+                        aria-label="Add Employee"
+                        className="group inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-indigo-600/20 transition-all duration-200 hover:-translate-y-0.5 hover:bg-indigo-700 hover:shadow-lg hover:shadow-indigo-600/30 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:ring-offset-2 active:translate-y-0"
+                    >
+                        <UserPlus className="h-4 w-4 transition-transform duration-200 group-hover:scale-110" />
+
+                    </button>
+                )}
             </div>
 
             {/* Table */}
@@ -159,8 +167,14 @@ function Employees() {
                         filteredEmployees.map((emp) => (
                             <tr
                                 key={emp.id}
-                                onClick={() => navigate(`/employees/details/${emp.id}`)}
-                                className="hover:bg-gray-50 transition cursor-pointer"
+                                onClick={
+                                    canOpenDetails
+                                        ? () => navigate(`/employees/details/${emp.id}`)
+                                        : undefined
+                                }
+                                className={`transition hover:bg-gray-50 ${
+                                    canOpenDetails ? "cursor-pointer" : ""
+                                }`}
                             >
                                 <td className="px-4 py-3 border-b text-center">
                                     {emp.employeeId || <span className="text-gray-300">—</span>}

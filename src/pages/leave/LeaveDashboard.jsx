@@ -13,10 +13,8 @@ import useAuth from "../../hooks/useAuth";
 import useHolidayDates from "../../hooks/useHolidayDates";
 import useLeaveBalance from "../../hooks/useLeaveBalance";
 import useLeaveRequests from "../../hooks/useLeaveRequests";
-import {
-  getCurrentEmployeeId,
-  isApprover,
-} from "../../utils/attendance/attendanceRequestUtils";
+import useRoleAccess from "../../hooks/useRoleAccess";
+import { getCurrentEmployeeId } from "../../utils/attendance/attendanceRequestUtils";
 import {
   filterLeaveRequestsByYear,
   formatLeaveRange,
@@ -49,11 +47,25 @@ function LeaveDashboard() {
 
     const { company, currentUser } = useAuth();
 
+    const { canAccessSection } = useRoleAccess();
+
     const { search, setSearch, setSearchPlaceholder } = useOutletContext();
 
     const companyCode = company?.companyCode;
 
     const employeeId = getCurrentEmployeeId(currentUser);
+
+    /*
+    | Which panels this role holds. The approvals shortcut is now decided by
+    | the same permission that guards `/leave/approvals`, rather than by the
+    | role alone, so the owner can take the queue away from HR without
+    | changing what HR is.
+    */
+    const showBalance = canAccessSection("leave.balance");
+    const showCalendar = canAccessSection("leave.calendar");
+    const showHistory = canAccessSection("leave.history");
+    const canApply = canAccessSection("leave.apply");
+    const canReview = canAccessSection("leave.approvals");
 
     const [year, setYear] = useState(() => new Date().getFullYear());
     const [showApplyModal, setShowApplyModal] = useState(false);
@@ -143,6 +155,16 @@ function LeaveDashboard() {
 
     const handleApply = async (payload) => {
 
+        /*
+        | The button is already hidden without this permission. Checked again
+        | here because the submit path is what actually writes, and it should
+        | not depend on the button being the only way to reach it.
+        */
+        if (!canApply) {
+            toast.error("You are not allowed to apply for leave.");
+            return;
+        }
+
         if (!employeeId) {
             toast.error("Your employee profile is missing an employee ID.");
             return;
@@ -221,57 +243,74 @@ function LeaveDashboard() {
                 onApplyLeave={() =>
                     setShowApplyModal(true)
                 }
-                canReview={isApprover(currentUser)}
+                canReview={canReview}
+                canApply={canApply}
                 pendingCount={pendingCount}
             />
 
-            <LeaveBalanceCards
-                balance={balance}
-                loading={balanceLoading}
-            />
+            {showBalance && (
+                <>
 
-            {balanceError && (
-                <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-600">
-                    {balanceError}
-                </div>
+                    <LeaveBalanceCards
+                        balance={balance}
+                        loading={balanceLoading}
+                    />
+
+                    {balanceError && (
+                        <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-600">
+                            {balanceError}
+                        </div>
+                    )}
+
+                </>
             )}
 
-            <div className="grid grid-cols-1 gap-6 xl:grid-cols-12">
+            {(showCalendar || showHistory) && (
 
-                <div className="xl:col-span-5">
-                    <LeaveCalendar
-                        requests={yearRequests}
-                        loading={requestsLoading}
-                        year={year}
-                    />
+                <div className="grid grid-cols-1 gap-6 xl:grid-cols-12">
+
+                    {showCalendar && (
+                        <div className={showHistory ? "xl:col-span-5" : "xl:col-span-12"}>
+                            <LeaveCalendar
+                                requests={yearRequests}
+                                loading={requestsLoading}
+                                year={year}
+                            />
+                        </div>
+                    )}
+
+                    {showHistory && (
+                        <div className={showCalendar ? "xl:col-span-7" : "xl:col-span-12"}>
+                            <RecentLeaveRequests
+                                requests={yearRequests}
+                                loading={requestsLoading}
+                                error={requestsError}
+                                onRetry={reloadRequests}
+                                employeeId={employeeId}
+                                onView={setDetailRequest}
+                                onDelete={setDeleteRequest}
+                            />
+                        </div>
+                    )}
+
                 </div>
 
-                <div className="xl:col-span-7">
-                    <RecentLeaveRequests
-                        requests={yearRequests}
-                        loading={requestsLoading}
-                        error={requestsError}
-                        onRetry={reloadRequests}
-                        employeeId={employeeId}
-                        onView={setDetailRequest}
-                        onDelete={setDeleteRequest}
-                    />
-                </div>
+            )}
 
-            </div>
-
-            <LeaveHistoryTable
-                requests={yearRequests}
-                loading={requestsLoading}
-                error={requestsError}
-                onRetry={reloadRequests}
-                subtitle={`Every leave request you submitted in ${year}`}
-                headerSearch={search}
-                emptyMessage="Leave requests you submit will appear here."
-            />
+            {showHistory && (
+                <LeaveHistoryTable
+                    requests={yearRequests}
+                    loading={requestsLoading}
+                    error={requestsError}
+                    onRetry={reloadRequests}
+                    subtitle={`Every leave request you submitted in ${year}`}
+                    headerSearch={search}
+                    emptyMessage="Leave requests you submit will appear here."
+                />
+            )}
 
             <ApplyLeaveModal
-                open={showApplyModal}
+                open={showApplyModal && canApply}
                 onClose={() =>
                     setShowApplyModal(false)
                 }

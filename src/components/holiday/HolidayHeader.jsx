@@ -11,6 +11,10 @@ import { FiCalendar, FiPlus, FiRefreshCw } from "react-icons/fi";
 | than only the table. The range runs one year back and one forward, which is
 | the same window the leave header offers: next year's calendar is usually
 | published before the year starts.
+|
+| The add action is only rendered for a role that holds `holidays.add`, so a
+| calendar that is published to everyone is still only written by the people
+| who are meant to publish it.
 |--------------------------------------------------------------------------
 */
 
@@ -21,6 +25,7 @@ function HolidayHeader({
   onRefresh,
   loading = false,
   totalHolidays = 0,
+  canAddHoliday = true,
 }) {
 
   const currentYear = new Date().getFullYear();
@@ -103,17 +108,21 @@ function HolidayHeader({
 
         </button>
 
-        <button
-          type="button"
-          onClick={onAddHoliday}
-          className="inline-flex cursor-pointer items-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-blue-600/20 transition-all duration-200 hover:-translate-y-0.5 hover:bg-blue-700 hover:shadow-lg hover:shadow-blue-600/30 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 active:translate-y-0"
-        >
+        {canAddHoliday && (
 
-          <FiPlus />
+          <button
+            type="button"
+            onClick={onAddHoliday}
+            className="inline-flex cursor-pointer items-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-blue-600/20 transition-all duration-200 hover:-translate-y-0.5 hover:bg-blue-700 hover:shadow-lg hover:shadow-blue-600/30 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 active:translate-y-0"
+          >
 
-          Add Holiday
+            <FiPlus />
 
-        </button>
+            Add Holiday
+
+          </button>
+
+        )}
 
       </div>
 

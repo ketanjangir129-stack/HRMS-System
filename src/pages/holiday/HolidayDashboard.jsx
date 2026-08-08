@@ -10,6 +10,7 @@ import HolidayTable from "../../components/holiday/HolidayTable";
 import UpcomingHolidayCard from "../../components/holiday/UpcomingHolidayCard";
 import useAuth from "../../hooks/useAuth";
 import useHolidays from "../../hooks/useHolidays";
+import useRoleAccess from "../../hooks/useRoleAccess";
 import useUpcomingHolidays from "../../hooks/useUpcomingHolidays";
 import { getHolidayStats } from "../../utils/holiday/holidayUtils";
 
@@ -35,9 +36,18 @@ function HolidayDashboard() {
 
   const { company, currentUser } = useAuth();
 
+  const { canAccessSection } = useRoleAccess();
+
   const { search, setSearch, setSearchPlaceholder } = useOutletContext();
 
   const companyCode = company?.companyCode;
+
+  const showCalendar = canAccessSection("holidays.calendar");
+  const showUpcoming = canAccessSection("holidays.upcoming");
+  const showList = canAccessSection("holidays.list");
+  const canAddHoliday = canAccessSection("holidays.add");
+  const canEditHoliday = canAccessSection("holidays.edit");
+  const canDeleteHoliday = canAccessSection("holidays.delete");
 
   const [year, setYear] = useState(() => new Date().getFullYear());
 
@@ -130,6 +140,23 @@ function HolidayDashboard() {
       return;
     }
 
+    /*
+    | The buttons are already hidden without these permissions. Checked again
+    | on the way in because this handler is what writes, and it should not
+    | depend on a button being the only route to it.
+    |
+    | One handler serves both, so which permission applies is decided the same
+    | way the modal decides its title: by whether a holiday is being edited.
+    */
+    if (editHoliday ? !canEditHoliday : !canAddHoliday) {
+      toast.error(
+        editHoliday
+          ? "You are not allowed to edit holidays."
+          : "You are not allowed to add holidays."
+      );
+      return;
+    }
+
     setSubmitting(true);
 
     try {
@@ -201,6 +228,11 @@ function HolidayDashboard() {
 
     if (!deleteTarget?.holidayId) return;
 
+    if (!canDeleteHoliday) {
+      toast.error("You are not allowed to delete holidays.");
+      return;
+    }
+
     setDeleting(true);
 
     try {
@@ -242,6 +274,7 @@ function HolidayDashboard() {
         loading={loading || upcomingLoading}
         onRefresh={handleRefresh}
         onAddHoliday={openAddModal}
+        canAddHoliday={canAddHoliday}
         totalHolidays={stats.total}
       />
 
@@ -253,38 +286,53 @@ function HolidayDashboard() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 gap-6 xl:grid-cols-12">
+      {(showCalendar || showUpcoming) && (
 
-        <div className="xl:col-span-5">
-          <HolidayCalendar
-            holidays={holidays}
-            loading={loading}
-            year={year}
-          />
+        <div className="grid grid-cols-1 gap-6 xl:grid-cols-12">
+
+          {showCalendar && (
+            <div className={showUpcoming ? "xl:col-span-5" : "xl:col-span-12"}>
+              <HolidayCalendar
+                holidays={holidays}
+                loading={loading}
+                year={year}
+              />
+            </div>
+          )}
+
+          {showUpcoming && (
+            <div className={showCalendar ? "xl:col-span-7" : "xl:col-span-12"}>
+              <UpcomingHolidayCard
+                holidays={upcoming}
+                loading={upcomingLoading}
+                error={upcomingError}
+                onRetry={reloadUpcoming}
+              />
+            </div>
+          )}
+
         </div>
 
-        <div className="xl:col-span-7">
-          <UpcomingHolidayCard
-            holidays={upcoming}
-            loading={upcomingLoading}
-            error={upcomingError}
-            onRetry={reloadUpcoming}
-          />
-        </div>
+      )}
 
-      </div>
-
-      <HolidayTable
-        holidays={holidays}
-        loading={loading}
-        error={error}
-        onRetry={reload}
-        year={year}
-        headerSearch={search}
-        onEdit={openEditModal}
-        onDelete={setDeleteTarget}
-        emptyMessage={`No holiday has been declared for ${year} yet.`}
-      />
+      {showList && (
+        <HolidayTable
+          holidays={holidays}
+          loading={loading}
+          error={error}
+          onRetry={reload}
+          year={year}
+          headerSearch={search}
+          /*
+          | Withheld rather than disabled. The table builds its Actions column
+          | only when it is given a handler, so a role with neither loses the
+          | column instead of looking at two buttons it cannot press.
+          */
+          onEdit={canEditHoliday ? openEditModal : undefined}
+          onDelete={canDeleteHoliday ? setDeleteTarget : undefined}
+          emptyMessage={`No holiday has been declared for ${year} yet.`}
+        />
+      )}
 
       <HolidayModal
         open={showHolidayModal}
