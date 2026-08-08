@@ -1,14 +1,19 @@
-import { FiCheckCircle, FiClock, FiLayers, FiLoader } from "react-icons/fi";
+import { FiAlertTriangle, FiCalendar, FiLayers, FiLoader } from "react-icons/fi";
 
 /*
 |--------------------------------------------------------------------------
 | Task Summary Cards
 |--------------------------------------------------------------------------
-| Status-wise ginti. Ginti khud nahi karta — taskUtils.js ke taskSummary()
-| se banaya hua object leta hai.
+| Ginti khud nahi karta — taskUtils.js ke taskSummary() se banaya hua object
+| leta hai.
+|
+| Chaar cards wahi hain jo owner ko roz dekhne hote hain: kul kitna kaam hai,
+| aaj kya nikalna hai, kya chal raha hai, aur kya bigad chuka hai.
+| To Do aur Completed ki poori distribution TaskProgress section mein hai.
 |
 | Layout AttendanceSummaryCards jaisa hi: upar rangeen patti, neeche progress
-| bar jo total ke hisaab se bharta hai.
+| bar jo total ke hisaab se bharta hai — chaaron ka denominator total hi hai,
+| isliye percent aapas mein compare ho sakte hain.
 |--------------------------------------------------------------------------
 */
 
@@ -20,7 +25,7 @@ function TaskSummaryCards({ summary }) {
 
   const cards = [
     {
-      title: "All tasks",
+      title: "Total tasks",
       value: summary.total,
       percentage: 100,
       subtitle: "Total assigned",
@@ -30,11 +35,11 @@ function TaskSummaryCards({ summary }) {
       bar: "bg-slate-800",
     },
     {
-      title: "To do",
-      value: summary.todo,
-      percentage: percent(summary.todo),
-      subtitle: "Not started",
-      icon: <FiClock />,
+      title: "Due today",
+      value: summary.dueToday,
+      percentage: percent(summary.dueToday),
+      subtitle: "Pending today",
+      icon: <FiCalendar />,
       iconBg: "bg-amber-50",
       iconColor: "text-amber-600",
       bar: "bg-amber-500",
@@ -50,14 +55,14 @@ function TaskSummaryCards({ summary }) {
       bar: "bg-blue-500",
     },
     {
-      title: "Completed",
-      value: summary.completed,
-      percentage: percent(summary.completed),
-      subtitle: "Finished",
-      icon: <FiCheckCircle />,
-      iconBg: "bg-emerald-50",
-      iconColor: "text-emerald-600",
-      bar: "bg-emerald-500",
+      title: "Overdue",
+      value: summary.overdue,
+      percentage: percent(summary.overdue),
+      subtitle: "Past due date",
+      icon: <FiAlertTriangle />,
+      iconBg: "bg-red-50",
+      iconColor: "text-red-600",
+      bar: "bg-red-500",
     },
   ];
 

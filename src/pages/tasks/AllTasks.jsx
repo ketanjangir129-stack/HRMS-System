@@ -1,10 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { FiCheckSquare, FiPlus, FiX } from "react-icons/fi";
 import { toast } from "react-toastify";
 import {
   createTask,
   deleteTask,
-  getTasks,
+  subscribeTasks,
   updateTask,
   updateTaskStatus,
 } from "../../services/taskService";
@@ -15,16 +15,26 @@ import {
   ALL_STATUSES,
   EMPTY_TASK_FORM,
   PRIMARY_BUTTON_CLASS,
+  SECTION_ROW_LIMIT,
 } from "../../utils/tasks/taskConstants";
 import {
   filterOwnTasks,
   filterTasks,
   getCurrentEmployeeId,
   isManager,
+  recentTasks,
+  taskProgress,
   taskSummary,
+  teamWorkload,
+  todayInputValue,
+  urgentTasks,
 } from "../../utils/tasks/taskUtils";
 import TaskPageHeader from "../../components/tasks/TaskPageHeader";
 import TaskSummaryCards from "../../components/tasks/TaskSummaryCards";
+import TaskProgress from "../../components/tasks/TaskProgress";
+import TeamWorkload from "../../components/tasks/TeamWorkload";
+import UrgentTasks from "../../components/tasks/UrgentTasks";
+import RecentTasks from "../../components/tasks/RecentTasks";
 import TaskFilters from "../../components/tasks/TaskFilters";
 import TaskTable from "../../components/tasks/TaskTable";
 import CreateTaskModal from "../../components/tasks/CreateTaskModal";
@@ -73,12 +83,12 @@ function AllTasks() {
   const [scope, setScope] = useState("all");
   const [formData, setFormData] = useState(EMPTY_TASK_FORM);
 
-  // Ek hi jagah se list refresh — create/status/delete teeno yahi bulate hain
-  const refreshTasks = async () => {
-    setTasks(await getTasks(companyCode));
-  };
+  // Dashboard sections ka "View all" isi table par scroll karta hai —
+  // naya page nahi khulta, wahi list neeche pehle se maujood hai
+  const tableRef = useRef(null);
 
-  // Page khulte hi ek baar tasks laao
+  // Tasks realtime — create/edit/delete ke baad list khud update ho jaati hai,
+  // aur doosre user ka change bhi bina refresh dikh jaata hai.
   useEffect(() => {
     if (!companyCode) {
       setError("Company code not found. Please log in again.");
@@ -86,18 +96,22 @@ function AllTasks() {
       return;
     }
 
-    getTasks(companyCode)
-      .then((data) => {
+    const unsubscribe = subscribeTasks(
+      companyCode,
+      (data) => {
         setTasks(data);
         setError("");
-      })
-      .catch((err) => {
+        setLoading(false);
+      },
+      (err) => {
         console.error("Failed to load tasks:", err);
         setError("Unable to load tasks.");
-      })
-      .finally(() => {
         setLoading(false);
-      });
+      }
+    );
+
+    // Page chhodte hi listener band — warna wo chalta rehta hai
+    return unsubscribe;
   }, [companyCode]);
 
   // Employees dropdown aur Assignee column ke liye — ek hi baar.
@@ -124,17 +138,48 @@ function AllTasks() {
   // "My tasks" na chune. Filter browser mein hota hai — attendance requests
   // module bhi yahi karta hai (filterOwnRequests).
   const showOnlyMine = !canManage || scope === "mine";
-  const roleTasks = showOnlyMine
-    ? filterOwnTasks(tasks, currentUser)
-    : tasks;
+  const roleTasks = useMemo(
+    () => (showOnlyMine ? filterOwnTasks(tasks, currentUser) : tasks),
+    [showOnlyMine, tasks, currentUser]
+  );
 
-  const summary = taskSummary(roleTasks);
+  // Local "today" — todayInputValue() timezone sambhaal leta hai
+  const today = todayInputValue();
+
+  /*
+  | Dashboard ka saara data yahin se banta hai — usi roleTasks se jo table
+  | use karta hai, isliye cards aur table kabhi alag baat nahi kehte.
+  |
+  | useMemo isliye ki subscribeTasks realtime listener hai: har chhote update
+  | par ye ginti dobara na ho.
+  */
+  const summary = useMemo(() => taskSummary(roleTasks, today), [roleTasks, today]);
+  const progress = useMemo(() => taskProgress(summary), [summary]);
+  const workload = useMemo(
+    () => teamWorkload(roleTasks, employees),
+    [roleTasks, employees]
+  );
+  const urgent = useMemo(
+    () => urgentTasks(roleTasks, today, SECTION_ROW_LIMIT),
+    [roleTasks, today]
+  );
+  const recent = useMemo(
+    () => recentTasks(roleTasks, SECTION_ROW_LIMIT),
+    [roleTasks]
+  );
+
   const visibleTasks = filterTasks(roleTasks, {
     search,
     statusFilter,
     employees,
     allStatuses: ALL_STATUSES,
   });
+
+  // "View all" — filter hata do taaki poori list dikhe, phir table par le jao
+  const viewAllTasks = () => {
+    setStatusFilter(ALL_STATUSES);
+    tableRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
 
   // Ek field badle to uska error hata do
   const updateField = (field, value) => {
@@ -206,7 +251,7 @@ function AllTasks() {
         await createTask(companyCode, payload);
       }
 
-      await refreshTasks();
+      // List khud update ho jaayegi — subscribeTasks listener se
 
       setFormData(EMPTY_TASK_FORM);
       setErrors({});
@@ -228,7 +273,6 @@ function AllTasks() {
   const changeStatus = async (task, status) => {
     try {
       await updateTaskStatus(companyCode, task.id, status);
-      await refreshTasks();
       toast.success(`Task moved to ${status}.`);
     } catch (err) {
       console.error("Failed to update task status:", err);
@@ -242,7 +286,6 @@ function AllTasks() {
     setDeleting(true);
     try {
       await deleteTask(companyCode, taskToDelete.id);
-      await refreshTasks();
       setTaskToDelete(null);
       toast.success("Task deleted successfully.");
     } catch (err) {
@@ -256,7 +299,8 @@ function AllTasks() {
   if (loading) return <Loader text="Loading tasks..." />;
 
   return (
-    <div className="p-2">
+    // space-y-6 — header ab khud ek card hai, isliye gap poore page ka ek jaisa
+    <div className="space-y-6 p-2">
       <TaskPageHeader
         title="Tasks"
         subtitle={
@@ -279,7 +323,7 @@ function AllTasks() {
         }
       />
 
-      <div className="mt-6 space-y-6">
+      <div className="space-y-6">
         {error && (
           <div className="flex items-center justify-between rounded-2xl border border-red-200 bg-red-50 px-5 py-4 text-sm font-medium text-red-700">
             <span>{error}</span>
@@ -296,7 +340,54 @@ function AllTasks() {
 
         <TaskSummaryCards summary={summary} />
 
-        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+        {/*
+          Dashboard sections sirf Owner/HR ke liye — wahi guard jo Create
+          button aur TaskTable ka Assignee column use karte hain.
+
+          Employee ke liye do wajah se chhipe hain:
+            1. getEmployees() uske liye chalti hi nahi (neeche wala effect
+               canManage par rukta hai), to employees khaali rehti hai aur
+               assigneeName() naam ki jagah raw Firebase id de deta hai
+            2. "Team workload" ka matlab hi nahi — usko sirf apne tasks
+               dikhte hain, to us list mein wo akela hota hai
+
+          Summary cards jaan-boojhkar bahar hain: wo uske apne tasks par
+          sahi ginti dete hain aur unme koi assignee naam nahi aata.
+        */}
+        {canManage && (
+          <>
+            {/*
+              Progress patli hai, Workload chaudi — isliye desktop par 1:2 ka
+              batwara. Tablet/mobile par dono neeche-oopar stack ho jaate hain.
+            */}
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+              <TaskProgress progress={progress} />
+
+              <TeamWorkload workload={workload} className="lg:col-span-2" />
+            </div>
+
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+              <UrgentTasks
+                tasks={urgent}
+                employees={employees}
+                today={today}
+                onViewAll={viewAllTasks}
+              />
+
+              <RecentTasks
+                tasks={recent}
+                employees={employees}
+                onViewAll={viewAllTasks}
+              />
+            </div>
+          </>
+        )}
+
+        {/* ref — dono "View all" isi card par scroll karte hain */}
+        <div
+          ref={tableRef}
+          className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
+        >
           <div className="flex flex-col gap-4 border-b border-slate-200 px-6 py-5 lg:flex-row lg:items-center lg:justify-between">
             <div className="min-w-0">
               <h2 className="text-lg font-semibold text-slate-900">

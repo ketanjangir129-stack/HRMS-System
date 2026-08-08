@@ -4,7 +4,7 @@ import { CheckCircle2 } from "lucide-react";
 import { toast } from "react-toastify";
 import {
   COMPLETED_STATUS,
-  getTasks,
+  subscribeTasks,
   updateTaskStatus,
 } from "../services/taskService";
 import { getEmployees } from "../services/EmployeeService";
@@ -58,11 +58,13 @@ function EmployeeTasks() {
 
   const today = todayInputValue();
 
-  const loadTasks = () => {
-    setError("");
+  // Tasks realtime — /tasks par kuch badle to card bhi turant badal jaata hai
+  useEffect(() => {
+    if (!companyCode) return;
 
-    getTasks(companyCode)
-      .then((data) => {
+    const unsubscribe = subscribeTasks(
+      companyCode,
+      (data) => {
         const windowEnd = dateAfterDays(DUE_WINDOW_DAYS);
 
         const mine = canManage ? data : filterOwnTasks(data, currentUser);
@@ -78,22 +80,20 @@ function EmployeeTasks() {
           .sort((a, b) => a.dueDate.localeCompare(b.dueDate));
 
         setTasks(due);
-      })
-      .catch((err) => {
+        setError("");
+        setLoading(false);
+      },
+      (err) => {
         console.error("Failed to load tasks:", err);
         setError("Unable to load tasks.");
-      })
-      .finally(() => {
         setLoading(false);
-      });
-  };
+      }
+    );
 
-  useEffect(() => {
-    if (!companyCode) return;
-
-    loadTasks();
+    // Dashboard chhodte hi listener band
+    return unsubscribe;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [companyCode]);
+  }, [companyCode, canManage]);
 
   // Naam dikhane ke liye — task mein sirf employee ki id hoti hai.
   // Employee ko naam dikhta hi nahi (sab uske apne hain), isliye uske liye skip.
@@ -115,16 +115,12 @@ function EmployeeTasks() {
   }, [companyCode, canManage]);
 
   const completeTask = async (task) => {
-    // Turant list se hata do — wapas laane ke liye purani list rakh li hai
-    const previous = tasks;
-    setTasks((current) => current.filter((item) => item.id !== task.id));
-
     try {
+      // Row khud hat jaayegi — listener ko naya status turant mil jaata hai
       await updateTaskStatus(companyCode, task.id, COMPLETED_STATUS);
       toast.success("Task marked as completed.");
     } catch (err) {
       console.error("Failed to complete task:", err);
-      setTasks(previous);
       toast.error("Unable to update the task.");
     }
   };
@@ -150,17 +146,9 @@ function EmployeeTasks() {
           Loading tasks...
         </p>
       ) : error ? (
+        // Listener khud dobara try karta rehta hai, isliye Retry button nahi
         <div className="py-8 text-center">
           <p className="text-sm text-red-600">{error}</p>
-          <button
-            onClick={() => {
-              setLoading(true);
-              loadTasks();
-            }}
-            className="mt-3 cursor-pointer rounded-lg border border-gray-200 px-4 py-2 text-sm text-gray-700 transition hover:bg-gray-50"
-          >
-            Retry
-          </button>
         </div>
       ) : visible.length === 0 ? (
         <div className="flex flex-col items-center justify-center gap-3 py-10 text-center">

@@ -43,6 +43,28 @@ export const PRIORITY_DOTS = {
   Low: "bg-slate-400",
 };
 
+/*
+| Progress bars ke rang. Jaan-boojhkar STATUS_DOTS jaise hi rakhe hain taaki
+| bar ka rang uske badge ke dot se match kare.
+|
+| Overdue koi status nahi hai — wo pending tasks ka subset hai. Yahan iska
+| rang sirf "attention row" ke liye hai, stacked bar mein wo nahi aata.
+*/
+export const PROGRESS_BARS = {
+  "To Do": "bg-slate-400",
+  "In Progress": "bg-blue-500",
+  Completed: "bg-emerald-500",
+  Overdue: "bg-red-500",
+};
+
+// Dashboard sections ka common white card — pehle ye string AllTasks mein
+// hardcoded thi, ab TaskSectionCard isi se banta hai
+export const SECTION_CARD_CLASS =
+  "overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm";
+
+// Dashboard lists (Urgent / Recent) mein kitni rows dikhein
+export const SECTION_ROW_LIMIT = 5;
+
 // Filter dropdown ka pehla option — kisi bhi status se match nahi karta
 export const ALL_STATUSES = "All statuses";
 

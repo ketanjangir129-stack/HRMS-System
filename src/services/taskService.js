@@ -1,5 +1,5 @@
 import {db} from "../firebase/firebase";
-import {ref, get, push, set, update, remove} from "firebase/database";
+import {ref, get, onValue, push, set, update, remove} from "firebase/database";
 
 export const TASK_STATUSES = ["To Do", "In Progress", "Completed"];
 
@@ -12,17 +12,35 @@ export const COMPLETED_STATUS = TASK_STATUSES[TASK_STATUSES.length - 1];
 const tasksPath = (companyCode) => `companies/${companyCode}/tasks`;
 const taskPath = (companyCode, taskId) => `${tasksPath(companyCode)}/${taskId}`;
 
+// Firebase object deta hai, page ko array chahiye.
+// { "-Nx8": {...} }  →  [ { id: "-Nx8", ... } ]
+const toTaskList = (data) =>
+  Object.entries(data || {})
+    .map(([id, task]) => ({ id, ...task }))
+    // New task sbse upar -createdAt jitna bada , utna new
+    .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+
 export const getTasks = async (companyCode) => {
   const snapshot = await get(ref(db, tasksPath(companyCode)));
   if  (!snapshot.exists()){
     return [];
   }
 
-  const data = snapshot.val();
-  return Object.entries(data).map(([id, task]) => ({ id, ...task }))
-  // New task sbse upar -createdAt jitna bada , utna new
-  .sort((a, b) => b.createdAt - a.createdAt);
+  return toTaskList(snapshot.val());
 };
+
+// Realtime listener — jab bhi tasks badlein, onData dobara chalta hai.
+// Doosre user ka banaya task bhi bina refresh dikh jaayega.
+//
+// Return hone wala function listener band karta hai — use useEffect ke
+// cleanup mein zaroor chalana, warna page chhodne ke baad bhi listener
+// chalta rehta hai (memory leak).
+export const subscribeTasks = (companyCode, onData, onError) =>
+  onValue(
+    ref(db, tasksPath(companyCode)),
+    (snapshot) => onData(snapshot.exists() ? toTaskList(snapshot.val()) : []),
+    (error) => onError?.(error)
+  );
 
 export const createTask = async (companyCode, task) => {
   const taskId = push(ref(db, tasksPath(companyCode))).key;
