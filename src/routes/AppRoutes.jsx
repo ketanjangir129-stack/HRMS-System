@@ -305,10 +305,14 @@ function AppRoutes(){
                     }
                 />
 
+                {/*
+                  One component, two routes, two permissions: assigning a new
+                  structure and revising an existing one are separate rights.
+                */}
                 <Route
                     path="/salarydashboard/salary/create/:employeeId"
                     element={
-                        <PermissionRoute permission="salary.manage">
+                        <PermissionRoute permission="salary.create">
                             <SalaryForm />
                         </PermissionRoute>
                     }
@@ -317,7 +321,7 @@ function AppRoutes(){
                 <Route
                     path="/salarydashboard/salary/edit/:employeeId"
                     element={
-                        <PermissionRoute permission="salary.manage">
+                        <PermissionRoute permission="salary.update">
                             <SalaryForm />
                         </PermissionRoute>
                     }

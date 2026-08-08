@@ -9,9 +9,11 @@ import { EARNING_FIELDS, DEDUCTION_FIELDS } from "../../utils/salary/salaryField
 import { formatCurrency } from "../../utils/salary/formatCurrency";
 import SalaryPageHeader from "../../components/salary/SalaryPageHeader";
 import Loader from "../../components/common/Loader";
+import useRoleAccess from "../../hooks/useRoleAccess";
 
 function SalaryForm() {
     const { employeeId } = useParams();
+    const { canAccessSection } = useRoleAccess();
     const [employee, setEmployee] = useState(null);
     const [isEditMode, setIsEditMode] = useState(false);
     const [loading, setLoading] = useState(true);
@@ -170,6 +172,24 @@ function SalaryForm() {
 
     };
     const handleSubmit = async () => {
+
+        /*
+        | The route is already guarded, but which of the two rights applies is
+        | only known once the record has loaded: this one component serves both
+        | /create and /edit, and `isEditMode` is what decides whether the click
+        | assigns a new structure or revises an existing one.
+        */
+        const permission = isEditMode ? "salary.update" : "salary.create";
+
+        if (!canAccessSection(permission)) {
+            alert(
+                isEditMode
+                    ? "You are not allowed to update salaries."
+                    : "You are not allowed to create salaries."
+            );
+            return;
+        }
+
         try {
 
             if (isEditMode) {

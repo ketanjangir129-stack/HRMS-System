@@ -2,11 +2,18 @@ import { useNavigate } from "react-router-dom";
 import { FiChevronRight } from "react-icons/fi";
 import { BsClockHistory } from "react-icons/bs";
 import { TbReportMoney, TbMoneybagEdit } from "react-icons/tb";
+import useRoleAccess from "../../hooks/useRoleAccess";
 
 function SalaryDashboard() {
 
     const navigate = useNavigate();
 
+    const { canAccessSection } = useRoleAccess();
+
+    /*
+    | Each card opens a guarded route, so it is offered under the same
+    | permission that lets that route open.
+    */
     const modules = [
         {
             title: "Create & Update",
@@ -17,6 +24,7 @@ function SalaryDashboard() {
             color: "bg-blue-50 text-blue-600",
             bar: "bg-blue-500",
             path: "/salarydashboard/salary",
+            permission: "salary.manage",
         },
         {
             title: "Revision History",
@@ -27,8 +35,9 @@ function SalaryDashboard() {
             color: "bg-emerald-50 text-emerald-600",
             bar: "bg-emerald-500",
             path: "/salarydashboard/salary/revisions",
+            permission: "salary.revisions",
         },
-    ];
+    ].filter((module) => canAccessSection(module.permission));
 
     return (
         <div className="mx-auto max-w-[1600px] space-y-6 p-1 sm:p-2">
@@ -59,6 +68,12 @@ function SalaryDashboard() {
             </div>
 
             {/* Modules */}
+            {modules.length === 0 && (
+                <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center text-sm text-slate-500 shadow-sm">
+                    You do not have access to any salary module yet.
+                </div>
+            )}
+
             <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
 
                 {modules.map((module) => (

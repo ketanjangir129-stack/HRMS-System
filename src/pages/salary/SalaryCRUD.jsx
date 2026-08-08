@@ -6,11 +6,22 @@ import { getEmployeeWithSalaryStatus, updateSalary } from "../../services/Salary
 import { filterData } from "../../utils/search/filterData";
 import Loader from "../../components/common/Loader"
 import { useOutletContext } from "react-router-dom";
+import useRoleAccess from "../../hooks/useRoleAccess";
 
 function SalaryCRUD() {
     const companyCode = localStorage.getItem("companyCode");
 
     const navigate = useNavigate();
+
+    const { canAccessSection } = useRoleAccess();
+
+    /*
+    | Each action opens a guarded route, so none of them is offered without the
+    | permission that lets it open.
+    */
+    const canCreate = canAccessSection("salary.create");
+    const canUpdate = canAccessSection("salary.update");
+    const canViewHistory = canAccessSection("salary.history");
 
     const [employees, setEmployees] = useState([]);
     const [isEditMode, setIsEditMode] = useState(false);
@@ -249,41 +260,52 @@ ${employee.salaryAssigned
 
                                                     (
                                                         <div className="flex gap-2 items-center justify-center">
-                                                            <button
+                                                            {canUpdate && (
+                                                                <button
 
-                                                                className="px-2 py-2 rounded-lg"
+                                                                    className="px-2 py-2 rounded-lg"
 
-                                                                onClick={() =>
+                                                                    onClick={() =>
 
-                                                                    navigate(
+                                                                        navigate(
 
-                                                                        `/salarydashboard/salary/edit/${employee.employeeId}`
+                                                                            `/salarydashboard/salary/edit/${employee.employeeId}`
 
-                                                                    )
+                                                                        )
 
-                                                                }
-                                                                title="Edit Employee Salary"
+                                                                    }
+                                                                    title="Edit Employee Salary"
 
-                                                            >
+                                                                >
 
-                                                                <TbMoneybagEdit size={20}
-                                                                    className="text-blue-600" />
+                                                                    <TbMoneybagEdit size={20}
+                                                                        className="text-blue-600" />
 
-                                                            </button>
-                                                            <button
-                                                                className="px-3 py-2"
-                                                                onClick={() =>
-                                                                    navigate(
-                                                                        `/salarydashboard/salary/history/${employee.employeeId}`
-                                                                    )
-                                                                }
-                                                                title="Check Salary History"
-                                                            >
-                                                                <BsClockHistory
-                                                                    size={20}
-                                                                    className="text-blue-600"
-                                                                />
-                                                            </button>
+                                                                </button>
+                                                            )}
+                                                            {canViewHistory && (
+                                                                <button
+                                                                    className="px-3 py-2"
+                                                                    onClick={() =>
+                                                                        navigate(
+                                                                            `/salarydashboard/salary/history/${employee.employeeId}`
+                                                                        )
+                                                                    }
+                                                                    title="Check Salary History"
+                                                                >
+                                                                    <BsClockHistory
+                                                                        size={20}
+                                                                        className="text-blue-600"
+                                                                    />
+                                                                </button>
+                                                            )}
+                                                            {/*
+                                                            | A row whose only actions were both withheld would
+                                                            | otherwise render an empty cell with no explanation.
+                                                            */}
+                                                            {!canUpdate && !canViewHistory && (
+                                                                <span className="text-gray-300">—</span>
+                                                            )}
                                                         </div>
 
 
@@ -293,26 +315,34 @@ ${employee.salaryAssigned
 
                                                     (
 
-                                                        <button
+                                                        canCreate ? (
 
-                                                            className="px-2 py-2 bg-green-600 text-white rounded-lg"
+                                                            <button
 
-                                                            onClick={() =>
+                                                                className="px-2 py-2 bg-green-600 text-white rounded-lg"
 
-                                                                navigate(
+                                                                onClick={() =>
 
-                                                                    `/salarydashboard/salary/create/${employee.employeeId}`
+                                                                    navigate(
 
-                                                                )
+                                                                        `/salarydashboard/salary/create/${employee.employeeId}`
 
-                                                            }
-                                                            title="Assign Salary to Employee"
+                                                                    )
 
-                                                        >
+                                                                }
+                                                                title="Assign Salary to Employee"
 
-                                                            Assign Salary
+                                                            >
 
-                                                        </button>
+                                                                Assign Salary
+
+                                                            </button>
+
+                                                        ) : (
+
+                                                            <span className="text-gray-300">—</span>
+
+                                                        )
 
                                                     )
 

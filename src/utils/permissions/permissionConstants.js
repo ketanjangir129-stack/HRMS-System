@@ -326,11 +326,30 @@ export const PERMISSION_PAGES = [
     path: "/salarydashboard",
     defaults: { hr: true, employee: false },
     sections: [
+      /*
+      | The screen the two actions below are performed on. Withholding it takes
+      | the module card and the route away; withholding an action leaves the
+      | screen readable but takes that one button off it.
+      */
       {
         key: "manage",
-        label: "Manage Salary",
-        description: "Create and edit salary structures",
+        label: "Create & Update Screen",
+        description: "Open the salary create and update list",
         path: "/salarydashboard/salary",
+        defaults: { hr: true, employee: false },
+      },
+      {
+        key: "create",
+        label: "Create Salary",
+        description: "Assign a new salary structure to an employee",
+        path: "/salarydashboard/salary/create",
+        defaults: { hr: true, employee: false },
+      },
+      {
+        key: "update",
+        label: "Update Salary",
+        description: "Revise an employee's existing salary",
+        path: "/salarydashboard/salary/edit",
         defaults: { hr: true, employee: false },
       },
       {
