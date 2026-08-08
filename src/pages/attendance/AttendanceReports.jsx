@@ -10,6 +10,7 @@ import DepartmentReportTable from "../../components/attendance/reports/Departmen
 import EmployeeReportTable from "../../components/attendance/reports/EmployeeReportTable";
 import ReportTabs from "../../components/attendance/reports/ReportTabs";
 import HolidayNotice from "../../components/holiday/HolidayNotice";
+import WeeklyOffNotice from "../../components/holiday/WeeklyOffNotice";
 import useAuth from "../../hooks/useAuth";
 import useDailyAttendance from "../../hooks/useDailyAttendance";
 import useEmployeeDirectory from "../../hooks/useEmployeeDirectory";
@@ -31,6 +32,7 @@ import {
   getEmployeeDetails,
   getMonthlySummary,
 } from "../../utils/attendance/attendanceUtils";
+import { isWeeklyOff } from "../../utils/holiday/holidayUtils";
 
 /*
 |--------------------------------------------------------------------------
@@ -118,6 +120,12 @@ function AttendanceReports() {
 
   const selectedDayHoliday = holidayMap[date] || null;
 
+  /*
+  | A holiday that lands on a weekly off is explained once, as the holiday.
+  */
+  const selectedDayWeeklyOff =
+    !selectedDayHoliday && isWeeklyOff(date);
+
   useEffect(() => {
     setSearchPlaceholder("Search by employee, ID or department...");
 
@@ -170,10 +178,18 @@ function AttendanceReports() {
     () =>
       isDaily
         ? getAttendanceSummary(dailyRows, activeCount, {
-          isHoliday: Boolean(selectedDayHoliday),
+          isNonWorkingDay:
+            Boolean(selectedDayHoliday) || selectedDayWeeklyOff,
         })
         : getMonthlySummary(monthlyRows),
-    [isDaily, dailyRows, activeCount, monthlyRows, selectedDayHoliday]
+    [
+      isDaily,
+      dailyRows,
+      activeCount,
+      monthlyRows,
+      selectedDayHoliday,
+      selectedDayWeeklyOff,
+    ]
   );
 
   const employees = useMemo(
@@ -257,6 +273,13 @@ function AttendanceReports() {
               label="The selected day"
             />
 
+            {selectedDayWeeklyOff && (
+              <WeeklyOffNotice
+                date={date}
+                label="The selected day"
+              />
+            )}
+
             <AttendanceRecordsTable
               records={dailyRows}
               loading={directoryLoading || dayLoading}
@@ -270,7 +293,9 @@ function AttendanceReports() {
               emptyMessage={
                 selectedDayHoliday
                   ? `The office was closed for ${selectedDayHoliday.name}, so no attendance was expected.`
-                  : "No attendance was recorded on this day."
+                  : selectedDayWeeklyOff
+                    ? "This day is a weekly off, so no attendance was expected."
+                    : "No attendance was recorded on this day."
               }
             />
           </>

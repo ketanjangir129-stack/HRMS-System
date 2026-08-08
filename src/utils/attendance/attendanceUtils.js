@@ -3,6 +3,10 @@ import {
     WORK_RULES,
 } from "./attendanceConstants";
 import { getDateKey } from "./attendanceDate";
+import {
+    getDayName,
+    isWeeklyOff,
+} from "../holiday/holidayUtils";
 
 /*
 |--------------------------------------------------------------------------
@@ -238,10 +242,26 @@ export const getInitials = (name = "") =>
 | omitted the record based counting is kept.
 */
 
+/*
+| The statuses that describe a day nobody was expected in. Neither is ever
+| stored on a record - both are derived for a day that has none - so on the
+| company wide views, where a row is an employee rather than a day, no row can
+| carry one and the total is the roster exactly as before.
+|
+| On an employee's own month a row is a day, and these are the days that are
+| left out of the total: dividing a month's attendance by its Sundays reports
+| somebody who never missed a day as four fifths present.
+*/
+
+const NON_WORKING_STATUSES = [
+    ATTENDANCE_STATUS.HOLIDAY,
+    ATTENDANCE_STATUS.WEEKLY_OFF,
+];
+
 export const getAttendanceSummary = (
     attendance = [],
     totalEmployees = null,
-    { isHoliday = false } = {}
+    { isNonWorkingDay = false } = {}
 ) => {
 
     const summary = {
@@ -250,8 +270,11 @@ export const getAttendanceSummary = (
         late: 0,
         leave: 0,
         halfDay: 0,
-        total: attendance.length,
-        isHoliday,
+        total: attendance.filter(
+            (employee) =>
+                !NON_WORKING_STATUSES.includes(employee.status)
+        ).length,
+        isNonWorkingDay,
     };
 
     attendance.forEach((employee) => {
@@ -290,10 +313,10 @@ export const getAttendanceSummary = (
     | covers records explicitly marked Absent. Half days are attendance, so
     | they are excluded from that count the same way the other statuses are.
     |
-    | On a declared holiday that rule is dropped: the office was closed, so a
-    | day with no record is not an absence and the roster is not turned into
-    | one. Records that do exist are still counted, because somebody who came
-    | in on a holiday was present.
+    | On a day nobody was expected in - a declared holiday or a weekly off -
+    | that rule is dropped: the office was closed, so a day with no record is
+    | not an absence and the roster is not turned into one. Records that do
+    | exist are still counted, because somebody who came in was present.
     */
     if (
         typeof totalEmployees === "number" &&
@@ -302,7 +325,7 @@ export const getAttendanceSummary = (
 
         summary.total = totalEmployees;
 
-        if (!isHoliday) {
+        if (!isNonWorkingDay) {
 
             summary.absent = Math.max(
                 totalEmployees -
@@ -725,16 +748,33 @@ export const buildEmployeeReport = (
 
                 const holiday = holidayMap?.[date];
 
+                /*
+                | A day nobody was expected in is not an absence. A holiday
+                | that lands on a weekly off is reported once, as the holiday,
+                | so the day carries the reason it was declared rather than
+                | the weekday it happened to fall on.
+                */
+
+                const weeklyOff = !holiday && isWeeklyOff(date);
+
+                let status = ATTENDANCE_STATUS.ABSENT;
+
+                if (holiday) {
+                    status = ATTENDANCE_STATUS.HOLIDAY;
+                } else if (weeklyOff) {
+                    status = ATTENDANCE_STATUS.WEEKLY_OFF;
+                }
+
                 return {
                     date,
                     employeeId,
                     punchIn: null,
                     punchOut: null,
                     workingHours: "",
-                    status: holiday
-                        ? ATTENDANCE_STATUS.HOLIDAY
-                        : ATTENDANCE_STATUS.ABSENT,
-                    remarks: holiday?.name || "",
+                    status,
+                    remarks:
+                        holiday?.name ||
+                        (weeklyOff ? getDayName(date) : ""),
                 };
 
             }

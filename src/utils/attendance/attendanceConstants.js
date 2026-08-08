@@ -27,6 +27,13 @@ export const ATTENDANCE_STATUS = {
   | an absence.
   */
   HOLIDAY: "Holiday",
+  /*
+  | A day the working week never covers, Sunday by default. Derived from
+  | `WEEKLY_OFF_DAYS` the same way `HOLIDAY` is derived from the calendar, so
+  | it is never stored on a record and never offered in the manual form: a day
+  | nobody was expected in is not an absence and nobody has to mark it.
+  */
+  WEEKLY_OFF: "Weekly Off",
 };
 
 export const ATTENDANCE_STATUS_OPTIONS = [
@@ -44,6 +51,7 @@ export const STATUS_BADGES = {
   [ATTENDANCE_STATUS.LEAVE]: "bg-blue-50 text-blue-700 ring-blue-200",
   [ATTENDANCE_STATUS.HALF_DAY]: "bg-purple-50 text-purple-700 ring-purple-200",
   [ATTENDANCE_STATUS.HOLIDAY]: "bg-teal-50 text-teal-700 ring-teal-200",
+  [ATTENDANCE_STATUS.WEEKLY_OFF]: "bg-indigo-50 text-indigo-700 ring-indigo-200",
 };
 
 export const STATUS_DOTS = {
@@ -53,6 +61,7 @@ export const STATUS_DOTS = {
   [ATTENDANCE_STATUS.LEAVE]: "bg-blue-500",
   [ATTENDANCE_STATUS.HALF_DAY]: "bg-purple-500",
   [ATTENDANCE_STATUS.HOLIDAY]: "bg-teal-500",
+  [ATTENDANCE_STATUS.WEEKLY_OFF]: "bg-indigo-500",
 };
 
 export const FALLBACK_BADGE = "bg-slate-100 text-slate-700 ring-slate-200";

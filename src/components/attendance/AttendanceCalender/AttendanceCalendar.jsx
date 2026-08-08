@@ -4,6 +4,7 @@ import "react-calendar/dist/Calendar.css";
 import "./AttendanceCalendar.css";
 import { getDateKey } from "../../../utils/attendance/attendanceDate";
 import { getAttendanceCalendar } from "../../../utils/attendance/attendanceUtils";
+import { isWeeklyOff } from "../../../utils/holiday/holidayUtils";
 
 /*
 |--------------------------------------------------------------------------
@@ -24,7 +25,25 @@ const LEGEND = [
   { label: "Absent", color: "bg-red-500" },
   { label: "Leave", color: "bg-blue-500" },
   { label: "Holiday", color: "bg-teal-500" },
+  { label: "Weekly Off", color: "bg-slate-300" },
 ];
+
+/*
+| What a single tile is. A record wins over a holiday, a holiday wins over a
+| weekly off: a day is described by the strongest thing known about it, so a
+| Sunday somebody actually worked reads as the punch and not as the day off.
+*/
+
+const tileClass = (attendanceByDate, date) => {
+
+  const key = getDateKey(date);
+
+  return (
+    attendanceByDate[key] ||
+    (isWeeklyOff(key) ? "weekly-off" : "")
+  );
+
+};
 
 function AttendanceCalendar({
   history = [],
@@ -99,7 +118,7 @@ function AttendanceCalendar({
           onActiveStartDateChange={handleActiveStartDateChange}
           tileClassName={({ date, view }) =>
             view === "month"
-              ? attendanceByDate[getDateKey(date)] || ""
+              ? tileClass(attendanceByDate, date)
               : ""
           }
         />

@@ -3,6 +3,7 @@ import {
   FiCalendar,
   FiCheckCircle,
   FiClock,
+  FiCoffee,
   FiLoader,
   FiLogIn,
   FiLogOut,
@@ -11,7 +12,14 @@ import { toast } from "react-toastify";
 import useAttendance from "../../hooks/useAttendance";
 import useAuth from "../../hooks/useAuth";
 import { ATTENDANCE_STATUS } from "../../utils/attendance/attendanceConstants";
-import { formatTime } from "../../utils/attendance/attendanceDate";
+import {
+  formatTime,
+  getDateKey,
+} from "../../utils/attendance/attendanceDate";
+import {
+  getDayName,
+  isWeeklyOff,
+} from "../../utils/holiday/holidayUtils";
 import AttendanceStatusBadge from "./common/AttendanceStatusBadge";
 
 /*
@@ -122,13 +130,40 @@ function TodayAttendanceCard({ className = "" }) {
   const onApprovedLeave =
     attendance?.status === ATTENDANCE_STATUS.LEAVE;
 
+  /*
+  | Sunday, unless the company works a different week. Read off the clock
+  | rather than memoised, so a card left open overnight stops offering the
+  | punch the moment the day rolls over into the weekly off.
+  */
+
+  const todayKey = getDateKey(now);
+
+  const onWeeklyOff = isWeeklyOff(todayKey);
+
+  /*
+  | A weekly off is not worked, so no punch in is offered for it.
+  |
+  | The punch out is left alone on purpose. Somebody who is already punched in
+  | on a weekly off - a day an approver marked by hand, or a punch made before
+  | this rule existed - would otherwise be stranded with an open record that
+  | nothing can close.
+  */
+
   const canPunchIn =
-    !onApprovedLeave && !attendance?.punchIn;
+    !onApprovedLeave && !onWeeklyOff && !attendance?.punchIn;
 
   const canPunchOut =
     !onApprovedLeave &&
     Boolean(attendance?.punchIn) &&
     !attendance?.punchOut;
+
+  /*
+  | The day has a record of its own once anything has been punched or marked,
+  | and that is the truer description of it than the weekly off is.
+  */
+
+  const showWeeklyOffNotice =
+    onWeeklyOff && !onApprovedLeave && !attendance?.punchIn;
 
   const cardClass = `flex flex-col justify-center rounded-2xl border border-slate-200 bg-white p-6 shadow-sm ${className}`;
 
@@ -177,10 +212,22 @@ function TodayAttendanceCard({ className = "" }) {
 
       <div className="mt-6 grid grid-cols-2 gap-3">
 
-        {/* The badge renders a dash on its own when the day is not marked yet. */}
+        {/*
+        | The badge renders a dash on its own when the day is not marked yet.
+        | An unmarked weekly off is not unmarked so much as not expected, so it
+        | says so rather than showing the same dash a working day shows before
+        | anybody arrives.
+        */}
         <Stat
           label="Status"
-          value={<AttendanceStatusBadge status={attendance?.status} />}
+          value={
+            <AttendanceStatusBadge
+              status={
+                attendance?.status ||
+                (onWeeklyOff ? ATTENDANCE_STATUS.WEEKLY_OFF : null)
+              }
+            />
+          }
         />
 
         <Stat label="Punch In" value={formatTime(attendance?.punchIn)} />
@@ -210,6 +257,13 @@ function TodayAttendanceCard({ className = "" }) {
           <div className="flex items-center gap-2 font-semibold text-blue-600">
             <FiCalendar />
             You are on approved leave today
+          </div>
+        )}
+
+        {!error && employeeId && showWeeklyOffNotice && (
+          <div className="flex items-center gap-2 font-semibold text-indigo-600">
+            <FiCoffee />
+            Today is {getDayName(todayKey)}, enjoy your day
           </div>
         )}
 

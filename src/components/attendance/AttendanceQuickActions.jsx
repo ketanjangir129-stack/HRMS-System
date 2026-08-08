@@ -36,14 +36,14 @@ const ACTIONS = [
     color: "bg-blue-50 text-blue-600",
     path: "/attendance/daily",
   },
-  {
-    title: "Monthly Attendance",
-    description: "Every employee's month",
-    icon: <FiClock size={20} />,
-    color: "bg-emerald-50 text-emerald-600",
-    path: "/attendance/monthly",
-    approverOnly: true,
-  },
+  // {
+  //   title: "Monthly Attendance",
+  //   description: "Every employee's month",
+  //   icon: <FiClock size={20} />,
+  //   color: "bg-emerald-50 text-emerald-600",
+  //   path: "/attendance/monthly",
+  //   approverOnly: true,
+  // },
   {
     title: "Requests",
     description: "Corrections and approvals",

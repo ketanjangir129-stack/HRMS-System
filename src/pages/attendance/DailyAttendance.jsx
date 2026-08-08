@@ -6,6 +6,7 @@ import AttendanceRecordsTable from "../../components/attendance/AttendanceRecord
 import AttendanceSummaryCards from "../../components/attendance/AttendanceSummaryCards";
 import MarkAttendanceModal from "../../components/attendance/MarkAttendanceModal";
 import HolidayNotice from "../../components/holiday/HolidayNotice";
+import WeeklyOffNotice from "../../components/holiday/WeeklyOffNotice";
 import useAuth from "../../hooks/useAuth";
 import useDailyAttendance from "../../hooks/useDailyAttendance";
 import useEmployeeDirectory from "../../hooks/useEmployeeDirectory";
@@ -16,6 +17,7 @@ import {
   buildDailyReport,
   getAttendanceSummary,
 } from "../../utils/attendance/attendanceUtils";
+import { isWeeklyOff } from "../../utils/holiday/holidayUtils";
 
 /*
 |--------------------------------------------------------------------------
@@ -24,9 +26,9 @@ import {
 | Today's punch in and punch out records, kept in realtime. Search comes from
 | the header search bar.
 |
-| On a declared holiday nobody is counted absent: the office was closed, so
-| the roster is not turned into a list of absences and the banner says why
-| the day is empty.
+| On a declared holiday or a weekly off nobody is counted absent: the office
+| was closed, so the roster is not turned into a list of absences and the
+| banner says why the day is empty.
 |--------------------------------------------------------------------------
 */
 
@@ -65,6 +67,11 @@ function DailyAttendance() {
 
   const todayHoliday = holidayMap[today] || null;
 
+  /*
+  | A holiday that lands on a weekly off is explained once, as the holiday.
+  */
+  const todayWeeklyOff = !todayHoliday && isWeeklyOff(today);
+
   useEffect(() => {
     setSearchPlaceholder("Search employees by name, ID or department...");
 
@@ -82,9 +89,9 @@ function DailyAttendance() {
   const summary = useMemo(
     () =>
       getAttendanceSummary(records, activeCount, {
-        isHoliday: Boolean(todayHoliday),
+        isNonWorkingDay: Boolean(todayHoliday) || todayWeeklyOff,
       }),
-    [records, activeCount, todayHoliday]
+    [records, activeCount, todayHoliday, todayWeeklyOff]
   );
 
   return (
@@ -111,6 +118,8 @@ function DailyAttendance() {
 
         <HolidayNotice holiday={todayHoliday} label="Today" />
 
+        {todayWeeklyOff && <WeeklyOffNotice date={today} label="Today" />}
+
         <AttendanceSummaryCards summary={summary} />
 
         <AttendanceRecordsTable
@@ -124,7 +133,9 @@ function DailyAttendance() {
           emptyMessage={
             todayHoliday
               ? `Today is a holiday for ${todayHoliday.name}, so no attendance is expected.`
-              : "No employee has punched in today."
+              : todayWeeklyOff
+                ? "Today is a weekly off, so no attendance is expected."
+                : "No employee has punched in today."
           }
           exportName="daily-attendance"
         />

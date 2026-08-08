@@ -126,3 +126,12 @@
 .attendance-calendar .holiday abbr {
   background: #14b8a6;
 }
+
+/* The weekly off. Greyed rather than filled: it is the absence of a working
+   day rather than a status somebody ended up with, and a solid circle on
+   every Sunday would out-shout the four that were earned. */
+
+.attendance-calendar .weekly-off abbr {
+  color: #cbd5e1;
+  font-weight: 500;
+}

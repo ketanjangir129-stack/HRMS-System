@@ -12,6 +12,7 @@ import MarkAttendanceModal from "../../components/attendance/MarkAttendanceModal
 import TodayAttendanceCard from "../../components/attendance/TodayAttendanceCard";
 import RejectRequestModal from "../../components/attendance/requests/RejectRequestModal";
 import HolidayNotice from "../../components/holiday/HolidayNotice";
+import WeeklyOffNotice from "../../components/holiday/WeeklyOffNotice";
 import useAttendanceHistory from "../../hooks/useAttendanceHistory";
 import useAttendanceRequests from "../../hooks/useAttendanceRequests";
 import useAuth from "../../hooks/useAuth";
@@ -25,6 +26,7 @@ import {
   getAttendanceAnalytics,
   getAttendanceSummary,
 } from "../../utils/attendance/attendanceUtils";
+import { isWeeklyOff } from "../../utils/holiday/holidayUtils";
 import {
   filterOwnRequests,
   getCurrentEmployeeId,
@@ -106,7 +108,16 @@ function AttendanceDashboard() {
     holidayYears
   );
 
-  const todayHoliday = holidayMap[getDateKey()] || null;
+  const todayKey = getDateKey();
+
+  const todayHoliday = holidayMap[todayKey] || null;
+
+  /*
+  | A holiday that lands on a weekly off is explained once, as the holiday:
+  | it is the reason the office is closed, and two banners saying the same
+  | thing is one banner too many.
+  */
+  const todayWeeklyOff = !todayHoliday && isWeeklyOff(todayKey);
 
   /*
   | Attendance and requests are joined with the directory once, so the table,
@@ -131,22 +142,25 @@ function AttendanceDashboard() {
   }, [requests, directory, currentUser]);
 
   /*
-  | On a declared holiday the roster is not turned into a list of absences,
-  | so both the cards and the analytics are told what kind of day it is.
+  | On a day nobody was expected in - a declared holiday or a weekly off - the
+  | roster is not turned into a list of absences, so both the cards and the
+  | analytics are told what kind of day it is.
   */
-  const holidayOptions = useMemo(
-    () => ({ isHoliday: Boolean(todayHoliday) }),
-    [todayHoliday]
+  const dayOptions = useMemo(
+    () => ({
+      isNonWorkingDay: Boolean(todayHoliday) || todayWeeklyOff,
+    }),
+    [todayHoliday, todayWeeklyOff]
   );
 
   const summary = useMemo(
-    () => getAttendanceSummary(records, activeCount, holidayOptions),
-    [records, activeCount, holidayOptions]
+    () => getAttendanceSummary(records, activeCount, dayOptions),
+    [records, activeCount, dayOptions]
   );
 
   const analytics = useMemo(
-    () => getAttendanceAnalytics(records, activeCount, holidayOptions),
-    [records, activeCount, holidayOptions]
+    () => getAttendanceAnalytics(records, activeCount, dayOptions),
+    [records, activeCount, dayOptions]
   );
 
   const activities = useMemo(
@@ -232,6 +246,8 @@ function AttendanceDashboard() {
       />
 
       <HolidayNotice holiday={todayHoliday} label="Today" />
+
+      {todayWeeklyOff && <WeeklyOffNotice date={todayKey} label="Today" />}
 
       <div className="grid grid-cols-1 items-stretch gap-6 xl:grid-cols-12">
 
