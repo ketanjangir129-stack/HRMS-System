@@ -206,8 +206,7 @@ function AttendanceDashboard() {
     [records]
   );
 
-  const actorName =
-    currentUser?.personalInfo?.name || currentUser?.name || "Admin";
+  const actorName = currentUser?.personalInfo?.name || currentUser?.name || "Admin";
 
   const handleMonthChange = useCallback((year, month) => {
     setCalendarMonth({ year, month });

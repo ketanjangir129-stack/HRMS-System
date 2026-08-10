@@ -1,6 +1,7 @@
 import { useState } from "react";
 import {
   FiAlertCircle,
+  FiChevronDown,
   FiRotateCcw,
   FiSave,
   FiShield,
@@ -36,6 +37,8 @@ import {
 function RoleAccessPanel() {
 
   const [activeRole, setActiveRole] = useState(MANAGED_ROLES[0]);
+
+  const [open, setOpen] = useState(false);
 
   const {
     draft,
@@ -98,30 +101,51 @@ function RoleAccessPanel() {
   return (
     <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
 
-      {/* Header */}
-      <div className="flex flex-col gap-4 border-b border-slate-200 px-5 py-5 sm:px-6 lg:flex-row lg:items-center lg:justify-between">
+      {/*
+      | Header
+      |
+      | Also the switch that opens the panel, so the section sits closed on a
+      | page that will grow past it rather than filling the screen with the
+      | whole permission matrix before anybody asks for it.
+      */}
+      <button
+        type="button"
+        onClick={() => setOpen((value) => !value)}
+        aria-expanded={open}
+        className={`flex w-full cursor-pointer items-center gap-4 px-5 py-5 text-left transition-colors duration-200 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-400 sm:px-6 ${
+          open ? "border-b border-slate-200" : ""
+        }`}
+      >
 
-        <div className="flex items-center gap-4">
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-white shadow-sm shadow-blue-600/20">
+          <FiShield size={20} />
+        </div>
 
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-white shadow-sm shadow-blue-600/20">
-            <FiShield size={20} />
-          </div>
+        <div className="min-w-0 flex-1">
 
-          <div>
+          <h2 className="text-lg font-semibold text-slate-900">
+            Roles &amp; Access
+          </h2>
 
-            <h2 className="text-lg font-semibold text-slate-900">
-              Roles &amp; Access
-            </h2>
-
-            <p className="mt-0.5 text-sm text-slate-500">
-              Choose which pages and sections each role can open.
-            </p>
-
-          </div>
+          <p className="mt-0.5 text-sm text-slate-500">
+            Choose which pages and sections each role can open.
+          </p>
 
         </div>
 
-      </div>
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-slate-400">
+          <FiChevronDown
+            size={20}
+            className={`transition-transform duration-200 ${
+              open ? "rotate-180" : ""
+            }`}
+          />
+        </span>
+
+      </button>
+
+      {open && (
+      <>
 
       <div className="space-y-4 p-5 sm:p-6">
 
@@ -258,6 +282,9 @@ function RoleAccessPanel() {
         </div>
 
       </div>
+
+      </>
+      )}
 
     </div>
   );

@@ -392,7 +392,7 @@ export const PERMISSION_PAGES = [
     description: "Task board for the company",
     path: "/tasks",
     defaults: { hr: true, employee: true },
-        sections: [
+    sections: [
       {
         key: "viewAll",
         label: "All Tasks",
