@@ -392,7 +392,57 @@ export const PERMISSION_PAGES = [
     description: "Task board for the company",
     path: "/tasks",
     defaults: { hr: true, employee: true },
-    sections: [],
+        sections: [
+      {
+        key: "viewAll",
+        label: "All Tasks",
+        description: "See everyone's tasks, not just their own",
+        defaults: { hr: true, employee: false },
+      },
+      {
+        key: "progress",
+        label: "Task Progress",
+        description: "Status distribution across tasks",
+        defaults: { hr: true, employee: false },
+      },
+      {
+        key: "workload",
+        label: "Team Workload",
+        description: "Assigned work per employee",
+        defaults: { hr: true, employee: false },
+      },
+      {
+        key: "urgent",
+        label: "Urgent & Overdue",
+        description: "Overdue and high priority tasks",
+        defaults: { hr: true, employee: false },
+      },
+      {
+        key: "recent",
+        label: "Recent Tasks",
+        description: "Latest task activity",
+        defaults: { hr: true, employee: false },
+      },
+      {
+        key: "create",
+        label: "Create Task",
+        description: "Assign a new task to an employee",
+        defaults: { hr: true, employee: false },
+      },
+      {
+        key: "update",
+        label: "Update Task",
+        description: "Edit an existing task",
+        defaults: { hr: true, employee: false },
+      },
+      {
+        key: "delete",
+        label: "Delete Task",
+        description: "Remove a task",
+        defaults: { hr: true, employee: false },
+      },
+    ],
+
   },
 
 ];

@@ -68,16 +68,6 @@ export const SECTION_ROW_LIMIT = 5;
 // Filter dropdown ka pehla option — kisi bhi status se match nahi karta
 export const ALL_STATUSES = "All statuses";
 
-// Roles — attendance module jaise hi naam
-export const ROLE = {
-  OWNER: "owner",
-  HR: "hr",
-  EMPLOYEE: "employee",
-};
-
-// Ye tasks assign, edit aur delete kar sakte hain
-export const MANAGER_ROLES = [ROLE.OWNER, ROLE.HR];
-
 // Form ki khaali haalat — reset karte waqt bhi yahi lagti hai
 export const EMPTY_TASK_FORM = {
   title: "",

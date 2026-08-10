@@ -1,9 +1,5 @@
 import { COMPLETED_STATUS } from "../../services/taskService";
-import {
-  ERROR_INPUT_CLASS,
-  INPUT_CLASS,
-  MANAGER_ROLES,
-} from "./taskConstants";
+import { ERROR_INPUT_CLASS, INPUT_CLASS } from "./taskConstants";
 
 /*
 |--------------------------------------------------------------------------
@@ -16,20 +12,13 @@ import {
 
 /*
 |--------------------------------------------------------------------------
-| Roles & Permissions
+| Identity
 |--------------------------------------------------------------------------
-| Owner Firebase Auth se aata hai aur uska role seedha user object par hota
-| hai. HR/Employee custom login use karte hain — unka role `account` mein.
-| Yahi pattern attendanceRequestUtils.js mein bhi hai.
+| Permissions ab useRoleAccess() / canAccessSection("tasks.*") se aati hain
+| — poore project jaisa. Yahan sirf "main kaun hun" bachta hai, "main kya
+| kar sakta hun" nahi.
 |--------------------------------------------------------------------------
 */
-
-export const getUserRole = (currentUser) =>
-  currentUser?.account?.role || currentUser?.role || "";
-
-// Owner aur HR tasks assign, edit aur delete kar sakte hain
-export const isManager = (currentUser) =>
-  MANAGER_ROLES.includes(getUserRole(currentUser));
 
 // Owner ke paas employmentInfo nahi hota — wo employee hai hi nahi
 export const getCurrentEmployeeId = (currentUser) =>
@@ -56,6 +45,24 @@ export const formatDate = (date) =>
         year: "numeric",
       })
     : "No due date";
+
+/*
+| createdAt / updatedAt millisecond timestamp hain (Date.now()), dueDate ki
+| tarah "YYYY-MM-DD" string nahi. Isliye inka apna formatter chahiye —
+| timestamp formatDate() mein daalne par "Invalid Date" banta hai.
+|
+| 1754640000000 → "Aug 08, 2026, 4:30 PM"
+*/
+export const formatTimestamp = (ms) =>
+  ms
+    ? new Date(ms).toLocaleString("en-US", {
+        month: "short",
+        day: "2-digit",
+        year: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+      })
+    : "--";
 
 // "Bhumika Gautam" → "BG"
 export const initials = (name) =>

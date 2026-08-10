@@ -11,6 +11,7 @@ import {
 import { getEmployees } from "../../services/EmployeeService";
 import { validateField } from "../../utils/validation/validateField";
 import useAuth from "../../hooks/useAuth";
+import useRoleAccess from "../../hooks/useRoleAccess";
 import {
   ALL_STATUSES,
   EMPTY_TASK_FORM,
@@ -21,7 +22,6 @@ import {
   filterOwnTasks,
   filterTasks,
   getCurrentEmployeeId,
-  isManager,
   recentTasks,
   taskProgress,
   taskSummary,
@@ -39,6 +39,7 @@ import TaskFilters from "../../components/tasks/TaskFilters";
 import TaskTable from "../../components/tasks/TaskTable";
 import CreateTaskModal from "../../components/tasks/CreateTaskModal";
 import DeleteTaskModal from "../../components/tasks/DeleteTaskModal";
+import TaskDetailsModal from "../../components/tasks/TaskDetailsModal";
 import Loader from "../../components/common/Loader";
 
 /*
@@ -57,13 +58,24 @@ function AllTasks() {
   const companyCode = localStorage.getItem("companyCode");
   const { currentUser } = useAuth();
 
-  // Owner/HR poora board chalate hain — assign, edit, delete.
-  // Employee sirf apne tasks dekhta hai aur unka status badal sakta hai.
-  const canManage = isManager(currentUser);
+  // Owner Settings se ye sab on/off karta hai. Owner ke liye hamesha true.
+  const { canAccessSection } = useRoleAccess();
 
-  // HR khud bhi employee hai, isliye uske apne tasks ho sakte hain.
-  // Owner ka employee record hota hi nahi — uske liye toggle bekaar hai.
-  const canSeeOwnTasks = canManage && Boolean(getCurrentEmployeeId(currentUser));
+  const canViewAll = canAccessSection("tasks.viewAll");
+  const showProgress = canAccessSection("tasks.progress");
+  const showWorkload = canAccessSection("tasks.workload");
+  const showUrgent = canAccessSection("tasks.urgent");
+  const showRecent = canAccessSection("tasks.recent");
+  const canCreateTask = canAccessSection("tasks.create");
+  const canUpdateTask = canAccessSection("tasks.update");
+  const canDeleteTask = canAccessSection("tasks.delete");
+
+  // Naam chahiye Assignee column, workload aur assign dropdown ke liye
+  const needsEmployees = canViewAll || showWorkload || canCreateTask;
+
+  // Toggle tabhi, jab sabke tasks dekh sakte ho AUR apna employee record ho.
+  // Owner ka record hota hi nahi — uske liye toggle bekaar hai.
+  const canSeeOwnTasks = canViewAll && Boolean(getCurrentEmployeeId(currentUser));
 
   const [tasks, setTasks] = useState([]);
   const [employees, setEmployees] = useState([]);
@@ -76,6 +88,8 @@ function AllTasks() {
   const [editingTask, setEditingTask] = useState(null);
   // Kaunsa task delete hone ja raha hai — null matlab modal band
   const [taskToDelete, setTaskToDelete] = useState(null);
+  // Sirf id — poora object rakhte to modal purani copy par atak jaata
+  const [viewingTaskId, setViewingTaskId] = useState(null);
   const [deleting, setDeleting] = useState(false);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState(ALL_STATUSES);
@@ -114,11 +128,11 @@ function AllTasks() {
     return unsubscribe;
   }, [companyCode]);
 
-  // Employees dropdown aur Assignee column ke liye — ek hi baar.
-  // Employee ke paas dono nahi hain, isliye uske liye ye call chalti hi nahi.
+  // Employees dropdown, Assignee column aur workload ke liye — ek hi baar.
+  // Jise inme se kuch nahi dikhta uske liye ye call chalti hi nahi.
   // Fail ho to page-level error nahi — task list to theek hai.
   useEffect(() => {
-    if (!companyCode || !canManage) return;
+    if (!companyCode || !needsEmployees) return;
 
     getEmployees(companyCode)
       .then((data) => {
@@ -132,12 +146,12 @@ function AllTasks() {
       .catch((err) => {
         console.error("Failed to load employees:", err);
       });
-  }, [companyCode, canManage]);
+  }, [companyCode, needsEmployees]);
 
-  // Employee ko hamesha sirf apne tasks. Manager ko sab, jab tak wo khud
+  // tasks.viewAll na ho to hamesha sirf apne tasks. Ho to sab, jab tak khud
   // "My tasks" na chune. Filter browser mein hota hai — attendance requests
   // module bhi yahi karta hai (filterOwnRequests).
-  const showOnlyMine = !canManage || scope === "mine";
+  const showOnlyMine = !canViewAll || scope === "mine";
   const roleTasks = useMemo(
     () => (showOnlyMine ? filterOwnTasks(tasks, currentUser) : tasks),
     [showOnlyMine, tasks, currentUser]
@@ -174,6 +188,12 @@ function AllTasks() {
     employees,
     allStatuses: ALL_STATUSES,
   });
+
+  // roleTasks se — jo dikhta nahi uski detail bhi nahi khulni chahiye
+  const viewingTask = useMemo(
+    () => roleTasks.find((task) => task.id === viewingTaskId) || null,
+    [roleTasks, viewingTaskId]
+  );
 
   // "View all" — filter hata do taaki poori list dikhe, phir table par le jao
   const viewAllTasks = () => {
@@ -304,13 +324,13 @@ function AllTasks() {
       <TaskPageHeader
         title="Tasks"
         subtitle={
-          canManage
+          canViewAll
             ? "Plan work, keep ownership clear, and stay ahead of deadlines"
             : "Everything assigned to you, in one place"
         }
         icon={<FiCheckSquare />}
         action={
-          canManage && (
+          canCreateTask && (
             <button
               type="button"
               onClick={openCreateForm}
@@ -341,46 +361,50 @@ function AllTasks() {
         <TaskSummaryCards summary={summary} />
 
         {/*
-          Dashboard sections sirf Owner/HR ke liye — wahi guard jo Create
-          button aur TaskTable ka Assignee column use karte hain.
-
-          Employee ke liye do wajah se chhipe hain:
-            1. getEmployees() uske liye chalti hi nahi (neeche wala effect
-               canManage par rukta hai), to employees khaali rehti hai aur
-               assigneeName() naam ki jagah raw Firebase id de deta hai
-            2. "Team workload" ka matlab hi nahi — usko sirf apne tasks
-               dikhte hain, to us list mein wo akela hota hai
-
-          Summary cards jaan-boojhkar bahar hain: wo uske apne tasks par
-          sahi ginti dete hain aur unme koi assignee naam nahi aata.
+          Har panel apni permission par. Ek chhip jaye to doosra poori chaudai
+          le leta hai — Dashboard.jsx bhi yahi karta hai.
+          Summary cards bahar hain: unme koi assignee naam nahi aata.
         */}
-        {canManage && (
-          <>
-            {/*
-              Progress patli hai, Workload chaudi — isliye desktop par 1:2 ka
-              batwara. Tablet/mobile par dono neeche-oopar stack ho jaate hain.
-            */}
-            <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-              <TaskProgress progress={progress} />
+        {(showProgress || showWorkload) && (
+          <div
+            className={`grid grid-cols-1 gap-6 ${
+              showProgress && showWorkload ? "lg:grid-cols-3" : ""
+            }`}
+          >
+            {showProgress && <TaskProgress progress={progress} />}
 
-              <TeamWorkload workload={workload} className="lg:col-span-2" />
-            </div>
+            {showWorkload && (
+              <TeamWorkload
+                workload={workload}
+                className={showProgress ? "lg:col-span-2" : ""}
+              />
+            )}
+          </div>
+        )}
 
-            <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        {(showUrgent || showRecent) && (
+          <div
+            className={`grid grid-cols-1 gap-6 ${
+              showUrgent && showRecent ? "lg:grid-cols-2" : ""
+            }`}
+          >
+            {showUrgent && (
               <UrgentTasks
                 tasks={urgent}
                 employees={employees}
                 today={today}
                 onViewAll={viewAllTasks}
               />
+            )}
 
+            {showRecent && (
               <RecentTasks
                 tasks={recent}
                 employees={employees}
                 onViewAll={viewAllTasks}
               />
-            </div>
-          </>
+            )}
+          </div>
         )}
 
         {/* ref — dono "View all" isi card par scroll karte hain */}
@@ -414,11 +438,14 @@ function AllTasks() {
             tasks={visibleTasks}
             employees={employees}
             hasTasks={roleTasks.length > 0}
-            canManage={canManage}
+            showAssignee={canViewAll}
+            canUpdate={canUpdateTask}
+            canDelete={canDeleteTask}
             onStatusChange={changeStatus}
             onEdit={openEditForm}
             onDelete={setTaskToDelete}
-            onCreate={canManage ? openCreateForm : undefined}
+            onRowClick={(task) => setViewingTaskId(task.id)}
+            onCreate={canCreateTask ? openCreateForm : undefined}
           />
         </div>
       </div>
@@ -433,6 +460,14 @@ function AllTasks() {
         onChange={updateField}
         onSubmit={handleSubmit}
         onClose={closeForm}
+      />
+
+      <TaskDetailsModal
+        open={Boolean(viewingTask)}
+        task={viewingTask}
+        employees={employees}
+        showAssignee={canViewAll}
+        onClose={() => setViewingTaskId(null)}
       />
 
       <DeleteTaskModal

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { CheckCircle2 } from "lucide-react";
 import { toast } from "react-toastify";
@@ -9,12 +9,12 @@ import {
 } from "../services/taskService";
 import { getEmployees } from "../services/EmployeeService";
 import useAuth from "../hooks/useAuth";
+import useRoleAccess from "../hooks/useRoleAccess";
 import { PRIORITY_STYLES } from "../utils/tasks/taskConstants";
 import {
   assigneeName,
   dueLabel,
   filterOwnTasks,
-  isManager,
   todayInputValue,
 } from "../utils/tasks/taskUtils";
 
@@ -46,9 +46,11 @@ function EmployeeTasks() {
   const navigate = useNavigate();
   const companyCode = localStorage.getItem("companyCode");
   const { currentUser } = useAuth();
+  const { canAccessSection } = useRoleAccess();
 
-  // Manager ko sabke tasks, employee ko sirf apne
-  const canManage = isManager(currentUser);
+  // tasks.viewAll wale ko sabke tasks, baaki ko sirf apne
+  const canViewAll = canAccessSection("tasks.viewAll");
+  const canCreateTask = canAccessSection("tasks.create");
 
   const [tasks, setTasks] = useState([]);
   const [employees, setEmployees] = useState([]);
@@ -67,7 +69,7 @@ function EmployeeTasks() {
       (data) => {
         const windowEnd = dateAfterDays(DUE_WINDOW_DAYS);
 
-        const mine = canManage ? data : filterOwnTasks(data, currentUser);
+        const mine = canViewAll ? data : filterOwnTasks(data, currentUser);
 
         const due = mine
           .filter(
@@ -93,12 +95,12 @@ function EmployeeTasks() {
     // Dashboard chhodte hi listener band
     return unsubscribe;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [companyCode, canManage]);
+  }, [companyCode, canViewAll]);
 
   // Naam dikhane ke liye — task mein sirf employee ki id hoti hai.
   // Employee ko naam dikhta hi nahi (sab uske apne hain), isliye uske liye skip.
   useEffect(() => {
-    if (!companyCode || !canManage) return;
+    if (!companyCode || !canViewAll) return;
 
     getEmployees(companyCode)
       .then((data) => {
@@ -112,7 +114,7 @@ function EmployeeTasks() {
       .catch((err) => {
         console.error("Failed to load employees:", err);
       });
-  }, [companyCode, canManage]);
+  }, [companyCode, canViewAll]);
 
   const completeTask = async (task) => {
     try {
@@ -163,7 +165,7 @@ function EmployeeTasks() {
             </p>
           </div>
 
-          {canManage && (
+          {canCreateTask && (
             <button
               onClick={() => navigate("/tasks")}
               className="mt-1 cursor-pointer text-sm font-medium text-blue-600 transition hover:underline"
@@ -190,7 +192,7 @@ function EmployeeTasks() {
               <div className="min-w-0 flex-1">
                 <p className="truncate text-gray-700">{task.title}</p>
                 <p className="mt-0.5 text-xs text-gray-400">
-                  {canManage ? `${assigneeName(task, employees)} · ` : ""}
+                  {canViewAll ? `${assigneeName(task, employees)} · ` : ""}
                   {dueLabel(task.dueDate, today)}
                 </p>
               </div>

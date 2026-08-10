@@ -48,12 +48,36 @@ function TaskTable({
   onEdit,
   onDelete,
   onCreate,
+  // Row click/Enter par details modal — page se aata hai. Na mile to row
+  // saadi rehti hai.
+  onRowClick,
   hasTasks,
-  // Owner/HR ke liye true. Employee ke liye false — tab Assignee column
-  // aur Actions ke buttons dikhte hi nahi.
-  canManage = true,
+  // Teeno alag permission se aate hain. showAssignee false ho to sirf apne
+  // hi tasks dikh rahe hain, to Assignee column bekaar hai.
+  showAssignee = true,
+  canUpdate = true,
+  canDelete = true,
 }) {
+  // Actions column tabhi, jab kam se kam ek button ho
+  const showActions = canUpdate || canDelete;
   const today = todayInputValue();
+
+  // Status/Edit/Delete row ke andar hain — unka event upar na jaye,
+  // warna status badalte hi details modal bhi khul jaata
+  const stopRowActivation = {
+    onClick: (event) => event.stopPropagation(),
+    onKeyDown: (event) => event.stopPropagation(),
+  };
+
+  // Mouse ke bina bhi details tak pahunch — Space page ko scroll karta hai,
+  // isliye preventDefault
+  const handleRowKeyDown = (event, task) => {
+    if (!onRowClick) return;
+    if (event.key !== "Enter" && event.key !== " ") return;
+
+    event.preventDefault();
+    onRowClick(task);
+  };
 
   return (
     <div className="overflow-x-auto">
@@ -62,11 +86,13 @@ function TaskTable({
           <tr>
             <th className="w-16 px-6 py-4 text-center">#</th>
             <th className="px-6 py-4">Task</th>
-            {canManage && <th className="px-6 py-4">Assignee</th>}
+            {showAssignee && <th className="px-6 py-4">Assignee</th>}
             <th className="px-6 py-4">Due date</th>
             <th className="px-6 py-4">Priority</th>
             <th className="px-6 py-4">Status</th>
-            {canManage && <th className="w-28 px-6 py-4 text-center">Actions</th>}
+            {showActions && (
+              <th className="w-28 px-6 py-4 text-center">Actions</th>
+            )}
           </tr>
         </thead>
 
@@ -78,7 +104,16 @@ function TaskTable({
             return (
               <tr
                 key={task.id}
-                className="transition-colors hover:bg-slate-50/70"
+                onClick={() => onRowClick?.(task)}
+                onKeyDown={(event) => handleRowKeyDown(event, task)}
+                // Keyboard tabhi, jab row par kuch hota ho
+                tabIndex={onRowClick ? 0 : undefined}
+                title={onRowClick ? `View details of ${task.title}` : undefined}
+                className={`transition-colors hover:bg-slate-50/70 ${
+                  onRowClick
+                    ? "cursor-pointer focus:outline-none focus-visible:bg-slate-50 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-500"
+                    : ""
+                }`}
               >
                 {/* Row ka number — filter lagne par bhi 1, 2, 3 hi rahega */}
                 <td className="px-6 py-4 text-center text-sm font-semibold text-slate-400">
@@ -96,7 +131,7 @@ function TaskTable({
                   )}
                 </td>
 
-                {canManage && (
+                {showAssignee && (
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
                       <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-50 text-xs font-bold text-blue-700">
@@ -130,7 +165,8 @@ function TaskTable({
                   <TaskBadge value={task.priority || "Medium"} variant="priority" />
                 </td>
 
-                <td className="px-6 py-4">
+                {/* Status badalne par details modal nahi khulna chahiye */}
+                <td className="px-6 py-4" {...stopRowActivation}>
                   <div className="relative inline-block">
                     <select
                       value={task.status || TASK_STATUSES[0]}
@@ -148,21 +184,26 @@ function TaskTable({
                   </div>
                 </td>
 
-                {canManage && (
-                  <td className="px-6 py-4">
+                {showActions && (
+                  // Edit/Delete dabane par bhi modal nahi khulna chahiye
+                  <td className="px-6 py-4" {...stopRowActivation}>
                     <div className="flex items-center justify-center gap-2">
-                      <RowAction
-                        tone="edit"
-                        title={`Edit ${task.title}`}
-                        onClick={() => onEdit(task)}
-                        icon={<FiEdit2 size={16} />}
-                      />
-                      <RowAction
-                        tone="delete"
-                        title={`Delete ${task.title}`}
-                        onClick={() => onDelete(task)}
-                        icon={<FiTrash2 size={16} />}
-                      />
+                      {canUpdate && (
+                        <RowAction
+                          tone="edit"
+                          title={`Edit ${task.title}`}
+                          onClick={() => onEdit(task)}
+                          icon={<FiEdit2 size={16} />}
+                        />
+                      )}
+                      {canDelete && (
+                        <RowAction
+                          tone="delete"
+                          title={`Delete ${task.title}`}
+                          onClick={() => onDelete(task)}
+                          icon={<FiTrash2 size={16} />}
+                        />
+                      )}
                     </div>
                   </td>
                 )}
@@ -172,8 +213,11 @@ function TaskTable({
 
           {tasks.length === 0 && (
             <tr>
-              {/* canManage false ho to Assignee aur Actions column nahi hote */}
-              <td colSpan={canManage ? 7 : 5} className="px-6 py-20">
+              {/* Assignee aur Actions column chhip sakte hain */}
+              <td
+                colSpan={5 + (showAssignee ? 1 : 0) + (showActions ? 1 : 0)}
+                className="px-6 py-20"
+              >
                 <div className="flex flex-col items-center gap-4 text-center">
                   <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100 text-slate-400">
                     <FiInbox size={26} />
@@ -193,10 +237,10 @@ function TaskTable({
                     <>
                       <div>
                         <p className="font-semibold text-slate-800">
-                          {canManage ? "No tasks yet" : "Nothing assigned yet"}
+                          {showAssignee ? "No tasks yet" : "Nothing assigned yet"}
                         </p>
                         <p className="mt-1 text-sm text-slate-500">
-                          {canManage
+                          {onCreate
                             ? "Create your first task to start tracking work."
                             : "Tasks assigned to you will show up here."}
                         </p>
