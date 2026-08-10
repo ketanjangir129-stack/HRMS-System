@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { FiAlertTriangle, FiCheckSquare, FiLoader, FiX } from "react-icons/fi";
 import { toast } from "react-toastify";
+import SearchableSelect from "../common/SearchableSelect";
 import {
   ATTENDANCE_STATUS,
   ATTENDANCE_STATUS_OPTIONS,
@@ -63,9 +64,7 @@ function MarkAttendanceForm({
       )
       : null;
 
-  const handleChange = (event) => {
-
-    const { name, value } = event.target;
+  const setField = (name, value) => {
 
     setForm((previous) => ({ ...previous, [name]: value }));
 
@@ -74,6 +73,24 @@ function MarkAttendanceForm({
     );
 
   };
+
+  const handleChange = (event) =>
+    setField(event.target.name, event.target.value);
+
+  /*
+  | The directory can be long, so the picker searches instead of scrolling.
+  | Name and id stay in the label and the department becomes the hint, which
+  | keeps both of them searchable.
+  */
+  const employeeOptions = useMemo(
+    () =>
+      employees.map((employee) => ({
+        value: employee.employeeId,
+        label: `${employee.name} (${employee.employeeId})`,
+        hint: employee.department ? `· ${employee.department}` : "",
+      })),
+    [employees]
+  );
 
   const handleSubmit = async (event) => {
 
@@ -197,23 +214,17 @@ function MarkAttendanceForm({
                   Employee <span className="text-red-500">*</span>
                 </label>
 
-                <select
-                  name="employeeId"
+                <SearchableSelect
+                  options={employeeOptions}
                   value={form.employeeId}
-                  onChange={handleChange}
+                  onChange={(employeeId) => setField("employeeId", employeeId)}
+                  placeholder="Select employee..."
+                  searchPlaceholder="Search by name, ID or department..."
+                  emptyMessage="No employees found"
+                  ariaLabel="Select employee"
+                  allowClear
                   className={`${fieldClass} cursor-pointer`}
-                >
-                  <option value="">Select employee...</option>
-                  {employees.map((employee) => (
-                    <option
-                      key={employee.employeeId}
-                      value={employee.employeeId}
-                    >
-                      {employee.name} ({employee.employeeId})
-                      {employee.department ? ` · ${employee.department}` : ""}
-                    </option>
-                  ))}
-                </select>
+                />
 
                 {errors.employeeId && (
                   <p className="mt-1 text-xs font-medium text-red-500">

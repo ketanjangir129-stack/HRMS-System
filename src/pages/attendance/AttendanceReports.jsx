@@ -9,6 +9,7 @@ import { MonthNavigator } from "../../components/attendance/common/AttendancePan
 import DepartmentReportTable from "../../components/attendance/reports/DepartmentReportTable";
 import EmployeeReportTable from "../../components/attendance/reports/EmployeeReportTable";
 import ReportTabs from "../../components/attendance/reports/ReportTabs";
+import SearchableSelect from "../../components/common/SearchableSelect";
 import HolidayNotice from "../../components/holiday/HolidayNotice";
 import WeeklyOffNotice from "../../components/holiday/WeeklyOffNotice";
 import useAuth from "../../hooks/useAuth";
@@ -200,6 +201,19 @@ function AttendanceReports() {
     [directory]
   );
 
+  /*
+  | The directory can hold hundreds of people, so the report picker is a
+  | searchable list rather than a plain dropdown.
+  */
+  const employeeOptions = useMemo(
+    () =>
+      employees.map((employee) => ({
+        value: employee.employeeId,
+        label: `${employee.name} (${employee.employeeId})`,
+      })),
+    [employees]
+  );
+
   const selectedEmployee = selectedEmployeeId
     ? getEmployeeDetails(directory, selectedEmployeeId)
     : null;
@@ -328,24 +342,17 @@ function AttendanceReports() {
               <>
                 {monthToolbar}
 
-                <select
+                <SearchableSelect
+                  options={employeeOptions}
                   value={selectedEmployeeId}
-                  onChange={(event) =>
-                    setSelectedEmployeeId(event.target.value)
-                  }
-                  aria-label="Select employee"
+                  onChange={setSelectedEmployeeId}
+                  placeholder="Select employee..."
+                  searchPlaceholder="Search by name or ID..."
+                  emptyMessage="No employees found"
+                  ariaLabel="Select employee"
+                  allowClear
                   className={selectClass}
-                >
-                  <option value="">Select employee...</option>
-                  {employees.map((employee) => (
-                    <option
-                      key={employee.employeeId}
-                      value={employee.employeeId}
-                    >
-                      {employee.name} ({employee.employeeId})
-                    </option>
-                  ))}
-                </select>
+                />
               </>
             }
           />

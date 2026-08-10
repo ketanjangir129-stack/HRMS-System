@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { FiFileText, FiLoader, FiX } from "react-icons/fi";
+import SearchableSelect from "../../common/SearchableSelect";
 import { REQUEST_TYPES } from "../../../utils/attendance/attendanceConstants";
 import {
   getLastCorrectableDate,
@@ -68,9 +69,7 @@ function RequestForm({
 
   const [errors, setErrors] = useState({});
 
-  const handleChange = (event) => {
-
-    const { name, value } = event.target;
+  const setField = (name, value) => {
 
     setForm((previous) => ({ ...previous, [name]: value }));
 
@@ -80,6 +79,22 @@ function RequestForm({
     );
 
   };
+
+  const handleChange = (event) =>
+    setField(event.target.name, event.target.value);
+
+  /*
+  | The employee list grows with the company, so it is searched rather than
+  | scrolled. Name and id both sit in the label and stay searchable.
+  */
+  const employeeOptions = useMemo(
+    () =>
+      employees.map((employee) => ({
+        value: employee.employeeId,
+        label: `${employee.name} (${employee.employeeId})`,
+      })),
+    [employees]
+  );
 
   const handleSubmit = (event) => {
 
@@ -148,22 +163,19 @@ function RequestForm({
                 required
               >
                 {canSelectEmployee && !initialData ? (
-                  <select
-                    name="employeeId"
+                  <SearchableSelect
+                    options={employeeOptions}
                     value={form.employeeId}
-                    onChange={handleChange}
+                    onChange={(employeeId) =>
+                      setField("employeeId", employeeId)
+                    }
+                    placeholder="Select employee..."
+                    searchPlaceholder="Search by name or ID..."
+                    emptyMessage="No employees found"
+                    ariaLabel="Select employee"
+                    allowClear
                     className={`${fieldClass} cursor-pointer`}
-                  >
-                    <option value="">Select employee...</option>
-                    {employees.map((employee) => (
-                      <option
-                        key={employee.employeeId}
-                        value={employee.employeeId}
-                      >
-                        {employee.name} ({employee.employeeId})
-                      </option>
-                    ))}
-                  </select>
+                  />
                 ) : (
                   <input
                     type="text"
