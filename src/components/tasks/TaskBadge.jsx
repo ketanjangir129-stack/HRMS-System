@@ -25,7 +25,8 @@ function TaskBadge({ value, variant = "status" }) {
 
   return (
     <span
-      className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ${
+      // whitespace-nowrap — "In Progress" pill ke andar do line mein tootta tha
+      className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-3 py-1 text-xs font-semibold ${
         styles[value] || "bg-slate-50 text-slate-600 ring-1 ring-inset ring-slate-200"
       }`}
     >

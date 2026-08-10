@@ -20,6 +20,17 @@ import { ERROR_INPUT_CLASS, INPUT_CLASS } from "./taskConstants";
 |--------------------------------------------------------------------------
 */
 
+/*
+| Task kisne banaya — ownership ke liye createdById use hota hai, createdBy
+| nahi. createdBy display naam hai aur do logon ka naam same ho sakta hai.
+|
+| employeeId khaali ho to hamesha false: Owner ka employee record nahi hota
+| (""), aur purane tasks mein createdById undefined hai — dono ko match hone
+| se rokna zaroori hai.
+*/
+export const isTaskCreator = (task, employeeId) =>
+  Boolean(employeeId) && task?.createdById === employeeId;
+
 // Owner ke paas employmentInfo nahi hota — wo employee hai hi nahi
 export const getCurrentEmployeeId = (currentUser) =>
   currentUser?.employmentInfo?.employeeId ||

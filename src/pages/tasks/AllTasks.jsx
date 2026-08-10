@@ -17,11 +17,14 @@ import {
   EMPTY_TASK_FORM,
   PRIMARY_BUTTON_CLASS,
   SECTION_ROW_LIMIT,
+  TASK_CONTEXT,
+  TASK_CONTEXT_LABELS,
 } from "../../utils/tasks/taskConstants";
 import {
   filterOwnTasks,
   filterTasks,
   getCurrentEmployeeId,
+  isTaskCreator,
   recentTasks,
   taskProgress,
   taskSummary,
@@ -67,15 +70,49 @@ function AllTasks() {
   const showUrgent = canAccessSection("tasks.urgent");
   const showRecent = canAccessSection("tasks.recent");
   const canCreateTask = canAccessSection("tasks.create");
+  const canCreateOwn = canAccessSection("tasks.createOwn");
   const canUpdateTask = canAccessSection("tasks.update");
+  const canUpdateOwn = canAccessSection("tasks.updateOwn");
   const canDeleteTask = canAccessSection("tasks.delete");
+
+  // Ownership isi se tay hoti hai — createdBy (naam) se nahi
+  const myEmployeeId = getCurrentEmployeeId(currentUser);
+
+  /*
+  | Jisko kisi ko assign karne ka haq nahi par apne liye bana sakta hai —
+  | uska assignee khud tay hota hai, form mein choice nahi milti. Yahi leave
+  | module karta hai: ApplyLeaveModal mein employee selector hai hi nahi.
+  |
+  | Employee record zaroori hai, warna assignedTo khaali reh jaata.
+  */
+  const selfAssignOnly =
+    !canCreateTask && canCreateOwn && Boolean(myEmployeeId);
+
+  const canOpenCreate = canCreateTask || selfAssignOnly;
+
+  // Owner/HR har task edit karte hain, baaki sirf apna banaya hua.
+  // Per-row check — ek global boolean se kaam nahi chalta.
+  const canEditTask = (task) =>
+    canUpdateTask || (canUpdateOwn && isTaskCreator(task, myEmployeeId));
+
+  // Actions column ka faisla — kisi bhi task par kuch kar sakte ho ya nahi.
+  // Filtered list se nahi nikalte, warna column aata-jaata rehta.
+  const canActOnTasks = canUpdateTask || canUpdateOwn || canDeleteTask;
 
   // Naam chahiye Assignee column, workload aur assign dropdown ke liye
   const needsEmployees = canViewAll || showWorkload || canCreateTask;
 
+  // Kisne task assign kiya — record par save hota hai. Wahi fallback chain
+  // jo HolidayDashboard createdBy ke liye use karta hai.
+  const actorName =
+    currentUser?.personalInfo?.name ||
+    currentUser?.name ||
+    currentUser?.email ||
+    "Admin";
+
   // Toggle tabhi, jab sabke tasks dekh sakte ho AUR apna employee record ho.
   // Owner ka record hota hi nahi — uske liye toggle bekaar hai.
-  const canSeeOwnTasks = canViewAll && Boolean(getCurrentEmployeeId(currentUser));
+  const canSeeOwnTasks = canViewAll && Boolean(myEmployeeId);
 
   const [tasks, setTasks] = useState([]);
   const [employees, setEmployees] = useState([]);
@@ -95,6 +132,8 @@ function AllTasks() {
   const [statusFilter, setStatusFilter] = useState(ALL_STATUSES);
   // "all" ya "mine" — sirf manager ke liye, employee ko hamesha apne hi dikhte hain
   const [scope, setScope] = useState("all");
+  // Kaunse section ka "View all" daba — khaali matlab poori list
+  const [tableContext, setTableContext] = useState(TASK_CONTEXT.ALL);
   const [formData, setFormData] = useState(EMPTY_TASK_FORM);
 
   // Dashboard sections ka "View all" isi table par scroll karta hai —
@@ -182,7 +221,25 @@ function AllTasks() {
     [roleTasks]
   );
 
-  const visibleTasks = filterTasks(roleTasks, {
+  /*
+  | Table ke liye wahi do helpers, bas bina limit — Infinity se slice poori
+  | list de deta hai. Section aur table ek hi definition par chalte hain,
+  | isliye "View all" mein sach mein wahi tasks dikhte hain.
+  */
+  const contextTasks = useMemo(() => {
+    if (tableContext === TASK_CONTEXT.URGENT) {
+      return urgentTasks(roleTasks, today, Infinity);
+    }
+
+    if (tableContext === TASK_CONTEXT.RECENT) {
+      return recentTasks(roleTasks, Infinity);
+    }
+
+    return roleTasks;
+  }, [tableContext, roleTasks, today]);
+
+  // Search aur status filter context ke upar lagte hain, uski jagah nahi
+  const visibleTasks = filterTasks(contextTasks, {
     search,
     statusFilter,
     employees,
@@ -195,8 +252,9 @@ function AllTasks() {
     [roleTasks, viewingTaskId]
   );
 
-  // "View all" — filter hata do taaki poori list dikhe, phir table par le jao
-  const viewAllTasks = () => {
+  // "View all" — us section ka context lagao, status filter hatao, table par jao
+  const showTableContext = (context) => {
+    setTableContext(context);
     setStatusFilter(ALL_STATUSES);
     tableRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
@@ -207,10 +265,14 @@ function AllTasks() {
     setErrors((current) => ({ ...current, [field]: "" }));
   };
 
-  // Naya task — khaali form
+  // Naya task — khaali form. Self-assign wale ka assignee pehle se bhara,
+  // taaki required validation pass ho jaye (form mein field dikhti hi nahi).
   const openCreateForm = () => {
     setEditingTask(null);
-    setFormData(EMPTY_TASK_FORM);
+    setFormData({
+      ...EMPTY_TASK_FORM,
+      assignedTo: selfAssignOnly ? myEmployeeId : "",
+    });
     setErrors({});
     setShowForm(true);
   };
@@ -257,18 +319,30 @@ function AllTasks() {
       return;
     }
 
+    /*
+    | assignedTo yahan force hota hai, sirf UI prefill par bharosa nahi.
+    | Jise assign karne ka haq nahi uska task hamesha uske hi naam par
+    | jaata hai — create par bhi, edit par bhi.
+    */
     const payload = {
       ...formData,
       title: formData.title.trim(),
       description: formData.description.trim(),
+      assignedTo: selfAssignOnly ? myEmployeeId : formData.assignedTo,
     };
 
     setSaving(true);
     try {
       if (editingTask) {
+        // Audit fields nahi bhejte — updateTask khud sirf editable fields
+        // chhaanta hai, to createdBy/createdById/createdAt bache rehte hain
         await updateTask(companyCode, editingTask.id, payload);
       } else {
-        await createTask(companyCode, payload);
+        await createTask(companyCode, {
+          ...payload,
+          createdBy: actorName,
+          createdById: myEmployeeId,
+        });
       }
 
       // List khud update ho jaayegi — subscribeTasks listener se
@@ -330,7 +404,7 @@ function AllTasks() {
         }
         icon={<FiCheckSquare />}
         action={
-          canCreateTask && (
+          canOpenCreate && (
             <button
               type="button"
               onClick={openCreateForm}
@@ -393,7 +467,7 @@ function AllTasks() {
                 tasks={urgent}
                 employees={employees}
                 today={today}
-                onViewAll={viewAllTasks}
+                onViewAll={() => showTableContext(TASK_CONTEXT.URGENT)}
               />
             )}
 
@@ -401,7 +475,7 @@ function AllTasks() {
               <RecentTasks
                 tasks={recent}
                 employees={employees}
-                onViewAll={viewAllTasks}
+                onViewAll={() => showTableContext(TASK_CONTEXT.RECENT)}
               />
             )}
           </div>
@@ -417,10 +491,33 @@ function AllTasks() {
               <h2 className="text-lg font-semibold text-slate-900">
                 Task overview
               </h2>
-              <p className="mt-1 text-sm text-slate-500">
-                {visibleTasks.length} task
-                {visibleTasks.length === 1 ? "" : "s"} shown
-              </p>
+
+              <div className="mt-1 flex flex-wrap items-center gap-2">
+                <p className="text-sm text-slate-500">
+                  {visibleTasks.length} task
+                  {visibleTasks.length === 1 ? "" : "s"} shown
+                </p>
+
+                {/*
+                  Kaunsa section ka view chal raha hai. Pill ka look
+                  AttendancePanel ke LiveBadge se, aur × wahi jo upar
+                  error banner mein hai.
+                */}
+                {tableContext !== TASK_CONTEXT.ALL && (
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 py-1 pl-3 pr-1.5 text-xs font-semibold text-blue-700">
+                    Showing: {TASK_CONTEXT_LABELS[tableContext]}
+                    <button
+                      type="button"
+                      onClick={() => setTableContext(TASK_CONTEXT.ALL)}
+                      aria-label="Show all tasks"
+                      title="Show all tasks"
+                      className="cursor-pointer rounded-full p-0.5 transition hover:bg-blue-100"
+                    >
+                      <FiX size={14} />
+                    </button>
+                  </span>
+                )}
+              </div>
             </div>
 
             <TaskFilters
@@ -437,15 +534,16 @@ function AllTasks() {
           <TaskTable
             tasks={visibleTasks}
             employees={employees}
-            hasTasks={roleTasks.length > 0}
+            hasTasks={contextTasks.length > 0}
             showAssignee={canViewAll}
-            canUpdate={canUpdateTask}
+            canUpdate={canEditTask}
             canDelete={canDeleteTask}
+            showActions={canActOnTasks}
             onStatusChange={changeStatus}
             onEdit={openEditForm}
             onDelete={setTaskToDelete}
             onRowClick={(task) => setViewingTaskId(task.id)}
-            onCreate={canCreateTask ? openCreateForm : undefined}
+            onCreate={canOpenCreate ? openCreateForm : undefined}
           />
         </div>
       </div>
@@ -456,6 +554,8 @@ function AllTasks() {
         formData={formData}
         errors={errors}
         employees={employees}    //state modal ko bheji jati hai
+        // true ho to assignee field dikhti hi nahi — task khud ke naam par
+        selfAssign={selfAssignOnly}
         saving={saving}
         onChange={updateField}
         onSubmit={handleSubmit}

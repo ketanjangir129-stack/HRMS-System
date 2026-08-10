@@ -430,10 +430,22 @@ export const PERMISSION_PAGES = [
         defaults: { hr: true, employee: false },
       },
       {
+        key: "createOwn",
+        label: "Create Own Task",
+        description: "Create a task for themselves",
+        defaults: { hr: true, employee: true },
+      },
+      {
         key: "update",
         label: "Update Task",
         description: "Edit an existing task",
         defaults: { hr: true, employee: false },
+      },
+      {
+        key: "updateOwn",
+        label: "Update Own Task",
+        description: "Edit a task they created",
+        defaults: { hr: true, employee: true },
       },
       {
         key: "delete",

@@ -42,12 +42,28 @@ export const subscribeTasks = (companyCode, onData, onError) =>
     (error) => onError?.(error)
   );
 
+// Edit se sirf ye field badal sakte hain. Baaki sab — id, status, createdBy,
+// createdById, createdAt, updatedAt — service ke haath mein hai, chahe payload
+// mein aa hi jayein.
+const EDITABLE_FIELDS = [
+  "title",
+  "description",
+  "assignedTo",
+  "dueDate",
+  "priority",
+];
+
+// createdBy (naam) aur createdById (ownership) dono payload se aate hain —
+// service currentUser padh nahi sakti (hook yahan chalta nahi). Wahi tarika
+// holidayService bhi use karta hai.
 export const createTask = async (companyCode, task) => {
   const taskId = push(ref(db, tasksPath(companyCode))).key;
   const newTask = {
     ...task,
     id: taskId,
     status: DEFAULT_TASKS_STATUS,
+    createdBy: task.createdBy || "",
+    createdById: task.createdById || "",
     createdAt: Date.now(),
     updatedAt: Date.now(),
   };
@@ -55,13 +71,23 @@ export const createTask = async (companyCode, task) => {
   return {id:taskId, ...newTask};
 };
 
-// Task edit — title, description, assignedTo, dueDate, priority badalne ke liye.
-// status yahan nahi aata, uska apna function hai (updateTaskStatus).
+/*
+| Task edit. status yahan nahi aata — uska apna function hai (updateTaskStatus).
+|
+| Payload spread nahi karte: sirf EDITABLE_FIELDS chhaante hain, taaki koi
+| audit field (createdBy/createdById/createdAt) galti se overwrite na ho.
+| undefined field skip hoti hai, warna Firebase usko delete maan leta hai.
+*/
 export const updateTask = async (companyCode, taskId, task) => {
-  await update(ref(db, taskPath(companyCode, taskId)), {
-    ...task,
-    updatedAt: Date.now(),
+  const updates = { updatedAt: Date.now() };
+
+  EDITABLE_FIELDS.forEach((field) => {
+    if (task?.[field] !== undefined) {
+      updates[field] = task[field];
+    }
   });
+
+  await update(ref(db, taskPath(companyCode, taskId)), updates);
 };
 
 export const updateTaskStatus = async (companyCode, taskId, status) => {

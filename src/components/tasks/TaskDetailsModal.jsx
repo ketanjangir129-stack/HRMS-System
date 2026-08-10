@@ -5,7 +5,6 @@ import {
   dueLabel,
   formatDate,
   formatTimestamp,
-  initials,
   isOverdue,
   todayInputValue,
 } from "../../utils/tasks/taskUtils";
@@ -144,12 +143,7 @@ function TaskDetailsModal({
           <div className="mt-6 divide-y divide-slate-100 border-t border-slate-100">
             {showAssignee && (
               <DetailRow label="Assignee">
-                <div className="flex items-center gap-2.5">
-                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-50 text-xs font-bold text-blue-700">
-                    {initials(name)}
-                  </span>
-                  <span className="truncate font-medium">{name}</span>
-                </div>
+                <span className="block truncate font-medium">{name}</span>
               </DetailRow>
             )}
 
@@ -171,6 +165,13 @@ function TaskDetailsModal({
                   {dueLabel(task.dueDate, today)}
                 </p>
               )}
+            </DetailRow>
+
+            {/* Purane tasks mein createdBy nahi hai — tab dash dikhta hai */}
+            <DetailRow label="Assigned by">
+              <span className={task.createdBy ? "font-medium" : "text-slate-400"}>
+                {task.createdBy || "—"}
+              </span>
             </DetailRow>
 
             <DetailRow label="Created">

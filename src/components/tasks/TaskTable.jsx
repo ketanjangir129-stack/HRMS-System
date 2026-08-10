@@ -4,7 +4,6 @@ import { PRIMARY_BUTTON_CLASS } from "../../utils/tasks/taskConstants";
 import {
   assigneeName,
   formatDate,
-  initials,
   isOverdue,
   todayInputValue,
 } from "../../utils/tasks/taskUtils";
@@ -52,14 +51,23 @@ function TaskTable({
   // saadi rehti hai.
   onRowClick,
   hasTasks,
-  // Teeno alag permission se aate hain. showAssignee false ho to sirf apne
-  // hi tasks dikh rahe hain, to Assignee column bekaar hai.
+  // showAssignee false ho to sirf apne hi tasks dikh rahe hain, to Assignee
+  // column bekaar hai.
   showAssignee = true,
-  canUpdate = true,
+  /*
+  | canUpdate ek FUNCTION hai, boolean nahi — edit ka haq har task par alag
+  | ho sakta hai. Owner/HR ke liye hamesha true, par Employee sirf apna
+  | banaya task edit kar sakta hai. Isliye per-row poochhna padta hai.
+  */
+  canUpdate = () => true,
   canDelete = true,
+  /*
+  | Actions column dikhe ya nahi. Page se aata hai, yahan tasks se nahi
+  | nikalte — warna filter se editable rows hat jaate hi column gayab ho
+  | jaata aur filter hatane par wapas aa jaata.
+  */
+  showActions = true,
 }) {
-  // Actions column tabhi, jab kam se kam ek button ho
-  const showActions = canUpdate || canDelete;
   const today = todayInputValue();
 
   // Status/Edit/Delete row ke andar hain — unka event upar na jaye,
@@ -81,23 +89,34 @@ function TaskTable({
 
   return (
     <div className="overflow-x-auto">
-      <table className="w-full min-w-[860px] text-left">
-        <thead className="border-b border-slate-200 bg-slate-50/60 text-xs font-semibold uppercase tracking-wide text-slate-500">
+      <table className="w-full min-w-[800px] border-collapse text-left">
+        {/* thead/tbody classes DataTable jaisi — poore project ka table pattern */}
+        <thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
           <tr>
-            <th className="w-16 px-6 py-4 text-center">#</th>
-            <th className="px-6 py-4">Task</th>
-            {showAssignee && <th className="px-6 py-4">Assignee</th>}
-            <th className="px-6 py-4">Due date</th>
-            <th className="px-6 py-4">Priority</th>
-            <th className="px-6 py-4">Status</th>
+            {/*
+              Alignment HolidayTable/LeaveHistoryTable jaisa: text left,
+              badges center, actions right. Koi fixed width nahi — column
+              apne aap size lete hain, wahi in tables mein hota hai.
+            */}
+            <th className="px-6 py-3 font-semibold">Task</th>
+            {showAssignee && (
+              <th className="px-6 py-3 font-semibold">Assignee</th>
+            )}
+            <th className="whitespace-nowrap px-6 py-3 font-semibold">
+              Due date
+            </th>
+            <th className="px-6 py-3 text-center font-semibold">Priority</th>
+            <th className="px-6 py-3 text-center font-semibold">Status</th>
             {showActions && (
-              <th className="w-28 px-6 py-4 text-center">Actions</th>
+              <th className="whitespace-nowrap px-6 py-3 text-right font-semibold">
+                Actions
+              </th>
             )}
           </tr>
         </thead>
 
         <tbody className="divide-y divide-slate-100">
-          {tasks.map((task, index) => {
+          {tasks.map((task) => {
             const name = assigneeName(task, employees);
             const overdue = isOverdue(task, today);
 
@@ -109,42 +128,38 @@ function TaskTable({
                 // Keyboard tabhi, jab row par kuch hota ho
                 tabIndex={onRowClick ? 0 : undefined}
                 title={onRowClick ? `View details of ${task.title}` : undefined}
-                className={`transition-colors hover:bg-slate-50/70 ${
+                className={`transition-colors hover:bg-slate-50 ${
                   onRowClick
                     ? "cursor-pointer focus:outline-none focus-visible:bg-slate-50 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-500"
                     : ""
                 }`}
               >
-                {/* Row ka number — filter lagne par bhi 1, 2, 3 hi rahega */}
-                <td className="px-6 py-4 text-center text-sm font-semibold text-slate-400">
-                  {index + 1}
-                </td>
-
+                {/* min-w-0 wrapper + truncate — HolidayTable ke name column
+                    jaisa. Column ki width nahi bandhi, bas lamba text kinare
+                    par kat jaata hai. */}
                 <td className="px-6 py-4">
-                  <p className="text-sm font-semibold text-slate-900">
-                    {task.title}
-                  </p>
-                  {task.description && (
-                    <p className="mt-0.5 line-clamp-1 max-w-sm text-xs text-slate-500">
-                      {task.description}
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold text-slate-900">
+                      {task.title}
                     </p>
-                  )}
+                    {task.description && (
+                      <p className="mt-0.5 truncate text-xs text-slate-500">
+                        {task.description}
+                      </p>
+                    )}
+                  </div>
                 </td>
 
                 {showAssignee && (
                   <td className="px-6 py-4">
-                    <div className="flex items-center gap-3">
-                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-50 text-xs font-bold text-blue-700">
-                        {initials(name)}
-                      </span>
-                      <span className="text-sm font-medium text-slate-700">
-                        {name}
-                      </span>
-                    </div>
+                    <span className="block truncate text-sm font-medium text-slate-800">
+                      {name}
+                    </span>
                   </td>
                 )}
 
-                <td className="px-6 py-4">
+                {/* whitespace-nowrap — warna "Aug 15, 2026" do line mein tootti */}
+                <td className="whitespace-nowrap px-6 py-4">
                   <span
                     className={`text-sm ${
                       overdue
@@ -161,12 +176,15 @@ function TaskTable({
                   )}
                 </td>
 
-                <td className="px-6 py-4">
+                <td className="px-6 py-4 text-center">
                   <TaskBadge value={task.priority || "Medium"} variant="priority" />
                 </td>
 
                 {/* Status badalne par details modal nahi khulna chahiye */}
-                <td className="px-6 py-4" {...stopRowActivation}>
+                <td
+                  className="px-6 py-4 text-center"
+                  {...stopRowActivation}
+                >
                   <div className="relative inline-block">
                     <select
                       value={task.status || TASK_STATUSES[0]}
@@ -186,9 +204,16 @@ function TaskTable({
 
                 {showActions && (
                   // Edit/Delete dabane par bhi modal nahi khulna chahiye
-                  <td className="px-6 py-4" {...stopRowActivation}>
-                    <div className="flex items-center justify-center gap-2">
-                      {canUpdate && (
+                  <td
+                    className="whitespace-nowrap px-6 py-4"
+                    {...stopRowActivation}
+                  >
+                    {/*
+                      h-9 — button ki hi height, taaki dash wali row aur
+                      button wali row barabar rahein
+                    */}
+                    <div className="flex h-9 items-center justify-end gap-2">
+                      {canUpdate(task) && (
                         <RowAction
                           tone="edit"
                           title={`Edit ${task.title}`}
@@ -196,6 +221,7 @@ function TaskTable({
                           icon={<FiEdit2 size={16} />}
                         />
                       )}
+
                       {canDelete && (
                         <RowAction
                           tone="delete"
@@ -203,6 +229,22 @@ function TaskTable({
                           onClick={() => onDelete(task)}
                           icon={<FiTrash2 size={16} />}
                         />
+                      )}
+
+                      {/*
+                        Dono withheld — jaise Employee ka wo task jo HR ne
+                        assign kiya. SalaryCRUD bhi aisi row par dash dikhata
+                        hai, khaali cell ki jagah.
+                      */}
+                      {!canUpdate(task) && !canDelete && (
+                        // h-9 w-9 — RowAction ka hi box, isliye dash theek
+                        // wahin baithta hai jahan button baithta hai
+                        <span
+                          aria-label="No actions available"
+                          className="inline-flex h-9 w-9 items-center justify-center text-slate-300"
+                        >
+                          —
+                        </span>
                       )}
                     </div>
                   </td>
@@ -213,9 +255,12 @@ function TaskTable({
 
           {tasks.length === 0 && (
             <tr>
-              {/* Assignee aur Actions column chhip sakte hain */}
+              {/*
+                Task + Due date + Priority + Status = 4 pakke column,
+                Assignee aur Actions chhip sakte hain
+              */}
               <td
-                colSpan={5 + (showAssignee ? 1 : 0) + (showActions ? 1 : 0)}
+                colSpan={4 + (showAssignee ? 1 : 0) + (showActions ? 1 : 0)}
                 className="px-6 py-20"
               >
                 <div className="flex flex-col items-center gap-4 text-center">

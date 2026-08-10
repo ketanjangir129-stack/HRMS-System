@@ -1,6 +1,5 @@
 import { FiUsers } from "react-icons/fi";
 import { PROGRESS_BARS } from "../../utils/tasks/taskConstants";
-import { initials } from "../../utils/tasks/taskUtils";
 import TaskSectionCard from "./TaskSectionCard";
 
 /*
@@ -34,17 +33,28 @@ function TeamWorkload({ workload, className = "" }) {
           No tasks assigned to anyone yet.
         </p>
       ) : (
-        // Chhoti screen par table sirf isi box ke andar scroll hoga,
-        // poora page side mein nahi khisakta
-        <div className="-mx-2 overflow-x-auto px-2">
-          <table className="w-full min-w-[520px] text-left">
-            <thead className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+        /*
+        | Chhoti screen par table sirf isi box ke andar scroll hoga.
+        |
+        | Cells ke kinare par padding nahi (first:pl-0 / last:pr-0) — card
+        | apna px-6 already deta hai, warna do baar padding lagti aur naam
+        | card ke title se aage khisak jaata.
+        */
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[420px] border-collapse text-left">
+            <thead className="border-b border-slate-200 text-xs uppercase tracking-wide text-slate-500">
               <tr>
-                <th className="pb-3 pr-4">Employee</th>
-                <th className="pb-3 px-4 text-center">Total</th>
-                <th className="pb-3 px-4 text-center">In progress</th>
-                <th className="pb-3 px-4 text-center">Completed</th>
-                <th className="w-32 pb-3 pl-4">Progress</th>
+                <th className="px-3 pb-3 font-semibold first:pl-0">Employee</th>
+                <th className="px-3 pb-3 text-center font-semibold">Total</th>
+                <th className="px-3 pb-3 text-center font-semibold">
+                  In progress
+                </th>
+                <th className="px-3 pb-3 text-center font-semibold">
+                  Completed
+                </th>
+                <th className="w-28 px-3 pb-3 font-semibold last:pr-0">
+                  Progress
+                </th>
               </tr>
             </thead>
 
@@ -55,32 +65,27 @@ function TeamWorkload({ workload, className = "" }) {
                   : 0;
 
                 return (
-                  <tr key={person.id}>
-                    <td className="py-3 pr-4">
-                      <div className="flex items-center gap-3">
-                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-50 text-xs font-bold text-blue-700">
-                          {initials(person.name)}
-                        </span>
-                        <span className="truncate text-sm font-medium text-slate-700">
-                          {person.name}
-                        </span>
-                      </div>
+                  <tr key={person.id} className="transition-colors hover:bg-slate-50">
+                    <td className="px-3 py-3 first:pl-0">
+                      <span className="block truncate text-sm font-medium text-slate-800">
+                        {person.name}
+                      </span>
                     </td>
 
-                    <td className="px-4 py-3 text-center text-sm font-bold text-slate-900">
+                    <td className="px-3 py-3 text-center text-sm font-bold text-slate-900">
                       {person.total}
                     </td>
 
-                    <td className="px-4 py-3 text-center text-sm font-semibold text-blue-600">
+                    <td className="px-3 py-3 text-center text-sm font-semibold text-blue-600">
                       {person.active}
                     </td>
 
-                    <td className="px-4 py-3 text-center text-sm font-semibold text-emerald-600">
+                    <td className="px-3 py-3 text-center text-sm font-semibold text-emerald-600">
                       {person.completed}
                     </td>
 
-                    <td className="py-3 pl-4">
-                      <div className="h-2 overflow-hidden rounded-full bg-slate-100">
+                    <td className="px-3 py-3 last:pr-0">
+                      <div className="h-1.5 overflow-hidden rounded-full bg-slate-100">
                         <div
                           style={{ width: `${donePercent}%` }}
                           className={`h-full rounded-full transition-all duration-500 ${PROGRESS_BARS.Completed}`}

@@ -68,6 +68,21 @@ export const SECTION_ROW_LIMIT = 5;
 // Filter dropdown ka pehla option — kisi bhi status se match nahi karta
 export const ALL_STATUSES = "All statuses";
 
+/*
+| Dashboard section ka "View all" table ko usi section ki list par le jaata
+| hai. Khaali string matlab koi context nahi — poori list.
+*/
+export const TASK_CONTEXT = {
+  ALL: "",
+  URGENT: "urgent",
+  RECENT: "recent",
+};
+
+export const TASK_CONTEXT_LABELS = {
+  [TASK_CONTEXT.URGENT]: "Urgent & overdue",
+  [TASK_CONTEXT.RECENT]: "Recent tasks",
+};
+
 // Form ki khaali haalat — reset karte waqt bhi yahi lagti hai
 export const EMPTY_TASK_FORM = {
   title: "",

@@ -50,7 +50,10 @@ function EmployeeTasks() {
 
   // tasks.viewAll wale ko sabke tasks, baaki ko sirf apne
   const canViewAll = canAccessSection("tasks.viewAll");
-  const canCreateTask = canAccessSection("tasks.create");
+  // Dono mein se koi bhi ho to /tasks par task ban sakta hai — Employee ke
+  // paas sirf createOwn hota hai
+  const canCreateTask =
+    canAccessSection("tasks.create") || canAccessSection("tasks.createOwn");
 
   const [tasks, setTasks] = useState([]);
   const [employees, setEmployees] = useState([]);
