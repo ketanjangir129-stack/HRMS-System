@@ -11,7 +11,8 @@ import {
     FaSnowboarding,
     FaTasks,
 } from "react-icons/fa";
-import {FcLeave } from "react-icons/fc";
+import { FcLeave } from "react-icons/fc";
+import { HandCoins } from "lucide-react";
 import { TbMoneybag } from "react-icons/tb";
 function QuickLinks() {
     const navigate = useNavigate();
@@ -23,11 +24,11 @@ function QuickLinks() {
     const gotodepartment = () => {
         navigate("/departments");
     };
-    
+
     const gotoSalary = () => {
         navigate("/salarydashboard");
     };
-   
+
     const gotoonboard = () => {
         navigate("/OnboardDashboard");
     };
@@ -36,6 +37,10 @@ function QuickLinks() {
     };
     const gototasks = () => {
         navigate("/tasks");
+    };
+
+    const gotopayroll = () => {
+        navigate("/payrolldashboard");
     };
 
     return (
@@ -59,12 +64,18 @@ function QuickLinks() {
                             </p>
                         </div>
 
-                        <div className="flex flex-col items-center cursor-pointer">
-                            <FaCog className="text-4xl p-3 rounded-xl bg-green-100 text-green-600" />
+
+
+                        <div className="flex flex-col items-center cursor-pointer" onClick={gotopayroll}>
+                            <HandCoins
+                                size={40}  // controls icon size
+                                className="p-3 rounded-xl bg-green-100 text-green-600"
+                            />
                             <p className="mt-2 text-sm font-medium text-gray-700">
-                                Settings
+                                Payroll
                             </p>
                         </div>
+
 
                         <div className="flex flex-col items-center cursor-pointer" onClick={gotodepartment}>
                             <FaGlobe className="text-4xl p-3 rounded-xl bg-orange-100 text-orange-600" />

@@ -37,6 +37,7 @@ import PayrolllDashboard from "../pages/payroll/PayrollDashboard";
 import PaySlip from "../pages/payroll/PaySlip";
 import AllTasks from "../pages/tasks/AllTasks";
 import Settings from "../pages/settings/Settings";
+import Profile from "../pages/Profile";
 
 /*
 | Every page inside the dashboard is mounted behind `PermissionRoute` with the
@@ -355,6 +356,13 @@ function AppRoutes(){
                         </PermissionRoute>
                     }
                 />
+
+                {/*
+                  Profile - the user's own record, so it carries no permission.
+                  It is not `employees.details`: that is the HR view of somebody
+                  else, and a role without it must still be able to open its own.
+                */}
+                <Route path="/profile" element={<Profile />} />
 
                 {/* Settings - owner only, and the only way into Roles & Access */}
                 <Route

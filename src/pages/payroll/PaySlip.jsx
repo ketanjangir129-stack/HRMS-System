@@ -2,12 +2,17 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useParams, useSearchParams, useNavigate } from "react-router-dom";
 import { FiArrowLeft, FiDownload } from "react-icons/fi";
 import useAuth from "../../hooks/useAuth";
+import useRoleAccess from "../../hooks/useRoleAccess";
 import { getPayrollHistory } from "../../services/payroll/PayRollServices";
 import {
   buildPayslipDeductions,
   buildPayslipEarnings,
 } from "../../utils/Payroll/Payrollcalculator";
 import { PAYSLIP_MONTHS } from "../../utils/Payroll/payrollConstants";
+import {
+  canViewPayslip,
+  isPayrollOperator,
+} from "../../utils/Payroll/payrollRun";
 import {
   formatPayrollDate,
   formatPayrollMonth,
@@ -108,6 +113,16 @@ const AmountTable = ({ heading, rows, totalLabel, totalAmount }) => (
   </div>
 );
 
+const DetailBlock = ({ className, rows }) => (
+  <div className={className}>
+    {rows.map((row) => (
+      <p key={row.label}>
+        <span>{row.label}:</span> {row.value}
+      </p>
+    ))}
+  </div>
+);
+
 const SummaryCard = ({ heading, rows }) => (
   <div className={styles.card}>
     <div className={styles.cardHeading}>{heading}</div>
@@ -141,7 +156,7 @@ const buildAttendanceRows = (summary = {}) => [
     value: summary.present ?? 0,
     tone: countTone(summary.present, "positive"),
   },
-  { title: "Late", value: summary.late ?? 0 },
+  // { title: "Late", value: summary.late ?? 0 },
   { title: "Half Day", value: summary.halfDay ?? 0 },
   { title: "Paid Leave", value: summary.paidLeave ?? 0 },
   {
@@ -188,6 +203,18 @@ const PaySlip = () => {
   const { company } = useAuth();
   const companyCode = company?.companyCode;
 
+  const { canAccessSection, canAccessPage, fallbackPath } = useRoleAccess();
+
+  /*
+  | Whoever runs payroll may read a month before it is closed, because they
+  | have to in order to decide whether to close it. For everybody else a
+  | payslip appears when the month is locked and its figures stop moving.
+  */
+  const isOperator = useMemo(
+    () => isPayrollOperator(canAccessSection),
+    [canAccessSection]
+  );
+
   /*
   | The month the dashboard was showing when the payslip was opened. It is the
   | newest of the three months on offer, so an older payroll can be printed by
@@ -205,9 +232,21 @@ const PaySlip = () => {
   const [error, setError] = useState("");
 
   /*
+  | Why the page is empty when it is. A month that exists but has not been
+  | released is a different answer from a month nobody has run, and telling
+  | somebody "no payroll has been generated" when theirs is sitting there
+  | waiting to be locked sends them to ask the wrong question.
+  */
+  const [withheld, setWithheld] = useState("");
+
+  /*
   | The last three months of payroll, newest first, and only the ones that
   | were actually generated. The anchor month can be changed while a load is
   | still in flight, so a stale response is dropped.
+  |
+  | Months that have not been released are dropped here rather than further
+  | down, so nothing that is not on offer reaches the month picker, the sheet
+  | or the download.
   */
   useEffect(() => {
     let cancelled = false;
@@ -215,6 +254,7 @@ const PaySlip = () => {
     const load = async () => {
       setLoading(true);
       setError("");
+      setWithheld("");
 
       try {
         const history =
@@ -229,13 +269,23 @@ const PaySlip = () => {
 
         if (cancelled) return;
 
-        setPayrolls(history);
+        const released = history.filter(
+          (item) => canViewPayslip(item.run, isOperator).allowed
+        );
+
+        setPayrolls(released);
+
+        setWithheld(
+          released.length === 0 && history.length > 0
+            ? canViewPayslip(history[0].run, isOperator).reason
+            : ""
+        );
 
         // Open on the month that was asked for, or the newest one there is.
         setSelectedMonth(
-          history.some((item) => item.payrollMonth === anchorMonth)
+          released.some((item) => item.payrollMonth === anchorMonth)
             ? anchorMonth
-            : history[0]?.payrollMonth || ""
+            : released[0]?.payrollMonth || ""
         );
       } catch (err) {
         console.error(err);
@@ -257,7 +307,7 @@ const PaySlip = () => {
     return () => {
       cancelled = true;
     };
-  }, [companyCode, employeeId, anchorMonth]);
+  }, [companyCode, employeeId, anchorMonth, isOperator]);
 
   const payroll = useMemo(
     () =>
@@ -374,30 +424,61 @@ const PaySlip = () => {
   }
 
   if (error || !payroll) {
+    /*
+    | A payslip that is only waiting to be released is not a failure, so it
+    | is not dressed as one. The red panel is kept for the two cases that
+    | genuinely are: a read that broke, and a month nobody ran.
+    */
+    const isWaiting = !error && Boolean(withheld);
+
+    /*
+    | An employee sent back to the payroll dashboard lands on a page they
+    | cannot open and is bounced somewhere else again, which reads as the app
+    | losing them. They go wherever their role can actually go instead.
+    */
+    const backPath = canAccessPage("payroll")
+      ? "/payrolldashboard"
+      : fallbackPath || "/dashboard";
+
     return (
       <div className="p-8 space-y-4">
-        <div className="bg-red-100 text-red-700 rounded-lg px-4 py-3">
+        <div
+          className={`rounded-lg px-4 py-3 ${
+            isWaiting
+              ? "bg-amber-50 text-amber-700 ring-1 ring-amber-200"
+              : "bg-red-100 text-red-700"
+          }`}
+        >
           {error ||
+            withheld ||
             `No payroll has been generated for ${employeeId} in the last ${PAYSLIP_MONTHS} months.`}
         </div>
 
         <button
           type="button"
-          onClick={() => navigate("/payrolldashboard")}
+          onClick={() => navigate(backPath)}
           className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
         >
           <FiArrowLeft />
-          Back to Payroll
+          {backPath === "/payrolldashboard" ? "Back to Payroll" : "Go Back"}
         </button>
       </div>
     );
   }
+
+  /*
+  | Who is being paid, and what they are being paid for. They are two
+  | different readings of the same block, so each gets its own column.
+  */
 
   const employeeRows = [
     { label: "Employee Name", value: payroll.employee?.name || employeeId },
     { label: "Employee ID", value: payroll.employeeId },
     { label: "Department", value: payroll.employee?.department || "--" },
     { label: "Designation", value: payroll.employee?.designation || "--" },
+  ];
+
+  const payPeriodRows = [
     { label: "Pay Period", value: formatPayPeriod(selectedMonth) },
     { label: "Pay Day", value: formatPayrollDate(payroll.payPeriod?.payDate) },
   ];
@@ -469,8 +550,8 @@ const PaySlip = () => {
 
               <div className={styles.headerRight}>
                 <div className={styles.logo}>
-                  <span className={styles.logoTop}>YOUR</span>
-                  <span className={styles.logoMain}>LOGO</span>
+                  <span className={styles.logoTop}>HRMS</span>
+                  <span className={styles.logoMain}>SYSTEM</span>
                 </div>
               </div>
             </div>
@@ -479,11 +560,15 @@ const PaySlip = () => {
 
             {/* Employee Details */}
             <div className={styles.employee}>
-              {employeeRows.map((row) => (
-                <p key={row.label}>
-                  <span>{row.label}:</span> {row.value}
-                </p>
-              ))}
+              <DetailBlock
+                className={styles.employeeDetails}
+                rows={employeeRows}
+              />
+
+              <DetailBlock
+                className={styles.payDetails}
+                rows={payPeriodRows}
+              />
             </div>
 
             <AmountTable

@@ -1,12 +1,49 @@
-import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect, useMemo } from "react";
+import { useNavigate, useOutletContext } from "react-router-dom";
 import { BsClockHistory } from "react-icons/bs";
 import { TbMoneybagEdit } from "react-icons/tb";
-import { getEmployeeWithSalaryStatus, updateSalary } from "../../services/SalaryService";
+import { FiPlus, FiUsers, FiCheckCircle, FiAlertCircle } from "react-icons/fi";
+import { toast } from "react-toastify";
+import { getEmployeeWithSalaryStatus, getAllSalary } from "../../services/SalaryService";
 import { filterData } from "../../utils/search/filterData";
-import Loader from "../../components/common/Loader"
-import { useOutletContext } from "react-router-dom";
+import { exportSalariesToExcel } from "../../utils/salary/exportSalaries";
+import {
+    AttendancePanel,
+    ExportButton,
+    FilterSelect,
+} from "../../components/attendance/common/AttendancePanel";
+import DataTable from "../../components/attendance/common/DataTable";
+import EmployeeCell from "../../components/attendance/common/EmployeeCell";
+import SalaryPageHeader from "../../components/salary/SalaryPageHeader";
 import useRoleAccess from "../../hooks/useRoleAccess";
+
+/*
+|--------------------------------------------------------------------------
+| Create & Update Salaries
+|--------------------------------------------------------------------------
+| Every employee on the register with the state of their salary structure,
+| and the action that either assigns one or opens it for a revision.
+|
+| The panel, the table and the toolbar controls are the shared ones used by
+| the attendance and payroll modules, so filtering stays here while sorting,
+| pagination and the loading / empty states live in `DataTable`.
+|
+| Columns are prioritised rather than all forced onto a phone: the employee,
+| the status and the action stay on every screen, and the department and the
+| designation drop out as the viewport narrows. Both are repeated inside the
+| employee cell, so nothing is lost on a small screen.
+|--------------------------------------------------------------------------
+*/
+
+const HIDDEN_UNTIL = {
+    md: "hidden md:table-cell",
+    lg: "hidden lg:table-cell",
+};
+
+const STATUS_FILTERS = [
+    { value: "assigned", label: "Assigned" },
+    { value: "pending", label: "Not Assigned" },
+];
 
 function SalaryCRUD() {
     const companyCode = localStorage.getItem("companyCode");
@@ -23,19 +60,21 @@ function SalaryCRUD() {
     const canUpdate = canAccessSection("salary.update");
     const canViewHistory = canAccessSection("salary.history");
 
-    const [employees, setEmployees] = useState([]);
-    const [isEditMode, setIsEditMode] = useState(false);
+    /*
+    | The export carries the amounts themselves, so it is offered only to
+    | someone who is already allowed to read an assigned structure.
+    */
+    const canExport = canUpdate || canViewHistory;
 
-    const [filteredEmployees, setFilteredEmployees] = useState([]);
+    const [employees, setEmployees] = useState([]);
 
     const [loading, setLoading] = useState(true);
+    const [exporting, setExporting] = useState(false);
 
-    const {search,setSearch,setSearchPlaceholder} = useOutletContext();
-    const [departmentFilter, setDepartmentFilter] =
-        useState("All");
+    const { search, setSearch, setSearchPlaceholder } = useOutletContext();
 
-    const [statusFilter, setStatusFilter] =
-        useState("All");
+    const [departmentFilter, setDepartmentFilter] = useState("");
+    const [statusFilter, setStatusFilter] = useState("");
 
     const loadEmployees = async () => {
         setLoading(true);
@@ -43,7 +82,6 @@ function SalaryCRUD() {
             const data =
                 await getEmployeeWithSalaryStatus(companyCode);
             setEmployees(data);
-            setFilteredEmployees(data)
         }
         catch (error) {
             console.error(error);
@@ -56,6 +94,99 @@ function SalaryCRUD() {
     useEffect(() => {
         loadEmployees();
     }, []);
+
+    const departments = useMemo(
+        () => [
+            ...new Set(
+                employees
+                    .map((employee) => employee.department)
+                    .filter(Boolean)
+            ),
+        ],
+        [employees]
+    );
+
+    /*
+    | What the table shows is also what the export carries, so the filtered
+    | list is derived from the register rather than kept in its own state -
+    | the two cannot fall out of step that way.
+    */
+    const filteredEmployees = useMemo(() => {
+
+        const searched = filterData(
+            employees,
+            search,
+            [
+                "employeeId",
+                "name",
+                "department",
+                "designation",
+            ]
+        );
+
+        return searched.filter((employee) => {
+
+            const matchesDepartment =
+                !departmentFilter ||
+                employee.department === departmentFilter;
+
+            const matchesStatus =
+                !statusFilter ||
+                (statusFilter === "assigned"
+                    ? employee.salaryAssigned
+                    : !employee.salaryAssigned);
+
+            return matchesDepartment && matchesStatus;
+
+        });
+
+    }, [
+        employees,
+        search,
+        departmentFilter,
+        statusFilter,
+    ]);
+
+    /*
+    | The table only holds who an employee is, so the structures behind the
+    | rows are fetched at export time and matched to whatever the filters
+    | have left on screen.
+    */
+    const handleExport = async () => {
+
+        if (!canExport) {
+            toast.error("You are not allowed to export salaries.");
+            return;
+        }
+
+        if (!filteredEmployees.length) {
+            toast.info("There is nothing to export.");
+            return;
+        }
+
+        setExporting(true);
+
+        try {
+
+            const salaries = await getAllSalary(companyCode);
+
+            exportSalariesToExcel(
+                filteredEmployees,
+                salaries
+            );
+
+            toast.success("Salary details exported.");
+
+        }
+        catch (error) {
+            console.error(error);
+            toast.error("Could not export salary details.");
+        }
+        finally {
+            setExporting(false);
+        }
+
+    };
 
     useEffect(() => {
         return () => {
@@ -71,294 +202,377 @@ function SalaryCRUD() {
 
     }, []);
 
-    const departments = [
-        "All",
-        ...new Set(
-            employees.map((emp) => emp.department)
-        ),
+    const assignedCount = employees.filter(
+        (employee) => employee.salaryAssigned
+    ).length;
+
+    /*
+    | Counts are read from the whole register rather than the filtered list, so
+    | they stay a summary of the company instead of restating the table.
+    */
+    const stats = [
+        {
+            title: "Total Employees",
+            value: employees.length,
+            subtitle: "On the register",
+            icon: <FiUsers />,
+            iconBg: "bg-blue-50",
+            iconColor: "text-blue-600",
+            valueColor: "text-blue-600",
+            bar: "bg-blue-500",
+        },
+        {
+            title: "Salary Assigned",
+            value: assignedCount,
+            subtitle: "Structure in place",
+            icon: <FiCheckCircle />,
+            iconBg: "bg-emerald-50",
+            iconColor: "text-emerald-600",
+            valueColor: "text-emerald-600",
+            bar: "bg-emerald-500",
+        },
+        {
+            title: "Not Assigned",
+            value: employees.length - assignedCount,
+            subtitle: "Awaiting a structure",
+            icon: <FiAlertCircle />,
+            iconBg: "bg-amber-50",
+            iconColor: "text-amber-600",
+            valueColor: "text-amber-600",
+            bar: "bg-amber-500",
+        },
     ];
-    useEffect(() => {
 
-        let data = filterData(
-            employees,
-            search,
-            [
-                "employeeId",
-                "name",
-                "department",
-                "designation",
-            ]
-        );
+    /*
+    | Written out in full rather than built from a breakpoint variable:
+    | Tailwind generates its CSS by scanning the source for literal class
+    | names, so an interpolated `${bp}:table-cell` would never be emitted.
+    */
+    const hideBelow = (breakpoint) => ({
+        headerClassName: HIDDEN_UNTIL[breakpoint],
+        className: HIDDEN_UNTIL[breakpoint],
+    });
 
-        if (departmentFilter !== "All") {
-            data = data.filter(
-                (emp) => emp.department === departmentFilter
-            );
-        }
+    const columns = [
 
-        if (statusFilter !== "All") {
-            data = data.filter((emp) =>
-                statusFilter === "Assigned"
-                    ? emp.salaryAssigned
-                    : !emp.salaryAssigned
-            );
-        }
+        {
+            key: "name",
+            label: "Employee",
+            sortable: true,
+            render: (row) => (
 
-        setFilteredEmployees(data);
+                <div className="min-w-0">
 
-    }, [
-        employees,
-        search,
-        departmentFilter,
-        statusFilter,
-    ]);
-    if (loading) {
-        return (
-            <div className="p-8 w-full h-full">
-                <Loader text="Loading employees..." />
-            </div>
-        )
-    };
+                    <EmployeeCell
+                        name={row.name}
+                        employeeId={row.employeeId}
+                    />
 
-    if (!employees.length) {
-        return (
+                    {/*
+                    | The columns hidden at this width, folded in here. Each span
+                    | is hidden at exactly the breakpoint where its own column
+                    | appears, so a value is never shown twice and never missing
+                    | in between.
+                    */}
+                    <p className="mt-1 truncate pl-14 text-xs text-slate-500 lg:hidden">
 
-            <div className="text-center mt-20">
-                No employees found.
-            </div>
-        );
-    }
+                        <span className="md:hidden">
+                            {row.department || "--"}
+                            {row.designation ? " · " : ""}
+                        </span>
+
+                        {row.designation || ""}
+
+                    </p>
+
+                </div>
+
+            ),
+        },
+
+        {
+            key: "department",
+            label: "Department",
+            sortable: true,
+            ...hideBelow("md"),
+            render: (row) => (
+                <span className="text-sm text-slate-600">
+                    {row.department || "--"}
+                </span>
+            ),
+        },
+
+        {
+            key: "designation",
+            label: "Designation",
+            ...hideBelow("lg"),
+            render: (row) => (
+                <span className="text-sm text-slate-600">
+                    {row.designation || "--"}
+                </span>
+            ),
+        },
+
+        {
+            key: "salaryAssigned",
+            label: "Status",
+            sortable: true,
+            align: "center",
+            render: (row) => (
+
+                <span
+                    className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ${row.salaryAssigned
+                        ? "bg-emerald-50 text-emerald-700"
+                        : "bg-amber-50 text-amber-700"
+                        }`}
+                >
+
+                    <span
+                        className={`h-1.5 w-1.5 rounded-full ${row.salaryAssigned ? "bg-emerald-500" : "bg-amber-500"
+                            }`}
+                    />
+
+                    {row.salaryAssigned ? "Assigned" : "Not Assigned"}
+
+                </span>
+
+            ),
+        },
+
+        {
+            key: "actions",
+            label: "Action",
+            align: "right",
+            className: "whitespace-nowrap",
+            render: (row) => {
+
+                if (!row.salaryAssigned) {
+
+                    if (!canCreate) {
+                        return <span className="text-sm text-slate-300">--</span>;
+                    }
+
+                    return (
+
+                        <button
+                            type="button"
+                            onClick={() =>
+                                navigate(
+                                    `/salarydashboard/salary/create/${row.employeeId}`
+                                )
+                            }
+                            title="Assign salary to this employee"
+                            className="inline-flex cursor-pointer items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm shadow-blue-600/20 transition-all hover:bg-blue-700 hover:shadow-md hover:shadow-blue-600/30 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2"
+                        >
+
+                            <FiPlus size={14} />
+
+                            Assign Salary
+
+                        </button>
+
+                    );
+
+                }
+
+                /*
+                | A row whose both actions were withheld would otherwise render
+                | an empty cell with no explanation.
+                */
+                if (!canUpdate && !canViewHistory) {
+                    return <span className="text-sm text-slate-300">--</span>;
+                }
+
+                return (
+
+                    <div className="flex items-center justify-end gap-2">
+
+                        {canUpdate && (
+
+                            <button
+                                type="button"
+                                onClick={() =>
+                                    navigate(
+                                        `/salarydashboard/salary/edit/${row.employeeId}`
+                                    )
+                                }
+                                title="Edit employee salary"
+                                className="inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-xl border border-slate-200 text-slate-500 transition-all hover:border-blue-500 hover:bg-blue-50 hover:text-blue-600"
+                            >
+                                <TbMoneybagEdit size={18} />
+                            </button>
+
+                        )}
+
+                        {canViewHistory && (
+
+                            <button
+                                type="button"
+                                onClick={() =>
+                                    navigate(
+                                        `/salarydashboard/salary/history/${row.employeeId}`
+                                    )
+                                }
+                                title="Check salary history"
+                                className="inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-xl border border-slate-200 text-slate-500 transition-all hover:border-blue-500 hover:bg-blue-50 hover:text-blue-600"
+                            >
+                                <BsClockHistory size={16} />
+                            </button>
+
+                        )}
+
+                    </div>
+
+                );
+
+            },
+        },
+
+    ];
 
     return (
 
-        <div><div className="p-6 bg-white rounded-xl shadow">
-            <div className="mb-10 text-sm pl-[2px]">
-                <h1 className="text-2xl font-bold mb-2">
+        <div className="mx-auto max-w-[1600px] space-y-6 p-1 sm:p-2">
 
-                    Create & Update Salaries
-                </h1>
-                <p>create new entries or update existing ones here.</p>
+            <SalaryPageHeader
+                title="Create & Update Salaries"
+                subtitle="Assign a new salary structure or revise an existing one."
+                icon={<TbMoneybagEdit />}
+                backTo="/salarydashboard"
+                action={
+                    !loading && (
+                        <span className="inline-flex w-fit items-center gap-2 rounded-full bg-blue-50 px-3 py-1 text-sm font-medium text-blue-700">
+                            {assignedCount} of {employees.length} assigned
+                        </span>
+                    )
+                }
+            />
+
+            {/* Summary */}
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+
+                {stats.map((stat) => (
+
+                    <div
+                        key={stat.title}
+                        className="group relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg"
+                    >
+
+                        <span
+                            className={`absolute left-0 top-0 h-1 w-full ${stat.bar}`}
+                        />
+
+                        <div className="flex items-start justify-between gap-3">
+
+                            <div>
+
+                                <p className="text-sm font-medium text-slate-500">
+                                    {stat.title}
+                                </p>
+
+                                <h3
+                                    className={`mt-2 text-2xl font-bold ${stat.valueColor}`}
+                                >
+                                    {loading ? "--" : stat.value}
+                                </h3>
+
+                                <p className="mt-2 text-xs font-medium text-slate-400">
+                                    {stat.subtitle}
+                                </p>
+
+                            </div>
+
+                            <div
+                                className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-xl transition group-hover:scale-110 ${stat.iconBg} ${stat.iconColor}`}
+                            >
+                                {stat.icon}
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                ))}
+
             </div>
 
+            {/* Employees */}
+            <AttendancePanel
+                title="Employee Salaries"
+                subtitle="Create new entries or update existing ones here."
+                toolbar={
+                    <>
+
+                        <div className="w-full sm:w-52 lg:w-auto">
+
+                            <FilterSelect
+                                value={departmentFilter}
+                                onChange={setDepartmentFilter}
+                                options={departments}
+                                placeholder="All Departments"
+                                ariaLabel="Filter by department"
+                            />
+
+                        </div>
+
+                        <div className="w-full sm:w-52 lg:w-auto">
+
+                            <FilterSelect
+                                value={statusFilter}
+                                onChange={setStatusFilter}
+                                options={STATUS_FILTERS}
+                                placeholder="All Status"
+                                ariaLabel="Filter by salary status"
+                            />
+
+                        </div>
+
+                        {canExport && (
+                            <ExportButton
+                                onClick={handleExport}
+                                disabled={exporting}
+                                label={exporting ? "Exporting..." : "Export Salary"}
+                            />
+                        )}
+
+                    </>
+                }
+            >
+
+                <DataTable
+                    columns={columns}
+                    rows={filteredEmployees}
+                    rowKey={(row) => row.employeeId}
+                    loading={loading}
+                    skeleton
+                    defaultSortBy="name"
+                    defaultSortOrder="asc"
+                    resetKey={`${search}|${departmentFilter}|${statusFilter}`}
+                    paginationLabel="employees"
+                    /*
+                    | Grows with the columns that appear at each breakpoint, so a
+                    | phone scrolls a compact three column table instead of a
+                    | 900px one.
+                    */
+                    minWidthClass="min-w-[520px] md:min-w-[680px] lg:min-w-[880px]"
+                    loadingMessage="Loading employees..."
+                    empty={{
+                        icon: <TbMoneybagEdit size={28} />,
+                        title:
+                            employees.length === 0
+                                ? "No Employees Found"
+                                : "No Matching Employees",
+                        message:
+                            employees.length === 0
+                                ? "Employees added to the company will appear here."
+                                : "No one on the register matches this search or filter.",
+                    }}
+                />
+
+            </AttendancePanel>
 
-
-
-            <div className="flex flex-col md:flex-row gap-4 mb-6">
-
-                <select
-                    value={departmentFilter}
-                    onChange={(e) =>
-                        setDepartmentFilter(e.target.value)
-                    }
-                    className="border rounded-lg px-4 py-2"
-                >
-                    {departments.map((department) => (
-                        <option
-                            key={department}
-                            value={department}
-                        >
-                            {department}
-                        </option>
-                    ))}
-                </select>
-
-                <select
-                    value={statusFilter}
-                    onChange={(e) =>
-                        setStatusFilter(e.target.value)
-                    }
-                    className="border rounded-lg px-4 py-2"
-                >
-                    <option value="All">
-                        All Status
-                    </option>
-
-                    <option value="Assigned">
-                        Assigned
-                    </option>
-
-                    <option value="Not Assigned">
-                        Not Assigned
-                    </option>
-
-                </select>
-
-            </div>
-            <div className="overflow-x-auto">
-
-                <div className="max-h-[450px] overflow-y-auto hide-scrollbar">
-                    <table className="min-w-full border-collapse ">
-
-                        <thead className="sticky top-0 z-20 bg-white shadow-sm">
-
-                            <tr>
-
-                                <th className="px-4 py-3 text-center bg-white">Employee ID</th>
-
-                                <th className="px-4 py-3 text-center bg-white">Name</th>
-
-                                <th className="px-4 py-3 text-center bg-white">Department</th>
-
-                                <th className="px-4 py-3 text-center bg-white">Designation</th>
-
-                                <th className="px-4 py-3 text-center bg-white">Status</th>
-
-                                <th className="px-4 py-3 text-center bg-white">Action</th>
-
-                            </tr>
-
-                        </thead>
-
-                        <tbody className="text-sm ">
-                            {
-
-                                filteredEmployees.map((employee) => (
-
-                                    <tr
-                                        key={employee.employeeId}
-                                        className="hover:bg-gray-50 p-2 border-b  border-gray-200"
-                                    >
-
-                                        <td className="text-center text-gray-600 font-semibold pt-3 pb-2">{employee.employeeId}</td>
-
-                                        <td className="text-center text-gray-600  pt-3 pb-2">{employee.name}</td>
-
-                                        <td className="text-center text-gray-600  pt-3 pb-2">{employee.department}</td>
-
-                                        <td className="text-center text-gray-600  pt-3 pb-2">{employee.designation}</td>
-                                        <td className="text-center text-gray-600  pt-3 pb-2">
-
-                                            <span
-                                                className={`px-3 py-1 rounded-full text-sm
-
-${employee.salaryAssigned
-
-                                                        ? "bg-green-100 text-green-700"
-
-                                                        : "bg-yellow-100 text-yellow-700"
-
-                                                    }`}
-
-                                            >
-
-                                                {employee.salaryAssigned
-
-                                                    ? "Assigned"
-
-                                                    : "Not Assigned"
-
-                                                }
-
-                                            </span>
-
-                                        </td>
-                                        <td className="text-center pt-3 pb-2">
-
-                                            {
-
-                                                employee.salaryAssigned ?
-
-                                                    (
-                                                        <div className="flex gap-2 items-center justify-center">
-                                                            {canUpdate && (
-                                                                <button
-
-                                                                    className="px-2 py-2 rounded-lg"
-
-                                                                    onClick={() =>
-
-                                                                        navigate(
-
-                                                                            `/salarydashboard/salary/edit/${employee.employeeId}`
-
-                                                                        )
-
-                                                                    }
-                                                                    title="Edit Employee Salary"
-
-                                                                >
-
-                                                                    <TbMoneybagEdit size={20}
-                                                                        className="text-blue-600" />
-
-                                                                </button>
-                                                            )}
-                                                            {canViewHistory && (
-                                                                <button
-                                                                    className="px-3 py-2"
-                                                                    onClick={() =>
-                                                                        navigate(
-                                                                            `/salarydashboard/salary/history/${employee.employeeId}`
-                                                                        )
-                                                                    }
-                                                                    title="Check Salary History"
-                                                                >
-                                                                    <BsClockHistory
-                                                                        size={20}
-                                                                        className="text-blue-600"
-                                                                    />
-                                                                </button>
-                                                            )}
-                                                            {/*
-                                                            | A row whose only actions were both withheld would
-                                                            | otherwise render an empty cell with no explanation.
-                                                            */}
-                                                            {!canUpdate && !canViewHistory && (
-                                                                <span className="text-gray-300">—</span>
-                                                            )}
-                                                        </div>
-
-
-                                                    )
-
-                                                    :
-
-                                                    (
-
-                                                        canCreate ? (
-
-                                                            <button
-
-                                                                className="px-2 py-2 bg-green-600 text-white rounded-lg"
-
-                                                                onClick={() =>
-
-                                                                    navigate(
-
-                                                                        `/salarydashboard/salary/create/${employee.employeeId}`
-
-                                                                    )
-
-                                                                }
-                                                                title="Assign Salary to Employee"
-
-                                                            >
-
-                                                                Assign Salary
-
-                                                            </button>
-
-                                                        ) : (
-
-                                                            <span className="text-gray-300">—</span>
-
-                                                        )
-
-                                                    )
-
-                                            }
-
-                                        </td>
-                                    </tr>
-                                )
-                                )
-                            }
-                        </tbody>
-                    </table>
-                </div>
-            </div>
         </div>
-        </div>
-    )
+    );
 }
-export default SalaryCRUD; 
+
+export default SalaryCRUD;

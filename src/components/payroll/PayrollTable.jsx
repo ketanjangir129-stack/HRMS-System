@@ -48,6 +48,7 @@ function PayrollTable({
   headerSearch = "",
   generating = "",
   isFutureMonth = false,
+  generateGate = { allowed: true, reason: "" },
   onGenerate,
   onViewPayslip,
 }) {
@@ -222,16 +223,26 @@ function PayrollTable({
 
         const busy = generating === row.employeeId;
 
+        /*
+        | The same gate the whole month run is behind. A row still says
+        | "Generate" once the month is closed rather than hiding the button,
+        | because the reason it cannot be pressed is the thing worth showing.
+        */
+
         return (
 
           <button
             type="button"
             onClick={() => onGenerate(row.employeeId)}
-            disabled={Boolean(generating) || isFutureMonth}
+            disabled={
+              Boolean(generating) || isFutureMonth || !generateGate.allowed
+            }
             title={
               isFutureMonth
                 ? "This month has not started yet."
-                : "Generate payroll for this employee"
+                : generateGate.allowed
+                  ? "Generate payroll for this employee"
+                  : generateGate.reason
             }
             className="inline-flex cursor-pointer items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm shadow-blue-600/20 transition-all hover:bg-blue-700 hover:shadow-md hover:shadow-blue-600/30 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:shadow-sm"
           >
@@ -257,7 +268,7 @@ function PayrollTable({
       toolbar={
         <>
 
-          <div className="relative w-full lg:max-w-sm">
+          {/* <div className="relative w-full lg:max-w-sm">
 
             <FiSearch className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
 
@@ -269,7 +280,7 @@ function PayrollTable({
               className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-10 pr-4 text-sm text-slate-700 outline-none transition-all placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
             />
 
-          </div>
+          </div> */}
 
           <div className="w-full sm:w-52 lg:w-auto">
 

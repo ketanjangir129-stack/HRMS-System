@@ -5,9 +5,20 @@ import { getAllSalary } from "../SalaryService";
 import { getMonthlyAttendanceSummaries } from "../attendanceServices/attendanceSummaryService";
 import { calculatePayroll } from "../../utils/Payroll/Payrollcalculator";
 import {
+    PAYROLL_RECORDS_NODE,
+    PAYROLL_RUN_STATUS,
+    PAYROLL_RUNS_NODE,
     PAYROLL_STATUS,
     PAYSLIP_MONTHS,
 } from "../../utils/Payroll/payrollConstants";
+import {
+    buildRunTotals,
+    canApproveRun,
+    canEditRun,
+    canGenerateRun,
+    canLockRun,
+    isRunLocked,
+} from "../../utils/Payroll/payrollRun";
 import {
     getPayPeriod,
     getRecentPayrollMonths,
@@ -21,13 +32,14 @@ import {
 |--------------------------------------------------------------------------
 | The only place that talks to the payroll branch of the database.
 |
-| companies/{companyCode}/payroll/{YYYY-MM}/{employeeId}
+| companies/{companyCode}/payroll/runs/{YYYY-MM}
+| companies/{companyCode}/payroll/records/{YYYY-MM}/{employeeId}
 |
-| The month is the outer node because everything that reads this tree wants a
-| month at a time: the dashboard shows one month for every employee, and a
-| payslip is one employee for one month. The month is not stored on the
-| record - it is the node the record lives in, and deriving it from there is
-| the only way the two can never disagree.
+| The month is the node rather than a field on the record, because everything
+| that reads this tree wants a month at a time: the dashboard shows one month
+| for every employee, and a payslip is one employee for one month. Deriving
+| the month from where the record lives is the only way the two can never
+| disagree.
 |
 | What is stored is a *snapshot*, not a set of references. The employee's
 | name, the salary structure, the attendance counts and every figure the
@@ -38,17 +50,45 @@ import {
 |
 | That is also why nothing here recalculates on read. `generatePayroll` is
 | the only thing that prices a month; every read hands back what it stored.
+| A salary revised in March, an attendance day corrected in April and a
+| holiday declared afterwards all leave February's payroll exactly as it was.
+|
+| The run is the month's own record: its totals, and where it has got to in
+| the generate, approve, lock sequence. Every write below asks the run for
+| permission first, which is what makes a locked month final - there is no
+| path through this file that writes to a month whose run says locked.
 |--------------------------------------------------------------------------
 */
 
 const payrollPath = (companyCode) =>
     `companies/${companyCode}/payroll`;
 
-const monthPath = (companyCode, payrollMonth) =>
+const runPath = (companyCode, payrollMonth) =>
+    `${payrollPath(companyCode)}/${PAYROLL_RUNS_NODE}/${payrollMonth}`;
+
+const recordsPath = (companyCode, payrollMonth) =>
+    `${payrollPath(companyCode)}/${PAYROLL_RECORDS_NODE}/${payrollMonth}`;
+
+const recordPath = (companyCode, payrollMonth, employeeId) =>
+    `${recordsPath(companyCode, payrollMonth)}/${employeeId}`;
+
+/*
+| Where a month of payroll was filed before runs and records were split apart.
+|
+| Reads fall back to it so a company that generated payroll under the old
+| shape keeps its payslips; writes never go near it, so a month re-run after
+| the split moves itself into the new tree. `runs` and `records` can never be
+| mistaken for one of these, because neither is a `YYYY-MM` and every path
+| below is built from a month that has been validated.
+*/
+
+const legacyMonthPath = (companyCode, payrollMonth) =>
     `${payrollPath(companyCode)}/${payrollMonth}`;
 
-const employeePath = (companyCode, payrollMonth, employeeId) =>
-    `${monthPath(companyCode, payrollMonth)}/${employeeId}`;
+const readValue = async (path) => {
+    const snapshot = await get(ref(db, path));
+    return snapshot.exists() ? snapshot.val() : null;
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -56,18 +96,77 @@ const employeePath = (companyCode, payrollMonth, employeeId) =>
 |--------------------------------------------------------------------------
 */
 
-export const checkPayrollExists = async (
+export const getPayrollRun = async (companyCode, payrollMonth) => {
+
+    if (!companyCode || !isPayrollMonth(payrollMonth)) return null;
+
+    return readValue(runPath(companyCode, payrollMonth));
+
+};
+
+/*
+| Every record of a month, keyed by employee id, and where they were found.
+| One read, however many employees the month covers; a second only when the
+| month has nothing under the new shape and might be an old one.
+|
+| The two are never merged. A month is entirely in one shape or entirely in
+| the other, because the first write to an old month moves the whole thing
+| across before it adds anything - see `migrateLegacyRecords`. Merging would
+| be the alternative, and it would mean two reads of every month forever.
+*/
+
+const readMonthRecords = async (companyCode, payrollMonth) => {
+
+    if (!companyCode || !isPayrollMonth(payrollMonth)) {
+        return { records: {}, legacy: false };
+    }
+
+    const records = await readValue(
+        recordsPath(companyCode, payrollMonth)
+    );
+
+    if (records) return { records, legacy: false };
+
+    const legacyRecords = await readValue(
+        legacyMonthPath(companyCode, payrollMonth)
+    );
+
+    return {
+        records: legacyRecords || {},
+        legacy: Boolean(legacyRecords),
+    };
+
+};
+
+export const getMonthlyPayroll = async (companyCode, payrollMonth) =>
+    (await readMonthRecords(companyCode, payrollMonth)).records;
+
+/*
+| The whole month moved into the records node, the first time anything is
+| written to a month that predates the split.
+|
+| It happens before the write that triggered it rather than after, so the
+| write lands on top of a month that is already in one place. Doing it the
+| other way round - writing the new record and leaving the rest behind -
+| would make the month half of each, and the fallback read above returns one
+| shape or the other, so the employees left behind would vanish from it.
+*/
+
+const migrateLegacyRecords = async (
     companyCode,
     payrollMonth,
-    employeeId
+    records
 ) => {
-    const snapshot = await get(
-        ref(
-            db,
-            employeePath(companyCode, payrollMonth, employeeId)
-        )
+
+    await set(
+        ref(db, recordsPath(companyCode, payrollMonth)),
+        records
     );
-    return snapshot.exists();
+
+    await remove(
+        ref(db, legacyMonthPath(companyCode, payrollMonth))
+    );
+
 };
 
 export const getPayroll = async (
@@ -75,38 +174,65 @@ export const getPayroll = async (
     payrollMonth,
     employeeId
 ) => {
-    const snapshot = await get(
-        ref(
-            db,
-            employeePath(companyCode, payrollMonth, employeeId)
-        )
-    );
-    if (!snapshot.exists()) {
+
+    if (!companyCode || !employeeId || !isPayrollMonth(payrollMonth)) {
         return null;
     }
-    return snapshot.val();
+
+    const record = await readValue(
+        recordPath(companyCode, payrollMonth, employeeId)
+    );
+
+    if (record) return record;
+
+    return readValue(
+        `${legacyMonthPath(companyCode, payrollMonth)}/${employeeId}`
+    );
+
 }
 
 /*
-| Every payroll of a month, keyed by employee id. One read, however many
-| employees the month covers.
+| The month's run and its records together, which is what every write needs:
+| the run to ask whether the write is allowed, and the records to re-total
+| the run afterwards.
+|
+| A month generated before runs existed has records but no run node. Rather
+| than refusing to approve it, a run is folded out of the records it already
+| has - generated, by nobody the record remembers - so an old month can still
+| be taken through the sequence. It is not written until something happens to
+| the month, so reading a legacy month does not quietly create one.
 */
 
-export const getMonthlyPayroll = async (
-    companyCode,
-    payrollMonth
-) => {
+const readRunState = async (companyCode, payrollMonth) => {
 
-    if (!companyCode || !isPayrollMonth(payrollMonth)) return {};
+    const [run, { records, legacy }] = await Promise.all([
+        getPayrollRun(companyCode, payrollMonth),
+        readMonthRecords(companyCode, payrollMonth),
+    ]);
 
-    const snapshot = await get(
-        ref(
-            db,
-            monthPath(companyCode, payrollMonth)
-        )
-    );
+    if (run) return { run, records, legacy };
 
-    return snapshot.exists() ? snapshot.val() : {};
+    if (Object.keys(records).length === 0) {
+        return { run: null, records, legacy };
+    }
+
+    return {
+        run: {
+            payrollMonth,
+            status: PAYROLL_RUN_STATUS.GENERATED,
+            ...buildRunTotals(records),
+            /*
+            | Zero rather than a guess. The old shape stamped each record with
+            | who generated it but never the month, and inventing a date here
+            | would put a time on the run that nothing actually recorded. It
+            | is also what tells `advanceRun` this run has never been written.
+            */
+            generatedAt: 0,
+            generatedBy: null,
+        },
+        records,
+        legacy,
+    };
 
 };
 
@@ -118,6 +244,16 @@ export const getMonthlyPayroll = async (
 | ending at the one being viewed, and gets back however many of them exist.
 | The months are read in parallel because they are separate nodes, and there
 | are only ever a handful of them.
+|
+| Each month arrives with its run attached. A payslip is only released once
+| its month is locked, and the page cannot tell whether it is without the run
+| - the record's own status says "Generated" whether the month was closed or
+| not, because that is a fact about the record and locking is a fact about
+| the month.
+|
+| The run is read for a month even when there is no record in it. Skipping
+| those would mean waiting for the record before knowing whether to ask, and
+| the whole point of reading them together is one round trip rather than two.
 */
 
 export const getPayrollHistory = async (
@@ -133,19 +269,22 @@ export const getPayrollHistory = async (
         return [];
     }
 
-    const records = await Promise.all(
-        payrollMonths.map((month) =>
-            getPayroll(companyCode, month, employeeId)
-        )
+    const entries = await Promise.all(
+        payrollMonths.map(async (month) => {
+
+            const [payroll, run] = await Promise.all([
+                getPayroll(companyCode, month, employeeId),
+                getPayrollRun(companyCode, month),
+            ]);
+
+            return payroll
+                ? { ...payroll, payrollMonth: month, run }
+                : null;
+
+        })
     );
 
-    return records
-        .map((payroll, index) => (
-            payroll
-                ? { ...payroll, payrollMonth: payrollMonths[index] }
-                : null
-        ))
-        .filter(Boolean);
+    return entries.filter(Boolean);
 
 };
 
@@ -154,10 +293,9 @@ export const getPayrollHistory = async (
 | Dashboard List
 |--------------------------------------------------------------------------
 | Every employee of the company alongside whether the month has been run for
-| them, and what it came to when it was.
+| them and what it came to, and the run the month itself is in.
 |
-| Two reads for the whole table. This used to fire one existence check per
-| employee, which is a request per head per month change.
+| Three reads for the whole page, whatever the headcount.
 */
 
 export const getEmployeesWithPayrollStatus = async (
@@ -165,16 +303,16 @@ export const getEmployeesWithPayrollStatus = async (
     payrollMonth
 ) => {
 
-    const [employees, monthlyPayroll] = await Promise.all([
+    const [employees, { run, records }] = await Promise.all([
         getEmployees(companyCode),
-        getMonthlyPayroll(companyCode, payrollMonth),
+        readRunState(companyCode, payrollMonth),
     ]);
 
-    return Object.keys(employees || {}).map((employeeId) => {
+    const rows = Object.keys(employees || {}).map((employeeId) => {
 
         const employee = employees[employeeId];
 
-        const payroll = monthlyPayroll?.[employeeId] || null;
+        const payroll = records?.[employeeId] || null;
 
         return {
 
@@ -195,6 +333,8 @@ export const getEmployeesWithPayrollStatus = async (
         };
 
     });
+
+    return { employees: rows, run };
 
 };
 
@@ -272,21 +412,56 @@ const buildPayrollSnapshot = ({
 
 };
 
-const savePayroll = async (
+/*
+|--------------------------------------------------------------------------
+| Run
+|--------------------------------------------------------------------------
+| The month's own record, rewritten whenever its records change.
+|
+| The totals are folded out of the records that are about to be stored rather
+| than summed on read, so the figure the run reports is the figure the month
+| was closed on. A record corrected afterwards cannot move it, which is the
+| whole point of writing it down.
+|
+| The approval and lock stamps are carried through untouched. In practice a
+| month past either state refuses every write that would reach here, but the
+| run is rewritten in full rather than patched, and a rewrite that dropped
+| them would quietly reopen a closed month.
+*/
+
+const writeRun = async (
     companyCode,
     payrollMonth,
-    payroll
+    { run, records, generatedBy }
 ) => {
 
-    await set(
-        ref(
-            db,
-            employeePath(companyCode, payrollMonth, payroll.employeeId)
-        ),
-        payroll
-    );
+    const stamped = {
 
-    return payroll;
+        payrollMonth,
+
+        status: run?.status || PAYROLL_RUN_STATUS.GENERATED,
+
+        ...buildRunTotals(records),
+
+        /*
+        | The first run of the month is the one the month is dated by. A
+        | later pass that fills in a missed employee is still the same run.
+        */
+        generatedAt: run?.generatedAt || Date.now(),
+
+        generatedBy: run?.generatedBy || generatedBy || null,
+
+        approvedAt: run?.approvedAt || null,
+        approvedBy: run?.approvedBy || null,
+
+        lockedAt: run?.lockedAt || null,
+        lockedBy: run?.lockedBy || null,
+
+    };
+
+    await set(ref(db, runPath(companyCode, payrollMonth)), stamped);
+
+    return stamped;
 
 };
 
@@ -295,12 +470,12 @@ const savePayroll = async (
 | Generate Payroll
 |--------------------------------------------------------------------------
 | Get the employees, get their salaries, get the month of attendance,
-| calculate, and store the snapshot.
+| calculate, store a snapshot each, and re-total the run.
 |
 | `employeeIds` narrows it to one employee - or a handful - and leaving it out
-| runs the whole company. Either way the reads are the same four, because a
-| month of attendance and a year of holidays are single nodes and so are the
-| employee and salary trees.
+| runs the whole company. Either way the reads are the same handful, because
+| a month of attendance and a year of holidays are single nodes and so are
+| the employee and salary trees.
 |
 | An employee with no salary structure is skipped rather than paid nothing:
 | there is no structure to price the month against, and writing a zero
@@ -309,6 +484,11 @@ const savePayroll = async (
 | A month already generated is skipped too, unless `regenerate` is passed.
 | Re-running by accident would restamp every snapshot with today's attendance,
 | which is the one thing a snapshot exists to prevent.
+|
+| A month that has been approved or locked refuses the whole run before it
+| reads anything. That is checked here as well as on the buttons, because the
+| dashboard's copy of the run is as old as its last load and a month can be
+| approved by somebody else while it is on screen.
 */
 
 export const generatePayroll = async (
@@ -330,11 +510,26 @@ export const generatePayroll = async (
         };
     }
 
-    const [employees, salaries, existing] = await Promise.all([
+    const [employees, salaries, { run, records, legacy }] = await Promise.all([
         getEmployees(companyCode),
         getAllSalary(companyCode),
-        getMonthlyPayroll(companyCode, payrollMonth),
+        readRunState(companyCode, payrollMonth),
     ]);
+
+    const allowed = canGenerateRun(run);
+
+    if (!allowed.allowed) {
+        return {
+            success: false,
+            generated: [],
+            skipped: [],
+            message: allowed.reason,
+        };
+    }
+
+    if (legacy) {
+        await migrateLegacyRecords(companyCode, payrollMonth, records);
+    }
 
     const salaryMap = {};
 
@@ -354,6 +549,8 @@ export const generatePayroll = async (
     if (targets.length === 0) {
         return {
             success: false,
+            generated: [],
+            skipped: [],
             message: "No employees found for this payroll run.",
         };
     }
@@ -369,6 +566,14 @@ export const generatePayroll = async (
     const skipped = [];
 
     /*
+    | The month's records as they will stand once this run finishes. The run
+    | is totalled from this rather than from a re-read, so the total covers
+    | the employees who were already generated as well as the ones just
+    | written, without paying for another read of the whole month.
+    */
+    const nextRecords = { ...records };
+
+    /*
     | Sequential on purpose. A payroll run writes one node per employee and
     | firing them all at once buys nothing but a burst of concurrent writes,
     | while a failure part way through is easier to report as "these were
@@ -377,7 +582,7 @@ export const generatePayroll = async (
 
     for (const employeeId of targets) {
 
-        if (existing?.[employeeId] && !regenerate) {
+        if (records?.[employeeId] && !regenerate) {
             skipped.push({
                 employeeId,
                 reason: "Payroll already generated for this month.",
@@ -397,18 +602,21 @@ export const generatePayroll = async (
 
         try {
 
-            const payroll = await savePayroll(
-                companyCode,
+            const payroll = buildPayrollSnapshot({
+                employeeId,
+                employee: employees[employeeId],
+                salary,
+                summary: summaries[employeeId],
                 payrollMonth,
-                buildPayrollSnapshot({
-                    employeeId,
-                    employee: employees[employeeId],
-                    salary,
-                    summary: summaries[employeeId],
-                    payrollMonth,
-                    generatedBy,
-                })
+                generatedBy,
+            });
+
+            await set(
+                ref(db, recordPath(companyCode, payrollMonth, employeeId)),
+                payroll
             );
+
+            nextRecords[employeeId] = payroll;
 
             generated.push(payroll);
 
@@ -428,10 +636,26 @@ export const generatePayroll = async (
 
     }
 
+    /*
+    | The run is only written when something actually landed in it. A pass
+    | that generated nothing - every employee already done, or every one of
+    | them skipped - leaves the month exactly as it was rather than restamping
+    | a run with the same totals.
+    */
+
+    const nextRun = generated.length
+        ? await writeRun(companyCode, payrollMonth, {
+            run,
+            records: nextRecords,
+            generatedBy,
+        })
+        : run;
+
     return {
         success: generated.length > 0,
         generated,
         skipped,
+        run: nextRun,
         message: buildRunMessage(generated.length, skipped),
     };
 
@@ -464,6 +688,7 @@ export const generateEmployeePayroll = async (
         return {
             success: true,
             payroll: result.generated[0],
+            run: result.run,
             message: "Payroll generated.",
         };
     }
@@ -497,8 +722,102 @@ const buildRunMessage = (generatedCount, skipped) => {
 
 /*
 |--------------------------------------------------------------------------
+| Approve And Lock
+|--------------------------------------------------------------------------
+| The two steps that close a month.
+|
+| Both are the same shape: read the run, ask it whether the step is allowed,
+| stamp it. The check is repeated here rather than trusted from the caller
+| because the dashboard's run is as old as its last load, and two people can
+| have the same month open.
+|
+| Neither recalculates anything. Approving a month does not re-price it - the
+| figures being approved are the ones that were generated, and re-running
+| them at the moment of sign off would mean approving numbers nobody had
+| seen. The totals are carried through from the run exactly as stored.
+*/
+
+const advanceRun = async (
+    companyCode,
+    payrollMonth,
+    actor,
+    { guard, status, atField, byField, message }
+) => {
+
+    if (!companyCode || !isPayrollMonth(payrollMonth)) {
+        return { success: false, message: "Select a valid payroll month." };
+    }
+
+    const { run, records, legacy } =
+        await readRunState(companyCode, payrollMonth);
+
+    const allowed = guard(run);
+
+    if (!allowed.allowed) {
+        return { success: false, message: allowed.reason };
+    }
+
+    const stamp = {
+        status,
+        [atField]: Date.now(),
+        [byField]: actor || null,
+    };
+
+    /*
+    | A month generated before runs existed has no node to update, so the run
+    | folded out of its records is written in full first. `update` on a path
+    | that does not exist would create a run carrying nothing but the stamp.
+    |
+    | Its records are moved across at the same time. This is the last chance
+    | to do it: approving closes the month to generating and locking closes
+    | it to everything, so no later write will come along to migrate it.
+    */
+
+    let next = { ...run, ...stamp };
+
+    if (!run.generatedAt) {
+
+        if (legacy) {
+            await migrateLegacyRecords(companyCode, payrollMonth, records);
+        }
+
+        next = {
+            ...(await writeRun(companyCode, payrollMonth, { run, records })),
+            ...stamp,
+        };
+
+    }
+
+    await update(ref(db, runPath(companyCode, payrollMonth)), stamp);
+
+    return { success: true, run: next, message };
+
+};
+
+export const approvePayroll = (companyCode, payrollMonth, approvedBy) =>
+    advanceRun(companyCode, payrollMonth, approvedBy, {
+        guard: canApproveRun,
+        status: PAYROLL_RUN_STATUS.APPROVED,
+        atField: "approvedAt",
+        byField: "approvedBy",
+        message: "Payroll approved. It is now closed to changes.",
+    });
+
+export const lockPayroll = (companyCode, payrollMonth, lockedBy) =>
+    advanceRun(companyCode, payrollMonth, lockedBy, {
+        guard: canLockRun,
+        status: PAYROLL_RUN_STATUS.LOCKED,
+        atField: "lockedAt",
+        byField: "lockedBy",
+        message: "Payroll locked. This month is now final.",
+    });
+
+/*
+|--------------------------------------------------------------------------
 | Writes
 |--------------------------------------------------------------------------
+| Everything that changes a month after it has been generated. Each one asks
+| the run first, so a locked month has no way through this file.
 */
 
 export const markPayrollPaid = async (
@@ -507,20 +826,48 @@ export const markPayrollPaid = async (
     employeeId
 ) => {
 
+    const { run, records, legacy } =
+        await readRunState(companyCode, payrollMonth);
+
+    const allowed = canEditRun(run);
+
+    if (!allowed.allowed) {
+        return { success: false, message: allowed.reason };
+    }
+
+    if (!records?.[employeeId]) {
+        return {
+            success: false,
+            message: "There is no payroll for this employee in this month.",
+        };
+    }
+
+    /*
+    | Without this the update would land on an empty node under the new
+    | shape, and the month would then read as one record holding nothing but
+    | a paid stamp while the real payslips sat unreachable under the old one.
+    */
+
+    if (legacy) {
+        await migrateLegacyRecords(companyCode, payrollMonth, records);
+    }
+
     await update(
-        ref(
-            db,
-            employeePath(companyCode, payrollMonth, employeeId)
-        ),
+        ref(db, recordPath(companyCode, payrollMonth, employeeId)),
         {
             status: PAYROLL_STATUS.PAID,
             paidAt: Date.now(),
         }
     );
 
-    return { success: true };
+    return { success: true, message: "Marked as paid." };
 
 };
+
+/*
+| Removing one employee's snapshot re-totals the month, so the run keeps
+| describing the records that are actually in it.
+*/
 
 export const deletePayroll = async (
     companyCode,
@@ -528,13 +875,50 @@ export const deletePayroll = async (
     employeeId
 ) => {
 
+    const { run, records, legacy } =
+        await readRunState(companyCode, payrollMonth);
+
+    const allowed = canEditRun(run);
+
+    if (!allowed.allowed) {
+        return { success: false, message: allowed.reason };
+    }
+
+    if (legacy) {
+        await migrateLegacyRecords(companyCode, payrollMonth, records);
+    }
+
     await remove(
-        ref(
-            db,
-            employeePath(companyCode, payrollMonth, employeeId)
-        )
+        ref(db, recordPath(companyCode, payrollMonth, employeeId))
     );
 
-    return { success: true };
+    const nextRecords = { ...records };
+
+    delete nextRecords[employeeId];
+
+    /*
+    | The last record out takes the run with it: a month with no payslips in
+    | it has not been generated, and leaving an empty run behind would show it
+    | as one that had.
+    */
+
+    if (Object.keys(nextRecords).length === 0) {
+        await remove(ref(db, runPath(companyCode, payrollMonth)));
+    } else {
+        await writeRun(companyCode, payrollMonth, {
+            run,
+            records: nextRecords,
+        });
+    }
+
+    return { success: true, message: "Payroll deleted." };
 
 };
+
+/*
+| Whether a month may still be written to at all, for a caller that holds a
+| month rather than a run.
+*/
+
+export const isPayrollMonthLocked = async (companyCode, payrollMonth) =>
+    isRunLocked(await getPayrollRun(companyCode, payrollMonth));

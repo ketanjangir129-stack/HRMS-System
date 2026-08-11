@@ -121,7 +121,7 @@
 .headerLeft {
   position: relative;
   width: 35%;
-  padding: 2rem;
+  padding: 1rem;
   background: #b6a7cb;
   color: #fff;
 }
@@ -159,7 +159,7 @@
 
 .logo {
   position: absolute;
-  top: 1.5rem;
+  top: 1rem;
   right: 2.5rem;
   display: flex;
   flex-direction: column;
@@ -206,10 +206,30 @@
   margin-top: 2rem;
 }
 
+/*
+| Two columns: who is being paid on the left, what the payment covers on the
+| right. The pay column is right aligned so it ends on the same edge as the
+| amount tables underneath it, and it never wraps — a pay period broken over
+| two lines would push the two columns out of line with each other.
+*/
+
 .employee {
   composes: section;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 2rem;
   margin-top: 2.5rem;
   font-size: 15px;
+}
+
+.employeeDetails {
+  min-width: 0;
+}
+
+.payDetails {
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 
 .employee p + p {

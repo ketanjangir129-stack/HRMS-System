@@ -12,9 +12,15 @@ import { formatPayrollMonth } from "../../utils/Payroll/payrollDate";
 | Payroll is filed per month, so the month picker drives the entire page in
 | the same way the year selector drives the holiday dashboard.
 |
-| The run button is disabled for a month that has not started and for one
-| that is already complete, and it says which of the two it is rather than
-| going grey without a word.
+| The run button goes grey for five different reasons - the month has not
+| started, everybody is done, there is nobody to run, the month has been
+| closed, or the signed in user may not run payroll - so it always says which
+| one it is rather than going grey without a word.
+|
+| `generateGate` is the answer the dashboard already worked out from the run
+| and the user's permissions. The button does not re-derive it: the same gate
+| is what the service checks before it writes, so a hidden button and a
+| refused write can never give different reasons.
 |--------------------------------------------------------------------------
 */
 
@@ -28,6 +34,7 @@ function PayrollHeader({
   isFutureMonth = false,
   pendingCount = 0,
   totalEmployees = 0,
+  generateGate = { allowed: true, reason: "" },
 }) {
 
   const busy = loading || generatingAll;
@@ -35,15 +42,27 @@ function PayrollHeader({
   const nothingToRun = pendingCount === 0 && totalEmployees > 0;
 
   const runDisabled =
-    busy || isFutureMonth || totalEmployees === 0 || nothingToRun;
+    busy ||
+    isFutureMonth ||
+    totalEmployees === 0 ||
+    nothingToRun ||
+    !generateGate.allowed;
+
+  /*
+  | The state of the month is named before the state of the run: "this month
+  | has not started yet" is the more useful thing to be told, and a future
+  | month is never generated whatever the run says.
+  */
 
   const runHint = isFutureMonth
     ? "This month has not started yet."
-    : nothingToRun
-      ? "Every employee has already been generated."
-      : totalEmployees === 0
-        ? "There is no one to generate payroll for."
-        : "";
+    : totalEmployees === 0
+      ? "There is no one to generate payroll for."
+      : !generateGate.allowed
+        ? generateGate.reason
+        : nothingToRun
+          ? "Every employee has already been generated."
+          : "";
 
   return (
 

@@ -11,6 +11,35 @@ import SalaryPageHeader from "../../components/salary/SalaryPageHeader";
 import Loader from "../../components/common/Loader";
 import useRoleAccess from "../../hooks/useRoleAccess";
 
+/*
+| What may be typed into a money field.
+|
+| The amount fields are text inputs rather than number ones, so the browser
+| leaves out the stepper arrows it puts on a number input - nobody sets a
+| salary by clicking up forty thousand times, and a scroll wheel over a
+| focused field silently changes the amount.
+|
+| Dropping the number type also drops the browser's filtering, so it is done
+| here instead: digits and a single decimal point survive and everything else
+| is discarded as it is typed. Without this a stray letter would sit in the
+| field looking like part of the amount, and be priced as zero.
+|
+| The value stays the string that was typed rather than being parsed. "12."
+| and "" are both mid-edit states that a number cannot hold, and parsing on
+| every keystroke would delete the decimal point the moment it was entered.
+*/
+
+const toAmountInput = (value) => {
+
+    const cleaned = String(value ?? "").replace(/[^\d.]/g, "");
+
+    const [whole, ...rest] = cleaned.split(".");
+
+    // Only the first decimal point is a decimal point; "1.2.3" is 1.23.
+    return rest.length ? `${whole}.${rest.join("")}` : whole;
+
+};
+
 function SalaryForm() {
     const { employeeId } = useParams();
     const { canAccessSection } = useRoleAccess();
@@ -156,7 +185,7 @@ function SalaryForm() {
 
         setEarnings((prev) => ({
             ...prev,
-            [name]: value,
+            [name]: toAmountInput(value),
         }));
 
     };
@@ -167,7 +196,7 @@ function SalaryForm() {
 
         setDeductions((prev) => ({
             ...prev,
-            [name]: value,
+            [name]: toAmountInput(value),
         }));
 
     };
@@ -368,7 +397,14 @@ function SalaryForm() {
 
                 <input
                     id={field.name}
-                    type="number"
+                    type="text"
+                    /*
+                    | The field is text so it carries no stepper arrows, but
+                    | it still holds a number: `inputMode` is what puts a
+                    | phone's numeric keypad up rather than its alphabet.
+                    */
+                    inputMode="decimal"
+                    autoComplete="off"
                     name={field.name}
                     value={value ?? ""}
                     onChange={onChange}

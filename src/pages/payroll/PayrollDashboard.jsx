@@ -1,15 +1,34 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useNavigate, useOutletContext } from "react-router-dom";
-import { FiAlertCircle, FiCheckCircle, FiInfo } from "react-icons/fi";
+import {
+    FiAlertCircle,
+    FiCheckCircle,
+    FiInfo,
+    FiLock,
+} from "react-icons/fi";
+import PayrollConfirmModal from "../../components/payroll/PayrollConfirmModal";
+import PayrollGeneratingOverlay from "../../components/payroll/PayrollGeneratingOverlay";
 import PayrollHeader from "../../components/payroll/PayrollHeader";
+import PayrollRunCard from "../../components/payroll/PayrollRunCard";
 import PayrollStatsCards from "../../components/payroll/PayrollStatsCards";
 import PayrollTable from "../../components/payroll/PayrollTable";
 import useAuth from "../../hooks/useAuth";
+import useRoleAccess from "../../hooks/useRoleAccess";
 import {
+    approvePayroll,
     generateEmployeePayroll,
     generatePayroll,
     getEmployeesWithPayrollStatus,
+    lockPayroll,
 } from "../../services/payroll/PayRollServices";
+import { PAYROLL_PERMISSION } from "../../utils/Payroll/payrollConstants";
+import {
+    canApproveRun,
+    canGenerateRun,
+    canLockRun,
+    gatePayrollAction,
+    toPayrollActor,
+} from "../../utils/Payroll/payrollRun";
 import {
     formatPayrollMonth,
     getPayrollMonth,
@@ -20,12 +39,23 @@ import {
 |--------------------------------------------------------------------------
 | Payroll Dashboard
 |--------------------------------------------------------------------------
-| The payroll month: the counts, the payout so far and every employee on the
-| register with the state their month is in.
+| The payroll month: the run it belongs to, the counts, the payout so far and
+| every employee on the register with the state their month is in.
 |
 | The month picker drives every panel, because payroll is calculated and
 | stored per month. A month can be run in one go or one employee at a time,
 | and both land in the same place, so the whole page reloads after either.
+|
+| Three actions move a month along - generate, approve, lock - and each is
+| gated twice. The state of the run says whether the step is possible at all,
+| and the signed in user's permissions say whether they are the one who may
+| take it. Both answers are folded into a single gate per action here, and
+| the same gate drives the button, its tooltip and the confirmation, so there
+| is one place that decides and everything below it only renders.
+|
+| The service checks the same rules again before it writes. That is not
+| belt and braces for its own sake: the run on this page is as old as its
+| last load, and a month can be approved by somebody else while it is open.
 |--------------------------------------------------------------------------
 */
 
@@ -37,9 +67,12 @@ function PayrollDashboard() {
 
     const navigate = useNavigate();
 
+    const { canAccessSection } = useRoleAccess();
+
     const { search, setSearch, setSearchPlaceholder } = useOutletContext();
 
     const [employees, setEmployees] = useState([]);
+    const [run, setRun] = useState(null);
     const [loading, setLoading] = useState(true);
     const [notice, setNotice] = useState("");
 
@@ -58,6 +91,10 @@ function PayrollDashboard() {
     // The employee id a single row is generating for, or "all" for the run.
     const [generating, setGenerating] = useState("");
 
+    // "approve" or "lock" while that step is in flight, and which is confirming.
+    const [closing, setClosing] = useState("");
+    const [confirming, setConfirming] = useState("");
+
     useEffect(() => {
 
         setSearchPlaceholder("Search employees...");
@@ -70,29 +107,18 @@ function PayrollDashboard() {
     }, [setSearch, setSearchPlaceholder]);
 
     /*
-    | Who ran the payroll, stamped onto every snapshot. `currentUser` is the
-    | whole employee record for HR and employees, and a small object for the
-    | owner, so both shapes are read.
+    | Who did it, stamped onto every snapshot and onto each step of the run.
     */
-    const generatedBy = useMemo(() => ({
-        employeeId:
-            currentUser?.employmentInfo?.employeeId ||
-            currentUser?.email ||
-            "unknown",
-        name:
-            currentUser?.personalInfo?.name ||
-            currentUser?.name ||
-            "Unknown",
-        role:
-            currentUser?.account?.role ||
-            currentUser?.role ||
-            "unknown",
-    }), [currentUser]);
+    const actor = useMemo(
+        () => toPayrollActor(currentUser),
+        [currentUser]
+    );
 
-    const loadEmployees = useCallback(async () => {
+    const loadPayroll = useCallback(async () => {
 
         if (!companyCode || !payrollMonth) {
             setEmployees([]);
+            setRun(null);
             setLoading(false);
             return;
         }
@@ -102,7 +128,8 @@ function PayrollDashboard() {
             payrollMonth
         );
 
-        setEmployees(data);
+        setEmployees(data.employees);
+        setRun(data.run);
 
     }, [companyCode, payrollMonth]);
 
@@ -129,10 +156,11 @@ function PayrollDashboard() {
                             companyCode,
                             payrollMonth
                         )
-                        : [];
+                        : { employees: [], run: null };
 
                 if (!cancelled) {
-                    setEmployees(data);
+                    setEmployees(data.employees);
+                    setRun(data.run);
                 }
 
             }
@@ -143,6 +171,7 @@ function PayrollDashboard() {
 
                 if (!cancelled) {
                     setEmployees([]);
+                    setRun(null);
                     setLoadError("Failed to load payroll data.");
                 }
 
@@ -177,6 +206,42 @@ function PayrollDashboard() {
     const isFutureMonth = isFuturePayrollMonth(payrollMonth);
 
     /*
+    |----------------------------------------------------------------------
+    | Gates
+    |----------------------------------------------------------------------
+    | What may be done to this month, by this user, right now. Each is the
+    | state rule and the permission answered together, so a caller gets one
+    | boolean and one sentence rather than having to combine them again.
+    */
+
+    const generateGate = useMemo(
+        () => gatePayrollAction(
+            canAccessSection(PAYROLL_PERMISSION.GENERATE),
+            canGenerateRun(run),
+            "generate"
+        ),
+        [canAccessSection, run]
+    );
+
+    const approveGate = useMemo(
+        () => gatePayrollAction(
+            canAccessSection(PAYROLL_PERMISSION.APPROVE),
+            canApproveRun(run),
+            "approve"
+        ),
+        [canAccessSection, run]
+    );
+
+    const lockGate = useMemo(
+        () => gatePayrollAction(
+            canAccessSection(PAYROLL_PERMISSION.LOCK),
+            canLockRun(run),
+            "lock"
+        ),
+        [canAccessSection, run]
+    );
+
+    /*
     | What the month costs so far. Only a generated payroll has a figure to
     | add, so this is the payout of the snapshots that exist rather than of
     | the whole register.
@@ -190,9 +255,11 @@ function PayrollDashboard() {
         [employees]
     );
 
+    const busy = Boolean(generating || closing);
+
     const handleRefresh = () => {
 
-        if (generating) return;
+        if (busy) return;
 
         setReloadToken((token) => token + 1);
 
@@ -204,7 +271,7 @@ function PayrollDashboard() {
     */
     const handleGenerateAll = async () => {
 
-        if (!companyCode || generating) return;
+        if (!companyCode || busy || !generateGate.allowed) return;
 
         setGenerating("all");
         setError("");
@@ -215,10 +282,10 @@ function PayrollDashboard() {
             const result = await generatePayroll(
                 companyCode,
                 payrollMonth,
-                generatedBy
+                actor
             );
 
-            await loadEmployees();
+            await loadPayroll();
 
             if (result.success) {
                 setNotice(result.message);
@@ -246,7 +313,7 @@ function PayrollDashboard() {
 
     const handleGenerateOne = async (employeeId) => {
 
-        if (!companyCode || generating) return;
+        if (!companyCode || busy || !generateGate.allowed) return;
 
         setGenerating(employeeId);
         setError("");
@@ -258,10 +325,10 @@ function PayrollDashboard() {
                 companyCode,
                 payrollMonth,
                 employeeId,
-                generatedBy
+                actor
             );
 
-            await loadEmployees();
+            await loadPayroll();
 
             if (result.success) {
                 setNotice(`${employeeId}: ${result.message}`);
@@ -288,6 +355,50 @@ function PayrollDashboard() {
     };
 
     /*
+    | Approve and lock are the same shape, so they share one runner. The
+    | month is reloaded after either: the run's own state changed, and a
+    | closed month changes what every button under it may do.
+    */
+    const closeMonth = async (step, gate, action) => {
+
+        if (!companyCode || busy || !gate.allowed) return;
+
+        setClosing(step);
+        setConfirming("");
+        setError("");
+        setNotice("");
+
+        try {
+
+            const result = await action(companyCode, payrollMonth, actor);
+
+            await loadPayroll();
+
+            if (result.success) {
+                setNotice(result.message);
+            } else {
+                setError(result.message);
+            }
+
+        }
+
+        catch (err) {
+
+            console.error(err);
+
+            setError(`Failed to ${step} payroll.`);
+
+        }
+
+        finally {
+
+            setClosing("");
+
+        }
+
+    };
+
+    /*
     | The payslip page opens on the month that was clicked and offers the two
     | before it, so the month has to travel with the employee.
     */
@@ -297,9 +408,51 @@ function PayrollDashboard() {
         );
     };
 
+    const monthLabel = formatPayrollMonth(payrollMonth);
+
     return (
 
         <div className="mx-auto max-w-[1600px] space-y-6 p-1 sm:p-2">
+
+            {/*
+            | Held open for the whole run, the reload of the month included,
+            | so it only lifts once the table underneath has the new figures.
+            */}
+            <PayrollGeneratingOverlay
+                open={Boolean(generating)}
+                payrollMonth={payrollMonth}
+                employeeId={generating}
+            />
+
+            <PayrollConfirmModal
+                open={confirming === "approve"}
+                title="Approve Payroll"
+                message={`Approve the payroll for ${monthLabel}? The figures will be signed off as they stand.`}
+                note="Once approved, the month can no longer be generated or re-run."
+                confirmText="Approve"
+                confirmingText="Approving..."
+                confirming={closing === "approve"}
+                icon={<FiCheckCircle />}
+                tone="bg-indigo-600 shadow-indigo-600/20 hover:bg-indigo-700 focus:ring-indigo-400"
+                onConfirm={() =>
+                    closeMonth("approve", approveGate, approvePayroll)
+                }
+                onClose={() => setConfirming("")}
+            />
+
+            <PayrollConfirmModal
+                open={confirming === "lock"}
+                title="Lock Payroll"
+                message={`Lock the payroll for ${monthLabel}? This marks the month as final.`}
+                note="Locking cannot be undone. Nothing in this month can be changed afterwards."
+                confirmText="Lock"
+                confirmingText="Locking..."
+                confirming={closing === "lock"}
+                icon={<FiLock />}
+                tone="bg-slate-800 shadow-slate-800/20 hover:bg-slate-900 focus:ring-slate-500"
+                onConfirm={() => closeMonth("lock", lockGate, lockPayroll)}
+                onClose={() => setConfirming("")}
+            />
 
             <PayrollHeader
                 payrollMonth={payrollMonth}
@@ -311,6 +464,18 @@ function PayrollDashboard() {
                 isFutureMonth={isFutureMonth}
                 pendingCount={pendingCount}
                 totalEmployees={totalEmployees}
+                generateGate={generateGate}
+            />
+
+            <PayrollRunCard
+                run={run}
+                payrollMonth={payrollMonth}
+                loading={loading}
+                busy={closing}
+                approveGate={approveGate}
+                lockGate={lockGate}
+                onApprove={() => setConfirming("approve")}
+                onLock={() => setConfirming("lock")}
             />
 
             <PayrollStatsCards
@@ -332,8 +497,8 @@ function PayrollDashboard() {
                     <FiInfo className="mt-0.5 shrink-0" size={16} />
 
                     <span>
-                        {formatPayrollMonth(payrollMonth)} has not started yet,
-                        so payroll cannot be generated for it.
+                        {monthLabel} has not started yet, so payroll cannot be
+                        generated for it.
                     </span>
 
                 </div>
@@ -373,6 +538,7 @@ function PayrollDashboard() {
                 headerSearch={search}
                 generating={generating}
                 isFutureMonth={isFutureMonth}
+                generateGate={generateGate}
                 onGenerate={handleGenerateOne}
                 onViewPayslip={openPayslip}
             />

@@ -27,33 +27,35 @@ export function AttendancePanel({
       className={`overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm ${className}`}
     >
 
-      {(title || action) && (
-        <div className="flex flex-col gap-4 border-b border-slate-200 px-6 py-5 lg:flex-row lg:items-center lg:justify-between">
+      <div className="flex justify-between items-center border-b border-slate-200 ">
+        {(title || action) && (
+          <div className="flex flex-col gap-4  px-6 py-5 lg:flex-row lg:items-center lg:justify-between">
 
-          <div className="min-w-0">
+            <div className="min-w-0">
 
-            <h2 className="text-lg font-semibold text-slate-900">
-              {title}
-            </h2>
+              <h2 className="text-lg font-semibold text-slate-900">
+                {title}
+              </h2>
 
-            {subtitle && (
-              <p className="mt-1 text-sm text-slate-500">{subtitle}</p>
+              {subtitle && (
+                <p className="mt-1 text-sm text-slate-500">{subtitle}</p>
+              )}
+
+            </div>
+
+            {action && (
+              <div className="flex flex-wrap items-center gap-3">{action}</div>
             )}
 
           </div>
+        )}
 
-          {action && (
-            <div className="flex flex-wrap items-center gap-3">{action}</div>
-          )}
-
-        </div>
-      )}
-
-      {toolbar && (
-        <div className="flex flex-col gap-3 border-b border-slate-200 bg-slate-50/60 px-6 py-4 lg:flex-row lg:items-center lg:justify-between">
-          {toolbar}
-        </div>
-      )}
+        {toolbar && (
+          <div className="flex flex-col gap-3 bg-slate-50/60 px-6 py-4 lg:flex-row lg:items-center lg:justify-between">
+            {toolbar}
+          </div>
+        )}
+      </div>
 
       {children}
 

@@ -186,14 +186,14 @@ export const buildPayslipDeductions = (payroll = {}, fieldLabels = []) => {
       amount: roundMoney(deductions[field.name]),
     }));
 
-  const lopDeduction = Number(payroll?.calculation?.lopDeduction) || 0;
+  // const lopDeduction = Number(payroll?.calculation?.lopDeduction) || 0;
 
-  if (lopDeduction > 0) {
-    lines.push({
-      title: `Loss Of Pay (${payroll.calculation.lopDays} days)`,
-      amount: roundMoney(lopDeduction),
-    });
-  }
+  // if (lopDeduction > 0) {
+  //   lines.push({
+  //     title: `Loss Of Pay (${payroll.calculation.lopDays} days)`,
+  //     amount: roundMoney(lopDeduction),
+  //   });
+  // }
 
   return lines;
 
