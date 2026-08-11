@@ -63,13 +63,13 @@ const useClock = () => {
 
 function Stat({ label, value }) {
   return (
-    <div className="rounded-xl border border-slate-100 bg-slate-50 px-4 py-3">
+    <div className="rounded-xl border border-slate-100 bg-slate-50 px-3 py-2.5 sm:px-4 sm:py-3">
 
-      <p className="truncate text-xs font-medium uppercase tracking-wide text-slate-500">
+      <p className="truncate text-[11px] font-medium uppercase tracking-wide text-slate-500 sm:text-xs">
         {label}
       </p>
 
-      <div className="mt-2 flex h-7 items-center whitespace-nowrap text-lg font-semibold text-slate-900">
+      <div className="mt-1.5 flex h-7 items-center whitespace-nowrap text-base font-semibold text-slate-900 sm:mt-2 sm:text-lg">
         {value}
       </div>
 
@@ -165,14 +165,14 @@ function TodayAttendanceCard({ className = "" }) {
   const showWeeklyOffNotice =
     onWeeklyOff && !onApprovedLeave && !attendance?.punchIn;
 
-  const cardClass = `flex flex-col justify-center rounded-2xl border border-slate-200 bg-white p-6 shadow-sm ${className}`;
+  const cardClass = `flex flex-col justify-center rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6 ${className}`;
 
   if (loading) {
     return (
       <div className={cardClass}>
         <div className="h-5 w-40 animate-pulse rounded-md bg-slate-200" />
         <div className="mt-3 h-3 w-28 animate-pulse rounded-md bg-slate-100" />
-        <div className="mt-6 grid grid-cols-2 gap-3">
+        <div className="mt-5 grid grid-cols-2 gap-2.5 sm:mt-6 sm:gap-3">
           {[0, 1, 2, 3].map((item) => (
             <div
               key={item}
@@ -187,11 +187,11 @@ function TodayAttendanceCard({ className = "" }) {
   return (
     <div className={cardClass}>
 
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex items-start justify-between gap-3 sm:gap-4">
 
         <div className="min-w-0">
 
-          <h2 className="text-xl font-semibold text-slate-900">
+          <h2 className="text-lg font-semibold text-slate-900 sm:text-xl">
             My Attendance
           </h2>
 
@@ -203,14 +203,14 @@ function TodayAttendanceCard({ className = "" }) {
 
         </div>
 
-        <div className="flex shrink-0 items-center gap-2 rounded-lg bg-slate-50 px-3 py-2 text-sm font-medium text-slate-500">
+        <div className="flex shrink-0 items-center gap-2 rounded-lg bg-slate-50 px-2.5 py-2 text-xs font-medium text-slate-500 sm:px-3 sm:text-sm">
           <FiClock />
           {formatTime(now)}
         </div>
 
       </div>
 
-      <div className="mt-6 grid grid-cols-2 gap-3">
+      <div className="mt-5 grid grid-cols-2 gap-2.5 sm:mt-6 sm:gap-3">
 
         {/*
         | The badge renders a dash on its own when the day is not marked yet.
@@ -241,7 +241,7 @@ function TodayAttendanceCard({ className = "" }) {
 
       </div>
 
-      <div className="mt-6 border-t border-slate-100 pt-5">
+      <div className="mt-5 border-t border-slate-100 pt-4 sm:mt-6 sm:pt-5">
 
         {error && (
           <p className="text-sm font-medium text-red-600">{error}</p>
@@ -272,7 +272,7 @@ function TodayAttendanceCard({ className = "" }) {
             type="button"
             onClick={() => handlePunch(punchIn, "Punched in successfully.")}
             disabled={submitting}
-            className="inline-flex cursor-pointer items-center gap-2 rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-emerald-600/20 transition-all duration-200 hover:-translate-y-0.5 hover:bg-emerald-700 hover:shadow-lg hover:shadow-emerald-600/30 focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:ring-offset-2 active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-60"
+            className="inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 py-3 text-sm font-semibold text-white shadow-md shadow-emerald-600/20 transition-all duration-200 hover:-translate-y-0.5 hover:bg-emerald-700 hover:shadow-lg hover:shadow-emerald-600/30 focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:ring-offset-2 active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto sm:py-2.5"
           >
             {submitting ? <FiLoader className="animate-spin" /> : <FiLogIn />}
             Punch In
@@ -284,7 +284,7 @@ function TodayAttendanceCard({ className = "" }) {
             type="button"
             onClick={() => handlePunch(punchOut, "Punched out successfully.")}
             disabled={submitting}
-            className="inline-flex cursor-pointer items-center gap-2 rounded-xl bg-amber-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-amber-600/20 transition-all duration-200 hover:-translate-y-0.5 hover:bg-amber-700 hover:shadow-lg hover:shadow-amber-600/30 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:ring-offset-2 active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-60"
+            className="inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-amber-600 px-5 py-3 text-sm font-semibold text-white shadow-md shadow-amber-600/20 transition-all duration-200 hover:-translate-y-0.5 hover:bg-amber-700 hover:shadow-lg hover:shadow-amber-600/30 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:ring-offset-2 active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto sm:py-2.5"
           >
             {submitting ? <FiLoader className="animate-spin" /> : <FiLogOut />}
             Punch Out

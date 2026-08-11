@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { toast } from "react-toastify";
+import { useNavigate } from "react-router-dom";
 import {
   FiAlertCircle,
   FiBriefcase,
@@ -15,6 +16,8 @@ import { validateField } from "../../utils/validation/validateField"
 import { validateForm } from "../../utils/validation/validateForm";
 
 function OnBoardForm() {
+
+  const navigate = useNavigate();
 
   const initialState = {
     employeeId: "",
@@ -35,6 +38,7 @@ function OnBoardForm() {
   const [loading, setLoading] = useState(false);
   const [departments, setDepartments] = useState([]);
   const [designations, setDesignations] = useState([]);
+
 
   useEffect(() => {
     loadDepartments();
@@ -137,14 +141,11 @@ function OnBoardForm() {
 
         return;
       }
-
       toast.success(result.message);
-
       setEmployee(initialState);
-
       setErrors({});
-
       setDesignations([]);
+      navigate("/OnboardDashboard");
 
     } catch (error) {
 

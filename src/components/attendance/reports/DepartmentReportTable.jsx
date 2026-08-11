@@ -28,6 +28,30 @@ const EXPORT_HEADER = [
   "Total Working Hours",
 ];
 
+/*
+| Written out in full rather than built from a breakpoint variable: Tailwind
+| generates its CSS by scanning the source for literal class names, so an
+| interpolated `${bp}:table-cell` would never be emitted.
+*/
+
+const HIDDEN_UNTIL = {
+  lg: "hidden lg:table-cell",
+  xl: "hidden xl:table-cell",
+};
+
+const hideBelow = (breakpoint) => ({
+  headerClassName: HIDDEN_UNTIL[breakpoint],
+  className: HIDDEN_UNTIL[breakpoint],
+});
+
+/* The four counts, in the order they read on both the table and the card. */
+const COUNTS = [
+  { key: "present", label: "Present", tone: "text-emerald-600" },
+  { key: "late", label: "Late", tone: "text-amber-600" },
+  { key: "absent", label: "Absent", tone: "text-red-600" },
+  { key: "leave", label: "Leave", tone: "text-blue-600" },
+];
+
 function DepartmentReportTable({
   rows = [],
   monthLabel,
@@ -43,6 +67,11 @@ function DepartmentReportTable({
     [rows, search]
   );
 
+  /*
+  | The department, how much of the month it made and the two counts that
+  | decide it stay at every width; the rest drop out as the viewport narrows
+  | and are folded back under the name, so nothing is actually lost.
+  */
   const columns = useMemo(
     () => [
       {
@@ -56,7 +85,33 @@ function DepartmentReportTable({
               <FiGrid size={18} />
             </div>
 
-            <p className="font-semibold text-slate-800">{row.department}</p>
+            <div className="min-w-0">
+
+              <p className="truncate font-semibold text-slate-800">
+                {row.department}
+              </p>
+
+              {/*
+              | The columns hidden at this width, folded in here. Each span is
+              | hidden at exactly the breakpoint where its own column appears,
+              | so a value is never shown twice and never missing in between.
+              */}
+              <p className="mt-0.5 truncate text-xs font-normal text-slate-500 xl:hidden">
+
+                <span className="lg:hidden">
+                  {row.employees} employees ·{" "}
+                </span>
+
+                {row.workingDays} marked · {row.workingHours || "--"}
+
+                <span className="lg:hidden">
+                  {" · "}
+                  {row.late} late · {row.leave} leave
+                </span>
+
+              </p>
+
+            </div>
 
           </div>
         ),
@@ -66,14 +121,16 @@ function DepartmentReportTable({
         label: "Employees",
         align: "center",
         sortable: true,
-        className: "font-medium",
+        ...hideBelow("lg"),
+        className: `font-medium ${HIDDEN_UNTIL.lg}`,
       },
       {
         key: "workingDays",
         label: "Marked Days",
         align: "center",
         sortable: true,
-        className: "font-medium",
+        ...hideBelow("xl"),
+        className: `font-medium ${HIDDEN_UNTIL.xl}`,
       },
       {
         key: "present",
@@ -87,7 +144,8 @@ function DepartmentReportTable({
         label: "Late",
         align: "center",
         sortable: true,
-        className: "font-semibold text-amber-600",
+        ...hideBelow("lg"),
+        className: `font-semibold text-amber-600 ${HIDDEN_UNTIL.lg}`,
       },
       {
         key: "absent",
@@ -101,7 +159,8 @@ function DepartmentReportTable({
         label: "Leave",
         align: "center",
         sortable: true,
-        className: "font-semibold text-blue-600",
+        ...hideBelow("lg"),
+        className: `font-semibold text-blue-600 ${HIDDEN_UNTIL.lg}`,
       },
       {
         key: "attendanceRate",
@@ -114,10 +173,88 @@ function DepartmentReportTable({
         label: "Hours",
         align: "center",
         sortable: true,
-        className: "font-medium",
+        ...hideBelow("xl"),
+        className: `font-medium whitespace-nowrap ${HIDDEN_UNTIL.xl}`,
       },
     ],
     []
+  );
+
+  /*
+  | Phones get a card per department, laid out as the monthly card is: who,
+  | how much of the month they made, what it was made of, and the totals
+  | behind it. The two reports are read one after the other from the same
+  | tab strip, so they are the same row at the same rhythm.
+  |
+  | Four lines of text, no tiles. A card is one row of a list here, not a
+  | panel: the name is the only thing set large, the rate bar is the single
+  | graphic, and every line runs to both margins rather than stopping short
+  | of the right edge.
+  */
+  const mobileCard = (row) => (
+    <div className="space-y-3">
+
+      <div className="flex items-center gap-3">
+
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+          <FiGrid size={18} />
+        </div>
+
+        <div className="min-w-0">
+
+          <p className="truncate font-semibold text-slate-800">
+            {row.department}
+          </p>
+
+          <p className="truncate text-xs text-slate-500">
+            {row.employees} employees
+          </p>
+
+        </div>
+
+      </div>
+
+      {/* Runs the full width, the figure closing the line at the right edge. */}
+      <AttendanceRate
+        value={row.attendanceRate}
+        barClassName="min-w-0 flex-1"
+      />
+
+      {/*
+      | One column per count, so the four share the width evenly and the last
+      | one ends where the card does. A rule above them separates the month's
+      | make up from the name without drawing a box around either.
+      */}
+      <div className="grid grid-cols-4 gap-2 border-t border-slate-100 pt-3">
+
+        {COUNTS.map((count) => (
+
+          <div key={count.key} className="min-w-0">
+
+            <p className="truncate text-[10px] font-medium uppercase tracking-wide text-slate-400">
+              {count.label}
+            </p>
+
+            <p className={`mt-0.5 text-sm font-semibold ${count.tone}`}>
+              {row[count.key]}
+            </p>
+
+          </div>
+
+        ))}
+
+      </div>
+
+      {/* Pushed to opposite edges rather than trailing off mid line. */}
+      <div className="flex items-center justify-between gap-3 text-xs text-slate-400">
+
+        <span className="truncate">{row.workingDays} marked days</span>
+
+        <span className="shrink-0">{row.workingHours || "--"}</span>
+
+      </div>
+
+    </div>
   );
 
   const handleExport = () => {
@@ -164,7 +301,12 @@ function DepartmentReportTable({
         defaultSortBy="department"
         resetKey={`${search}|${monthLabel}`}
         paginationLabel="departments"
-        minWidthClass="min-w-[1000px]"
+        mobileCard={mobileCard}
+        /*
+        | Grows with the columns that appear at each breakpoint, so a tablet
+        | scrolls a compact four column table instead of a 1000px one.
+        */
+        minWidthClass="min-w-[560px] lg:min-w-[800px] xl:min-w-[1000px]"
         empty={{
           icon: <FiGrid size={28} />,
           title:

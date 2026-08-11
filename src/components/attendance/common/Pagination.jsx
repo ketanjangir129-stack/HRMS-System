@@ -8,10 +8,18 @@ import { getPageRange } from "../../../utils/attendance/attendanceTable";
 |--------------------------------------------------------------------------
 | Only a window of page buttons is rendered: a full month of records can run
 | to dozens of pages and printing every number would overflow the toolbar.
+|
+| Five numbers still do not fit beside the previous and next arrows on a
+| phone, so below `sm` the window narrows again to the current page and its
+| two neighbours. The outer numbers are hidden rather than dropped, so the
+| row is the same component at every width.
 |--------------------------------------------------------------------------
 */
 
 const WINDOW_SIZE = 5;
+
+/* How far from the current page a number stays visible on a phone. */
+const MOBILE_REACH = 1;
 
 const getPageWindow = (currentPage, totalPages) => {
 
@@ -47,11 +55,11 @@ function Pagination({
   const pages = getPageWindow(page, totalPages);
 
   return (
-    <div className="flex flex-col gap-3 border-t border-slate-200 px-6 py-4 lg:flex-row lg:items-center lg:justify-between">
+    <div className="flex flex-col gap-3 border-t border-slate-200 px-4 py-4 sm:px-6 lg:flex-row lg:items-center lg:justify-between">
 
-      <div className="flex flex-wrap items-center gap-3">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
 
-        <p className="text-sm text-slate-500">
+        <p className="text-xs text-slate-500 sm:text-sm">
           Showing{" "}
           <span className="font-semibold text-slate-800">
             {range.from}-{range.to}
@@ -82,13 +90,13 @@ function Pagination({
 
       </div>
 
-      <div className="flex items-center gap-2">
+      <div className="flex items-center justify-center gap-1.5 sm:gap-2">
 
         <button
           onClick={() => onPageChange(page - 1)}
           disabled={page === 1}
           aria-label="Previous page"
-          className="inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg border border-slate-200 text-slate-600 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+          className="inline-flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-slate-200 text-slate-600 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
         >
           <FiChevronLeft size={16} />
         </button>
@@ -98,7 +106,11 @@ function Pagination({
             key={pageNumber}
             onClick={() => onPageChange(pageNumber)}
             aria-current={pageNumber === page ? "page" : undefined}
-            className={`h-9 min-w-9 cursor-pointer rounded-lg border px-2 text-sm font-semibold transition-colors ${
+            className={`h-9 min-w-9 shrink-0 cursor-pointer items-center justify-center rounded-lg border px-2 text-sm font-semibold transition-colors ${
+              Math.abs(pageNumber - page) <= MOBILE_REACH
+                ? "inline-flex"
+                : "hidden sm:inline-flex"
+            } ${
               pageNumber === page
                 ? "border-blue-600 bg-blue-600 text-white"
                 : "border-slate-200 text-slate-600 hover:bg-slate-50"
@@ -112,7 +124,7 @@ function Pagination({
           onClick={() => onPageChange(page + 1)}
           disabled={page === totalPages}
           aria-label="Next page"
-          className="inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg border border-slate-200 text-slate-600 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+          className="inline-flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-slate-200 text-slate-600 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
         >
           <FiChevronRight size={16} />
         </button>

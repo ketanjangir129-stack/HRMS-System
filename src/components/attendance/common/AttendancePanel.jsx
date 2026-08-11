@@ -40,23 +40,30 @@ export function AttendancePanel({
       */}
       <div className="border-b border-slate-200">
         {(title || action) && (
-          <div className="flex flex-col gap-4 px-6 py-5 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex flex-col gap-4 px-4 py-4 sm:px-6 sm:py-5 lg:flex-row lg:items-center lg:justify-between">
 
             <div className="min-w-0">
 
-              <h2 className="text-lg font-semibold text-slate-900">
+              <h2 className="text-base font-semibold text-slate-900 sm:text-lg">
                 {title}
               </h2>
 
               {subtitle && (
-                <p className="mt-1 text-sm text-slate-500">{subtitle}</p>
+                <p className="mt-1 text-xs text-slate-500 sm:text-sm">
+                  {subtitle}
+                </p>
               )}
 
             </div>
 
-            {/* Never squeezed by a long title — the heading wraps instead. */}
+            {/*
+            | Never squeezed by a long title — the heading wraps instead.
+            |
+            | Full width until the row splits in two at `lg`, so a button that
+            | asks to fill its line on a phone actually can.
+            */}
             {action && (
-              <div className="flex shrink-0 flex-wrap items-center gap-3">
+              <div className="flex w-full shrink-0 flex-wrap items-center gap-3 lg:w-auto">
                 {action}
               </div>
             )}
@@ -68,7 +75,7 @@ export function AttendancePanel({
           /* Divider only under a heading — on its own it would sit at the very
              top edge of the card as a stray line. */
           <div
-            className={`flex flex-col gap-3 bg-slate-50/60 px-6 py-4 lg:flex-row lg:items-center lg:justify-between ${
+            className={`flex flex-col gap-3 bg-slate-50/60 px-4 py-4 sm:px-6 lg:flex-row lg:items-center lg:justify-between ${
               title || action ? "border-t border-slate-100" : ""
             }`}
           >
@@ -162,7 +169,7 @@ export function ExportButton({ onClick, disabled = false, label = "Export" }) {
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className="inline-flex cursor-pointer items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-md shadow-blue-600/20 transition-all duration-200 hover:-translate-y-0.5 hover:bg-blue-700 hover:shadow-lg hover:shadow-blue-600/30 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0"
+      className="inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-md shadow-blue-600/20 transition-all duration-200 hover:-translate-y-0.5 hover:bg-blue-700 hover:shadow-lg hover:shadow-blue-600/30 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0 sm:w-auto"
     >
       <FiDownload />
       {label}
@@ -178,18 +185,23 @@ export function ExportButton({ onClick, disabled = false, label = "Export" }) {
 
 export function MonthNavigator({ label, onChange, disableNext = false }) {
   return (
-    <div className="flex items-center gap-1 rounded-xl border border-slate-200 bg-white p-1">
+    /*
+    | Fills its line on a phone with the two arrows pushed to the edges, which
+    | is where a thumb reaches for them. From `sm` it shrinks back to the
+    | inline control that sits beside the other toolbar filters.
+    */
+    <div className="flex w-full items-center justify-between gap-1 rounded-xl border border-slate-200 bg-white p-1 sm:w-auto sm:justify-start">
 
       <button
         type="button"
         onClick={() => onChange("prev")}
         aria-label="Previous month"
-        className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg text-slate-600 transition-all hover:bg-slate-50 hover:text-blue-600"
+        className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-lg text-slate-600 transition-all hover:bg-slate-50 hover:text-blue-600"
       >
         <FiChevronLeft size={18} />
       </button>
 
-      <span className="min-w-[130px] text-center text-sm font-semibold text-slate-700">
+      <span className="min-w-32 text-center text-sm font-semibold text-slate-700">
         {label}
       </span>
 
@@ -198,7 +210,7 @@ export function MonthNavigator({ label, onChange, disableNext = false }) {
         onClick={() => onChange("next")}
         disabled={disableNext}
         aria-label="Next month"
-        className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg text-slate-600 transition-all hover:bg-slate-50 hover:text-blue-600 disabled:cursor-not-allowed disabled:opacity-40"
+        className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-lg text-slate-600 transition-all hover:bg-slate-50 hover:text-blue-600 disabled:cursor-not-allowed disabled:opacity-40"
       >
         <FiChevronRight size={18} />
       </button>

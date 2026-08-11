@@ -84,16 +84,16 @@ function AttendanceQuickActions() {
   if (actions.length === 0) return null;
 
   return (
-    <div className="h-full rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+    <div className="h-full rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
 
       {/* Header */}
       <div className="mb-4">
 
-        <h2 className="text-lg font-semibold text-slate-900">
+        <h2 className="text-base font-semibold text-slate-900 sm:text-lg">
           Quick Actions
         </h2>
 
-        <p className="mt-1 text-sm text-slate-500">
+        <p className="mt-1 text-xs text-slate-500 sm:text-sm">
           Manage attendance modules
         </p>
 
@@ -114,7 +114,7 @@ function AttendanceQuickActions() {
             key={action.title}
             type="button"
             onClick={() => navigate(action.path)}
-            className="group flex min-h-[76px] w-full cursor-pointer items-center justify-between gap-3 rounded-xl border border-transparent p-3 text-left transition-all duration-200 hover:border-slate-200 hover:bg-slate-50"
+            className="group flex min-h-19 w-full cursor-pointer items-center justify-between gap-3 rounded-xl border border-slate-100 p-3 text-left transition-all duration-200 hover:border-slate-200 hover:bg-slate-50 sm:border-transparent"
           >
 
             <div className="flex min-w-0 items-center gap-3">

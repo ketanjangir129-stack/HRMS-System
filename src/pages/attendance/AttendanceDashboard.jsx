@@ -275,7 +275,7 @@ function AttendanceDashboard() {
   };
 
   return (
-    <div className="mx-auto max-w-[1600px] space-y-6 p-1 sm:p-2">
+    <div className="mx-auto max-w-[1600px] space-y-4 p-0 sm:space-y-6 sm:p-2">
 
       <AttendanceHeader
         onMarkAttendance={() => setMarkOpen(true)}
@@ -286,7 +286,7 @@ function AttendanceDashboard() {
 
       {todayWeeklyOff && <WeeklyOffNotice date={todayKey} label="Today" />}
 
-      <div className="grid grid-cols-1 items-stretch gap-6 xl:grid-cols-12">
+      <div className="grid grid-cols-1 items-stretch gap-4 sm:gap-6 xl:grid-cols-12">
 
         <div className={showSummary ? "xl:col-span-5" : "xl:col-span-12"}>
           <TodayAttendanceCard className="h-full" />
@@ -297,7 +297,7 @@ function AttendanceDashboard() {
             <AttendanceSummaryCards
               summary={summary}
               compact
-              gridClassName="grid-cols-1 sm:grid-cols-2 sm:grid-rows-2"
+              gridClassName="grid-cols-2 sm:grid-rows-2"
             />
           </div>
         )}
@@ -326,7 +326,7 @@ function AttendanceDashboard() {
 
       {/* Insights */}
       {insightCount > 0 && (
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 xl:grid-cols-12">
+        <div className="grid grid-cols-1 gap-4 sm:gap-6 lg:grid-cols-2 xl:grid-cols-12">
 
           {showCalendar && (
             <div className={insightSpan}>
@@ -359,7 +359,7 @@ function AttendanceDashboard() {
 
       {/* Requests */}
       {showRequests && (
-        <div className="grid grid-cols-1 gap-6 xl:grid-cols-12">
+        <div className="grid grid-cols-1 gap-4 sm:gap-6 xl:grid-cols-12">
 
           <div className="xl:col-span-12 self-start">
             <AttendanceRequests

@@ -122,7 +122,7 @@ function MonthlyAttendance() {
 
     return (
 
-      <div className="p-2">
+      <div className="p-0 sm:p-2">
 
         <AttendancePageHeader
           title="Monthly Attendance"
@@ -130,13 +130,13 @@ function MonthlyAttendance() {
           icon={<FiClock />}
         />
 
-        <div className="mt-6 flex flex-col items-center justify-center rounded-2xl border border-slate-200 bg-white px-6 py-20 text-center shadow-sm">
+        <div className="mt-5 flex flex-col items-center justify-center rounded-2xl border border-slate-200 bg-white px-4 py-14 text-center shadow-sm sm:mt-6 sm:px-6 sm:py-20">
 
           <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-amber-50 text-amber-600">
             <FiLock size={28} />
           </div>
 
-          <h3 className="mt-5 text-xl font-semibold text-slate-900">
+          <h3 className="mt-5 text-lg font-semibold text-slate-900 sm:text-xl">
             Monthly attendance is restricted
           </h3>
 
@@ -162,7 +162,7 @@ function MonthlyAttendance() {
   }
 
   return (
-    <div className="p-2">
+    <div className="p-0 sm:p-2">
 
       <AttendancePageHeader
         title="Monthly Attendance"
@@ -170,7 +170,7 @@ function MonthlyAttendance() {
         icon={<FiClock />}
       />
 
-      <div className="mt-6 space-y-6">
+      <div className="mt-5 space-y-4 sm:mt-6 sm:space-y-6">
 
         <AttendanceSummaryCards summary={summary} />
 

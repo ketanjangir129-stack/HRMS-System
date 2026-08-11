@@ -11,7 +11,7 @@ import { FiAlertTriangle, FiInbox } from "react-icons/fi";
 
 export function LoadingState({ message = "Loading..." }) {
   return (
-    <div className="p-12 text-center sm:p-16">
+    <div className="p-10 text-center sm:p-16">
       <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-blue-600" />
       <p className="mt-4 font-medium text-slate-500">{message}</p>
     </div>
@@ -25,7 +25,7 @@ export function EmptyState({
   action = null,
 }) {
   return (
-    <div className="flex flex-col items-center justify-center px-6 py-14 text-center sm:py-20">
+    <div className="flex flex-col items-center justify-center px-4 py-14 text-center sm:px-6 sm:py-20">
 
       <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-blue-50 text-blue-600">
         {icon}
@@ -51,7 +51,7 @@ export function ErrorState({
   onRetry,
 }) {
   return (
-    <div className="flex flex-col items-center justify-center px-6 py-14 text-center sm:py-16">
+    <div className="flex flex-col items-center justify-center px-4 py-14 text-center sm:px-6 sm:py-16">
 
       <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-red-50 text-red-600">
         <FiAlertTriangle size={28} />
@@ -86,7 +86,7 @@ export function TableSkeleton({ rows = 6 }) {
   return (
     <div className="divide-y divide-slate-100">
       {Array.from({ length: rows }).map((_, index) => (
-        <div key={index} className="flex items-center gap-4 px-6 py-5">
+        <div key={index} className="flex items-center gap-4 px-4 py-5 sm:px-6">
           <div className="h-11 w-11 shrink-0 animate-pulse rounded-full bg-slate-200" />
           <div className="flex-1 space-y-2">
             <div className="h-4 w-40 animate-pulse rounded-md bg-slate-200" />

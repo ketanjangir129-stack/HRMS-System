@@ -41,11 +41,16 @@ function TodayFooter({ records }) {
   ];
 
   return (
+    /*
+    | Three across from `sm`. On a phone they stack instead: three columns in
+    | a 360px card would break "Punched out" across two lines and leave the
+    | numbers sitting under each other's captions.
+    */
     <div className="grid grid-cols-1 divide-y divide-slate-100 border-t border-slate-200 bg-slate-50/70 sm:grid-cols-3 sm:divide-x sm:divide-y-0">
 
       {stats.map((stat) => (
 
-        <div key={stat.label} className="px-6 py-4">
+        <div key={stat.label} className="px-4 py-3 sm:px-6 sm:py-4">
 
           <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
             {stat.label}

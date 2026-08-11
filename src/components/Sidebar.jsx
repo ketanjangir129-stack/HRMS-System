@@ -156,7 +156,7 @@ function Sidebar({ isCollapsed, onToggle, isMobileOpen = false, onMobileClose })
   */
   return (
     <aside
-      className={`fixed inset-y-0 left-0 z-50 flex h-screen w-[280px] flex-col border-r border-gray-200 bg-white transition-transform duration-300 ease-in-out
+      className={`fixed inset-y-0 left-0 z-50 flex h-dvh w-[280px] flex-col border-r border-gray-200 bg-white transition-transform duration-300 ease-in-out
         lg:static lg:translate-x-0 lg:transition-all
         ${isMobileOpen ? "translate-x-0" : "-translate-x-full"}
         ${isCollapsed ? "lg:w-[88px]" : "lg:w-[280px]"}`}

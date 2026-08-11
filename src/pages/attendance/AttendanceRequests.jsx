@@ -260,7 +260,7 @@ function AttendanceRequests() {
   };
 
   return (
-    <div className="p-2">
+    <div className="p-0 sm:p-2">
 
       <AttendancePageHeader
         title="Attendance Requests"
@@ -268,7 +268,7 @@ function AttendanceRequests() {
         icon={<FiFileText />}
       />
 
-      <div className="mt-6">
+      <div className="mt-5 sm:mt-6">
 
         <AttendanceRequestList
           requests={visibleRequests}

@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useId, useMemo, useState } from "react";
 import { FiChevronDown, FiChevronUp } from "react-icons/fi";
 import { PAGE_SIZE } from "../../../utils/attendance/attendanceConstants";
 import {
@@ -26,6 +26,12 @@ import Pagination from "./Pagination";
 |
 | Sorting and pagination are display concerns, so they are handled here.
 | Filtering stays with the parent, which also owns the export.
+|
+| Below `md` a table is the wrong shape for the screen: six columns in a
+| 360px viewport is a sideways scroll through every row. A caller that
+| passes `mobileCard` gets a stacked card per row on phones instead, and
+| the table returns from `md` up. Callers that do not pass it keep the
+| scrolling table they already had.
 |--------------------------------------------------------------------------
 */
 
@@ -65,11 +71,14 @@ function DataTable({
   pageSize: initialPageSize = PAGE_SIZE,
   paginationLabel = "records",
   minWidthClass = "min-w-[900px]",
+  mobileCard = null,
 }) {
 
   const [sortBy, setSortBy] = useState(defaultSortBy);
   const [sortOrder, setSortOrder] = useState(defaultSortOrder);
   const [pageSize, setPageSize] = useState(initialPageSize);
+
+  const sortFieldId = useId();
 
   /*
   | Filters live in the parent, which signals a change through `resetKey`. The
@@ -97,6 +106,15 @@ function DataTable({
   const paged = useMemo(
     () => paginate(sorted, currentPage, pageSize),
     [sorted, currentPage, pageSize]
+  );
+
+  /*
+  | Cards have no column headings to click, so the same sort is offered as a
+  | field picker and a direction toggle above them.
+  */
+  const sortableColumns = useMemo(
+    () => columns.filter((column) => column.sortable),
+    [columns]
   );
 
   const handleSort = (column) => {
@@ -131,7 +149,80 @@ function DataTable({
 
   return (
     <>
-      <div className="overflow-x-auto">
+      {mobileCard && (
+        <div className="md:hidden">
+
+          {sortableColumns.length > 0 && (
+            <div className="flex items-center gap-2 border-b border-slate-100 bg-slate-50/60 px-4 py-3">
+
+              <label
+                htmlFor={sortFieldId}
+                className="shrink-0 text-[11px] font-semibold uppercase tracking-wide text-slate-500"
+              >
+                Sort
+              </label>
+
+              <select
+                id={sortFieldId}
+                value={sortBy}
+                onChange={(event) => {
+                  setSortBy(event.target.value);
+                  setSortOrder("asc");
+                }}
+                className="min-w-0 flex-1 cursor-pointer rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 outline-none transition-all focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+              >
+                {!sortBy && <option value="">Default order</option>}
+
+                {sortableColumns.map((column) => (
+                  <option key={column.key} value={column.key}>
+                    {column.label}
+                  </option>
+                ))}
+              </select>
+
+              <button
+                type="button"
+                onClick={() =>
+                  setSortOrder((order) => (order === "asc" ? "desc" : "asc"))
+                }
+                aria-label={
+                  sortOrder === "asc"
+                    ? "Sort descending"
+                    : "Sort ascending"
+                }
+                className="inline-flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 transition-colors hover:bg-slate-50"
+              >
+                {sortOrder === "asc" ? (
+                  <FiChevronUp size={16} />
+                ) : (
+                  <FiChevronDown size={16} />
+                )}
+              </button>
+
+            </div>
+          )}
+
+          <div className="divide-y divide-slate-100">
+
+            {paged.map((row, index) => (
+
+              <div
+                key={rowKey ? rowKey(row, index) : index}
+                className="px-4 py-4 transition-colors active:bg-slate-50"
+              >
+                {mobileCard(row, index)}
+              </div>
+
+            ))}
+
+          </div>
+
+        </div>
+      )}
+
+      <div
+        className={`overflow-x-auto ${mobileCard ? "hidden md:block" : ""}`}
+      >
 
         <table className={`w-full border-collapse ${minWidthClass}`}>
 
@@ -144,7 +235,7 @@ function DataTable({
                 <th
                   key={column.key}
                   onClick={() => handleSort(column)}
-                  className={`px-6 py-3 font-semibold ${alignClass[column.align] || "text-left"} ${column.sortable ? "cursor-pointer select-none transition-colors hover:text-slate-700" : ""} ${column.headerClassName || ""}`}
+                  className={`px-4 py-3 font-semibold lg:px-6 ${alignClass[column.align] || "text-left"} ${column.sortable ? "cursor-pointer select-none transition-colors hover:text-slate-700" : ""} ${column.headerClassName || ""}`}
                 >
 
                   <span
@@ -183,7 +274,7 @@ function DataTable({
 
                   <td
                     key={column.key}
-                    className={`px-6 py-4 text-sm text-slate-700 ${alignClass[column.align] || "text-left"} ${column.className || ""}`}
+                    className={`px-4 py-4 text-sm text-slate-700 lg:px-6 ${alignClass[column.align] || "text-left"} ${column.className || ""}`}
                   >
                     {column.render
                       ? column.render(row, index)

@@ -45,14 +45,36 @@ const ACTION_STYLES = {
   delete: "hover:border-red-500 hover:bg-red-50 hover:text-red-600",
 };
 
-function RowAction({ tone, title, onClick, icon }) {
+/*
+| Written out in full rather than built from a breakpoint variable: Tailwind
+| generates its CSS by scanning the source for literal class names, so an
+| interpolated `${bp}:table-cell` would never be emitted.
+*/
+
+const HIDDEN_UNTIL = {
+  lg: "hidden lg:table-cell",
+  xl: "hidden xl:table-cell",
+};
+
+const hideBelow = (breakpoint) => ({
+  headerClassName: HIDDEN_UNTIL[breakpoint],
+  className: HIDDEN_UNTIL[breakpoint],
+});
+
+/*
+| Two sizes. The table row keeps its 36px square; the phone card asks for the
+| 44px one, which is the smallest square a thumb hits reliably and the size a
+| hover title is no help at.
+*/
+
+function RowAction({ tone, title, onClick, icon, size = "sm" }) {
   return (
     <button
       type="button"
       onClick={onClick}
       title={title}
       aria-label={title}
-      className={`inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition-all ${ACTION_STYLES[tone]}`}
+      className={`inline-flex shrink-0 cursor-pointer items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition-all ${size === "lg" ? "h-11 w-11" : "h-9 w-9"} ${ACTION_STYLES[tone]}`}
     >
       {icon}
     </button>
@@ -106,6 +128,71 @@ function AttendanceRequestList({
 
   const hasFilters = Boolean(statusFilter || typeFilter);
 
+  /*
+  | The table row's actions. The phone card offers the same five, laid out for
+  | a thumb rather than for a cell — see `mobileCard` below.
+  */
+  const renderActions = (request) => {
+
+    const canModify = canModifyRequest(request, currentUser);
+
+    const canDecide = canReviewRequest(request, currentUser);
+
+    return (
+      <>
+        <RowAction
+          tone="view"
+          title="View details"
+          icon={<FiEye size={16} />}
+          onClick={() => onView(request)}
+        />
+
+        {canModify && (
+          <RowAction
+            tone="edit"
+            title="Edit request"
+            icon={<FiEdit2 size={16} />}
+            onClick={() => onEdit(request)}
+          />
+        )}
+
+        {canDecide && hasRequestedTimes(request) && (
+          <RowAction
+            tone="approve"
+            title="Approve request"
+            icon={<FiCheck size={16} />}
+            onClick={() => onApprove(request)}
+          />
+        )}
+
+        {canDecide && (
+          <RowAction
+            tone="reject"
+            title="Reject request"
+            icon={<FiX size={16} />}
+            onClick={() => onReject(request)}
+          />
+        )}
+
+        {canModify && (
+          <RowAction
+            tone="delete"
+            title="Delete request"
+            icon={<FiTrash2 size={16} />}
+            onClick={() => onDelete(request)}
+          />
+        )}
+      </>
+    );
+
+  };
+
+  /*
+  | Who raised it, when it is for, where it stands and what can be done about
+  | it stay at every width; the type and the requested times drop out as the
+  | viewport narrows and are folded back into the employee cell, so nothing is
+  | actually lost.
+  */
   const columns = useMemo(
     () => [
       {
@@ -113,23 +200,45 @@ function AttendanceRequestList({
         label: "Employee",
         sortable: true,
         render: (request) => (
-          <EmployeeCell
-            name={request.employeeName}
-            employeeId={request.employeeId}
-            subtitle={
-              request.department
-                ? `${request.employeeId} · ${request.department}`
-                : request.employeeId
-            }
-          />
+          <div className="min-w-0">
+
+            <EmployeeCell
+              name={request.employeeName}
+              employeeId={request.employeeId}
+              subtitle={
+                request.department
+                  ? `${request.employeeId} · ${request.department}`
+                  : request.employeeId
+              }
+            />
+
+            {/*
+            | The columns hidden at this width, folded in here. Each span is
+            | hidden at exactly the breakpoint where its own column appears,
+            | so a value is never shown twice and never missing in between.
+            */}
+            <p className="mt-1.5 truncate text-xs text-slate-500 xl:hidden">
+
+              <span className="lg:hidden">
+                {getRequestTypeLabel(request.type)}
+                {" · "}
+              </span>
+
+              In {formatTime(request.requestedPunchIn)} · Out{" "}
+              {formatTime(request.requestedPunchOut)}
+
+            </p>
+
+          </div>
         ),
       },
       {
         key: "type",
         label: "Type",
         sortable: true,
+        ...hideBelow("lg"),
         render: (request) => (
-          <span className="whitespace-nowrap rounded-lg bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
+          <span className="inline-flex whitespace-nowrap rounded-lg bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
             {getRequestTypeLabel(request.type)}
           </span>
         ),
@@ -144,6 +253,7 @@ function AttendanceRequestList({
       {
         key: "requestedPunchIn",
         label: "Requested Times",
+        ...hideBelow("xl"),
         render: (request) => (
           <div className="flex flex-col gap-0.5 whitespace-nowrap text-slate-600">
             <span>
@@ -176,72 +286,176 @@ function AttendanceRequestList({
         key: "actions",
         label: "Actions",
         align: "center",
-        render: (request) => {
+        render: (request) => (
+          <div className="flex items-center justify-center gap-1.5">
+            {renderActions(request)}
+          </div>
+        ),
+      },
+    ],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [currentUser, onApprove, onDelete, onEdit, onReject, onView]
+  );
 
-          const canModify = canModifyRequest(request, currentUser);
+  /*
+  | Phones get a card per request: who raised it and where it stands on top,
+  | the type, the date and the requested times below, and the actions last.
+  |
+  | The actions are not the table's row of five identical squares. A square
+  | with an icon in it is a guess on a touch screen - there is no hover title
+  | to explain it, and approving somebody's attendance by guess is the one
+  | thing this screen must not invite. So the two decisions are spelled out as
+  | labelled buttons on a line of their own, opening the request is spelled
+  | out beside them, and only editing and deleting your own request - which
+  | reach for the same two icons everywhere else in the product - stay square.
+  */
+  const mobileCard = (request) => {
 
-          const canDecide = canReviewRequest(request, currentUser);
+    const canModify = canModifyRequest(request, currentUser);
 
-          return (
-            <div className="flex items-center justify-center gap-1.5">
+    const canDecide = canReviewRequest(request, currentUser);
 
-              <RowAction
-                tone="view"
-                title="View details"
-                icon={<FiEye size={16} />}
-                onClick={() => onView(request)}
-              />
+    return (
+      <div className="space-y-3">
 
-              {canModify && (
+        <div className="flex items-start justify-between gap-3">
+
+          <EmployeeCell
+            name={request.employeeName}
+            employeeId={request.employeeId}
+            subtitle={
+              request.department
+                ? `${request.employeeId} · ${request.department}`
+                : request.employeeId
+            }
+            size="sm"
+          />
+
+          <span className="shrink-0">
+            <AttendanceStatusBadge
+              status={request.status}
+              variant="request"
+              size="sm"
+            />
+          </span>
+
+        </div>
+
+        <div className="space-y-1.5 rounded-xl bg-slate-50 px-3 py-2.5">
+
+          <div className="flex flex-wrap items-center gap-2">
+
+            <span className="inline-flex whitespace-nowrap rounded-lg bg-white px-2.5 py-1 text-xs font-semibold text-slate-700 ring-1 ring-slate-200">
+              {getRequestTypeLabel(request.type)}
+            </span>
+
+            <span className="text-xs font-medium text-slate-600">
+              {formatDate(request.date)}
+            </span>
+
+          </div>
+
+          <p className="text-xs text-slate-500">
+            In{" "}
+            <span className="font-semibold text-slate-800">
+              {formatTime(request.requestedPunchIn)}
+            </span>
+            {" · "}
+            Out{" "}
+            <span className="font-semibold text-slate-800">
+              {formatTime(request.requestedPunchOut)}
+            </span>
+          </p>
+
+        </div>
+
+        <div className="space-y-2">
+
+          {/*
+          | The decision, when there is one to make. Approve keeps its filled
+          | green and reject its outline, so the destructive half of the pair
+          | never reads as the default.
+          */}
+          {canDecide && (
+            <div className="grid grid-cols-2 gap-2">
+
+              <button
+                type="button"
+                onClick={() => onApprove(request)}
+                disabled={!hasRequestedTimes(request)}
+                title={
+                  hasRequestedTimes(request)
+                    ? undefined
+                    : "This request has no punch time to apply."
+                }
+                className="inline-flex h-11 cursor-pointer items-center justify-center gap-2 rounded-xl bg-emerald-600 text-sm font-semibold text-white transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <FiCheck size={16} />
+                Approve
+              </button>
+
+              <button
+                type="button"
+                onClick={() => onReject(request)}
+                className="inline-flex h-11 cursor-pointer items-center justify-center gap-2 rounded-xl border border-red-200 text-sm font-semibold text-red-600 transition-colors hover:bg-red-50"
+              >
+                <FiX size={16} />
+                Reject
+              </button>
+
+            </div>
+          )}
+
+          {/*
+          | Opening the request is offered on every row: it is the only way to
+          | read the reason a correction was asked for, and on a phone it is
+          | also where a decided request explains why it was turned down.
+          */}
+          <div className="flex items-center gap-2">
+
+            <button
+              type="button"
+              onClick={() => onView(request)}
+              className="inline-flex h-11 flex-1 cursor-pointer items-center justify-center gap-2 rounded-xl border border-slate-200 text-sm font-semibold text-slate-700 transition-all hover:border-blue-500 hover:bg-blue-50 hover:text-blue-600"
+            >
+              <FiEye size={16} />
+              View Details
+            </button>
+
+            {canModify && (
+              <>
                 <RowAction
                   tone="edit"
                   title="Edit request"
                   icon={<FiEdit2 size={16} />}
                   onClick={() => onEdit(request)}
+                  size="lg"
                 />
-              )}
 
-              {canDecide && hasRequestedTimes(request) && (
-                <RowAction
-                  tone="approve"
-                  title="Approve request"
-                  icon={<FiCheck size={16} />}
-                  onClick={() => onApprove(request)}
-                />
-              )}
-
-              {canDecide && (
-                <RowAction
-                  tone="reject"
-                  title="Reject request"
-                  icon={<FiX size={16} />}
-                  onClick={() => onReject(request)}
-                />
-              )}
-
-              {canModify && (
                 <RowAction
                   tone="delete"
                   title="Delete request"
                   icon={<FiTrash2 size={16} />}
                   onClick={() => onDelete(request)}
+                  size="lg"
                 />
-              )}
+              </>
+            )}
 
-            </div>
-          );
+          </div>
 
-        },
-      },
-    ],
-    [currentUser, onApprove, onDelete, onEdit, onReject, onView]
-  );
+        </div>
+
+      </div>
+    );
+
+  };
 
   const createButton = (
     <button
       type="button"
       onClick={onCreate}
-      className="inline-flex cursor-pointer items-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-blue-600/20 transition-all duration-200 hover:-translate-y-0.5 hover:bg-blue-700 hover:shadow-lg hover:shadow-blue-600/30 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 active:translate-y-0"
+      className="inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-blue-600/20 transition-all duration-200 hover:-translate-y-0.5 hover:bg-blue-700 hover:shadow-lg hover:shadow-blue-600/30 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 active:translate-y-0 sm:w-auto"
     >
       <FiPlus size={18} />
       New Request
@@ -266,10 +480,12 @@ function AttendanceRequestList({
       action={createButton}
       toolbar={
         <>
-          <div className="flex flex-wrap items-center gap-3">
+          <div className="flex w-full flex-wrap items-center gap-3 lg:w-auto">
 
             {canReview && onScopeChange && (
-              <div className="inline-flex rounded-xl border border-slate-200 bg-white p-1">
+              /* Fills its line on a phone, so both halves are a comfortable
+                 tap target rather than two small pills in a corner. */
+              <div className="inline-flex w-full rounded-xl border border-slate-200 bg-white p-1 sm:w-auto">
 
                 {[
                   { value: "all", label: "All Requests" },
@@ -280,7 +496,7 @@ function AttendanceRequestList({
                     key={tab.value}
                     type="button"
                     onClick={() => onScopeChange(tab.value)}
-                    className={`cursor-pointer rounded-lg px-3 py-1.5 text-sm font-semibold transition-colors ${
+                    className={`flex-1 cursor-pointer whitespace-nowrap rounded-lg px-3 py-1.5 text-sm font-semibold transition-colors sm:flex-none ${
                       scope === tab.value
                         ? "bg-blue-600 text-white"
                         : "text-slate-600 hover:bg-slate-50"
@@ -372,7 +588,12 @@ function AttendanceRequestList({
         defaultSortOrder="desc"
         resetKey={`${headerSearch}|${statusFilter}|${typeFilter}|${scope}`}
         paginationLabel="requests"
-        minWidthClass="min-w-[1000px]"
+        mobileCard={mobileCard}
+        /*
+        | Grows with the columns that appear at each breakpoint, so a tablet
+        | scrolls a compact four column table instead of a 1000px one.
+        */
+        minWidthClass="min-w-[660px] lg:min-w-[800px] xl:min-w-[1000px]"
         empty={{
           icon: <FiFileText size={28} />,
           title:

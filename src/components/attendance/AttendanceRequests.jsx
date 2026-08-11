@@ -74,60 +74,86 @@ function AttendanceRequests({
 
         <div className="divide-y divide-slate-100">
 
-          {visible.map((request) => (
+          {visible.map((request) => {
 
-            <div
-              key={request.requestId}
-              className="flex flex-col gap-3 px-6 py-4 transition hover:bg-slate-50 sm:flex-row sm:items-center sm:justify-between"
-            >
+            const canDecide = canReviewRequest(request, currentUser);
 
-              <EmployeeCell
-                name={request.employeeName}
-                employeeId={request.employeeId}
-                subtitle={`${getRequestTypeLabel(request.type)} · ${formatDate(request.date)}`}
-              />
+            return (
 
-              {canReviewRequest(request, currentUser) ? (
+              <div
+                key={request.requestId}
+                className="flex flex-col gap-3 px-4 py-4 transition hover:bg-slate-50 sm:flex-row sm:items-center sm:justify-between sm:px-6"
+              >
 
-                <div className="flex shrink-0 gap-2">
+                {/*
+                | A decided request states where it stands beside the name and
+                | the date rather than on a line of its own: on a phone that
+                | left the row three lines tall for one fact about it.
+                |
+                | Top aligned on a phone so the pill reads against the name;
+                | centred from `sm`, which is where the desktop row already
+                | had it.
+                */}
+                <div className="flex min-w-0 flex-1 items-start justify-between gap-3 sm:items-center">
 
-                  <button
-                    type="button"
-                    onClick={() => onReject(request)}
-                    className="cursor-pointer rounded-lg border border-red-200 px-3 py-1.5 text-xs font-semibold text-red-600 transition hover:bg-red-50"
-                  >
-                    Reject
-                  </button>
+                  <EmployeeCell
+                    name={request.employeeName}
+                    employeeId={request.employeeId}
+                    subtitle={`${getRequestTypeLabel(request.type)} · ${formatDate(request.date)}`}
+                  />
 
-                  <button
-                    type="button"
-                    onClick={() => onApprove(request)}
-                    disabled={!hasRequestedTimes(request)}
-                    title={
-                      hasRequestedTimes(request)
-                        ? undefined
-                        : "This request has no punch time to apply."
-                    }
-                    className="cursor-pointer rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    Approve
-                  </button>
+                  {!canDecide && (
+                    <span className="shrink-0">
+                      <AttendanceStatusBadge
+                        status={request.status}
+                        variant="request"
+                        size="sm"
+                      />
+                    </span>
+                  )}
 
                 </div>
 
-              ) : (
+                {/*
+                | Still awaiting this user's review. Two buttons need more room
+                | than a pill does, so they keep the line under the employee on
+                | a phone and sit beside them from `sm`.
+                */}
+                {canDecide && (
 
-                <AttendanceStatusBadge
-                  status={request.status}
-                  variant="request"
-                  size="sm"
-                />
+                  <div className="flex shrink-0 gap-2">
 
-              )}
+                    <button
+                      type="button"
+                      onClick={() => onReject(request)}
+                      className="flex-1 cursor-pointer rounded-lg border border-red-200 px-3 py-2 text-xs font-semibold text-red-600 transition hover:bg-red-50 sm:flex-none sm:py-1.5"
+                    >
+                      Reject
+                    </button>
 
-            </div>
+                    <button
+                      type="button"
+                      onClick={() => onApprove(request)}
+                      disabled={!hasRequestedTimes(request)}
+                      title={
+                        hasRequestedTimes(request)
+                          ? undefined
+                          : "This request has no punch time to apply."
+                      }
+                      className="flex-1 cursor-pointer rounded-lg bg-emerald-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50 sm:flex-none sm:py-1.5"
+                    >
+                      Approve
+                    </button>
 
-          ))}
+                  </div>
+
+                )}
+
+              </div>
+
+            );
+
+          })}
 
         </div>
 

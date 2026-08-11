@@ -69,12 +69,17 @@ function AttendanceRequestDetailModal({
   const busy = approving || rejecting;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-sm">
+    /*
+    | A sheet off the bottom edge on a phone and a centred dialog from `sm`.
+    | The header and the review actions are pinned so a long request scrolls
+    | between them rather than pushing Approve out of reach.
+    */
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-900/50 backdrop-blur-sm sm:items-center sm:p-4">
 
-      <div className="max-h-full w-full max-w-2xl overflow-hidden rounded-2xl bg-white shadow-2xl">
+      <div className="flex max-h-[92dvh] w-full max-w-2xl flex-col overflow-hidden rounded-t-2xl bg-white shadow-2xl sm:max-h-[90dvh] sm:rounded-2xl">
 
         {/* Header */}
-        <div className="flex items-center justify-between gap-4 border-b border-slate-200 px-6 py-5">
+        <div className="flex shrink-0 items-center justify-between gap-3 border-b border-slate-200 px-4 py-4 sm:gap-4 sm:px-6 sm:py-5">
 
           <div className="flex min-w-0 items-center gap-3">
 
@@ -86,19 +91,23 @@ function AttendanceRequestDetailModal({
               <h2 className="text-lg font-semibold text-slate-900">
                 Request Details
               </h2>
-              <p className="truncate text-sm text-slate-500">
+              {/* <p className="truncate text-sm text-slate-500">
                 {request.requestId}
-              </p>
+              </p> */}
             </div>
 
           </div>
 
-          <div className="flex shrink-0 items-center gap-3">
+          <div className="flex shrink-0 items-center gap-2 sm:gap-3">
 
-            <AttendanceStatusBadge
-              status={request.status}
-              variant="request"
-            />
+            {/* Moves down beside the employee on a phone, where the header
+                has no room for both the pill and the close button. */}
+            <span className="hidden sm:inline-flex">
+              <AttendanceStatusBadge
+                status={request.status}
+                variant="request"
+              />
+            </span>
 
             <button
               type="button"
@@ -114,9 +123,10 @@ function AttendanceRequestDetailModal({
         </div>
 
         {/* Body */}
-        <div className="max-h-[65vh] space-y-4 overflow-y-auto p-6">
+        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4 sm:p-6">
 
-          <div className="rounded-2xl border border-slate-200 p-4">
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 p-4">
+
             <EmployeeCell
               name={request.employeeName}
               employeeId={request.employeeId}
@@ -128,6 +138,16 @@ function AttendanceRequestDetailModal({
                 .filter(Boolean)
                 .join(" · ")}
             />
+
+            {/* The status the header gave up on a phone. */}
+            <span className="sm:hidden">
+              <AttendanceStatusBadge
+                status={request.status}
+                variant="request"
+                size="sm"
+              />
+            </span>
+
           </div>
 
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -214,7 +234,7 @@ function AttendanceRequestDetailModal({
 
         {/* Footer */}
         {canDecide && (
-          <div className="flex flex-col-reverse gap-3 border-t border-slate-200 px-6 py-5 sm:flex-row sm:justify-end">
+          <div className="flex shrink-0 flex-col-reverse gap-3 border-t border-slate-200 px-4 py-4 sm:flex-row sm:justify-end sm:px-6 sm:py-5">
 
             <button
               type="button"

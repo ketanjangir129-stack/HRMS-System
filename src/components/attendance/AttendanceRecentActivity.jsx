@@ -58,25 +58,25 @@ function AttendanceRecentActivity({
 
   return (
 
-    <div className="flex h-full flex-col rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+    <div className="flex h-full flex-col rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
 
       {/* Header */}
 
-      <div className="mb-5 flex items-start justify-between">
+      <div className="mb-5 flex items-start justify-between gap-3">
 
-        <div>
+        <div className="min-w-0">
 
-          <h2 className="text-lg font-semibold text-slate-900">
+          <h2 className="text-base font-semibold text-slate-900 sm:text-lg">
             Recent Activities
           </h2>
 
-          <p className="mt-1 text-sm text-slate-500">
+          <p className="mt-1 text-xs text-slate-500 sm:text-sm">
             Latest attendance updates
           </p>
 
         </div>
 
-        <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-600">
+        <span className="shrink-0 whitespace-nowrap rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-600">
           {latestActivities.length} Events
         </span>
 
@@ -170,15 +170,15 @@ function AttendanceRecentActivity({
 
                   <div className="flex items-start justify-between gap-3">
 
-                    <div>
+                    <div className="min-w-0">
 
-                      <p className="text-sm font-semibold text-slate-800">
+                      <p className="truncate text-sm font-semibold text-slate-800">
 
                         {item.employee}
 
                       </p>
 
-                      <p className="text-sm text-slate-500">
+                      <p className="truncate text-sm text-slate-500">
 
                         {item.title}
 
@@ -194,7 +194,7 @@ function AttendanceRecentActivity({
 
                   </div>
 
-                  <p className="mt-1 text-xs text-slate-400">
+                  <p className="mt-1 line-clamp-2 text-xs text-slate-400">
 
                     {item.description}
 

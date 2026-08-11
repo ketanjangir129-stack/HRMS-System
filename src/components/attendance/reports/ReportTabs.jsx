@@ -25,7 +25,7 @@ function ReportTabs({ value, onChange }) {
               type="button"
               onClick={() => onChange(tab.value)}
               aria-current={isActive ? "page" : undefined}
-              className={`flex-1 cursor-pointer whitespace-nowrap rounded-xl px-5 py-3 text-left transition-all duration-200 ${
+              className={`flex-1 cursor-pointer whitespace-nowrap rounded-xl px-4 py-2.5 text-left transition-all duration-200 sm:px-5 sm:py-3 ${
                 isActive
                   ? "bg-blue-600 text-white shadow-md shadow-blue-600/20"
                   : "text-slate-600 hover:bg-slate-50"

@@ -246,7 +246,7 @@ function AttendanceReports() {
   );
 
   return (
-    <div className="p-2">
+    <div className="p-0 sm:p-2">
 
       <AttendancePageHeader
         title="Attendance Reports"
@@ -254,7 +254,7 @@ function AttendanceReports() {
         icon={<FiBarChart2 />}
       />
 
-      <div className="mt-6 space-y-6">
+      <div className="mt-5 space-y-4 sm:mt-6 sm:space-y-6">
 
         <ReportTabs value={reportType} onChange={setReportType} />
 
@@ -262,7 +262,7 @@ function AttendanceReports() {
 
         {isDaily && (
           <>
-            <div className="flex flex-col gap-2 rounded-2xl border border-slate-200 bg-white px-6 py-4 shadow-sm sm:flex-row sm:items-center sm:gap-4">
+            <div className="flex flex-col gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-sm sm:flex-row sm:items-center sm:gap-4 sm:px-6">
 
               <label
                 htmlFor="report-date"

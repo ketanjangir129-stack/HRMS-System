@@ -18,9 +18,15 @@ const DEFAULT_SUBTITLES = {
   leave: "Employees On Leave",
 };
 
+/*
+| Two across on a phone rather than one. Stacked, the four cards are a screen
+| and a half of scrolling before the page below them starts, and the number on
+| each is short enough to read at half the width.
+*/
+
 function AttendanceSummaryCards({
   summary,
-  gridClassName = "grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-4",
+  gridClassName = "grid-cols-2 xl:grid-cols-4",
   compact = false,
   subtitles,
 }) {
@@ -71,14 +77,16 @@ function AttendanceSummaryCards({
   ];
 
   return (
-    <div className={`grid h-full gap-6 ${gridClassName}`}>
+    <div className={`grid h-full gap-3 sm:gap-6 ${gridClassName}`}>
 
       {cards.map((card) => (
 
         <div
           key={card.title}
           className={`group relative overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg ${
-            compact ? "min-h-[145px] p-4" : " p-6"
+            compact
+              ? "min-h-32 p-3 sm:min-h-36.25 sm:p-4"
+              : "p-4 sm:p-6"
           }`}
         >
 
@@ -90,22 +98,28 @@ function AttendanceSummaryCards({
 
           {/* Header */}
 
-          <div className="flex items-start justify-between">
+          <div className="flex items-start justify-between gap-2">
 
-            <div>
+            <div className="min-w-0">
 
-              <p className="text-sm font-medium text-slate-500">
+              <p className="truncate text-xs font-medium text-slate-500 sm:text-sm">
                 {card.title}
               </p>
 
-              <h2 className={`mt-2 font-bold text-slate-900 ${compact ? "text-3xl" : "text-4xl"}`}>
+              <h2
+                className={`mt-1 font-bold text-slate-900 sm:mt-2 ${
+                  compact
+                    ? "text-2xl sm:text-3xl"
+                    : "text-3xl sm:text-4xl"
+                }`}
+              >
                 {card.value}
               </h2>
 
             </div>
 
             <div
-              className={`flex h-12 w-12 items-center justify-center rounded-2xl text-xl ${card.iconBg} ${card.iconColor} transition group-hover:scale-110`}
+              className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl text-lg sm:h-12 sm:w-12 sm:text-xl ${card.iconBg} ${card.iconColor} transition group-hover:scale-110`}
             >
               {card.icon}
             </div>
@@ -114,13 +128,13 @@ function AttendanceSummaryCards({
 
           {/* Progress */}
 
-          <div className={compact ? "mt-3" : "mt-6"}>
+          <div className={compact ? "mt-3" : "mt-4 sm:mt-6"}>
 
-            <div className="mb-2 flex items-center justify-between text-xs font-medium text-slate-500">
+            <div className="mb-2 flex items-center justify-between gap-2 text-[11px] font-medium text-slate-500 sm:text-xs">
 
-              <span>{card.subtitle}</span>
+              <span className="truncate">{card.subtitle}</span>
 
-              <span>{card.percentage}%</span>
+              <span className="shrink-0">{card.percentage}%</span>
 
             </div>
 

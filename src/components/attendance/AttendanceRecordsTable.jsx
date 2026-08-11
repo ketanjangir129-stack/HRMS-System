@@ -33,6 +33,22 @@ const SEARCH_FIELDS = [
   "designation",
 ];
 
+/*
+| Written out in full rather than built from a breakpoint variable: Tailwind
+| generates its CSS by scanning the source for literal class names, so an
+| interpolated `${bp}:table-cell` would never be emitted.
+*/
+
+const HIDDEN_UNTIL = {
+  lg: "hidden lg:table-cell",
+  xl: "hidden xl:table-cell",
+};
+
+const hideBelow = (breakpoint) => ({
+  headerClassName: HIDDEN_UNTIL[breakpoint],
+  className: HIDDEN_UNTIL[breakpoint],
+});
+
 const EXPORT_HEADER = [
   "Employee ID",
   "Employee Name",
@@ -82,6 +98,12 @@ function AttendanceRecordsTable({
     [records, search, statusFilter, departmentFilter]
   );
 
+  /*
+  | Columns are prioritised rather than all forced onto a narrow screen. Who
+  | it is, when they came and went, and how the day ended up stay at every
+  | width; the department and the hours drop out as the viewport narrows and
+  | are folded back into the employee cell, so nothing is actually lost.
+  */
   const columns = useMemo(
     () => [
       {
@@ -89,16 +111,39 @@ function AttendanceRecordsTable({
         label: "Employee",
         sortable: true,
         render: (record) => (
-          <EmployeeCell
-            name={record.employeeName}
-            employeeId={record.employeeId}
-          />
+          <div className="min-w-0">
+
+            <EmployeeCell
+              name={record.employeeName}
+              employeeId={record.employeeId}
+            />
+
+            {/*
+            | The columns hidden at this width, folded in here. Each span is
+            | hidden at exactly the breakpoint where its own column appears,
+            | so a value is never shown twice and never missing in between.
+            */}
+            <p className="mt-1.5 truncate text-xs text-slate-500 xl:hidden">
+
+              {record.department || "--"}
+
+              {record.designation ? ` · ${record.designation}` : ""}
+
+              <span className="lg:hidden">
+                {" · "}
+                {record.workingHours || "--"}
+              </span>
+
+            </p>
+
+          </div>
         ),
       },
       {
         key: "department",
         label: "Department",
         sortable: true,
+        ...hideBelow("xl"),
         render: (record) => (
           <>
             <p className="font-medium text-slate-700">
@@ -114,21 +159,22 @@ function AttendanceRecordsTable({
         key: "punchIn",
         label: "Punch In",
         sortable: true,
-        className: "font-medium",
+        className: "font-medium whitespace-nowrap",
         render: (record) => formatTime(record.punchIn),
       },
       {
         key: "punchOut",
         label: "Punch Out",
         sortable: true,
-        className: "font-medium",
+        className: "font-medium whitespace-nowrap",
         render: (record) => formatTime(record.punchOut),
       },
       {
         key: "workingHours",
         label: "Working Hours",
+        ...hideBelow("lg"),
         render: (record) => (
-          <span className="rounded-lg bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
+          <span className="inline-flex whitespace-nowrap rounded-lg bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
             {record.workingHours || "--"}
           </span>
         ),
@@ -143,6 +189,56 @@ function AttendanceRecordsTable({
       },
     ],
     []
+  );
+
+  /*
+  | Phones get a card per employee instead of a six column table dragged
+  | sideways: the identity on top with the day's status beside it, and the
+  | three times below as a row of their own.
+  */
+  const mobileCard = (record) => (
+    <div className="space-y-3">
+
+      <div className="flex items-start justify-between gap-3">
+
+        <EmployeeCell
+          name={record.employeeName}
+          employeeId={record.employeeId}
+          subtitle={record.department || record.employeeId}
+          size="sm"
+        />
+
+        <span className="shrink-0">
+          <AttendanceStatusBadge status={record.status} size="sm" />
+        </span>
+
+      </div>
+
+      <div className="grid grid-cols-3 gap-2 rounded-xl bg-slate-50 px-3 py-2.5">
+
+        {[
+          { label: "In", value: formatTime(record.punchIn) },
+          { label: "Out", value: formatTime(record.punchOut) },
+          { label: "Hours", value: record.workingHours || "--" },
+        ].map((item) => (
+
+          <div key={item.label} className="min-w-0">
+
+            <p className="text-[11px] font-medium uppercase tracking-wide text-slate-400">
+              {item.label}
+            </p>
+
+            <p className="mt-0.5 truncate text-sm font-semibold text-slate-800">
+              {item.value}
+            </p>
+
+          </div>
+
+        ))}
+
+      </div>
+
+    </div>
   );
 
   const handleExport = () => {
@@ -169,7 +265,7 @@ function AttendanceRecordsTable({
   const toolbar =
     showFilters || showExport ? (
       <>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:w-auto lg:grid-cols-2">
+        <div className="grid w-full grid-cols-1 gap-3 sm:grid-cols-2 lg:w-auto lg:grid-cols-2">
 
           {showFilters && (
             <FilterSelect
@@ -222,6 +318,12 @@ function AttendanceRecordsTable({
         defaultSortBy="employeeName"
         resetKey={`${search}|${statusFilter}|${departmentFilter}`}
         paginationLabel="records"
+        mobileCard={mobileCard}
+        /*
+        | Grows with the columns that appear at each breakpoint, so a tablet
+        | scrolls a compact four column table instead of a 900px one.
+        */
+        minWidthClass="min-w-[560px] lg:min-w-[720px] xl:min-w-[900px]"
         empty={{
           icon: <FiCalendar size={28} />,
           title:

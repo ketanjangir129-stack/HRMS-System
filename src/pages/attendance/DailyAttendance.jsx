@@ -95,7 +95,7 @@ function DailyAttendance() {
   );
 
   return (
-    <div className="p-2">
+    <div className="p-0 sm:p-2">
 
       <AttendancePageHeader
         title="Daily Attendance"
@@ -106,7 +106,7 @@ function DailyAttendance() {
             <button
               type="button"
               onClick={() => setMarkOpen(true)}
-              className="inline-flex cursor-pointer items-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-blue-600/20 transition-all duration-200 hover:-translate-y-0.5 hover:bg-blue-700 hover:shadow-lg hover:shadow-blue-600/30 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 active:translate-y-0"
+              className="inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-blue-600/20 transition-all duration-200 hover:-translate-y-0.5 hover:bg-blue-700 hover:shadow-lg hover:shadow-blue-600/30 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 active:translate-y-0 md:w-auto"
             >
               Mark Attendance
             </button>
@@ -114,7 +114,7 @@ function DailyAttendance() {
         }
       />
 
-      <div className="mt-6 space-y-6">
+      <div className="mt-5 space-y-4 sm:mt-6 sm:space-y-6">
 
         <HolidayNotice holiday={todayHoliday} label="Today" />
 

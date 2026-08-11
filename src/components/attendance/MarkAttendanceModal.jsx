@@ -145,12 +145,18 @@ function MarkAttendanceForm({
   const timesOptional = isTimeOptionalStatus(form.status);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-sm">
+    /*
+    | A sheet off the bottom edge on a phone and a centred dialog from `sm`.
+    | Full width and flush with the bottom is where a thumb can reach the
+    | buttons; the header and footer are pinned and only the fields scroll,
+    | so the keyboard never pushes Save off the screen.
+    */
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-900/50 backdrop-blur-sm sm:items-center sm:p-4">
 
-      <div className="max-h-full w-full max-w-2xl overflow-hidden rounded-2xl bg-white shadow-2xl">
+      <div className="flex max-h-[92dvh] w-full max-w-2xl flex-col overflow-hidden rounded-t-2xl bg-white shadow-2xl sm:max-h-[90dvh] sm:rounded-2xl">
 
         {/* Header */}
-        <div className="flex items-center justify-between gap-4 border-b border-slate-200 px-6 py-5">
+        <div className="flex shrink-0 items-center justify-between gap-4 border-b border-slate-200 px-4 py-4 sm:px-6 sm:py-5">
 
           <div className="flex min-w-0 items-center gap-3">
 
@@ -182,9 +188,9 @@ function MarkAttendanceForm({
         </div>
 
         {/* Body */}
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
 
-          <div className="max-h-[65vh] overflow-y-auto p-6">
+          <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6">
 
             {existingRecord && (
               <div className="mb-5 flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4">
@@ -206,7 +212,7 @@ function MarkAttendanceForm({
               </div>
             )}
 
-            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5">
 
               <div className="sm:col-span-2">
 
@@ -339,7 +345,7 @@ function MarkAttendanceForm({
           </div>
 
           {/* Footer */}
-          <div className="flex flex-col-reverse gap-3 border-t border-slate-200 px-6 py-5 sm:flex-row sm:justify-end">
+          <div className="flex shrink-0 flex-col-reverse gap-3 border-t border-slate-200 px-4 py-4 sm:flex-row sm:justify-end sm:px-6 sm:py-5">
 
             <button
               type="button"

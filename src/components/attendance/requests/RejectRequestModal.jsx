@@ -33,12 +33,17 @@ function RejectForm({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-sm">
+    /*
+    | A sheet off the bottom edge on a phone and a centred dialog from `sm`,
+    | so the remarks box sits directly above the keyboard rather than behind
+    | it.
+    */
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-900/50 backdrop-blur-sm sm:items-center sm:p-4">
 
-      <div className="w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-2xl">
+      <div className="flex max-h-[92dvh] w-full max-w-md flex-col overflow-hidden rounded-t-2xl bg-white shadow-2xl sm:max-h-[90dvh] sm:rounded-2xl">
 
         {/* Header */}
-        <div className="flex items-center justify-between gap-4 border-b border-slate-200 px-6 py-5">
+        <div className="flex shrink-0 items-center justify-between gap-4 border-b border-slate-200 px-4 py-4 sm:px-6 sm:py-5">
 
           <div className="flex min-w-0 items-center gap-3">
 
@@ -72,7 +77,7 @@ function RejectForm({
         </div>
 
         {/* Body */}
-        <div className="p-6">
+        <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6">
 
           <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">
             Remarks <span className="text-red-500">*</span>
@@ -97,7 +102,7 @@ function RejectForm({
         </div>
 
         {/* Footer */}
-        <div className="flex flex-col-reverse gap-3 border-t border-slate-200 px-6 py-5 sm:flex-row sm:justify-end">
+        <div className="flex shrink-0 flex-col-reverse gap-3 border-t border-slate-200 px-4 py-4 sm:flex-row sm:justify-end sm:px-6 sm:py-5">
 
           <button
             type="button"

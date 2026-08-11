@@ -33,7 +33,7 @@ function DashboardLayout() {
   }, [isSidebarOpen]);
 
   return (
-    <div className="flex h-screen">
+    <div className="flex h-dvh">
       <Sidebar
         isCollapsed={isSidebarCollapsed}
         onToggle={() => setIsSidebarCollapsed((isCollapsed) => !isCollapsed)}
