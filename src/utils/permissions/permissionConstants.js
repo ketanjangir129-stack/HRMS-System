@@ -383,6 +383,24 @@ export const PERMISSION_PAGES = [
         path: "/payrolldashboard/payslip",
         defaults: { hr: true, employee: false },
       },
+       {
+        key: "generate",
+        label: "Generate Payroll",
+        description: "Run the month's payroll, for one employee or all",
+        defaults: { hr: true, employee: false },
+      },
+      {
+        key: "approve",
+        label: "Approve Payroll",
+        description: "Sign off a generated month and close it to changes",
+        defaults: { hr: false, employee: false },
+      },
+      {
+        key: "lock",
+        label: "Lock Payroll",
+        description: "Make an approved month final. This cannot be undone",
+        defaults: { hr: false, employee: false },
+      },
     ],
   },
 
