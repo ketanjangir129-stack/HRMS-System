@@ -1,6 +1,7 @@
 import { FiFilter, FiSearch } from "react-icons/fi";
 import { TASK_STATUSES } from "../../services/taskService";
-import { ALL_STATUSES } from "../../utils/tasks/taskConstants";
+import { ALL_STATUSES, STATUS_DOTS } from "../../utils/tasks/taskConstants";
+import TaskSelect from "./TaskSelect";
 
 /*
 |--------------------------------------------------------------------------
@@ -18,6 +19,20 @@ import { ALL_STATUSES } from "../../utils/tasks/taskConstants";
 const SCOPES = [
   { key: "all", label: "All tasks" },
   { key: "mine", label: "My tasks" },
+];
+
+/*
+| Pehla option "All statuses" hai — koi status nahi, isliye uske aage dot
+| bhi nahi. Baaki har row ka dot wahi rang deta hai jo uske badge ka hai,
+| to list dekhkar hi pata chal jaata hai kis par filter lag raha hai.
+*/
+const STATUS_OPTIONS = [
+  { value: ALL_STATUSES, label: ALL_STATUSES },
+  ...TASK_STATUSES.map((status) => ({
+    value: status,
+    label: status,
+    dot: STATUS_DOTS[status],
+  })),
 ];
 
 function TaskFilters({
@@ -60,19 +75,21 @@ function TaskFilters({
         />
       </div>
 
-      <div className="relative">
-        <FiFilter className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-        <select
+      {/*
+        Filter icon trigger ke andar nahi baith sakta (wo TaskSelect ka apna
+        button hai), isliye upar se rakha hai — pl-10 uski jagah chhodta hai
+        aur pointer-events-none se click neeche button tak pahunch jaata hai.
+      */}
+      <div className="relative lg:w-52">
+        <FiFilter className="pointer-events-none absolute left-3.5 top-1/2 z-10 -translate-y-1/2 text-slate-400" />
+
+        <TaskSelect
+          options={STATUS_OPTIONS}
           value={statusFilter}
-          onChange={(event) => onStatusChange(event.target.value)}
-          aria-label="Filter by status"
-          className="w-full cursor-pointer appearance-none rounded-xl border border-slate-200 bg-white py-2.5 pl-10 pr-8 text-sm font-semibold text-slate-700 outline-none transition-all focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-        >
-          <option>{ALL_STATUSES}</option>
-          {TASK_STATUSES.map((status) => (
-            <option key={status}>{status}</option>
-          ))}
-        </select>
+          onChange={onStatusChange}
+          ariaLabel="Filter by status"
+          className="w-full cursor-pointer rounded-xl border border-slate-200 bg-white py-2.5 pl-10 pr-3 text-sm font-semibold text-slate-700 outline-none transition-all focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+        />
       </div>
     </div>
   );

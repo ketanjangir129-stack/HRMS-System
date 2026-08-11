@@ -17,6 +17,8 @@
 export const STATUS_STYLES = {
   "To Do": "bg-slate-50 text-slate-700 ring-1 ring-inset ring-slate-200",
   "In Progress": "bg-blue-50 text-blue-700 ring-1 ring-inset ring-blue-200",
+  // Paused laal hai — ruka hua kaam turant aankh mein aana chahiye
+  Paused: "bg-red-50 text-red-700 ring-1 ring-inset ring-red-200",
   Completed:
     "bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-200",
 };
@@ -24,6 +26,7 @@ export const STATUS_STYLES = {
 export const STATUS_DOTS = {
   "To Do": "bg-slate-400",
   "In Progress": "bg-blue-500",
+  Paused: "bg-red-500",
   Completed: "bg-emerald-500",
 };
 
@@ -53,6 +56,9 @@ export const PRIORITY_DOTS = {
 export const PROGRESS_BARS = {
   "To Do": "bg-slate-400",
   "In Progress": "bg-blue-500",
+  // Overdue jaisa hi laal — dono "ye ruka hua hai" wali baat kehte hain, aur
+  // Overdue stacked bar mein aata bhi nahi, isliye takraav nahi hota
+  Paused: "bg-red-500",
   Completed: "bg-emerald-500",
   Overdue: "bg-red-500",
 };

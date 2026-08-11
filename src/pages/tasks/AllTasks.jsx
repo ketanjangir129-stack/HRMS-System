@@ -4,6 +4,7 @@ import { toast } from "react-toastify";
 import {
   createTask,
   deleteTask,
+  IN_PROGRESS_STATUS,
   subscribeTasks,
   updateTask,
   updateTaskStatus,
@@ -26,6 +27,7 @@ import {
   getCurrentEmployeeId,
   isTaskCreator,
   recentTasks,
+  runningTasksOf,
   taskProgress,
   taskSummary,
   teamWorkload,
@@ -364,10 +366,37 @@ function AllTasks() {
     }
   };
 
+  /*
+  | Ek employee ek waqt par ek hi task par kaam kar sakta hai. Isliye task
+  | start karte waqt uske baaki chal rahe tasks Paused ho jaate hain — user
+  | ko pehle unhe khud rokna nahi padta.
+  |
+  | Dono badlaav service ek hi write mein bhejti hai, isliye list kabhi do
+  | task In Progress dikhati nahi.
+  */
   const changeStatus = async (task, status) => {
+    const running =
+      status === IN_PROGRESS_STATUS
+        ? runningTasksOf(tasks, task.assignedTo, task.id)
+        : [];
+
     try {
-      await updateTaskStatus(companyCode, task.id, status);
-      toast.success(`Task moved to ${status}.`);
+      await updateTaskStatus(
+        companyCode,
+        task.id,
+        status,
+        running.map((item) => item.id)
+      );
+
+      // Kaunsa task apne aap ruka, ye batana zaroori hai — warna user ko
+      // lagta hai list apne aap badal gayi
+      toast.success(
+        running.length === 1
+          ? `Task moved to ${status}. "${running[0].title}" paused.`
+          : running.length > 1
+            ? `Task moved to ${status}. ${running.length} tasks paused.`
+            : `Task moved to ${status}.`
+      );
     } catch (err) {
       console.error("Failed to update task status:", err);
       toast.error("Unable to update task status.");

@@ -1,12 +1,22 @@
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { Loader2, Pencil, Plus, X } from "lucide-react";
 import {
   DESCRIPTION_LIMIT,
   INPUT_CLASS,
   PRIMARY_BUTTON_CLASS,
   PRIORITIES,
+  PRIORITY_DOTS,
 } from "../../utils/tasks/taskConstants";
 import { fieldClass, todayInputValue } from "../../utils/tasks/taskUtils";
+import SearchableSelect from "../common/SearchableSelect";
+import TaskSelect from "./TaskSelect";
+
+// Har priority ke saath uska rang — wahi jo table ke badge par dikhta hai
+const PRIORITY_OPTIONS = PRIORITIES.map((priority) => ({
+  value: priority,
+  label: priority,
+  dot: PRIORITY_DOTS[priority],
+}));
 
 /*
 |--------------------------------------------------------------------------
@@ -78,6 +88,21 @@ function CreateTaskModal({
       document.removeEventListener("keydown", onKeyDown);
     };
   }, [open, saving, onClose]);
+
+  /*
+  | Employee list company ke saath badhti hai — 200 naam wale native select
+  | mein scroll karna bekaar hai. SearchableSelect mein type karke dhoondte
+  | hain. Naam aur id dono label mein hain, to dono se search chalti hai —
+  | wahi tarika AttendanceRequestModal bhi use karta hai.
+  */
+  const employeeOptions = useMemo(
+    () =>
+      employees.map((employee) => ({
+        value: employee.id,
+        label: `${employee.name} (${employee.id})`,
+      })),
+    [employees]
+  );
 
   if (!open) return null;
 
@@ -174,18 +199,19 @@ function CreateTaskModal({
             </p>
           ) : (
             <Field label="Assign to" error={errors.assignedTo}>
-              <select
+              <SearchableSelect
+                options={employeeOptions}
                 value={formData.assignedTo}
-                onChange={(event) => onChange("assignedTo", event.target.value)}
+                onChange={(next) => onChange("assignedTo", next)}
+                placeholder="Select an employee"
+                searchPlaceholder="Search by name or ID..."
+                emptyMessage="No employees found"
+                ariaLabel="Assign to"
+                allowClear
+                // Trigger ka poora look yahan se aata hai — wahi input class
+                // jo baaki fields use karte hain
                 className={`${fieldClass(errors.assignedTo)} cursor-pointer`}
-              >
-                <option value="">Select an employee</option>
-                {employees.map((employee) => (
-                  <option key={employee.id} value={employee.id}>
-                    {employee.name} ({employee.id})
-                  </option>
-                ))}
-              </select>
+              />
             </Field>
           )}
 
@@ -203,15 +229,13 @@ function CreateTaskModal({
             </Field>
 
             <Field label="Priority">
-              <select
+              <TaskSelect
+                options={PRIORITY_OPTIONS}
                 value={formData.priority}
-                onChange={(event) => onChange("priority", event.target.value)}
+                onChange={(next) => onChange("priority", next)}
+                ariaLabel="Priority"
                 className={`${INPUT_CLASS} cursor-pointer`}
-              >
-                {PRIORITIES.map((priority) => (
-                  <option key={priority}>{priority}</option>
-                ))}
-              </select>
+              />
             </Field>
           </div>
 

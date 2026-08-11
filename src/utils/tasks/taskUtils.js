@@ -1,4 +1,8 @@
-import { COMPLETED_STATUS } from "../../services/taskService";
+import {
+  COMPLETED_STATUS,
+  IN_PROGRESS_STATUS,
+  PAUSED_STATUS,
+} from "../../services/taskService";
 import { ERROR_INPUT_CLASS, INPUT_CLASS } from "./taskConstants";
 
 /*
@@ -75,15 +79,6 @@ export const formatTimestamp = (ms) =>
       })
     : "--";
 
-// "Bhumika Gautam" → "BG"
-export const initials = (name) =>
-  name
-    ?.split(" ")
-    .map((part) => part[0])
-    .join("")
-    .slice(0, 2)
-    .toUpperCase() || "--";
-
 // Aaj ki date YYYY-MM-DD mein — local, UTC nahi.
 // Seedha toISOString() lagane par India mein ek din pichhe chala jaata hai.
 export const todayInputValue = () => {
@@ -123,12 +118,36 @@ export const assigneeName = (task, employees) =>
   task.assignedTo ||
   "Unassigned";
 
+/*
+| Ek employee ke wo tasks jo abhi In Progress hain — task ko chhodkar jise
+| hum start karne ja rahe hain.
+|
+| Ek waqt par ek hi kaam chal sakta hai, isliye start karne se pehle page
+| yahi list nikaalta hai aur unhe Paused bhej deta hai. List (array) lautti
+| hai, ek task nahi: purana data ya do tab se ek saath badla hua status —
+| dono soorat mein ek se zyada mil sakte hain, aur tab sab rukne chahiye.
+|
+| assignedTo khaali ho to khaali list: bina assignee wale tasks ka koi
+| "ek waqt par ek" niyam nahi banta.
+*/
+export const runningTasksOf = (tasks = [], assignedTo, exceptTaskId) => {
+  if (!assignedTo) return [];
+
+  return tasks.filter(
+    (task) =>
+      task.assignedTo === assignedTo &&
+      task.id !== exceptTaskId &&
+      task.status === IN_PROGRESS_STATUS
+  );
+};
+
 // Status-wise ginti — summary cards aur Task Progress dono ke liye.
 // today optional hai taaki purane call (sirf tasks ke saath) bhi chalte rahein.
 export const taskSummary = (tasks, today = todayInputValue()) => ({
   total: tasks.length,
   todo: tasks.filter((task) => task.status === "To Do").length,
-  active: tasks.filter((task) => task.status === "In Progress").length,
+  active: tasks.filter((task) => task.status === IN_PROGRESS_STATUS).length,
+  paused: tasks.filter((task) => task.status === PAUSED_STATUS).length,
   completed: tasks.filter((task) => task.status === COMPLETED_STATUS).length,
   // Aaj due hai aur ab tak pending — jo ho chuka wo "due" nahi kehlaata
   dueToday: tasks.filter(
@@ -141,7 +160,7 @@ export const taskSummary = (tasks, today = todayInputValue()) => ({
 |--------------------------------------------------------------------------
 | Task Progress
 |--------------------------------------------------------------------------
-| Teen status ka distribution — inka jod hamesha total hota hai, isliye ye
+| Chaaron status ka distribution — inka jod hamesha total hota hai, isliye ye
 | ek hi stacked bar mein aa sakte hain.
 |
 | Overdue ko jaan-boojhkar isse bahar rakha hai: wo chautha status nahi,
@@ -180,6 +199,12 @@ export const taskProgress = (summary) => {
         share: share(summary.active),
       },
       {
+        label: "Paused",
+        value: summary.paused,
+        percent: percent(summary.paused),
+        share: share(summary.paused),
+      },
+      {
         label: "Completed",
         value: summary.completed,
         percent: percent(summary.completed),
@@ -215,13 +240,15 @@ export const teamWorkload = (tasks = [], employees = []) => {
       total: 0,
       todo: 0,
       active: 0,
+      paused: 0,
       completed: 0,
     };
 
     row.total += 1;
 
     if (task.status === COMPLETED_STATUS) row.completed += 1;
-    else if (task.status === "In Progress") row.active += 1;
+    else if (task.status === IN_PROGRESS_STATUS) row.active += 1;
+    else if (task.status === PAUSED_STATUS) row.paused += 1;
     else row.todo += 1;
 
     rows.set(task.assignedTo, row);

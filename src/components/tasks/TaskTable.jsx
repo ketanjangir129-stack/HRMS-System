@@ -1,6 +1,9 @@
 import { FiEdit2, FiInbox, FiPlus, FiTrash2 } from "react-icons/fi";
 import { TASK_STATUSES } from "../../services/taskService";
-import { PRIMARY_BUTTON_CLASS } from "../../utils/tasks/taskConstants";
+import {
+  PRIMARY_BUTTON_CLASS,
+  STATUS_DOTS,
+} from "../../utils/tasks/taskConstants";
 import {
   assigneeName,
   formatDate,
@@ -8,6 +11,7 @@ import {
   todayInputValue,
 } from "../../utils/tasks/taskUtils";
 import TaskBadge from "./TaskBadge";
+import TaskSelect from "./TaskSelect";
 
 /*
 |--------------------------------------------------------------------------
@@ -20,6 +24,14 @@ import TaskBadge from "./TaskBadge";
 | khaali table par "No matching tasks" dikhe ya "No tasks yet".
 |--------------------------------------------------------------------------
 */
+
+// Status dropdown ki rows — dot ka rang wahi jo badge ka hai, isliye list
+// aur pill dono ek hi bhasha bolte hain
+const STATUS_OPTIONS = TASK_STATUSES.map((status) => ({
+  value: status,
+  label: status,
+  dot: STATUS_DOTS[status],
+}));
 
 function RowAction({ tone, title, onClick, icon }) {
   const styles = {
@@ -185,21 +197,28 @@ function TaskTable({
                   className="px-6 py-4 text-center"
                   {...stopRowActivation}
                 >
-                  <div className="relative inline-block">
-                    <select
-                      value={task.status || TASK_STATUSES[0]}
-                      onChange={(event) =>
-                        onStatusChange(task, event.target.value)
-                      }
-                      aria-label={`Change status of ${task.title}`}
-                      className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
-                    >
-                      {TASK_STATUSES.map((status) => (
-                        <option key={status}>{status}</option>
-                      ))}
-                    </select>
-                    <TaskBadge value={task.status || TASK_STATUSES[0]} />
-                  </div>
+                  {/*
+                    Badge hi dropdown ka trigger hai — pehle uske upar ek
+                    paardarshi native <select> baithta tha, par uski khuli
+                    hui list OS banata hai aur wo baaki UI se alag dikhti
+                    thi. Ab list bhi apni hai (TaskSelect).
+
+                    withCaret pill ke andar chevron laga deta hai — warna
+                    badge bilkul static lagta hai.
+                  */}
+                  <TaskSelect
+                    options={STATUS_OPTIONS}
+                    value={task.status || TASK_STATUSES[0]}
+                    onChange={(next) => onStatusChange(task, next)}
+                    ariaLabel={`Change status of ${task.title}`}
+                    className="cursor-pointer rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+                    trigger={
+                      <TaskBadge
+                        value={task.status || TASK_STATUSES[0]}
+                        withCaret
+                      />
+                    }
+                  />
                 </td>
 
                 {showActions && (
