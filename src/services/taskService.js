@@ -63,6 +63,48 @@ const EDITABLE_FIELDS = [
 ];
 
 /*
+|--------------------------------------------------------------------------
+| Activity
+|--------------------------------------------------------------------------
+| Har badlaav ka nishaan task ke andar hi rehta hai:
+|
+|   tasks/{taskId}/activity/{pushKey}
+|
+| Sirf jodi jaati hai, kabhi badli ya hataayi nahi — isliye "kab kya hua"
+| par bharosa kiya ja sakta hai. Entry status ke saath usi ek write mein
+| jaati hai, to activity aur status kabhi alag nahi ho sakte.
+|
+| Dikhne wala text yahan store nahi hota (sirf type aur status), taaki kal
+| wording badle to purani entries bhi nayi bhasha bolein — wo kaam
+| taskUtils ke activityLabel() ka hai. Apwaad: auto-pause, jiske message
+| mein us doosre task ka naam hota hai jo shuru kiya gaya — wo baat kisi
+| field mein nahi hai.
+*/
+export const ACTIVITY_TYPES = {
+  CREATED: "created",
+  STATUS_CHANGED: "status_changed",
+};
+
+/*
+| actor { id, name } page se aata hai — service currentUser padh nahi
+| sakti, bilkul waise hi jaise createdBy/createdById ke saath hota hai.
+|
+| Khaali string isliye ki Firebase undefined leta hi nahi.
+*/
+const activityEntry = (type, actor, extra = {}) => ({
+  type,
+  actorId: actor?.id || "",
+  actorName: actor?.name || "",
+  timestamp: Date.now(),
+  ...extra,
+});
+
+// Key pehle se bana lete hain — push() bina value ke kuch likhta nahi, sirf
+// key deta hai. Date.now() isliye nahi ki ek write mein kai entries banti hain.
+const newActivityKey = (companyCode, taskId) =>
+  push(ref(db, `${taskPath(companyCode, taskId)}/activity`)).key;
+
+/*
 | createdBy (naam) aur createdById (ownership) dono payload se aate hain —
 | service currentUser padh nahi sakti (hook yahan chalta nahi). Wahi tarika
 | holidayService bhi use karta hai.
@@ -72,14 +114,34 @@ const EDITABLE_FIELDS = [
 */
 export const createTask = async (companyCode, task) => {
   const taskId = push(ref(db, tasksPath(companyCode))).key;
+
+  /*
+  | Pehli activity entry usi set() mein chali jaati hai — alag write nahi,
+  | warna task ban jaata aur uski pehli entry na banti.
+  |
+  | Actor wahi hai jo createdBy/createdById mein ja raha hai; iske liye
+  | koi nayi pehchaan nahi maangi jaati.
+  */
+  const creator = {
+    id: task.createdById || "",
+    name: task.createdBy || "",
+  };
+
   const newTask = {
     ...task,
     status: DEFAULT_TASKS_STATUS,
-    createdBy: task.createdBy || "",
-    createdById: task.createdById || "",
+    createdBy: creator.name,
+    createdById: creator.id,
     createdAt: Date.now(),
     updatedAt: Date.now(),
+    activity: {
+      [newActivityKey(companyCode, taskId)]: activityEntry(
+        ACTIVITY_TYPES.CREATED,
+        creator
+      ),
+    },
   };
+
   await set(ref(db, taskPath(companyCode, taskId)), newTask);
   return {id:taskId, ...newTask};
 };
@@ -106,37 +168,78 @@ export const updateTask = async (companyCode, taskId, task) => {
 /*
 | Status change.
 |
-| pauseTaskIds un tasks ki id hai jinhe isi ke saath Paused karna hai — ek
-| employee ke paas ek waqt par ek hi task In Progress reh sakta hai, isliye
-| naya start karte hi purana ruk jaata hai. Kaun se task hain, ye page tay
-| karta hai (uske paas poori list hai); service sirf likhti hai.
+| Poora task leta hai, sirf id nahi — purana status aur title yahin se
+| milte hain: ek activity entry ke liye "kahan se kahan" chahiye, aur
+| auto-pause ke message mein us task ka naam chahiye jo shuru hua.
 |
-| Dono badlaav ek hi update() mein jaate hain — tasks node par multi-path
-| write. Isse beech mein do task ek saath In Progress dikhne ka moka nahi
-| milta: ya dono badalte hain, ya koi nahi.
+| pauseTasks wo tasks hain jinhe isi ke saath Paused karna hai — ek employee
+| ke paas ek waqt par ek hi task In Progress reh sakta hai, isliye naya start
+| karte hi purana ruk jaata hai. Kaun se hain, ye page tay karta hai (uske
+| paas poori list hai); service sirf likhti hai.
+|
+| Sab kuch ek hi update() mein jaata hai — tasks node par multi-path write.
+| Isse beech mein do task ek saath In Progress dikhne ka moka nahi milta,
+| aur activity kabhi status se alag nahi ho sakti: ya sab likha jaata hai,
+| ya kuch nahi.
+|
+| Status pehle jaisa hi ho to kuch nahi likhta aur false laut jaata hai —
+| bekaar write aur jhooti entry, dono se bachne ke liye. Page isi se tay
+| karta hai ki toast dikhana hai ya nahi.
 */
 export const updateTaskStatus = async (
   companyCode,
-  taskId,
+  task,
   status,
-  pauseTaskIds = []
+  { actor, pauseTasks = [] } = {}
 ) => {
-  const now = Date.now();
+  const taskId = task?.id;
 
-  const updates = {
-    [`${taskId}/status`]: status,
-    [`${taskId}/updatedAt`]: now,
+  if (!taskId) return false;
+
+  const fromStatus = task.status || DEFAULT_TASKS_STATUS;
+
+  if (fromStatus === status) return false;
+
+  const now = Date.now();
+  const updates = {};
+
+  // Ek task ka status + uski entry — dono ek saath, taaki koi jagah
+  // chhoote nahi
+  const addChange = (id, from, to, extra = {}) => {
+    updates[`${id}/status`] = to;
+    updates[`${id}/updatedAt`] = now;
+    updates[`${id}/activity/${newActivityKey(companyCode, id)}`] = {
+      ...activityEntry(ACTIVITY_TYPES.STATUS_CHANGED, actor, {
+        fromStatus: from,
+        toStatus: to,
+        ...extra,
+      }),
+      // Ek hi write ki saari entries ka waqt bhi ek hi rehna chahiye
+      timestamp: now,
+    };
   };
 
-  pauseTaskIds.forEach((id) => {
-    // Wahi task dobara pause na ho jaye jise abhi start kar rahe hain
-    if (id === taskId) return;
+  addChange(taskId, fromStatus, status);
 
-    updates[`${id}/status`] = PAUSED_STATUS;
-    updates[`${id}/updatedAt`] = now;
+  pauseTasks.forEach((item) => {
+    // Wahi task dobara pause na ho jaye jise abhi start kar rahe hain
+    if (!item?.id || item.id === taskId) return;
+
+    /*
+    | auto: true batata hai ki ye user ka seedha click nahi tha. actor phir
+    | bhi wahi hai jisne doosra task start kiya — zimmedari usi ki hai.
+    */
+    addChange(item.id, item.status || IN_PROGRESS_STATUS, PAUSED_STATUS, {
+      auto: true,
+      message: `Paused automatically when "${
+        task.title || "another task"
+      }" was started`,
+    });
   });
 
   await update(ref(db, tasksPath(companyCode)), updates);
+
+  return true;
 };
 
 export const deleteTask = async (companyCode, taskId) => {

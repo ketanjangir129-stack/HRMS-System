@@ -1,4 +1,4 @@
-import { FiEdit2, FiInbox, FiPlus, FiTrash2 } from "react-icons/fi";
+import { FiClock, FiEdit2, FiInbox, FiPlus, FiTrash2 } from "react-icons/fi";
 import { TASK_STATUSES } from "../../services/taskService";
 import {
   PRIMARY_BUTTON_CLASS,
@@ -35,6 +35,9 @@ const STATUS_OPTIONS = TASK_STATUSES.map((status) => ({
 
 function RowAction({ tone, title, onClick, icon }) {
   const styles = {
+    // Activity kuch badalti nahi, sirf dikhati hai — isliye saada slate,
+    // taaki edit ka blue aur delete ka red apna matlab na kho dein
+    activity: "hover:border-slate-400 hover:bg-slate-50 hover:text-slate-700",
     edit: "hover:border-blue-500 hover:bg-blue-50 hover:text-blue-600",
     delete: "hover:border-red-500 hover:bg-red-50 hover:text-red-600",
   };
@@ -62,6 +65,14 @@ function TaskTable({
   // Row click/Enter par details modal — page se aata hai. Na mile to row
   // saadi rehti hai.
   onRowClick,
+  /*
+  | Activity column dikhe ya nahi — page tasks.activity ke haq se tay karta
+  | hai, bilkul waise jaise showActions apne permissions se tay hota hai.
+  | Haq na ho to column hi nahi banta, khaali cells nahi bachte.
+  */
+  showActivity = false,
+  // Activity icon ka click — page id yaad rakhkar modal khol deta hai
+  onActivityClick,
   hasTasks,
   // showAssignee false ho to sirf apne hi tasks dikh rahe hain, to Assignee
   // column bekaar hai.
@@ -119,6 +130,14 @@ function TaskTable({
             </th>
             <th className="px-6 py-3 text-center font-semibold">Priority</th>
             <th className="px-6 py-3 text-center font-semibold">Status</th>
+            {/*
+              Activity ka apna column — Actions ke bahar, kyunki wo sirf
+              padhne wala kaam hai aur uska haq (tasks.activity) edit/delete
+              se bilkul alag chalta hai.
+            */}
+            {showActivity && (
+              <th className="px-6 py-3 text-center font-semibold">Activity</th>
+            )}
             {showActions && (
               <th className="whitespace-nowrap px-6 py-3 text-right font-semibold">
                 Actions 
@@ -221,6 +240,25 @@ function TaskTable({
                   />
                 </td>
 
+                {/* Activity dekhna row kholne se alag hai — event yahin ruk
+                    jaata hai, warna peeche details modal bhi khul jaata */}
+                {showActivity && (
+                  <td className="px-6 py-4 text-center" {...stopRowActivation}>
+                    <RowAction
+                      tone="activity"
+                      title={`View activity of ${task.title}`}
+                      // Cell par pehle se stopRowActivation hai, par yahan
+                      // bhi rokte hain — kal button kahin aur jaye to bhi
+                      // row activate na ho
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        onActivityClick(task);
+                      }}
+                      icon={<FiClock size={16} />}
+                    />
+                  </td>
+                )}
+
                 {showActions && (
                   // Edit/Delete dabane par bhi modal nahi khulna chahiye
                   <td
@@ -276,10 +314,15 @@ function TaskTable({
             <tr>
               {/*
                 Task + Due date + Priority + Status = 4 pakke column,
-                Assignee aur Actions chhip sakte hain
+                Assignee, Activity aur Actions chhip sakte hain
               */}
               <td
-                colSpan={4 + (showAssignee ? 1 : 0) + (showActions ? 1 : 0)}
+                colSpan={
+                  4 +
+                  (showAssignee ? 1 : 0) +
+                  (showActivity ? 1 : 0) +
+                  (showActions ? 1 : 0)
+                }
                 className="px-6 py-20"
               >
                 <div className="flex flex-col items-center gap-4 text-center">

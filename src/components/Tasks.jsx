@@ -15,6 +15,7 @@ import {
   assigneeName,
   dueLabel,
   filterOwnTasks,
+  getCurrentActor,
   todayInputValue,
 } from "../utils/tasks/taskUtils";
 
@@ -121,8 +122,18 @@ function EmployeeTasks() {
 
   const completeTask = async (task) => {
     try {
+      /*
+      | Poora task jaata hai, sirf id nahi — service usi se purana status
+      | padhkar activity entry banati hai. actor bhi zaroori hai, warna
+      | dashboard se complete kiya task "kisne kiya" ke bina reh jaata.
+      |
+      | Yahan pauseTasks nahi bhejte: complete karne se kisi doosre task ka
+      | chalna nahi rukta.
+      */
       // Row khud hat jaayegi — listener ko naya status turant mil jaata hai
-      await updateTaskStatus(companyCode, task.id, COMPLETED_STATUS);
+      await updateTaskStatus(companyCode, task, COMPLETED_STATUS, {
+        actor: getCurrentActor(currentUser),
+      });
       toast.success("Task marked as completed.");
     } catch (err) {
       console.error("Failed to complete task:", err);

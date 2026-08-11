@@ -442,6 +442,12 @@ export const PERMISSION_PAGES = [
         defaults: { hr: true, employee: false },
       },
       {
+        key: "activity",
+        label: "Task Activity",
+        description: "View task activity/history",
+        defaults: { hr: true, employee: true },
+      },
+      {
         key: "create",
         label: "Create Task",
         description: "Assign a new task to an employee",

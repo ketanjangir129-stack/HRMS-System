@@ -1,5 +1,13 @@
 import { useEffect } from "react";
-import { Eye, X } from "lucide-react";
+import {
+  AlertTriangle,
+  CalendarDays,
+  Clock,
+  Eye,
+  User,
+  UserCheck,
+  X,
+} from "lucide-react";
 import {
   assigneeName,
   dueLabel,
@@ -23,14 +31,42 @@ import TaskBadge from "./TaskBadge";
 |--------------------------------------------------------------------------
 */
 
-// Label baayein, value daayein — chhoti screen par upar-neeche
-function DetailRow({ label, children }) {
+/*
+| Ek jaankari = ek chhota card. Pehle ye "label baayein, value daayein" wali
+| rows thin, jisme aankh ko har baar poori chaudai naapni padti thi. Tile
+| mein label upar chhota aur value neeche mota hota hai, isliye do-teen
+| cheezein ek nazar mein padh li jaati hain.
+|
+| tone="danger" sirf overdue due date par lagta hai — laal tabhi, jab sach
+| mein kuch bigda ho.
+*/
+function InfoTile({ icon, label, children, tone = "default", className = "" }) {
+  const danger = tone === "danger";
+
   return (
-    <div className="flex flex-col gap-1 py-3 sm:flex-row sm:items-start sm:gap-4">
-      <span className="w-32 shrink-0 text-sm font-medium text-slate-500">
-        {label}
+    <div
+      className={`${className} flex items-start gap-3 rounded-xl border p-3.5 ${
+        danger ? "border-red-200 bg-red-50" : "border-slate-200 bg-white"
+      }`}
+    >
+      <span
+        className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${
+          danger ? "bg-red-100 text-red-600" : "bg-slate-100 text-slate-500"
+        }`}
+      >
+        {icon}
       </span>
-      <div className="min-w-0 flex-1 text-sm text-slate-800">{children}</div>
+
+      <div className="min-w-0 flex-1">
+        <p
+          className={`text-xs font-semibold uppercase tracking-wide ${
+            danger ? "text-red-500" : "text-slate-400"
+          }`}
+        >
+          {label}
+        </p>
+        <div className="mt-0.5 text-sm text-slate-800">{children}</div>
+      </div>
     </div>
   );
 }
@@ -111,18 +147,39 @@ function TaskDetailsModal({
         </div>
 
         {/* Body — lambi description par yahi hissa scroll hota hai */}
-        <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
-          <h3 className="text-xl font-bold leading-snug text-slate-900">
-            {task.title}
-          </h3>
+        <div className="min-h-0 flex-1 space-y-5 overflow-y-auto px-6 py-5">
+          {/*
+            Overdue sabse upar apni patti mein. Pehle ye baat sirf due date
+            ke laal rang se pata chalti thi, jo neeche scroll karne par hi
+            dikhti — jo sabse zaroori khabar hai wo sabse pehle honi chahiye.
+          */}
+          {overdue && (
+            <div className="flex items-center gap-2.5 rounded-xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-700 ring-1 ring-inset ring-red-200">
+              <AlertTriangle size={17} className="shrink-0" />
+              {dueLabel(task.dueDate, today)}
+            </div>
+          )}
 
-          <div className="mt-3 flex flex-wrap items-center gap-2">
-            <TaskBadge value={task.priority || "Medium"} variant="priority" />
-            <TaskBadge value={task.status} />
+          <div>
+            <h3 className="break-words text-xl font-bold leading-snug text-slate-900">
+              {task.title}
+            </h3>
+
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <TaskBadge value={task.priority || "Medium"} variant="priority" />
+              <TaskBadge value={task.status} />
+            </div>
           </div>
 
-          <div className="mt-6">
-            <p className="text-sm font-medium text-slate-500">Description</p>
+          {/*
+            Description ab apne halke box mein hai. Khuli padi thi to title
+            aur baaki jaankari ke beech ghul jaati thi — ab saaf dikhta hai
+            ki ye user ka likha hua matter hai.
+          */}
+          <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-4">
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+              Description
+            </p>
 
             {task.description ? (
               /*
@@ -140,53 +197,71 @@ function TaskDetailsModal({
             )}
           </div>
 
-          <div className="mt-6 divide-y divide-slate-100 border-t border-slate-100">
+          {/* Do column bade screen par, chhoti par ek ke neeche ek */}
+          <div className="grid gap-3 sm:grid-cols-2">
             {showAssignee && (
-              <DetailRow label="Assignee">
-                <span className="block truncate font-medium">{name}</span>
-              </DetailRow>
+              <InfoTile icon={<User size={16} />} label="Assignee">
+                <span className="block truncate font-semibold">{name}</span>
+              </InfoTile>
             )}
 
-            <DetailRow label="Due date">
+            <InfoTile
+              icon={<CalendarDays size={16} />}
+              label="Due date"
+              tone={overdue ? "danger" : "default"}
+            >
               <span
-                className={
-                  overdue ? "font-semibold text-red-600" : "font-medium"
-                }
+                className={`font-semibold ${overdue ? "text-red-700" : ""}`}
               >
                 {formatDate(task.dueDate)}
               </span>
 
-              {task.dueDate && (
-                <p
-                  className={`mt-0.5 text-xs font-medium ${
-                    overdue ? "text-red-500" : "text-slate-400"
-                  }`}
-                >
+              {/* Overdue ki baat upar patti mein aa chuki hai */}
+              {task.dueDate && !overdue && (
+                <p className="mt-0.5 text-xs font-medium text-slate-400">
                   {dueLabel(task.dueDate, today)}
                 </p>
               )}
-            </DetailRow>
+            </InfoTile>
 
-            {/* Purane tasks mein createdBy nahi hai — tab dash dikhta hai */}
-            <DetailRow label="Assigned by">
-              <span className={task.createdBy ? "font-medium" : "text-slate-400"}>
+            {/*
+              Teen tiles do column mein aayein to aakhri ke bagal khaali
+              jagah bach jaati hai — isliye Assignee dikh raha ho to ye
+              poori chaudai le leta hai.
+
+              Purane tasks mein createdBy nahi hai — tab dash dikhta hai.
+            */}
+            <InfoTile
+              className={showAssignee ? "sm:col-span-2" : ""}
+              icon={<UserCheck size={16} />}
+              label="Assigned by"
+            >
+              <span
+                className={
+                  task.createdBy
+                    ? "block truncate font-semibold"
+                    : "text-slate-400"
+                }
+              >
                 {task.createdBy || "—"}
               </span>
-            </DetailRow>
+            </InfoTile>
+          </div>
 
-            <DetailRow label="Created">
-              <span className="text-slate-600">
-                {formatTimestamp(task.createdAt)}
-              </span>
-            </DetailRow>
+          {/*
+            Timestamps sabse kam kaam ke hain, isliye sabse halke — apni
+            tiles ki jagah ek chhoti si line, taaki upar wali jaankari se
+            takraayein nahi. Purane tasks mein updatedAt na ho to us hisse
+            ko chhod dete hain.
+          */}
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-slate-100 pt-4 text-xs text-slate-400">
+            <span className="flex items-center gap-1.5">
+              <Clock size={13} className="shrink-0" />
+              Created {formatTimestamp(task.createdAt)}
+            </span>
 
-            {/* Purane tasks mein updatedAt na ho to row dikhti hi nahi */}
             {task.updatedAt && (
-              <DetailRow label="Last updated">
-                <span className="text-slate-600">
-                  {formatTimestamp(task.updatedAt)}
-                </span>
-              </DetailRow>
+              <span>Last updated {formatTimestamp(task.updatedAt)}</span>
             )}
           </div>
         </div>

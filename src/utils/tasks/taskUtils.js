@@ -1,4 +1,5 @@
 import {
+  ACTIVITY_TYPES,
   COMPLETED_STATUS,
   IN_PROGRESS_STATUS,
   PAUSED_STATUS,
@@ -40,6 +41,29 @@ export const getCurrentEmployeeId = (currentUser) =>
   currentUser?.employmentInfo?.employeeId ||
   currentUser?.account?.username ||
   "";
+
+/*
+| Jo abhi kaam kar raha hai — id aur naam ek saath.
+|
+| Dono chain pehle se project mein thin: id wahi hai jo createdById mein
+| jaati hai, aur naam wahi jo createdBy mein (pehle ye AllTasks ke andar
+| padi thi). Yahan lane ki wajah ye hai ki activity ko bhi bilkul yahi
+| pehchaan chahiye, aur dashboard card ko bhi — teen jagah teen chain nahi
+| honi chahiye, warna ek hi task par do alag naam dikh sakte hain.
+|
+| currentUser ki shakal role se badalti hai: Owner ke paas { role, name,
+| email } hota hai, Employee/HR ke paas poora employee record. Isliye
+| fallback chain — aakhir mein "Admin", taaki activity kabhi bina naam ke
+| na dikhe.
+*/
+export const getCurrentActor = (currentUser) => ({
+  id: getCurrentEmployeeId(currentUser),
+  name:
+    currentUser?.personalInfo?.name ||
+    currentUser?.name ||
+    currentUser?.email ||
+    "Admin",
+});
 
 // Sirf logged-in employee ke apne tasks — "My Tasks" wala view.
 // Filter browser mein hota hai, isliye Firebase mein index ki zaroorat nahi.
@@ -315,3 +339,45 @@ export const filterTasks = (tasks, { search, statusFilter, employees, allStatuse
 
 // Error ho to laal border wala input, warna normal
 export const fieldClass = (error) => (error ? ERROR_INPUT_CLASS : INPUT_CLASS);
+
+/*
+|--------------------------------------------------------------------------
+| Activity
+|--------------------------------------------------------------------------
+| Task ke andar activity ek object hoti hai (Firebase keys), UI ko array
+| chahiye — bilkul waise hi jaise toTaskList tasks ke saath karta hai.
+|
+| Naya sabse upar. Ek hi write mein bani entries ka timestamp ek jaisa hota
+| hai (start + auto-pause), par wo alag-alag tasks par jaati hain, isliye ek
+| hi timeline mein kabhi nahi takraatin.
+|
+| Purane tasks mein activity node hai hi nahi — tab khaali array, aur modal
+| apna empty state dikha deta hai. Koi migration nahi.
+*/
+export const taskActivityList = (task) =>
+  Object.entries(task?.activity || {})
+    .map(([id, entry]) => ({ ...entry, id }))
+    .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+
+/*
+| Entry ka padhne wala matter. Normal entries mein text store nahi hota —
+| sirf type/fromStatus/toStatus — isliye wording kabhi bhi badli ja sakti
+| hai aur purani entries bhi nayi bhasha bolne lagti hain.
+|
+| message sirf wahan store hota hai jahan usme aisi baat ho jo kisi field
+| mein nahi hai — jaise auto-pause, jisme doosre task ka naam hota hai.
+*/
+export const activityLabel = (entry) => {
+  if (!entry) return "";
+
+  if (entry.message) return entry.message;
+
+  if (entry.type === ACTIVITY_TYPES.STATUS_CHANGED) {
+    return `Status changed from ${entry.fromStatus} to ${entry.toStatus}`;
+  }
+
+  if (entry.type === ACTIVITY_TYPES.CREATED) return "Task created";
+
+  // Aage koi naya type jude aur yahan na aaye — tab bhi row khaali na dikhe
+  return "Task updated";
+};

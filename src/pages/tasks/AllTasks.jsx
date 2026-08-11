@@ -25,6 +25,7 @@ import {
 import {
   filterOwnTasks,
   filterTasks,
+  getCurrentActor,
   getCurrentEmployeeId,
   isTaskCreator,
   recentTasks,
@@ -46,6 +47,7 @@ import TaskTable from "../../components/tasks/TaskTable";
 import CreateTaskModal from "../../components/tasks/CreateTaskModal";
 import DeleteTaskModal from "../../components/tasks/DeleteTaskModal";
 import TaskDetailsModal from "../../components/tasks/TaskDetailsModal";
+import TaskActivityModal from "../../components/tasks/TaskActivityModal";
 import Pagination from "../../components/common/pagination/Pagination";
 import Loader from "../../components/common/Loader";
 
@@ -78,6 +80,9 @@ function AllTasks() {
   const canUpdateTask = canAccessSection("tasks.update");
   const canUpdateOwn = canAccessSection("tasks.updateOwn");
   const canDeleteTask = canAccessSection("tasks.delete");
+  // Activity sirf padhne wali cheez hai — uska haq edit/delete se bilkul
+  // alag chalta hai, isliye Actions column se bahar apna column
+  const canViewActivity = canAccessSection("tasks.activity");
 
   // Ownership isi se tay hoti hai — createdBy (naam) se nahi
   const myEmployeeId = getCurrentEmployeeId(currentUser);
@@ -106,13 +111,13 @@ function AllTasks() {
   // Naam chahiye Assignee column, workload aur assign dropdown ke liye
   const needsEmployees = canViewAll || showWorkload || canCreateTask;
 
-  // Kisne task assign kiya — record par save hota hai. Wahi fallback chain
-  // jo HolidayDashboard createdBy ke liye use karta hai.
-  const actorName =
-    currentUser?.personalInfo?.name ||
-    currentUser?.name ||
-    currentUser?.email ||
-    "Admin";
+  /*
+  | Kisne kaam kiya — createdBy/createdById par bhi yahi jaata hai aur
+  | activity entries par bhi, isliye ek hi jagah se aana chahiye. Chain
+  | pehle yahin khuli padi thi; ab taskUtils mein hai taaki dashboard card
+  | bhi wahi naam likhe.
+  */
+  const actor = getCurrentActor(currentUser);
 
   // Toggle tabhi, jab sabke tasks dekh sakte ho AUR apna employee record ho.
   // Owner ka record hota hi nahi — uske liye toggle bekaar hai.
@@ -131,6 +136,9 @@ function AllTasks() {
   const [taskToDelete, setTaskToDelete] = useState(null);
   // Sirf id — poora object rakhte to modal purani copy par atak jaata
   const [viewingTaskId, setViewingTaskId] = useState(null);
+  // Activity modal bhi sirf id rakhta hai — poora object rakhte to modal
+  // khula rehte hue nayi entry usme nahi pahunchti
+  const [activityTaskId, setActivityTaskId] = useState(null);
   const [deleting, setDeleting] = useState(false);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState(ALL_STATUSES);
@@ -281,6 +289,17 @@ function AllTasks() {
     [roleTasks, viewingTaskId]
   );
 
+  /*
+  | Activity bhi wahi jodi — id se har render par taaza task nikalta hai,
+  | isliye modal khula rehte hue koi status badle to nayi entry apne aap
+  | list mein aa jaati hai. Task delete ho jaye to null, aur modal khud
+  | band ho jaata hai.
+  */
+  const activityTask = useMemo(
+    () => roleTasks.find((task) => task.id === activityTaskId) || null,
+    [roleTasks, activityTaskId]
+  );
+
   // "View all" — us section ka context lagao, status filter hatao, table par jao
   const showTableContext = (context) => {
     setTableContext(context);
@@ -369,8 +388,8 @@ function AllTasks() {
       } else {
         await createTask(companyCode, {
           ...payload,
-          createdBy: actorName,
-          createdById: myEmployeeId,
+          createdBy: actor.name,
+          createdById: actor.id,
         });
       }
 
@@ -408,12 +427,14 @@ function AllTasks() {
         : [];
 
     try {
-      await updateTaskStatus(
-        companyCode,
-        task.id,
-        status,
-        running.map((item) => item.id)
-      );
+      const changed = await updateTaskStatus(companyCode, task, status, {
+        actor,
+        pauseTasks: running,
+      });
+
+      // Wahi status dobara chuna gaya — kuch likha hi nahi gaya, to kehne
+      // ko bhi kuch nahi
+      if (!changed) return;
 
       // Kaunsa task apne aap ruka, ye batana zaroori hai — warna user ko
       // lagta hai list apne aap badal gayi
@@ -595,10 +616,12 @@ function AllTasks() {
             canUpdate={canEditTask}
             canDelete={canDeleteTask}
             showActions={canActOnTasks}
+            showActivity={canViewActivity}
             onStatusChange={changeStatus}
             onEdit={openEditForm}
             onDelete={setTaskToDelete}
             onRowClick={(task) => setViewingTaskId(task.id)}
+            onActivityClick={(task) => setActivityTaskId(task.id)}
             onCreate={canOpenCreate ? openCreateForm : undefined}
           />
 
@@ -636,6 +659,12 @@ function AllTasks() {
         employees={employees}
         showAssignee={canViewAll}
         onClose={() => setViewingTaskId(null)}
+      />
+
+      <TaskActivityModal
+        open={Boolean(activityTask)}
+        task={activityTask}
+        onClose={() => setActivityTaskId(null)}
       />
 
       <DeleteTaskModal
