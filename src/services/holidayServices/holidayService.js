@@ -2,6 +2,7 @@ import { db } from "../../firebase/firebase";
 import {
   ref,
   get,
+  onValue,
   set,
   push,
   update,
@@ -432,6 +433,48 @@ export const getHolidays = async (
     );
 
   }
+
+};
+
+/*
+|--------------------------------------------------------------------------
+| Subscribe Holidays
+|--------------------------------------------------------------------------
+| The same year as `getHolidays`, but kept open: whenever anyone adds, edits
+| or deletes a holiday, `onData` runs again with the new list.
+|
+| A screen that is only ever opened to read the year can stay on the one shot
+| read. This is for the ones that sit on the dashboard all day, where a
+| holiday declared this morning has to appear without the page being
+| reloaded.
+|
+| Returns the unsubscribe function. Call it from the effect cleanup, or the
+| listener outlives the screen that opened it.
+*/
+
+export const subscribeHolidays = (
+  companyCode,
+  year,
+  onData,
+  onError
+) => {
+
+  if (!companyCode || !year) {
+
+    onData?.([]);
+
+    return () => {};
+
+  }
+
+  return onValue(
+    ref(db, yearPath(companyCode, year)),
+    (snapshot) =>
+      onData?.(
+        snapshot.exists() ? flattenYear(snapshot.val()) : []
+      ),
+    (error) => onError?.(error)
+  );
 
 };
 

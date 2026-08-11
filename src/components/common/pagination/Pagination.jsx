@@ -5,6 +5,33 @@ import {
     FiChevronsRight,
 } from "react-icons/fi";
 
+/*
+|--------------------------------------------------------------------------
+| Window Shape
+|--------------------------------------------------------------------------
+| Kitne page numbers dikhte hain, ye in do se decide hota hai:
+|
+|   boundary — dono kinaron par hamesha dikhne wale pages (pehla aur aakhri)
+|   sibling  — current page ke aas paas kitne padosi dikhein
+|
+| Total slots = boundary*2 + sibling*2 + 3 (current + do ellipsis ki jagah)
+| = 7. Ye har page par same rehta hai, isliye 3 se 4 par jaate waqt bar apni
+| jagah se hilti nahi.
+*/
+
+const BOUNDARY_COUNT = 1;
+
+const SIBLING_COUNT = 1;
+
+// start se end tak ke numbers, dono included. Ulta range khaali aata hai.
+const range = (start, end) =>
+    end < start
+        ? []
+        : Array.from(
+              { length: end - start + 1 },
+              (_, index) => start + index
+          );
+
 function Pagination({
     currentPage,
     totalPages,
@@ -43,53 +70,71 @@ function Pagination({
 
     const getPageNumbers = () => {
 
-        const pages = [];
+        /*
+        | Itne pages hain hi nahi ki kuch chhupana pade — sab dikha do.
+        */
 
-        const maxVisiblePages = 5;
+        const maxSlots =
+            BOUNDARY_COUNT * 2 + SIBLING_COUNT * 2 + 3;
 
-        if (totalPages <= maxVisiblePages) {
-
-            for (let i = 1; i <= totalPages; i++) {
-                pages.push(i);
-            }
-
-            return pages;
+        if (totalPages <= maxSlots) {
+            return range(1, totalPages);
         }
 
-        if (currentPage <= 3) {
+        const startPages = range(1, BOUNDARY_COUNT);
 
-            return [
-                1,
-                2,
-                3,
-                4,
-                "...",
-                totalPages,
-            ];
+        const endPages = range(
+            totalPages - BOUNDARY_COUNT + 1,
+            totalPages
+        );
 
-        }
+        /*
+        | Current page ke aas paas ki window. Dono taraf clamp ki hui hai:
+        |
+        |  - kinaron par window andar ki taraf khisak jaati hai, taki page 1
+        |    par bhi utne hi numbers dikhein jitne beech mein
+        |  - boundary pages ko cross nahi karti, warna wahi number do baar
+        |    render hota
+        */
 
-        if (currentPage >= totalPages - 2) {
+        const siblingsStart = Math.max(
+            Math.min(
+                currentPage - SIBLING_COUNT,
+                totalPages - BOUNDARY_COUNT - SIBLING_COUNT * 2 - 1
+            ),
+            BOUNDARY_COUNT + 2
+        );
 
-            return [
-                1,
-                "...",
-                totalPages - 3,
-                totalPages - 2,
-                totalPages - 1,
-                totalPages,
-            ];
+        const siblingsEnd = Math.min(
+            Math.max(
+                currentPage + SIBLING_COUNT,
+                BOUNDARY_COUNT + SIBLING_COUNT * 2 + 2
+            ),
+            totalPages - BOUNDARY_COUNT - 1
+        );
 
-        }
+        /*
+        | Ellipsis tabhi jab uske peeche do ya usse zyada pages chhupe hon.
+        | Ek hi page bacha ho to "..." ki jagah wahi number rakh dete hain —
+        | teen dots pe click nahi hota, number pe hota hai.
+        */
+
+        const startGap =
+            siblingsStart > BOUNDARY_COUNT + 2
+                ? ["..."]
+                : range(BOUNDARY_COUNT + 1, siblingsStart - 1);
+
+        const endGap =
+            siblingsEnd < totalPages - BOUNDARY_COUNT - 1
+                ? ["..."]
+                : range(siblingsEnd + 1, totalPages - BOUNDARY_COUNT);
 
         return [
-            1,
-            "...",
-            currentPage - 1,
-            currentPage,
-            currentPage + 1,
-            "...",
-            totalPages,
+            ...startPages,
+            ...startGap,
+            ...range(siblingsStart, siblingsEnd),
+            ...endGap,
+            ...endPages,
         ];
 
     };
@@ -193,7 +238,7 @@ function Pagination({
                     disabled={currentPage === 1}
                     className={`${buttonBase} ${
                         currentPage === 1
-                            ? "cursor-not-allowed border-slate-200 text-slate-300"
+                            ? " border-slate-200 text-slate-300"
                             : "border-slate-300 text-slate-600 hover:bg-slate-50"
                     }`}
                     aria-label="Previous page"
@@ -233,6 +278,9 @@ function Pagination({
                                 onClick={() =>
                                     onPageChange(page)
                                 }
+                                aria-current={
+                                    active ? "page" : undefined
+                                }
                                 className={`${buttonBase} ${
                                     active
                                         ? "border-blue-600 bg-blue-600 text-white shadow-sm"
@@ -260,7 +308,7 @@ function Pagination({
                     }
                     className={`${buttonBase} ${
                         currentPage === totalPages
-                            ? "cursor-not-allowed border-slate-200 text-slate-300"
+                            ? "border-slate-200 text-slate-300"
                             : "border-slate-300 text-slate-600 hover:bg-slate-50"
                     }`}
                     aria-label="Next page"

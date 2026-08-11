@@ -27,9 +27,20 @@ export function AttendancePanel({
       className={`overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm ${className}`}
     >
 
-      <div className="flex justify-between items-center border-b border-slate-200 ">
+      {/*
+      | Heading and toolbar are stacked, not sat side by side.
+      |
+      | A search box, two filters and an export button asked to share one line
+      | need more width than the card has: the row overflowed and the panel
+      | clipped it, which is what cut "All Status" down to "All S" and slid the
+      | export button over the subtitle.
+      |
+      | Given a row each, both lay out the way they were written to - heading
+      | left and its action right, search left and its filters right.
+      */}
+      <div className="border-b border-slate-200">
         {(title || action) && (
-          <div className="flex flex-col gap-4  px-6 py-5 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex flex-col gap-4 px-6 py-5 lg:flex-row lg:items-center lg:justify-between">
 
             <div className="min-w-0">
 
@@ -43,15 +54,24 @@ export function AttendancePanel({
 
             </div>
 
+            {/* Never squeezed by a long title — the heading wraps instead. */}
             {action && (
-              <div className="flex flex-wrap items-center gap-3">{action}</div>
+              <div className="flex shrink-0 flex-wrap items-center gap-3">
+                {action}
+              </div>
             )}
 
           </div>
         )}
 
         {toolbar && (
-          <div className="flex flex-col gap-3 bg-slate-50/60 px-6 py-4 lg:flex-row lg:items-center lg:justify-between">
+          /* Divider only under a heading — on its own it would sit at the very
+             top edge of the card as a stray line. */
+          <div
+            className={`flex flex-col gap-3 bg-slate-50/60 px-6 py-4 lg:flex-row lg:items-center lg:justify-between ${
+              title || action ? "border-t border-slate-100" : ""
+            }`}
+          >
             {toolbar}
           </div>
         )}
