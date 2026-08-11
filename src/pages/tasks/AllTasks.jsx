@@ -13,6 +13,7 @@ import { getEmployees } from "../../services/EmployeeService";
 import { validateField } from "../../utils/validation/validateField";
 import useAuth from "../../hooks/useAuth";
 import useRoleAccess from "../../hooks/useRoleAccess";
+import usePagination from "../../hooks/usePagination";
 import {
   ALL_STATUSES,
   EMPTY_TASK_FORM,
@@ -45,6 +46,7 @@ import TaskTable from "../../components/tasks/TaskTable";
 import CreateTaskModal from "../../components/tasks/CreateTaskModal";
 import DeleteTaskModal from "../../components/tasks/DeleteTaskModal";
 import TaskDetailsModal from "../../components/tasks/TaskDetailsModal";
+import Pagination from "../../components/common/pagination/Pagination";
 import Loader from "../../components/common/Loader";
 
 /*
@@ -247,6 +249,31 @@ function AllTasks() {
     employees,
     allStatuses: ALL_STATUSES,
   });
+
+  /*
+  | Table sirf ek page ki rows dikhata hai — wahi common pagination jo
+  | Employees page use karta hai (usePagination + Pagination).
+  */
+  const {
+    paginatedData: paginatedTasks,
+    currentPage,
+    totalPages,
+    totalItems,
+    startItem,
+    endItem,
+    pageSize,
+    goToPage,
+    changePageSize,
+    resetPagination,
+  } = usePagination({
+    data: visibleTasks,
+    initialPageSize: 5,
+  });
+
+  // Filter/scope/context badla to list hi nayi hai — page 1 par wapas
+  useEffect(() => {
+    resetPagination();
+  }, [search, statusFilter, scope, tableContext]);
 
   // roleTasks se — jo dikhta nahi uski detail bhi nahi khulni chahiye
   const viewingTask = useMemo(
@@ -561,7 +588,7 @@ function AllTasks() {
         </div>
 
           <TaskTable
-            tasks={visibleTasks}
+            tasks={paginatedTasks}
             employees={employees}
             hasTasks={contextTasks.length > 0}
             showAssignee={canViewAll}
@@ -573,6 +600,18 @@ function AllTasks() {
             onDelete={setTaskToDelete}
             onRowClick={(task) => setViewingTaskId(task.id)}
             onCreate={canOpenCreate ? openCreateForm : undefined}
+          />
+
+          {/* Pagination */}
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={totalItems}
+            startItem={startItem}
+            endItem={endItem}
+            pageSize={pageSize}
+            onPageChange={goToPage}
+            onPageSizeChange={changePageSize}
           />
         </div>
       </div>

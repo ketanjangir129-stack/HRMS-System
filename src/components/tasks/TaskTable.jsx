@@ -121,7 +121,7 @@ function TaskTable({
             <th className="px-6 py-3 text-center font-semibold">Status</th>
             {showActions && (
               <th className="whitespace-nowrap px-6 py-3 text-right font-semibold">
-                Actions
+                Actions 
               </th>
             )}
           </tr>
@@ -154,11 +154,11 @@ function TaskTable({
                     <p className="truncate text-sm font-semibold text-slate-900">
                       {task.title}
                     </p>
-                    {task.description && (
+                    {/* {task.description && (
                       <p className="mt-0.5 truncate text-xs text-slate-500">
                         {task.description}
                       </p>
-                    )}
+                    )} */}
                   </div>
                 </td>
 
