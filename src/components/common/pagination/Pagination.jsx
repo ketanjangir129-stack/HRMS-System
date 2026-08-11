@@ -22,7 +22,16 @@ function Pagination({
     showInfo = true,
 }) {
 
-    if (totalItems === 0) {
+    /*
+    |--------------------------------------------------------------------------
+    | Hide until there is something to paginate
+    |--------------------------------------------------------------------------
+    | Khaali list par, aur jab tak saari rows ek hi page mein aa jaati hain,
+    | ye bar chhupi rehti hai. Pehli baar tabhi dikhti hai jab itne
+    | employees/tasks add ho jaayein ki doosra page ban jaaye.
+    */
+
+    if (totalItems === 0 || totalPages <= 1) {
         return null;
     }
 
