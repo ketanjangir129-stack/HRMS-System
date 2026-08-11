@@ -194,23 +194,23 @@ function Departments() {
     }, []);
 
     return (
-        <div className="mx-auto max-w-[1600px] space-y-6 p-1 sm:p-2">
+        <div className="mx-auto max-w-[1600px] space-y-4 p-0 sm:space-y-6 sm:p-2">
 
             {/* Header */}
-            <div className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white px-5 py-5 shadow-sm sm:px-6 md:flex-row md:items-center md:justify-between">
+            <div className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-sm sm:px-6 sm:py-5 md:flex-row md:items-center md:justify-between">
 
-                <div className="flex items-center gap-3 sm:gap-4">
+                <div className="flex min-w-0 items-center gap-3 sm:gap-4">
 
-                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-600 shadow-sm shadow-blue-600/20">
-                        <FiLayers className="text-white text-xl" />
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-600 shadow-sm shadow-blue-600/20 sm:h-11 sm:w-11">
+                        <FiLayers className="text-white text-lg sm:text-xl" />
                     </div>
 
-                    <div>
-                        <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
+                    <div className="min-w-0">
+                        <h1 className="text-xl font-bold tracking-tight text-slate-900 sm:text-2xl lg:text-3xl">
                             Departments
                         </h1>
 
-                        <p className="mt-1 text-sm text-slate-500 sm:text-base">
+                        <p className="mt-0.5 text-xs text-slate-500 sm:mt-1 sm:text-sm lg:text-base">
                             Manage departments and designations
                         </p>
                     </div>
@@ -220,20 +220,25 @@ function Departments() {
                 {/* Stats + Action */}
                 <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-end">
 
-                    <div className="flex flex-wrap items-center justify-end gap-2">
+                    {/*
+                        On a phone the pills are stacked full width, so the label
+                        sits left and the count right instead of wrapping into a
+                        ragged block. From `sm` up they go back to being chips.
+                    */}
+                    <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
 
                         {stats.map((stat) => (
 
                             <div
                                 key={stat.title}
-                                className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 whitespace-nowrap"
+                                className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 sm:whitespace-nowrap"
                             >
 
-                                <span className="text-sm text-slate-400">
+                                <span className="shrink-0 text-sm text-slate-400">
                                     {stat.icon}
                                 </span>
 
-                                <span className="text-xs font-medium text-slate-500">
+                                <span className="min-w-0 flex-1 truncate text-xs font-medium text-slate-500 sm:flex-none">
                                     {stat.title}
                                 </span>
 
@@ -253,7 +258,7 @@ function Departments() {
                             setDepartmentName("");
                             setDepartmentModal(true);
                         }}
-                        className="group inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-blue-600/20 transition-all duration-200 hover:-translate-y-0.5 hover:bg-blue-700 hover:shadow-lg hover:shadow-blue-600/30 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 active:translate-y-0 cursor-pointer whitespace-nowrap"
+                        className="group inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-md shadow-blue-600/20 transition-all duration-200 hover:-translate-y-0.5 hover:bg-blue-700 hover:shadow-lg hover:shadow-blue-600/30 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 active:translate-y-0 cursor-pointer whitespace-nowrap sm:px-5"
                     >
                         <FiPlus
                             size={18}

@@ -404,8 +404,8 @@ function EmployeesDetails() {
     // Load fail hua ya employee mila nahi → error + Retry (infinite spinner se bachne ke liye)
     if (loadError) {
         return (
-            <div className="p-2">
-                <div className="flex flex-col items-center justify-center rounded-2xl border border-slate-200 bg-white px-6 py-16 text-center shadow-sm">
+            <div className="p-0 sm:p-2">
+                <div className="flex flex-col items-center justify-center rounded-2xl border border-slate-200 bg-white px-4 py-14 text-center shadow-sm sm:px-6 sm:py-16">
 
                     <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-red-50 text-red-600">
                         <AlertTriangle className="h-7 w-7" />
@@ -419,7 +419,7 @@ function EmployeesDetails() {
                         {loadError}
                     </p>
 
-                    <div className="mt-6 flex items-center gap-3">
+                    <div className="mt-6 flex w-full flex-col items-stretch gap-3 sm:w-auto sm:flex-row sm:items-center">
                         <button
                             onClick={() => navigate("/employees")}
                             className="cursor-pointer rounded-xl px-5 py-2.5 text-sm font-semibold text-slate-500 transition-all hover:bg-slate-100 hover:text-slate-700"
@@ -442,8 +442,8 @@ function EmployeesDetails() {
 
     if (!employee) {
         return (
-            <div className="p-2">
-                <div className="rounded-2xl border border-slate-200 bg-white px-6 py-10 shadow-sm">
+            <div className="p-0 sm:p-2">
+                <div className="rounded-2xl border border-slate-200 bg-white px-4 py-10 shadow-sm sm:px-6">
                     <Loader text="Loading employee..." />
                 </div>
             </div>
@@ -621,10 +621,10 @@ function EmployeesDetails() {
     ].filter((chip) => chip.label);
 
     return (
-        <div className="p-2 space-y-5">
+        <div className="p-0 space-y-4 sm:p-2 sm:space-y-5">
 
                 {/* Toolbar */}
-                <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm sm:px-5">
+                <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white px-3 py-3 shadow-sm sm:px-5">
 
                     <button
                         type="button"
@@ -632,7 +632,10 @@ function EmployeesDetails() {
                         className="group inline-flex cursor-pointer items-center gap-2 rounded-xl px-2 py-1.5 text-sm font-semibold text-slate-500 transition-all hover:bg-slate-100 hover:text-slate-700"
                     >
                         <ArrowLeft className="h-4 w-4 transition-transform duration-200 group-hover:-translate-x-0.5" />
-                        Back to Employees
+                        {/* Short label keeps this on the same row as the status
+                            button on a phone. */}
+                        <span className="sm:hidden">Back</span>
+                        <span className="hidden sm:inline">Back to Employees</span>
                     </button>
 
                     <button
@@ -678,19 +681,19 @@ function EmployeesDetails() {
                 {/* Profile header + tabs */}
                 <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
 
-                    <div className="flex flex-col gap-6 p-5 sm:p-6 xl:flex-row xl:items-center xl:justify-between">
+                    <div className="flex flex-col gap-5 p-4 sm:gap-6 sm:p-6 xl:flex-row xl:items-center xl:justify-between">
 
-                        <div className="flex min-w-0 flex-col gap-4 sm:flex-row sm:items-center">
+                        <div className="flex min-w-0 flex-row items-center gap-4 sm:items-center">
 
-                            <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-2xl bg-blue-600 text-2xl font-bold text-white shadow-md shadow-blue-600/25">
+                            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-blue-600 text-xl font-bold text-white shadow-md shadow-blue-600/25 sm:h-20 sm:w-20 sm:text-2xl">
                                 {initials}
                             </div>
 
                             <div className="min-w-0">
 
-                                <div className="flex flex-wrap items-center gap-3">
+                                <div className="flex flex-wrap items-center gap-2 sm:gap-3">
 
-                                    <h1 className="min-w-0 truncate text-2xl font-bold text-slate-900">
+                                    <h1 className="min-w-0 truncate text-lg font-bold text-slate-900 sm:text-2xl">
                                         {employee.personalInfo?.name || "Unnamed Employee"}
                                     </h1>
 
@@ -728,7 +731,7 @@ function EmployeesDetails() {
 
                         </div>
 
-                        <div className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-3 xl:gap-6">
+                        <div className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:gap-6">
 
                             {metaItems.map((item) => {
                                 const MetaIcon = item.icon;
@@ -853,12 +856,12 @@ function EmployeesDetails() {
                                 className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition-shadow duration-200 hover:shadow-md"
                             >
 
-                                <div className="flex items-center gap-3 border-b border-slate-200 px-5 py-4 sm:px-6">
+                                <div className="flex items-center gap-3 border-b border-slate-200 px-4 py-4 sm:px-6">
 
-                                    <div className="flex min-w-0 flex-1 items-center gap-3.5">
+                                    <div className="flex min-w-0 flex-1 items-center gap-3 sm:gap-3.5">
 
                                         <span
-                                            className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${section.accent}`}
+                                            className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl sm:h-10 sm:w-10 ${section.accent}`}
                                         >
                                             <Icon className="h-5 w-5" />
                                         </span>
@@ -991,7 +994,7 @@ function EmployeesDetails() {
 
                                 <div>
                                         <div
-                                            className={`grid grid-cols-1 gap-x-6 px-5 sm:px-6 ${gridCols} ${
+                                            className={`grid grid-cols-1 gap-x-6 px-4 sm:px-6 ${gridCols} ${
                                                 isEditing ? "gap-y-5 py-6" : "pb-0 pt-1"
                                             }`}
                                         >
@@ -1069,7 +1072,7 @@ function EmployeesDetails() {
                                                                         field.key === "designation" &&
                                                                         !formData.department
                                                                     }
-                                                                    className={`w-full cursor-pointer rounded-xl border bg-white px-4 py-2.5 text-sm text-slate-800 outline-none transition focus:ring-2 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400 ${
+                                                                    className={`w-full cursor-pointer rounded-xl border bg-white px-4 py-2.5 text-base text-slate-800 outline-none transition focus:ring-2 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400 sm:text-sm ${
                                                                         errors[field.key]
                                                                             ? "border-red-400 focus:border-red-400 focus:ring-red-100"
                                                                             : "border-slate-200 focus:border-blue-500 focus:ring-blue-100"
@@ -1095,7 +1098,7 @@ function EmployeesDetails() {
                                                                             e.target.value
                                                                         )
                                                                     }
-                                                                    className={`w-full rounded-xl border bg-white px-4 py-2.5 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:ring-2 ${
+                                                                    className={`w-full rounded-xl border bg-white px-4 py-2.5 text-base text-slate-800 outline-none transition placeholder:text-slate-400 focus:ring-2 sm:text-sm ${
                                                                         errors[field.key]
                                                                             ? "border-red-400 focus:border-red-400 focus:ring-red-100"
                                                                             : "border-slate-200 focus:border-blue-500 focus:ring-blue-100"
@@ -1175,12 +1178,12 @@ function EmployeesDetails() {
 
                                     
                                         {!section.readOnly && isEditing && (
-                                        <div className="flex items-center justify-end gap-3 border-t border-slate-200 bg-slate-50/60 px-6 py-4">
+                                        <div className="flex flex-col-reverse gap-2 border-t border-slate-200 bg-slate-50/60 px-4 py-4 sm:flex-row sm:items-center sm:justify-end sm:gap-3 sm:px-6">
 
                                             <button
                                                 onClick={cancelEdit}
                                                 disabled={saving}
-                                                className="cursor-pointer rounded-xl px-5 py-2.5 text-sm font-semibold text-slate-500 transition-all hover:bg-slate-200/60 hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
+                                                className="w-full cursor-pointer rounded-xl px-5 py-2.5 text-sm font-semibold text-slate-500 transition-all hover:bg-slate-200/60 hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
                                             >
                                                 Cancel
                                             </button>
@@ -1188,7 +1191,7 @@ function EmployeesDetails() {
                                             <button
                                                 onClick={() => saveSection(section.section)}
                                                 disabled={saving}
-                                                className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-blue-600/20 transition-all duration-200 hover:bg-blue-700 hover:shadow-lg hover:shadow-blue-600/30 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 disabled:shadow-none"
+                                                className="inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white sm:w-auto shadow-md shadow-blue-600/20 transition-all duration-200 hover:bg-blue-700 hover:shadow-lg hover:shadow-blue-600/30 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 disabled:shadow-none"
                                             >
                                                 {saving ? "Saving…" : "Save Changes"}
                                             </button>

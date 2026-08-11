@@ -1,5 +1,5 @@
 import { MdDashboard, MdOutlineBeachAccess, MdOutlineCelebration } from "react-icons/md";
-import { MdChevronLeft, MdChevronRight } from "react-icons/md";
+import { MdChevronLeft, MdChevronRight, MdClose } from "react-icons/md";
 import { FaBuilding, FaTasks } from "react-icons/fa";
 import { BsFillPersonLinesFill,BsCalendarCheck } from "react-icons/bs";
 import { PiPersonSimpleSnowboardLight } from "react-icons/pi";
@@ -65,6 +65,12 @@ const menuItems = [
     icon: MdOutlineCelebration,
     permission: "holidays",
   },
+   {
+    label: "Tasks",
+    path: "/tasks",
+    icon: FaTasks,
+    permission: "tasks",
+  },
   {
     label: "Salary",
     path: "/salarydashboard",
@@ -76,12 +82,6 @@ const menuItems = [
     path: "/payrolldashboard",
     icon: BadgeIndianRupee ,
     permission: "payroll",
-  },
-  {
-    label: "Tasks",
-    path: "/tasks",
-    icon: FaTasks,
-    permission: "tasks",
   },
   {
     label: "Settings",
@@ -97,6 +97,13 @@ const menuItems = [
 | nothing would make the sidebar collapse and jump.
 */
 
+/*
+| The collapsed look belongs to the desktop rail only - below `lg` the
+| sidebar is a full-width drawer that is either on screen or off it, so every
+| collapse-driven class here is `lg:` prefixed and the expanded layout is the
+| mobile default.
+*/
+
 function SidebarSkeleton({ isCollapsed }) {
   return (
     <ul className="space-y-2">
@@ -105,16 +112,18 @@ function SidebarSkeleton({ isCollapsed }) {
 
         <li key={index}>
           <div
-            className={`flex h-[52px] items-center rounded-xl bg-slate-100 ${
-              isCollapsed ? "justify-center px-2" : "gap-4 px-[18px]"
+            className={`flex h-[52px] items-center gap-4 rounded-xl bg-slate-100 px-[18px] ${
+              isCollapsed ? "lg:justify-center lg:gap-0 lg:px-2" : ""
             }`}
           >
 
             <span className="h-5 w-5 shrink-0 animate-pulse rounded-md bg-slate-200" />
 
-            {!isCollapsed && (
-              <span className="h-4 w-28 animate-pulse rounded-md bg-slate-200" />
-            )}
+            <span
+              className={`h-4 w-28 animate-pulse rounded-md bg-slate-200 ${
+                isCollapsed ? "lg:hidden" : ""
+              }`}
+            />
 
           </div>
         </li>
@@ -125,7 +134,7 @@ function SidebarSkeleton({ isCollapsed }) {
   );
 }
 
-function Sidebar({ isCollapsed, onToggle }) {
+function Sidebar({ isCollapsed, onToggle, isMobileOpen = false, onMobileClose }) {
 
   const { canAccessPage, isOwner, loading } = useRoleAccess();
 
@@ -137,15 +146,24 @@ function Sidebar({ isCollapsed, onToggle }) {
     [canAccessPage, isOwner]
   );
 
+  /*
+    Two sidebars in one element.
+
+    On `lg` and up it is a normal flex column in the page that only changes
+    width. Below that it is taken out of the flow entirely and parked off the
+    left edge, so the content column gets the whole viewport, and the list
+    button slides it back in.
+  */
   return (
     <aside
-      className={`h-screen bg-white border-r border-gray-200 flex flex-col transition-all duration-300 ease-in-out ${
-        isCollapsed ? "w-[88px]" : "w-[280px]"
-      }`}
+      className={`fixed inset-y-0 left-0 z-50 flex h-screen w-[280px] flex-col border-r border-gray-200 bg-white transition-transform duration-300 ease-in-out
+        lg:static lg:translate-x-0 lg:transition-all
+        ${isMobileOpen ? "translate-x-0" : "-translate-x-full"}
+        ${isCollapsed ? "lg:w-[88px]" : "lg:w-[280px]"}`}
     >
 
       {/* Logo */}
-      <div className={`h-[95px] shrink-0 border-b border-gray-200 flex items-center ${isCollapsed ? "justify-center px-3" : "justify-between px-6"}`}>
+      <div className={`h-[95px] shrink-0 border-b border-gray-200 flex items-center justify-between px-6 ${isCollapsed ? "lg:justify-center lg:px-3" : ""}`}>
 
           <div className="flex items-center gap-3 overflow-hidden">
 
@@ -155,7 +173,7 @@ function Sidebar({ isCollapsed, onToggle }) {
                   </span>
               </div>
 
-              <div className={`whitespace-nowrap transition-opacity duration-200 ${isCollapsed ? "hidden" : "block"}`}>
+              <div className={`whitespace-nowrap transition-opacity duration-200 ${isCollapsed ? "lg:hidden" : "block"}`}>
                   <h2 className="text-lg font-bold text-slate-900 leading-none">
                       HRMS
                   </h2>
@@ -166,6 +184,17 @@ function Sidebar({ isCollapsed, onToggle }) {
               </div>
 
           </div>
+
+          {/* The drawer has no visible edge to click past on a phone, so it
+              carries its own close button. */}
+          <button
+            type="button"
+            onClick={onMobileClose}
+            className="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-xl text-slate-500 transition-colors hover:bg-gray-100 hover:text-slate-900 lg:hidden"
+            aria-label="Close menu"
+          >
+            <MdClose size={22} />
+          </button>
 
       </div>
 
@@ -179,7 +208,7 @@ function Sidebar({ isCollapsed, onToggle }) {
         without it the nav would push the collapse button off screen instead
         of scrolling.
       */}
-      <nav className={`flex-1 min-h-0 overflow-y-auto hide-scrollbar ${isCollapsed ? "p-3 pt-5" : "p-5"}`}>
+      <nav className={`flex-1 min-h-0 overflow-y-auto hide-scrollbar p-5 ${isCollapsed ? "lg:p-3 lg:pt-5" : ""}`}>
 
         {loading ? (
 
@@ -194,18 +223,23 @@ function Sidebar({ isCollapsed, onToggle }) {
 
               return (
                 <li key={item.path}>
+                  {/* Tapping a link on a phone means the drawer has done its
+                      job - it closes with the navigation. */}
                   <NavLink
                     to={item.path}
+                    onClick={onMobileClose}
                     className={({ isActive }) =>
-                      `flex items-center h-[52px] rounded-xl transition-all duration-200 font-semibold
-                        ${isCollapsed ? "justify-center px-2" : "gap-4 px-[18px]"}
+                      `flex items-center h-[52px] rounded-xl transition-all duration-200 font-semibold gap-4 px-[18px]
+                        ${isCollapsed ? "lg:justify-center lg:gap-0 lg:px-2" : ""}
                         ${isActive ? "bg-gray-100 text-gray-900 "
                         : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
                     }`}
                     title={isCollapsed ? item.label : undefined}
                   >
                     <Icon className="text-lg flex-shrink-0" size={20} />
-                    {!isCollapsed && <span className="whitespace-nowrap">{item.label}</span>}
+                    <span className={`whitespace-nowrap ${isCollapsed ? "lg:hidden" : ""}`}>
+                      {item.label}
+                    </span>
                   </NavLink>
                 </li>
               );
@@ -217,7 +251,9 @@ function Sidebar({ isCollapsed, onToggle }) {
 
       </nav>
 
-      <div className={`shrink-0 border-t border-gray-200 p-4 ${isCollapsed ? "flex justify-center" : ""}`}>
+      {/* Collapsing is a desktop affordance - the drawer is either open or
+          gone, so there is no half state to offer on a phone. */}
+      <div className={`hidden shrink-0 border-t border-gray-200 p-4 lg:block ${isCollapsed ? "lg:flex lg:justify-center" : ""}`}>
         <button
           type="button"
           onClick={onToggle}

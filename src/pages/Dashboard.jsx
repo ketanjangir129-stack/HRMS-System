@@ -33,19 +33,19 @@ const Dashboard = () => {
     currentUser?.name || "Loading....";
 
   return (
-    <div className="flex-1 p-2 bg-gray-100 min-h-full">
+    <div className="flex-1 p-0 sm:p-2 bg-gray-100 min-h-full">
       {/* Welcome Section */}
-      <div className="flex justify-between items-center mb-9">
-        <div>
-          <p className="text-2xl text-black mb-2 font-semibold">
+      <div className="flex justify-between items-center mb-6 sm:mb-9">
+        <div className="min-w-0">
+          <p className="text-base sm:text-xl lg:text-2xl text-black mb-2 font-semibold">
             {today}
           </p>
 
-          <h1 className="text-4xl font-bold text-green-600 mb-2">
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-green-600 mb-2 break-words">
             Hello, {displayName}
           </h1>
 
-          <p className="text-gray-500">
+          <p className="text-sm sm:text-base text-gray-500">
             Here's what's happening with your HRMS today.
           </p>
         </div>
@@ -58,8 +58,8 @@ const Dashboard = () => {
         column rather than leaving the empty half its slot would keep.
       */}
       <div
-        className={`grid gap-6 ${
-          showTasks && showQuickLinks ? "grid-cols-2" : "grid-cols-1"
+        className={`grid grid-cols-1 gap-4 sm:gap-6 ${
+          showTasks && showQuickLinks ? "xl:grid-cols-2" : ""
         }`}
       >
         {/* Today's Tasks */}

@@ -39,13 +39,15 @@ function DepartmentCard({
     const isExpanded = expandedDepartment === departmentId;
 
     return (
-        <div className="group rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition-all duration-300 hover:border-slate-300 hover:shadow-md">
+        <div className="group rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition-all duration-300 hover:border-slate-300 hover:shadow-md sm:p-5">
 
             <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
 
-                <div className="flex items-start gap-3 sm:gap-4">
+                {/* `min-w-0` lets a long department name truncate instead of
+                    pushing the action buttons off the card. */}
+                <div className="flex min-w-0 items-start gap-3 sm:gap-4">
 
-                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-lg font-bold text-blue-600">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-base font-bold text-blue-600 sm:h-11 sm:w-11 sm:text-lg">
                         {department.name?.charAt(0)?.toUpperCase()}
                     </div>
 
@@ -53,7 +55,7 @@ function DepartmentCard({
 
                         <button
                             onClick={() =>toggleDepartment(departmentId)}
-                            className="flex items-center gap-2 text-lg font-semibold tracking-tight text-slate-900 transition-colors hover:text-blue-600 cursor-pointer sm:text-xl"
+                            className="flex w-full items-center gap-2 text-base font-semibold tracking-tight text-slate-900 transition-colors hover:text-blue-600 cursor-pointer sm:text-lg md:text-xl"
                         >
                             <span className="truncate">{department.name}</span>
 
@@ -77,9 +79,10 @@ function DepartmentCard({
                     </div>
 
                 </div>
-                <div className="flex flex-wrap items-center gap-2">
-
-
+                {/* On a phone the buttons share the row evenly and wrap onto a
+                    second line; from `sm` up they shrink back to their own
+                    width. */}
+                <div className="flex flex-wrap items-center gap-2 md:shrink-0">
 
                     <button
                         onClick={() =>
@@ -89,7 +92,7 @@ function DepartmentCard({
                             )
                         }
                         title="Edit department"
-                        className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-600 transition-all duration-200 hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-300 cursor-pointer"
+                        className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-600 transition-all duration-200 hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-300 cursor-pointer sm:flex-none"
                     >
                         <FiEdit2 className="text-[15px]" />
                         Edit
@@ -98,7 +101,7 @@ function DepartmentCard({
                     <button
                         onClick={() => setConfirmDelete(true)}
                         title="Delete department"
-                        className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 px-3 py-2 text-sm font-medium text-red-600 transition-all duration-200 hover:border-red-300 hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-300 cursor-pointer"
+                        className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-red-200 px-3 py-2 text-sm font-medium text-red-600 transition-all duration-200 hover:border-red-300 hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-300 cursor-pointer sm:flex-none"
                     >
                         <FiTrash2 className="text-[15px]" />
                         Delete
@@ -110,7 +113,7 @@ function DepartmentCard({
                                 departmentId
                             )
                         }
-                        className="group/btn inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white shadow-sm shadow-blue-600/20 transition-all duration-200 hover:-translate-y-0.5 hover:bg-blue-700 hover:shadow-md hover:shadow-blue-600/30 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 active:translate-y-0 cursor-pointer whitespace-nowrap"
+                        className="group/btn inline-flex w-full items-center justify-center gap-1.5 rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white shadow-sm shadow-blue-600/20 transition-all duration-200 hover:-translate-y-0.5 hover:bg-blue-700 hover:shadow-md hover:shadow-blue-600/30 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 active:translate-y-0 cursor-pointer whitespace-nowrap sm:w-auto"
                     >
                         <FiPlus className="text-[15px] transition-transform duration-200 group-hover/btn:rotate-90" />
                         Add Designation
@@ -122,7 +125,7 @@ function DepartmentCard({
 
             {
                 isExpanded && (
-                    <div className="mt-5 space-y-2.5 border-t border-slate-100 pt-5">
+                    <div className="mt-4 space-y-2.5 border-t border-slate-100 pt-4 sm:mt-5 sm:pt-5">
 
                         {Object.entries(
                             department.designations || {}

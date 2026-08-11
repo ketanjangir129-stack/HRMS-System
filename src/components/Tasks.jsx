@@ -134,13 +134,13 @@ function EmployeeTasks() {
   const hiddenCount = tasks.length - visible.length;
 
   return (
-    <div className="bg-white rounded-2xl p-6 shadow-md">
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-2xl font-semibold text-gray-800">Today's Tasks</h2>
+    <div className="bg-white rounded-2xl p-4 sm:p-6 shadow-md">
+      <div className="flex flex-wrap justify-between items-center gap-3 mb-4 sm:mb-6">
+        <h2 className="text-xl sm:text-2xl font-semibold text-gray-800">Today's Tasks</h2>
 
         <button
           onClick={() => navigate("/tasks")}
-          className="cursor-pointer bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition"
+          className="cursor-pointer bg-blue-600 text-white text-sm sm:text-base px-3 sm:px-4 py-2 rounded-lg hover:bg-blue-700 transition"
         >
           View All
         </button>
@@ -182,7 +182,7 @@ function EmployeeTasks() {
           {visible.map((task) => (
             <div
               key={task.id}
-              className="flex items-start gap-4 py-4 border-b border-gray-200 last:border-b-0"
+              className="flex items-start gap-3 sm:gap-4 py-3 sm:py-4 border-b border-gray-200 last:border-b-0"
             >
               <input
                 type="checkbox"
@@ -193,7 +193,7 @@ function EmployeeTasks() {
               />
 
               <div className="min-w-0 flex-1">
-                <p className="truncate text-gray-700">{task.title}</p>
+                <p className="truncate text-sm sm:text-base text-gray-700">{task.title}</p>
                 <p className="mt-0.5 text-xs text-gray-400">
                   {canViewAll ? `${assigneeName(task, employees)} · ` : ""}
                   {dueLabel(task.dueDate, today)}
