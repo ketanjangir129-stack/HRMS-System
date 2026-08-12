@@ -1,9 +1,12 @@
 import {
-  ACTIVITY_TYPES,
+  ACTIVITY_TYPE,
   COMPLETED_STATUS,
   IN_PROGRESS_STATUS,
   PAUSED_STATUS,
 } from "../../services/taskService";
+import { getUserRole } from "../attendance/attendanceRequestUtils";
+import { OWNER_ROLE } from "../permissions/permissionConstants";
+import { isOwnerRole } from "../permissions/permissionUtils";
 import { ERROR_INPUT_CLASS, INPUT_CLASS } from "./taskConstants";
 
 /*
@@ -55,9 +58,18 @@ export const getCurrentEmployeeId = (currentUser) =>
 | email } hota hai, Employee/HR ke paas poora employee record. Isliye
 | fallback chain — aakhir mein "Admin", taaki activity kabhi bina naam ke
 | na dikhe.
+|
+| id role se tay hoti hai, sirf employee record se nahi: Owner ka employee
+| record hota hi nahi, isliye uske liye fixed key "owner" (OWNER_ROLE).
+| Ek company mein Owner ek hi hai, to ye key uske liye utni hi pakki
+| pehchaan hai jitni HR/Employee ke liye unki employeeId. Isse pehle yahan
+| khaali string aati thi aur service usko "unknown" bana deti thi — ek hi
+| dabbe mein sabki activity.
 */
 export const getCurrentActor = (currentUser) => ({
-  id: getCurrentEmployeeId(currentUser),
+  id: isOwnerRole(getUserRole(currentUser))
+    ? OWNER_ROLE
+    : getCurrentEmployeeId(currentUser),
   name:
     currentUser?.personalInfo?.name ||
     currentUser?.name ||
@@ -344,40 +356,100 @@ export const fieldClass = (error) => (error ? ERROR_INPUT_CLASS : INPUT_CLASS);
 |--------------------------------------------------------------------------
 | Activity
 |--------------------------------------------------------------------------
-| Task ke andar activity ek object hoti hai (Firebase keys), UI ko array
-| chahiye — bilkul waise hi jaise toTaskList tasks ke saath karta hai.
+| Firebase se activity do parat mein aati hai — actor ki id (Owner ke liye
+| "owner"), uske andar timestamp:
 |
-| Naya sabse upar. Ek hi write mein bani entries ka timestamp ek jaisa hota
-| hai (start + auto-pause), par wo alag-alag tasks par jaati hain, isliye ek
-| hi timeline mein kabhi nahi takraatin.
+|   { "EMP01": { "1754640000000": { fromStatus, toStatus, actorName } } }
 |
-| Purane tasks mein activity node hai hi nahi — tab khaali array, aur modal
-| apna empty state dikha deta hai. Koi migration nahi.
+| UI ko ek seedhi list chahiye, isliye dono parat kholkar flat kar dete
+| hain — wahi kaam jo toTaskList tasks ke saath karta hai.
+|
+| employeeId entry ke andar nahi hota (wo path mein hai), par baad mein
+| "kisne kiya" par filter karna ho to chahiye — isliye padhte waqt laga
+| dete hain. id dono keys se banti hai: ek hi timestamp do employee ke
+| paas ho sakta hai, akela timestamp React ke liye unique key nahi.
+|
+| Naya sabse upar.
+|
+| Jis task ka records node hai hi nahi (naye structure se pehle bana hua)
+| — tab khaali array, aur modal apna empty state dikha deta hai.
 */
-export const taskActivityList = (task) =>
-  Object.entries(task?.activity || {})
-    .map(([id, entry]) => ({ ...entry, id }))
-    .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+export const taskActivityList = (activity) =>
+  Object.entries(activity || {})
+    .flatMap(([employeeId, entries]) =>
+      Object.entries(entries || {}).map(([key, entry]) => ({
+        ...entry,
+        employeeId,
+        id: `${employeeId}/${key}`,
+        // Key hi timestamp hai. Purani entries mein wo field bhi padi hai —
+        // wo bhi wahi value hai, isliye key se padhna hi kaafi hai
+        timestamp: Number(key) || entry?.timestamp || 0,
+      }))
+    )
+    .sort((a, b) => b.timestamp - a.timestamp);
+
+/*
+|--------------------------------------------------------------------------
+| Entry kis baat ki hai
+|--------------------------------------------------------------------------
+| Nayi entries apna type khud batati hain. Purani entries mein type hai hi
+| nahi — unhe usi purane tareeke se pehchanna padta hai jis se pehle pehchana
+| jaata tha, warna Firebase mein jo history pehle se padi hai wo apna matlab
+| kho de. Isliye har check do parat ka hai: pehle type, phir purana ishaara.
+|
+| Ye do parat hamesha rehni hain: history append-only hai, purani entries
+| kabhi type nahi paayengi, aur unhe badalna hi nahi hai.
+*/
+
+// Purani assignment entry mein assignedToId hamesha tha — wahi uska ishaara
+export const isAssignmentEntry = (entry) =>
+  entry?.type === ACTIVITY_TYPE.ASSIGNED || Boolean(entry?.assignedToId);
+
+/*
+| Pehli entry — iske pehle task ka koi status tha hi nahi.
+|
+| Purane tareeke mein ishaara khaali fromStatus tha, isliye assignment entry
+| ko pehle chhaanna padta hai (usme fromStatus hota hi nahi). Ye jhamela sirf
+| bina-type wali entries ke liye bacha hai — jinme type hai, unme koi shak
+| hi nahi rehta.
+*/
+export const isCreatedEntry = (entry) => {
+  if (entry?.type) return entry.type === ACTIVITY_TYPE.CREATED;
+
+  return !isAssignmentEntry(entry) && !entry?.fromStatus;
+};
 
 /*
 | Entry ka padhne wala matter. Normal entries mein text store nahi hota —
-| sirf type/fromStatus/toStatus — isliye wording kabhi bhi badli ja sakti
-| hai aur purani entries bhi nayi bhasha bolne lagti hain.
+| sirf fromStatus/toStatus — isliye wording kabhi bhi badli ja sakti hai
+| aur purani entries bhi nayi bhasha bolne lagti hain.
 |
 | message sirf wahan store hota hai jahan usme aisi baat ho jo kisi field
 | mein nahi hai — jaise auto-pause, jisme doosre task ka naam hota hai.
+|
+| Kram maayne rakhta hai. Har shart pehle type dekhti hai aur phir purane
+| ishaare par gir jaati hai, isliye bina-type wali purani entry bhi wahi
+| line dikhati hai jo pehle dikhati thi.
 */
 export const activityLabel = (entry) => {
   if (!entry) return "";
 
-  if (entry.message) return entry.message;
-
-  if (entry.type === ACTIVITY_TYPES.STATUS_CHANGED) {
-    return `Status changed from ${entry.fromStatus} to ${entry.toStatus}`;
+  /*
+  | Assignment ka text bhi yahin banta hai, store nahi hota — entry mein
+  | sirf kis ko mila (id aur naam) rehta hai. Naam entry se aata hai,
+  | employees list se nahi: Employee ke paas wo list hoti hi nahi.
+  */
+  if (isAssignmentEntry(entry)) {
+    return `Task assigned to ${entry.assignedToName || entry.assignedToId}`;
   }
 
-  if (entry.type === ACTIVITY_TYPES.CREATED) return "Task created";
+  // Auto-pause: message mein us doosre task ka naam hai jo shuru hua, aur wo
+  // baat kisi field mein nahi — isliye yahi ek text store hota hai
+  if (entry.type === ACTIVITY_TYPE.AUTO_PAUSED || entry.message) {
+    return entry.message || `Status changed from ${entry.fromStatus} to ${entry.toStatus}`;
+  }
 
-  // Aage koi naya type jude aur yahan na aaye — tab bhi row khaali na dikhe
-  return "Task updated";
+  if (isCreatedEntry(entry)) return "Task created";
+
+  return `Status changed from ${entry.fromStatus} to ${entry.toStatus}`;
 };

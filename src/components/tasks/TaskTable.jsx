@@ -85,6 +85,15 @@ function TaskTable({
   canUpdate = () => true,
   canDelete = true,
   /*
+  | canUpdate ki tarah ye bhi FUNCTION hai — status ka haq har row par alag
+  | hota hai: apna task badal sakte ho, doosre ka nahi. HR ki list mein dono
+  | tarah ke rows ek saath hote hain, isliye per-row poochhna padta hai.
+  |
+  | Haq na ho to badge saada pill rehti hai (dropdown nahi) — status phir
+  | bhi dikhta hai, bas badla nahi ja sakta.
+  */
+  canChangeStatus = () => true,
+  /*
   | Actions column dikhe ya nahi. Page se aata hai, yahan tasks se nahi
   | nikalte — warna filter se editable rows hat jaate hi column gayab ho
   | jaata aur filter hatane par wapas aa jaata.
@@ -225,19 +234,25 @@ function TaskTable({
                     withCaret pill ke andar chevron laga deta hai — warna
                     badge bilkul static lagta hai.
                   */}
-                  <TaskSelect
-                    options={STATUS_OPTIONS}
-                    value={task.status || TASK_STATUSES[0]}
-                    onChange={(next) => onStatusChange(task, next)}
-                    ariaLabel={`Change status of ${task.title}`}
-                    className="cursor-pointer rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
-                    trigger={
-                      <TaskBadge
-                        value={task.status || TASK_STATUSES[0]}
-                        withCaret
-                      />
-                    }
-                  />
+                  {canChangeStatus(task) ? (
+                    <TaskSelect
+                      options={STATUS_OPTIONS}
+                      value={task.status || TASK_STATUSES[0]}
+                      onChange={(next) => onStatusChange(task, next)}
+                      ariaLabel={`Change status of ${task.title}`}
+                      className="cursor-pointer rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+                      trigger={
+                        <TaskBadge
+                          value={task.status || TASK_STATUSES[0]}
+                          withCaret
+                        />
+                      }
+                    />
+                  ) : (
+                    // Bina caret ke — pill dikhti hai par khulne ka ishaara
+                    // nahi deti
+                    <TaskBadge value={task.status || TASK_STATUSES[0]} />
+                  )}
                 </td>
 
                 {/* Activity dekhna row kholne se alag hai — event yahin ruk

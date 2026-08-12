@@ -1,6 +1,9 @@
-import { ACTIVITY_TYPES } from "../../services/taskService";
 import { STATUS_DOTS } from "../../utils/tasks/taskConstants";
-import { activityLabel, formatTimestamp } from "../../utils/tasks/taskUtils";
+import {
+  activityLabel,
+  formatTimestamp,
+  isCreatedEntry,
+} from "../../utils/tasks/taskUtils";
 
 /*
 |--------------------------------------------------------------------------
@@ -9,8 +12,8 @@ import { activityLabel, formatTimestamp } from "../../utils/tasks/taskUtils";
 | Task ke saath kya-kya hua, naya sabse upar. Details modal ke andar ek
 | section hai — apna page ya modal nahi, kyunki ye task ki hi jaankari hai.
 |
-| Firebase se khud baat nahi karta: entries task ke andar aati hain aur
-| task modal ko page ki state se milta hai. Isliye modal khula rehte hue
+| Firebase se khud baat nahi karta: entries banī-banaayi milti hain, aur
+| page unhe records se realtime padhta hai. Isliye modal khula rehte hue
 | koi status badle to nayi line apne aap upar aa jaati hai.
 |
 | Dikhne wala text yahan nahi banta — activityLabel() se aata hai, taaki
@@ -24,11 +27,9 @@ import { activityLabel, formatTimestamp } from "../../utils/tasks/taskUtils";
 | slate.
 */
 const dotClass = (entry) => {
-  if (entry.type === ACTIVITY_TYPES.STATUS_CHANGED) {
-    return STATUS_DOTS[entry.toStatus] || "bg-slate-400";
-  }
+  if (isCreatedEntry(entry)) return "bg-slate-400";
 
-  return "bg-slate-400";
+  return STATUS_DOTS[entry.toStatus] || "bg-slate-400";
 };
 
 function TaskActivity({ entries = [] }) {
@@ -40,9 +41,8 @@ function TaskActivity({ entries = [] }) {
 
       {entries.length === 0 ? (
         /*
-        | Purane tasks mein activity node hai hi nahi (aur unka koi
-        | migration nahi hua) — unke liye yahi soft line dikhti hai,
-        | bilkul waise jaise description na hone par dikhti hai.
+        | Jis task ka records node hai hi nahi — unke liye yahi soft line
+        | dikhti hai, bilkul waise jaise description na hone par dikhti hai.
         */
         <p className="mt-1.5 text-sm italic text-slate-400">No activity yet.</p>
       ) : (

@@ -16,6 +16,7 @@ import {
   dueLabel,
   filterOwnTasks,
   getCurrentActor,
+  getCurrentEmployeeId,
   todayInputValue,
 } from "../utils/tasks/taskUtils";
 
@@ -47,10 +48,23 @@ function EmployeeTasks() {
   const navigate = useNavigate();
   const companyCode = localStorage.getItem("companyCode");
   const { currentUser } = useAuth();
-  const { canAccessSection } = useRoleAccess();
+  const { canAccessSection, isOwner } = useRoleAccess();
 
   // tasks.viewAll wale ko sabke tasks, baaki ko sirf apne
   const canViewAll = canAccessSection("tasks.viewAll");
+
+  /*
+  | Checkbox status hi badalta hai (Completed), isliye uspar wahi niyam
+  | chalta hai jo /tasks ke dropdown par: apna task hi poora kar sakte ho.
+  |
+  | HR ko tasks.viewAll se Employee ke tasks bhi is card mein dikhte hain —
+  | unpar tick nahi milta, sirf dikhte hain. Owner khud-ba-khud bahar hai:
+  | uska employee record hi nahi, to koi task uska ho hi nahi sakta.
+  */
+  const myEmployeeId = getCurrentEmployeeId(currentUser);
+
+  const canCompleteTask = (task) =>
+    !isOwner && Boolean(myEmployeeId) && task?.assignedTo === myEmployeeId;
   // Dono mein se koi bhi ho to /tasks par task ban sakta hai — Employee ke
   // paas sirf createOwn hota hai
   const canCreateTask =
@@ -195,13 +209,15 @@ function EmployeeTasks() {
               key={task.id}
               className="flex items-start gap-3 sm:gap-4 py-3 sm:py-4 border-b border-gray-200 last:border-b-0"
             >
-              <input
-                type="checkbox"
-                checked={false}
-                onChange={() => completeTask(task)}
-                aria-label={`Mark ${task.title} as completed`}
-                className="mt-1 h-4 w-4 shrink-0 cursor-pointer accent-blue-600"
-              />
+              {canCompleteTask(task) && (
+                <input
+                  type="checkbox"
+                  checked={false}
+                  onChange={() => completeTask(task)}
+                  aria-label={`Mark ${task.title} as completed`}
+                  className="mt-1 h-4 w-4 shrink-0 cursor-pointer accent-blue-600"
+                />
+              )}
 
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm sm:text-base text-gray-700">{task.title}</p>

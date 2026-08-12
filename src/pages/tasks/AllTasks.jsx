@@ -5,11 +5,13 @@ import {
   createTask,
   deleteTask,
   IN_PROGRESS_STATUS,
+  subscribeTaskActivity,
   subscribeTasks,
   updateTask,
   updateTaskStatus,
 } from "../../services/taskService";
 import { getEmployees } from "../../services/EmployeeService";
+import { ROLE } from "../../utils/attendance/attendanceConstants";
 import { validateField } from "../../utils/validation/validateField";
 import useAuth from "../../hooks/useAuth";
 import useRoleAccess from "../../hooks/useRoleAccess";
@@ -23,6 +25,7 @@ import {
   TASK_CONTEXT_LABELS,
 } from "../../utils/tasks/taskConstants";
 import {
+  assigneeName,
   filterOwnTasks,
   filterTasks,
   getCurrentActor,
@@ -30,6 +33,7 @@ import {
   isTaskCreator,
   recentTasks,
   runningTasksOf,
+  taskActivityList,
   taskProgress,
   taskSummary,
   teamWorkload,
@@ -68,7 +72,7 @@ function AllTasks() {
   const { currentUser } = useAuth();
 
   // Owner Settings se ye sab on/off karta hai. Owner ke liye hamesha true.
-  const { canAccessSection } = useRoleAccess();
+  const { canAccessSection, isOwner } = useRoleAccess();
 
   const canViewAll = canAccessSection("tasks.viewAll");
   const showProgress = canAccessSection("tasks.progress");
@@ -103,6 +107,24 @@ function AllTasks() {
   // Per-row check — ek global boolean se kaam nahi chalta.
   const canEditTask = (task) =>
     canUpdateTask || (canUpdateOwn && isTaskCreator(task, myEmployeeId));
+
+  /*
+  | Status badalna baaki haqon se bilkul alag chalta hai: dekhne, banane,
+  | assign karne ya edit karne se koi kaam nahi hota — kaam wahi karta hai
+  | jise task mila hai. Isliye ek hi niyam sab par:
+  |
+  |   apna status hi badal sakte ho.
+  |
+  | Owner khud-ba-khud bahar ho jaata hai — uska employee record hi nahi,
+  | to koi task uska ho hi nahi sakta. HR sabke tasks dekh sakta hai (aur
+  | dena/edit karna bhi uska haq hai), par jo usne Employee ko diya hai
+  | usko chalu ya poora wahi Employee karega.
+  |
+  | Per-task check hai, ek global boolean nahi — HR ki list mein uske apne
+  | aur doosron ke, dono tarah ke tasks ek saath hote hain.
+  */
+  const canChangeStatus = (task) =>
+    !isOwner && Boolean(myEmployeeId) && task?.assignedTo === myEmployeeId;
 
   // Actions column ka faisla — kisi bhi task par kuch kar sakte ho ya nahi.
   // Filtered list se nahi nikalte, warna column aata-jaata rehta.
@@ -139,6 +161,13 @@ function AllTasks() {
   // Activity modal bhi sirf id rakhta hai — poora object rakhte to modal
   // khula rehte hue nayi entry usme nahi pahunchti
   const [activityTaskId, setActivityTaskId] = useState(null);
+  /*
+  | Khule hue task ki history — records se alag aati hai, task ke saath
+  | nahi. taskId saath rakhte hain taaki pata rahe ki ye kis task ki hai:
+  | modal badalte hi purani history ek pal ke liye dikh jaati, aur "aa chuki
+  | hai ya nahi" ka bhi koi pata na chalta.
+  */
+  const [activity, setActivity] = useState(null);
   const [deleting, setDeleting] = useState(false);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState(ALL_STATUSES);
@@ -187,10 +216,13 @@ function AllTasks() {
 
     getEmployees(companyCode)
       .then((data) => {
-        // Firebase ki key hi employeeId hai
+        // Firebase ki key hi employeeId hai. role saath aata hai kyunki
+        // "kisko assign kar sakte ho" usi par tika hai — HR doosre HR ko
+        // nahi de sakta.
         const list = Object.entries(data).map(([id, employee]) => ({
           id,
           name: employee.personalInfo?.name || id,
+          role: employee.account?.role || "",
         }));
         setEmployees(list.sort((a, b) => a.name.localeCompare(b.name)));
       })
@@ -198,6 +230,30 @@ function AllTasks() {
         console.error("Failed to load employees:", err);
       });
   }, [companyCode, needsEmployees]);
+
+  /*
+  | Assign dropdown ki list. Assignee column aur workload poori list se
+  | chalte hain (naam to sabke dikhne chahiye), par dena kisko hai — wo
+  | role par tika hai:
+  |
+  |   Owner  → HR aur Employee, dono
+  |   HR     → sirf Employee, aur khud
+  |
+  | Owner is list mein aata hi nahi — uska employee record hota hi nahi,
+  | isliye "Assign to Owner" ka sawaal hi nahi uthta.
+  |
+  | HR khud list mein rehta hai taaki apne liye task bana sake; doosre HR
+  | hat jaate hain.
+  */
+  const assignableEmployees = useMemo(
+    () =>
+      isOwner
+        ? employees
+        : employees.filter(
+            (employee) => employee.role !== ROLE.HR || employee.id === myEmployeeId
+          ),
+    [employees, isOwner, myEmployeeId]
+  );
 
   // tasks.viewAll na ho to hamesha sirf apne tasks. Ho to sab, jab tak khud
   // "My tasks" na chune. Filter browser mein hota hai — attendance requests
@@ -300,6 +356,45 @@ function AllTasks() {
     [roleTasks, activityTaskId]
   );
 
+  /*
+  | History ab task ke andar nahi aati — wo records mein alag padi hai,
+  | isliye uska apna listener hai. Chalta sirf tab hai jab modal khula ho,
+  | aur band karte hi ruk jaata hai: jitne tasks hain utni history har baar
+  | utaarna bekaar hai, jab ek waqt par ek hi dikhti hai.
+  |
+  | Realtime isliye rakha hai ki modal khula rehte hue koi status badle to
+  | nayi line apne aap upar aa jaaye — wahi behaviour jo pehle tha.
+  |
+  | State par taskId chipka kar bhejte hain — jab tak wo khule hue task se
+  | mel na khaye, modal loading dikhata hai. Effect khud state saaf nahi
+  | karta: uska kaam sirf subscribe karna hai.
+  */
+  useEffect(() => {
+    if (!companyCode || !activityTaskId) return;
+
+    const unsubscribe = subscribeTaskActivity(
+      companyCode,
+      activityTaskId,
+      (data) => setActivity({ taskId: activityTaskId, data }),
+      (err) => {
+        console.error("Failed to load task activity:", err);
+        // Page-level error nahi — baaki list theek hai. Modal khaali
+        // timeline dikha dega.
+        setActivity({ taskId: activityTaskId, data: {} });
+      }
+    );
+
+    return unsubscribe;
+  }, [companyCode, activityTaskId]);
+
+  // Doosre task ki history apne aap chhoot jaati hai — id milti hi nahi
+  const activityLoaded = Boolean(activity && activity.taskId === activityTaskId);
+
+  const activityEntries = useMemo(
+    () => (activityLoaded ? taskActivityList(activity.data) : []),
+    [activityLoaded, activity]
+  );
+
   // "View all" — us section ka context lagao, status filter hatao, table par jao
   const showTableContext = (context) => {
     setTableContext(context);
@@ -379,18 +474,46 @@ function AllTasks() {
       assignedTo: selfAssignOnly ? myEmployeeId : formData.assignedTo,
     };
 
+    /*
+    | Jise task mil raha hai uska naam — activity entry ke saath jaata hai,
+    | taaki timeline "Task assigned to Sakshi Jethi" keh sake bina employees
+    | list ke (Employee ke paas wo hoti hi nahi).
+    |
+    | Apne liye banaya task: assigneeName() employees list mein dhoondhta
+    | hai, par selfAssign wale ke paas list hai hi nahi — us soorat mein
+    | naam khud uska hai.
+    */
+    const assignedToName =
+      payload.assignedTo === myEmployeeId
+        ? actor.name
+        : assigneeName(payload, employees);
+
     setSaving(true);
     try {
       if (editingTask) {
-        // Audit fields nahi bhejte — updateTask khud sirf editable fields
-        // chhaanta hai, to createdBy/createdById/createdAt bache rehte hain
-        await updateTask(companyCode, editingTask.id, payload);
-      } else {
-        await createTask(companyCode, {
-          ...payload,
-          createdBy: actor.name,
-          createdById: actor.id,
+        /*
+        | Audit fields nahi bhejte — updateTask khud sirf editable fields
+        | chhaanta hai, to createdBy/createdById/createdAt bache rehte hain.
+        |
+        | actor aur purana task isliye ki assignee badle to uski entry bhi
+        | usi write mein jaaye. Baaki edit (title/priority/date) history mein
+        | nahi jaate.
+        */
+        await updateTask(companyCode, editingTask.id, payload, {
+          actor,
+          previous: editingTask,
+          assignedToName,
         });
+      } else {
+        await createTask(
+          companyCode,
+          {
+            ...payload,
+            createdBy: actor.name,
+            createdById: actor.id,
+          },
+          { assignedToName }
+        );
       }
 
       // List khud update ho jaayegi — subscribeTasks listener se
@@ -615,6 +738,7 @@ function AllTasks() {
             showAssignee={canViewAll}
             canUpdate={canEditTask}
             canDelete={canDeleteTask}
+            canChangeStatus={canChangeStatus}
             showActions={canActOnTasks}
             showActivity={canViewActivity}
             onStatusChange={changeStatus}
@@ -644,7 +768,9 @@ function AllTasks() {
         isEdit={Boolean(editingTask)}
         formData={formData}
         errors={errors}
-        employees={employees}    //state modal ko bheji jati hai
+        // Sirf wahi log jinhe ye user task de sakta hai — baaki jagah poori
+        // list jaati hai, kyunki wahan naam dikhane ka kaam hai
+        employees={assignableEmployees}
         // true ho to assignee field dikhti hi nahi — task khud ke naam par
         selfAssign={selfAssignOnly}
         saving={saving}
@@ -664,6 +790,8 @@ function AllTasks() {
       <TaskActivityModal
         open={Boolean(activityTask)}
         task={activityTask}
+        entries={activityEntries}
+        loading={!activityLoaded}
         onClose={() => setActivityTaskId(null)}
       />
 

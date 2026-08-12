@@ -1,6 +1,5 @@
 import { useEffect } from "react";
 import { Clock, X } from "lucide-react";
-import { taskActivityList } from "../../utils/tasks/taskUtils";
 import TaskActivity from "./TaskActivity";
 
 /*
@@ -13,14 +12,18 @@ import TaskActivity from "./TaskActivity";
 | ka hissa scroll hota hai. Poori list yahan aati hai (koi limit nahi),
 | isliye lambi history par yahi hissa chalega.
 |
-| Timeline khud nahi banata — wahi TaskActivity component use hota hai, aur
-| entries taskActivityList() se aati hain. Firebase se yahan koi baat nahi
-| hoti: task page ki state se milta hai, isliye modal khula rehte hue nayi
-| entry apne aap upar aa jaati hai.
+| Timeline khud nahi banata — wahi TaskActivity component use hota hai.
+| Firebase se yahan koi baat nahi hoti: task aur entries dono page ki state
+| se aate hain, aur wo dono realtime hain — isliye modal khula rehte hue
+| nayi entry apne aap upar aa jaati hai.
+|
+| loading tab dikhta hai jab records se pehli baar entries aa rahi hon.
+| Pehle activity task ke saath hi aa jaati thi, ab uska apna listener hai —
+| bina iske ek pal ke liye "No activity yet" jhalak jaata hai.
 |--------------------------------------------------------------------------
 */
 
-function TaskActivityModal({ open, task, onClose }) {
+function TaskActivityModal({ open, task, entries = [], loading = false, onClose }) {
   // Escape se band, aur peeche ka page scroll na ho
   useEffect(() => {
     if (!open) return;
@@ -91,7 +94,13 @@ function TaskActivityModal({ open, task, onClose }) {
 
         {/* Body — lambi history par yahi hissa scroll hota hai */}
         <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
-          <TaskActivity entries={taskActivityList(task)} />
+          {loading ? (
+            <p className="py-6 text-center text-sm text-slate-400">
+              Loading activity...
+            </p>
+          ) : (
+            <TaskActivity entries={entries} />
+          )}
         </div>
 
         {/* Footer */}
