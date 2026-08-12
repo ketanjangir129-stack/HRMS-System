@@ -90,7 +90,7 @@ function RecentLeaveRequests({
 
             <div
               key={request.requestId}
-              className="flex flex-col gap-3 px-6 py-4 transition-colors hover:bg-slate-50 sm:flex-row sm:items-center sm:justify-between"
+              className="flex flex-col gap-3 px-4 py-4 transition-colors hover:bg-slate-50 sm:flex-row sm:items-center sm:justify-between sm:px-6"
             >
 
               <div className="flex min-w-0 items-start gap-3">
@@ -130,7 +130,7 @@ function RecentLeaveRequests({
                     onClick={() => onView(request)}
                     aria-label="View request"
                     title="View request"
-                    className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition-all hover:border-blue-500 hover:bg-blue-50 hover:text-blue-600"
+                    className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition-all hover:border-blue-500 hover:bg-blue-50 hover:text-blue-600 sm:h-8 sm:w-8"
                   >
                     <FiEye size={14} />
                   </button>
@@ -142,7 +142,7 @@ function RecentLeaveRequests({
                     onClick={() => onDelete(request)}
                     aria-label="Withdraw request"
                     title="Withdraw request"
-                    className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition-all hover:border-red-500 hover:bg-red-50 hover:text-red-600"
+                    className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition-all hover:border-red-500 hover:bg-red-50 hover:text-red-600 sm:h-8 sm:w-8"
                   >
                     <FiTrash2 size={14} />
                   </button>

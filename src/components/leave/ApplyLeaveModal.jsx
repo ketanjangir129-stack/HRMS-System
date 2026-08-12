@@ -196,27 +196,33 @@ function ApplyLeaveForm({
 
   return (
 
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-sm">
+    /*
+    | A sheet off the bottom edge on a phone and a centred dialog from `sm`.
+    | The heading and the submit action are pinned while the form scrolls
+    | between them, so "Apply Leave" is reachable without scrolling the whole
+    | form back down on a small screen.
+    */
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-900/50 backdrop-blur-sm sm:items-center sm:p-4">
 
-      <div className="hide-scrollbar max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-2xl bg-white shadow-2xl">
+      <div className="flex max-h-[92dvh] w-full max-w-3xl flex-col overflow-hidden rounded-t-2xl bg-white shadow-2xl sm:max-h-[90dvh] sm:rounded-2xl">
 
         {/* Header */}
 
-        <div className="sticky top-0 z-10 flex items-center justify-between gap-4 border-b border-slate-200 bg-white px-6 py-5 sm:px-8">
+        <div className="flex shrink-0 items-center justify-between gap-3 border-b border-slate-200 px-4 py-4 sm:gap-4 sm:px-6 sm:py-5 lg:px-8">
 
           <div className="flex min-w-0 items-center gap-3">
 
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600 sm:h-11 sm:w-11">
               <FiCalendar size={20} />
             </div>
 
             <div className="min-w-0">
 
-              <h2 className="text-xl font-bold text-slate-900">
+              <h2 className="text-base font-bold text-slate-900 sm:text-xl">
                 Apply Leave
               </h2>
 
-              <p className="mt-0.5 truncate text-sm text-slate-500">
+              <p className="mt-0.5 truncate text-xs text-slate-500 sm:text-sm">
                 Submit a leave request for approval.
               </p>
 
@@ -238,17 +244,17 @@ function ApplyLeaveForm({
 
         {/* Body */}
 
-        <div className="space-y-7 p-6 sm:p-8">
+        <div className="hide-scrollbar min-h-0 flex-1 space-y-5 overflow-y-auto p-4 sm:space-y-7 sm:p-6 lg:p-8">
 
           {/* Request Type */}
 
           <div>
 
-            <label className="mb-3 block text-xs font-semibold uppercase tracking-wide text-slate-500">
+            <label className="mb-2.5 block text-xs font-semibold uppercase tracking-wide text-slate-500 sm:mb-3">
               Request Type
             </label>
 
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-3 sm:gap-3">
 
               {LEAVE_REQUEST_TYPES.map((item) => (
 
@@ -310,7 +316,7 @@ function ApplyLeaveForm({
 
           {requestType === LEAVE_REQUEST_TYPE.MULTIPLE_DAY && (
 
-            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5">
 
               <div>
 
@@ -353,7 +359,7 @@ function ApplyLeaveForm({
 
           {requestType === LEAVE_REQUEST_TYPE.HALF_DAY && (
 
-            <div className="space-y-5">
+            <div className="space-y-4 sm:space-y-5">
 
               <div>
 
@@ -374,11 +380,13 @@ function ApplyLeaveForm({
 
               <div>
 
-                <label className="mb-3 block text-xs font-semibold uppercase tracking-wide text-slate-500">
+                <label className="mb-2.5 block text-xs font-semibold uppercase tracking-wide text-slate-500 sm:mb-3">
                   Session
                 </label>
 
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                {/* Two across even on a phone: the pair is a choice between
+                    the halves of one day, and side by side is how it reads. */}
+                <div className="grid grid-cols-2 gap-2.5 sm:gap-3">
 
                   {HALF_DAY_SESSIONS.map((item) => (
 
@@ -413,9 +421,9 @@ function ApplyLeaveForm({
 
           {/* Duration & Balance */}
 
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
 
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:p-5">
 
               <div className="flex items-center gap-3">
 
@@ -423,13 +431,13 @@ function ApplyLeaveForm({
                   <FiClock />
                 </div>
 
-                <div>
+                <div className="min-w-0">
 
-                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500 sm:text-xs">
                     Leave Duration
                   </p>
 
-                  <h3 className="mt-1 text-xl font-bold text-slate-900">
+                  <h3 className="mt-1 text-lg font-bold text-slate-900 sm:text-xl">
                     {formatLeaveDuration(leaveDays)}
                   </h3>
 
@@ -467,7 +475,7 @@ function ApplyLeaveForm({
             </div>
 
             <div
-              className={`rounded-2xl border p-5 transition-colors ${
+              className={`rounded-2xl border p-4 transition-colors sm:p-5 ${
                 isOverdrawn
                   ? "border-red-100 bg-red-50"
                   : "border-blue-100 bg-blue-50"
@@ -484,14 +492,14 @@ function ApplyLeaveForm({
                   {isOverdrawn ? <FiAlertCircle /> : <FiCalendar />}
                 </div>
 
-                <div>
+                <div className="min-w-0">
 
-                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500 sm:text-xs">
                     Remaining Balance
                   </p>
 
                   <h3
-                    className={`mt-1 text-xl font-bold ${
+                    className={`mt-1 text-lg font-bold sm:text-xl ${
                       isOverdrawn ? "text-red-700" : "text-blue-700"
                     }`}
                   >
@@ -514,8 +522,8 @@ function ApplyLeaveForm({
 
           {balance?.pending > 0 && (
 
-            <p className="flex items-center gap-2 rounded-xl border border-amber-100 bg-amber-50 px-4 py-3 text-xs font-medium text-amber-700">
-              <FiAlertCircle />
+            <p className="flex items-start gap-2 rounded-xl border border-amber-100 bg-amber-50 px-3 py-3 text-xs font-medium text-amber-700 sm:items-center sm:px-4">
+              <FiAlertCircle className="mt-0.5 shrink-0 sm:mt-0" />
               {balance.pending} day(s) are held by requests still awaiting approval.
             </p>
 
@@ -530,7 +538,7 @@ function ApplyLeaveForm({
             </label>
 
             <textarea
-              rows={5}
+              rows={4}
               value={reason}
               onChange={(e) =>
                 setReason(e.target.value)
@@ -549,7 +557,7 @@ function ApplyLeaveForm({
 
         {/* Footer */}
 
-        <div className="sticky bottom-0 flex flex-col-reverse gap-3 border-t border-slate-200 bg-white px-6 py-5 sm:flex-row sm:justify-end sm:px-8">
+        <div className="flex shrink-0 flex-col-reverse gap-2 border-t border-slate-200 px-4 py-4 sm:flex-row sm:justify-end sm:gap-3 sm:px-6 sm:py-5 lg:px-8">
 
           <button
             type="button"

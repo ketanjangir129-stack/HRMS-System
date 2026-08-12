@@ -291,6 +291,116 @@ function LeaveHistoryTable({
 
   ].filter((column) => hasColumn(column.key));
 
+  /*
+  |--------------------------------------------------------------------------
+  | Mobile
+  |--------------------------------------------------------------------------
+  | Below `md` the same request is a stacked card instead of a row. Six
+  | columns in a 360px viewport is a sideways scroll through every record,
+  | and the one thing this list is read for - what happened to which days -
+  | is what ends up off screen.
+  |
+  | The card leads with whatever identifies the request on this screen: the
+  | employee on the approval queue, the dates on an employee's own history.
+  | The status sits opposite it, because that is what the list is scanned
+  | for. Everything else is grouped into the tinted block below.
+  |
+  | `hasColumn` is honoured here as well, so a column the caller dropped on
+  | purpose is not quietly reintroduced on a phone.
+  */
+
+  const mobileCard = (row) => (
+
+    <div className="space-y-3">
+
+      <div className="flex items-start justify-between gap-3">
+
+        {showEmployee ? (
+
+          <EmployeeCell
+            name={row.employeeName}
+            employeeId={row.employeeId}
+            subtitle={row.department}
+            size="sm"
+          />
+
+        ) : (
+
+          <div className="min-w-0">
+
+            <p className="text-sm font-semibold text-slate-800">
+              {formatLeaveRange(row)}
+            </p>
+
+            <p className="mt-0.5 text-xs text-slate-400">
+              Applied {formatDateTime(row.requestedAt)}
+            </p>
+
+          </div>
+
+        )}
+
+        <div className="flex shrink-0 flex-col items-end gap-1">
+
+          <LeaveStatusBadge status={row.status} size="sm" />
+
+          {row.approvedBy && (
+            <span className="max-w-28 truncate text-[11px] text-slate-400">
+              by {row.approvedBy}
+            </span>
+          )}
+
+        </div>
+
+      </div>
+
+      <div className="space-y-1.5 rounded-xl bg-slate-50 px-3 py-2.5">
+
+        {/* Only when the employee took the top line above. */}
+        {showEmployee && (
+          <p className="text-xs font-semibold text-slate-800">
+            {formatLeaveRange(row)}
+          </p>
+        )}
+
+        <div className="flex flex-wrap items-center gap-2">
+
+          <span className="inline-flex whitespace-nowrap rounded-lg bg-white px-2.5 py-1 text-xs font-semibold text-slate-700 ring-1 ring-slate-200">
+            {formatLeaveType(row)}
+          </span>
+
+          {hasColumn("days") && (
+            <span className="text-xs font-medium text-slate-600">
+              {formatLeaveDuration(row.days)}
+            </span>
+          )}
+
+        </div>
+
+        {hasColumn("reason") && (
+          <p className="line-clamp-2 text-xs text-slate-500">
+            {row.reason || "--"}
+          </p>
+        )}
+
+        {showEmployee && (
+          <p className="text-xs text-slate-400">
+            Applied {formatDateTime(row.requestedAt)}
+          </p>
+        )}
+
+      </div>
+
+      {renderActions && (
+        <div className="flex items-center justify-end">
+          {renderActions(row)}
+        </div>
+      )}
+
+    </div>
+
+  );
+
   return (
 
     <AttendancePanel
@@ -359,9 +469,11 @@ function LeaveHistoryTable({
         resetKey={`${keyword}|${status}|${requestType}`}
         pageSize={LEAVE_PAGE_SIZE}
         paginationLabel="leave requests"
+        mobileCard={mobileCard}
         /*
-        | Grows with the columns that appear at each breakpoint, so a phone
-        | scrolls a compact four column table instead of a 1100px one.
+        | Grows with the columns that appear at each breakpoint. The table
+        | itself now only starts at `md`, where there is room for it, so the
+        | narrowest width it has to fit is a tablet's rather than a phone's.
         */
         minWidthClass={
           showEmployee

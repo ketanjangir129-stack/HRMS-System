@@ -31,7 +31,7 @@ import LeaveStatusBadge from "./common/LeaveStatusBadge";
 function DetailRow({ icon, label, value }) {
 
   return (
-    <div className="flex items-start gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4">
+    <div className="flex items-start gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3 sm:p-4">
 
       <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white text-slate-500 shadow-sm">
         {icon}
@@ -39,7 +39,7 @@ function DetailRow({ icon, label, value }) {
 
       <div className="min-w-0">
 
-        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+        <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500 sm:text-xs">
           {label}
         </p>
 
@@ -88,37 +88,47 @@ function LeaveRequestDetailModal({
 
   return (
 
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-sm">
+    /*
+    | A sheet off the bottom edge on a phone and a centred dialog from `sm`,
+    | which is the shape every other modal in the product takes. The header
+    | and the review actions are pinned so a long reason scrolls between them
+    | rather than pushing Approve out of reach.
+    */
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-900/50 backdrop-blur-sm sm:items-center sm:p-4">
 
-      <div className="hide-scrollbar max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white shadow-2xl">
+      <div className="flex max-h-[92dvh] w-full max-w-2xl flex-col overflow-hidden rounded-t-2xl bg-white shadow-2xl sm:max-h-[90dvh] sm:rounded-2xl">
 
         {/* Header */}
 
-        <div className="sticky top-0 z-10 flex items-center justify-between gap-4 border-b border-slate-200 bg-white px-6 py-5">
+        <div className="flex shrink-0 items-center justify-between gap-3 border-b border-slate-200 px-4 py-4 sm:gap-4 sm:px-6 sm:py-5">
 
           <div className="flex min-w-0 items-center gap-3">
 
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600 sm:h-11 sm:w-11">
               <FiFileText size={20} />
             </div>
 
             <div className="min-w-0">
 
-              <h2 className="text-lg font-bold text-slate-900">
+              <h2 className="text-base font-bold text-slate-900 sm:text-lg">
                 Leave Request
               </h2>
 
-              <p className="truncate text-sm text-slate-500">
-                {request.requestId}
+              <p className="truncate text-xs text-slate-500 sm:text-sm">
+                {/* {request.requestId} */}
               </p>
 
             </div>
 
           </div>
 
-          <div className="flex shrink-0 items-center gap-3">
+          <div className="flex shrink-0 items-center gap-2 sm:gap-3">
 
-            <LeaveStatusBadge status={request.status} size="sm" />
+            {/* Moves into the body on a phone, where the header has no room
+                for both the pill and the close button. */}
+            <span className="hidden sm:inline-flex">
+              <LeaveStatusBadge status={request.status} size="sm" />
+            </span>
 
             <button
               type="button"
@@ -136,9 +146,13 @@ function LeaveRequestDetailModal({
 
         {/* Body */}
 
-        <div className="space-y-4 p-6">
+        <div className="hide-scrollbar min-h-0 flex-1 space-y-3 overflow-y-auto p-4 sm:space-y-4 sm:p-6">
 
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div className="flex sm:hidden">
+            <LeaveStatusBadge status={request.status} size="sm" />
+          </div>
+
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
 
             <DetailRow
               icon={<FiUser />}
@@ -170,9 +184,9 @@ function LeaveRequestDetailModal({
 
           </div>
 
-          <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+          <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 sm:p-4">
 
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500 sm:text-xs">
               Reason
             </p>
 
@@ -182,7 +196,7 @@ function LeaveRequestDetailModal({
 
           </div>
 
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
 
             <DetailRow
               icon={<FiClock />}
@@ -204,9 +218,9 @@ function LeaveRequestDetailModal({
 
           {request.remarks && (
 
-            <div className="rounded-xl border border-red-100 bg-red-50 p-4">
+            <div className="rounded-xl border border-red-100 bg-red-50 p-3 sm:p-4">
 
-              <p className="text-xs font-semibold uppercase tracking-wide text-red-500">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-red-500 sm:text-xs">
                 Reviewer Remarks
               </p>
 
@@ -222,7 +236,7 @@ function LeaveRequestDetailModal({
 
         {/* Footer */}
 
-        <div className="sticky bottom-0 flex flex-col-reverse gap-3 border-t border-slate-200 bg-white px-6 py-5 sm:flex-row sm:justify-end">
+        <div className="flex shrink-0 flex-col-reverse gap-2 border-t border-slate-200 px-4 py-4 sm:flex-row sm:justify-end sm:gap-3 sm:px-6 sm:py-5">
 
           <button
             type="button"

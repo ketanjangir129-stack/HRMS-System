@@ -233,7 +233,7 @@ function LeaveDashboard() {
 
     return (
 
-        <div className="mx-auto max-w-[1600px] space-y-6 p-1 sm:p-2">
+        <div className="mx-auto max-w-[1600px] space-y-4 p-1 sm:space-y-6 sm:p-2">
 
             <LeaveHeader
                 year={year}
@@ -257,7 +257,7 @@ function LeaveDashboard() {
                     />
 
                     {balanceError && (
-                        <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-600">
+                        <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-600 sm:p-4 sm:text-sm">
                             {balanceError}
                         </div>
                     )}
@@ -265,9 +265,15 @@ function LeaveDashboard() {
                 </>
             )}
 
+            {/*
+            | The calendar and the recent list only sit side by side from `xl`.
+            | Below that the calendar needs the full width to keep seven
+            | readable columns, so the two stack rather than being squeezed
+            | into halves of a tablet.
+            */}
             {(showCalendar || showHistory) && (
 
-                <div className="grid grid-cols-1 gap-6 xl:grid-cols-12">
+                <div className="grid grid-cols-1 gap-4 sm:gap-6 xl:grid-cols-12">
 
                     {showCalendar && (
                         <div className={showHistory ? "xl:col-span-5" : "xl:col-span-12"}>

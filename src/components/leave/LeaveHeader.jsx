@@ -41,21 +41,21 @@ function LeaveHeader({
 
   return (
 
-    <div className="flex flex-col gap-5 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm lg:flex-row lg:items-center lg:justify-between">
+    <div className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:gap-5 sm:p-6 lg:flex-row lg:items-center lg:justify-between">
 
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-3 sm:gap-4">
 
-        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-blue-600 text-xl text-white shadow-sm shadow-blue-600/20">
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-blue-600 text-lg text-white shadow-sm shadow-blue-600/20 sm:h-12 sm:w-12 sm:text-xl">
           <MdOutlineBeachAccess />
         </div>
 
-        <div>
+        <div className="min-w-0">
 
-          <h1 className="text-2xl font-bold text-slate-900">
+          <h1 className="text-lg font-bold text-slate-900 sm:text-2xl">
             Leave Management
           </h1>
 
-          <p className="mt-1 text-sm text-slate-500">
+          <p className="mt-0.5 text-xs text-slate-500 sm:mt-1 sm:text-sm">
             Manage leave requests, balances and approvals.
           </p>
 
@@ -63,7 +63,16 @@ function LeaveHeader({
 
       </div>
 
-      <div className="flex flex-wrap items-center gap-3">
+      {/*
+      | On a phone the controls are a two column grid rather than a wrapped
+      | row: the year and the refresh share a line, and each action takes a
+      | line of its own, so "Apply Leave" is a full width target instead of
+      | whatever width happens to be left over at the end of a wrap.
+      |
+      | `col-span-2` is a grid property, so it is simply ignored once the
+      | container becomes the inline flex row from `sm` up.
+      */}
+      <div className="grid grid-cols-2 gap-2.5 sm:flex sm:flex-wrap sm:items-center sm:gap-3">
 
         <select
           value={year}
@@ -71,7 +80,7 @@ function LeaveHeader({
             setYear(Number(e.target.value))
           }
           aria-label="Leave year"
-          className="cursor-pointer rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 outline-none transition-all focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+          className="w-full cursor-pointer rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-700 outline-none transition-all focus:border-blue-500 focus:ring-2 focus:ring-blue-100 sm:w-auto sm:px-4"
         >
 
           {years.map((item) => (
@@ -91,7 +100,7 @@ function LeaveHeader({
           type="button"
           onClick={onRefresh}
           disabled={loading}
-          className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 transition-all hover:border-blue-500 hover:bg-blue-50 hover:text-blue-600 disabled:cursor-not-allowed disabled:opacity-60"
+          className="inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 transition-all hover:border-blue-500 hover:bg-blue-50 hover:text-blue-600 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
         >
 
           <FiRefreshCw
@@ -111,7 +120,7 @@ function LeaveHeader({
           <button
             type="button"
             onClick={() => navigate("/leave/approvals")}
-            className="relative inline-flex cursor-pointer items-center gap-2 rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 transition-all hover:border-blue-500 hover:bg-blue-50 hover:text-blue-600"
+            className="relative col-span-2 inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 transition-all hover:border-blue-500 hover:bg-blue-50 hover:text-blue-600 sm:w-auto"
           >
 
             <FiCheckSquare />
@@ -133,7 +142,7 @@ function LeaveHeader({
           <button
             type="button"
             onClick={onApplyLeave}
-            className="inline-flex cursor-pointer items-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-blue-600/20 transition-all duration-200 hover:-translate-y-0.5 hover:bg-blue-700 hover:shadow-lg hover:shadow-blue-600/30 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 active:translate-y-0"
+            className="col-span-2 inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-blue-600/20 transition-all duration-200 hover:-translate-y-0.5 hover:bg-blue-700 hover:shadow-lg hover:shadow-blue-600/30 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 active:translate-y-0 sm:w-auto"
           >
 
             <FiPlus />

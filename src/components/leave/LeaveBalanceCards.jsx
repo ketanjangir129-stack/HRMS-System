@@ -6,6 +6,18 @@ import {
   FiAlertTriangle,
 } from "react-icons/fi";
 
+/*
+| Two across on a phone rather than stacked: five full width cards are most
+| of a screen of scrolling before the calendar below them starts, and a
+| balance is a short enough number to read at half the width. Three across
+| from `md` so a tablet does not leave half of each row empty.
+|
+| Shared by the skeleton so the loading state occupies the same shape the
+| loaded cards will, and the page does not jump when the balance arrives.
+*/
+const GRID_CLASS =
+  "grid grid-cols-2 gap-3 sm:gap-6 md:grid-cols-3 xl:grid-cols-5";
+
 function LeaveBalanceCards({
   balance,
   loading,
@@ -15,13 +27,13 @@ function LeaveBalanceCards({
 
     return (
 
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-5">
+      <div className={GRID_CLASS}>
 
         {Array.from({ length: 5 }).map((_, index) => (
 
           <div
             key={index}
-            className="h-40 animate-pulse rounded-2xl border border-slate-200 bg-white"
+            className="h-32 animate-pulse rounded-2xl border border-slate-200 bg-white sm:h-40"
           />
 
         ))}
@@ -36,7 +48,7 @@ function LeaveBalanceCards({
 
     return (
 
-      <div className="rounded-2xl border border-slate-200 bg-white p-10 text-center">
+      <div className="rounded-2xl border border-slate-200 bg-white p-6 text-center sm:p-10">
 
         <h3 className="font-semibold text-slate-700">
           Leave balance not found
@@ -112,42 +124,47 @@ function LeaveBalanceCards({
 
   return (
 
-    <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-5">
+    <div className={GRID_CLASS}>
 
       {cards.map((card) => (
 
         <div
           key={card.title}
-          className="group relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg"
+          className="group relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg sm:p-6"
         >
 
           <span
             className={`absolute left-0 top-0 h-1 w-full ${card.color}`}
           />
 
-          <div className="flex items-start justify-between">
+          <div className="flex items-start justify-between gap-2">
 
-            <div>
+            <div className="min-w-0">
 
-              <p className="text-sm font-medium text-slate-500">
+              <p className="truncate text-xs font-medium text-slate-500 sm:text-sm">
                 {card.title}
               </p>
 
-              <h2 className="mt-2 text-4xl font-bold text-slate-900">
+              <h2 className="mt-1 text-2xl font-bold text-slate-900 sm:mt-2 sm:text-4xl">
                 {card.value}
               </h2>
 
             </div>
 
             <div
-              className={`flex h-12 w-12 items-center justify-center rounded-2xl text-xl ${card.iconBg} ${card.iconColor}`}
+              className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl text-lg sm:h-12 sm:w-12 sm:text-xl ${card.iconBg} ${card.iconColor}`}
             >
               {card.icon}
             </div>
 
           </div>
 
-          <p className="mt-6 text-sm text-slate-500">
+          {/*
+          | The remaining card's caption carries two figures, so it is left to
+          | wrap at half width rather than truncated: which part of the balance
+          | is already spoken for is the point of the line.
+          */}
+          <p className="mt-4 text-[11px] leading-relaxed text-slate-500 sm:mt-6 sm:text-sm">
             {card.subtitle}
           </p>
 
