@@ -76,17 +76,17 @@ function UpcomingHolidayCard({
 
           {/* Next holiday */}
 
-          <div className="flex flex-col gap-4 bg-blue-50/40 px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-col gap-3 bg-blue-50/40 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:px-6 sm:py-5">
 
-            <div className="flex min-w-0 items-center gap-4">
+            <div className="flex min-w-0 items-center gap-3 sm:gap-4">
 
               {/*
               | A date block rather than an icon: the date is the thing being
               | looked up, so it is what the eye should land on first.
               */}
-              <div className="flex h-14 w-14 shrink-0 flex-col items-center justify-center rounded-2xl bg-blue-600 text-white shadow-sm shadow-blue-600/20">
+              <div className="flex h-12 w-12 shrink-0 flex-col items-center justify-center rounded-2xl bg-blue-600 text-white shadow-sm shadow-blue-600/20 sm:h-14 sm:w-14">
 
-                <span className="text-lg font-bold leading-none">
+                <span className="text-base font-bold leading-none sm:text-lg">
                   {String(next.date).slice(8, 10)}
                 </span>
 
@@ -98,7 +98,7 @@ function UpcomingHolidayCard({
 
               <div className="min-w-0">
 
-                <p className="truncate text-base font-bold text-slate-900">
+                <p className="truncate text-sm font-bold text-slate-900 sm:text-base">
                   {next.name}
                 </p>
 
@@ -110,7 +110,8 @@ function UpcomingHolidayCard({
 
             </div>
 
-            <div className="flex shrink-0 flex-wrap items-center gap-2 pl-18 sm:pl-0">
+            {/* Indented to clear the date block when the row stacks on mobile. */}
+            <div className="flex shrink-0 flex-wrap items-center gap-2 pl-15 sm:pl-0">
 
               <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-blue-700 ring-1 ring-blue-200">
                 {formatDaysUntil(next.daysUntil)}
@@ -132,7 +133,7 @@ function UpcomingHolidayCard({
 
             <div
               key={holiday.holidayId}
-              className="flex flex-col gap-3 px-6 py-4 transition-colors hover:bg-slate-50 sm:flex-row sm:items-center sm:justify-between"
+              className="flex flex-col gap-3 px-4 py-4 transition-colors hover:bg-slate-50 sm:flex-row sm:items-center sm:justify-between sm:px-6"
             >
 
               <div className="flex min-w-0 items-start gap-3">

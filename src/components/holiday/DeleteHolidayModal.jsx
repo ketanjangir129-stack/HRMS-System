@@ -57,25 +57,25 @@ function DeleteHolidayModal({
 
     <div
       onClick={() => !deleting && onClose()}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-3 backdrop-blur-sm sm:p-4"
     >
 
       <div
         onClick={(event) => event.stopPropagation()}
-        className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl"
+        className="hide-scrollbar max-h-[92vh] w-full max-w-md overflow-y-auto rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl sm:p-6"
       >
 
         {/* Header */}
 
-        <div className="mb-5 flex items-start justify-between gap-4">
+        <div className="mb-4 flex items-start justify-between gap-3 sm:mb-5 sm:gap-4">
 
-          <div className="flex items-center gap-3">
+          <div className="flex min-w-0 items-center gap-3">
 
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-red-50 text-xl text-red-600">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-red-50 text-lg text-red-600 sm:h-11 sm:w-11 sm:text-xl">
               <FiAlertTriangle />
             </div>
 
-            <h2 className="text-xl font-bold tracking-tight text-slate-900">
+            <h2 className="text-lg font-bold tracking-tight text-slate-900 sm:text-xl">
               Delete Holiday
             </h2>
 
@@ -99,9 +99,15 @@ function DeleteHolidayModal({
 
         {/* The holiday being removed */}
 
-        <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-4">
+        <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-3 sm:p-4">
 
-          <div className="flex items-start justify-between gap-3">
+          {/*
+          | The badge drops under the holiday on a phone: a type and an
+          | optional pill beside the name leaves neither enough width to be
+          | read, and this is the dialog where the wrong day must not be
+          | mistaken for the right one.
+          */}
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
 
             <div className="min-w-0">
 
@@ -115,11 +121,13 @@ function DeleteHolidayModal({
 
             </div>
 
-            <HolidayTypeBadge
-              type={holiday.type}
-              isOptional={holiday.isOptional}
-              size="sm"
-            />
+            <span className="shrink-0">
+              <HolidayTypeBadge
+                type={holiday.type}
+                isOptional={holiday.isOptional}
+                size="sm"
+              />
+            </span>
 
           </div>
 
@@ -132,13 +140,18 @@ function DeleteHolidayModal({
 
         {/* Actions */}
 
-        <div className="mt-6 flex justify-end gap-3">
+        {/*
+        | Stacked on a phone with the destructive action on top, which is the
+        | order `flex-col-reverse` gives the same markup that reads Cancel
+        | then Delete on a wide screen.
+        */}
+        <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
 
           <button
             type="button"
             onClick={onClose}
             disabled={deleting}
-            className="cursor-pointer rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-600 transition-all duration-200 hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-300 disabled:cursor-not-allowed disabled:opacity-50"
+            className="w-full cursor-pointer rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-600 transition-all duration-200 hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-300 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
           >
             Cancel
           </button>
@@ -147,7 +160,7 @@ function DeleteHolidayModal({
             type="button"
             onClick={onConfirm}
             disabled={deleting}
-            className="inline-flex cursor-pointer items-center gap-2 rounded-xl bg-red-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-red-600/20 transition-all duration-200 hover:-translate-y-0.5 hover:bg-red-700 hover:shadow-lg hover:shadow-red-600/30 focus:outline-none focus:ring-2 focus:ring-red-400 focus:ring-offset-2 active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-70 disabled:hover:translate-y-0"
+            className="inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-red-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-red-600/20 transition-all duration-200 hover:-translate-y-0.5 hover:bg-red-700 hover:shadow-lg hover:shadow-red-600/30 focus:outline-none focus:ring-2 focus:ring-red-400 focus:ring-offset-2 active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-70 disabled:hover:translate-y-0 sm:w-auto"
           >
 
             {deleting ? (

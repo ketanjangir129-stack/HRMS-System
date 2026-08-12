@@ -32,15 +32,18 @@ import HolidayTypeBadge from "./common/HolidayTypeBadge";
 | Filtering stays here while sorting and pagination live in `DataTable`,
 | which is the split every attendance and leave table already uses.
 |
-| Columns are prioritised rather than all forced onto a phone: the holiday,
-| its date and the actions stay on every screen, and the day, type and
-| description drop out as the viewport narrows. Each of them is repeated
-| inside the holiday cell, so nothing is lost on a small screen.
+| Columns are prioritised rather than all forced onto a narrow screen: the
+| holiday, its date, the day and the actions stay wherever the table is
+| shown, and the type and description drop out as the viewport narrows. Each
+| of them is repeated inside the holiday cell, so nothing is lost in between.
+|
+| Below `md` the table is replaced by a stacked card per holiday, which is
+| what `DataTable` renders from `mobileCard`. Six columns in a 360px viewport
+| is a sideways scroll through every row.
 |--------------------------------------------------------------------------
 */
 
 const HIDDEN_UNTIL = {
-  md: "hidden md:table-cell",
   lg: "hidden lg:table-cell",
   xl: "hidden xl:table-cell",
   "2xl": "hidden 2xl:table-cell",
@@ -114,6 +117,45 @@ function HolidayTable({
     className: HIDDEN_UNTIL[breakpoint],
   });
 
+  /*
+  | The same two buttons in the Actions column and at the foot of the mobile
+  | card, written once so a permission that withholds one cannot leave it
+  | showing on the other. They are sized up on a phone, where they are a
+  | thumb target rather than a pointer one.
+  */
+
+  const renderActions = (row) => (
+
+    <div className="flex items-center justify-end gap-2">
+
+      {onEdit && (
+        <button
+          type="button"
+          onClick={() => onEdit(row)}
+          aria-label="Edit holiday"
+          title="Edit holiday"
+          className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition-all hover:border-blue-500 hover:bg-blue-50 hover:text-blue-600 md:h-8 md:w-8"
+        >
+          <FiEdit2 size={14} />
+        </button>
+      )}
+
+      {onDelete && (
+        <button
+          type="button"
+          onClick={() => onDelete(row)}
+          aria-label="Delete holiday"
+          title="Delete holiday"
+          className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition-all hover:border-red-500 hover:bg-red-50 hover:text-red-600 md:h-8 md:w-8"
+        >
+          <FiTrash2 size={14} />
+        </button>
+      )}
+
+    </div>
+
+  );
+
   const columns = [
 
     {
@@ -153,20 +195,13 @@ function HolidayTable({
               </p>
 
               {/*
-              | The columns hidden at this width, folded in here. Each span is
+              | The columns hidden at this width, folded in here. Each line is
               | hidden at exactly the breakpoint where its own column appears,
               | so a value is never shown twice and never missing in between.
               */}
               <p className="mt-1 text-xs text-slate-500 lg:hidden">
-
-                <span className="md:hidden">
-                  {getDayName(row.date, { short: true })}
-                  {" · "}
-                </span>
-
                 {row.type}
                 {row.isOptional ? " · Optional" : ""}
-
               </p>
 
               {row.description && (
@@ -198,7 +233,6 @@ function HolidayTable({
     {
       key: "day",
       label: "Day",
-      ...hideBelow("md"),
       render: (row) => (
         <span className="whitespace-nowrap text-sm text-slate-600">
           {getDayName(row.date)}
@@ -244,42 +278,107 @@ function HolidayTable({
             label: "Actions",
             align: "right",
             className: "whitespace-nowrap",
-            render: (row) => (
-
-              <div className="flex items-center justify-end gap-2">
-
-                {onEdit && (
-                  <button
-                    type="button"
-                    onClick={() => onEdit(row)}
-                    aria-label="Edit holiday"
-                    title="Edit holiday"
-                    className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition-all hover:border-blue-500 hover:bg-blue-50 hover:text-blue-600"
-                  >
-                    <FiEdit2 size={14} />
-                  </button>
-                )}
-
-                {onDelete && (
-                  <button
-                    type="button"
-                    onClick={() => onDelete(row)}
-                    aria-label="Delete holiday"
-                    title="Delete holiday"
-                    className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition-all hover:border-red-500 hover:bg-red-50 hover:text-red-600"
-                  >
-                    <FiTrash2 size={14} />
-                  </button>
-                )}
-
-              </div>
-
-            ),
+            render: (row) => renderActions(row),
           },
         ]
       : []),
 
   ];
+
+  /*
+  |--------------------------------------------------------------------------
+  | Mobile
+  |--------------------------------------------------------------------------
+  | Below `md` the same holiday is a stacked card instead of a row.
+  |
+  | The card leads with the name, because that is what the list is scanned
+  | for, and the type sits opposite it. The date and the day it falls on go
+  | into the tinted block below, together with the description: which day of
+  | the week a holiday lands on is half the reason this list is opened.
+  |
+  | A past holiday is dimmed here the same way it is in the table, so the
+  | year's record reads identically on either screen.
+  */
+
+  const mobileCard = (row) => {
+
+    const past = isPastHoliday(row);
+
+    return (
+
+      <div className="space-y-3">
+
+        <div className="flex items-start justify-between gap-3">
+
+          <div className="flex min-w-0 items-start gap-3">
+
+            <div
+              className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${
+                past
+                  ? "bg-slate-100 text-slate-400"
+                  : "bg-blue-50 text-blue-600"
+              }`}
+            >
+              <FiCalendar />
+            </div>
+
+            <div className="min-w-0">
+
+              <p
+                className={`text-sm font-semibold ${
+                  past ? "text-slate-500" : "text-slate-800"
+                }`}
+              >
+                {row.name}
+              </p>
+
+              <p className="mt-0.5 text-xs text-slate-400">
+                {past ? "Passed" : "Upcoming"}
+              </p>
+
+            </div>
+
+          </div>
+
+          <span className="shrink-0">
+            <HolidayTypeBadge
+              type={row.type}
+              isOptional={row.isOptional}
+              size="sm"
+            />
+          </span>
+
+        </div>
+
+        <div className="space-y-1.5 rounded-xl bg-slate-50 px-3 py-2.5">
+
+          <div className="flex flex-wrap items-center gap-2">
+
+            <span className="inline-flex whitespace-nowrap rounded-lg bg-white px-2.5 py-1 text-xs font-semibold text-slate-700 ring-1 ring-slate-200">
+              {formatHolidayDate(row.date)}
+            </span>
+
+            <span className="text-xs font-medium text-slate-600">
+              {getDayName(row.date)}
+            </span>
+
+          </div>
+
+          {row.description && (
+            <p className="line-clamp-2 text-xs text-slate-500">
+              {row.description}
+            </p>
+          )}
+
+        </div>
+
+        {(onEdit || onDelete) && renderActions(row)}
+
+      </div>
+
+    );
+
+  };
 
   return (
 
@@ -357,11 +456,13 @@ function HolidayTable({
         resetKey={`${keyword}|${type}|${optional}|${month}`}
         pageSize={HOLIDAY_PAGE_SIZE}
         paginationLabel="holidays"
+        mobileCard={mobileCard}
         /*
-        | Grows with the columns that appear at each breakpoint, so a phone
-        | scrolls a compact three column table instead of a 1100px one.
+        | Grows with the columns that appear at each breakpoint. The table
+        | itself now only starts at `md`, where there is room for it, so the
+        | narrowest width it has to fit is a tablet's rather than a phone's.
         */
-        minWidthClass="min-w-[420px] md:min-w-[560px] lg:min-w-[720px] xl:min-w-[900px]"
+        minWidthClass="min-w-[560px] lg:min-w-[720px] xl:min-w-[900px]"
         loadingMessage="Loading holidays..."
         empty={{
           icon: <FiCalendar size={28} />,

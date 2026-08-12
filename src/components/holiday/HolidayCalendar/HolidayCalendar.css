@@ -135,3 +135,38 @@
 .holiday-calendar .holiday-optional.holiday-company abbr {
   color: #8b5cf6;
 }
+
+/* Small screens
+
+   Seven columns have to fit whatever the viewport is, so the tiles are
+   shortened rather than squeezed: a 44px row is taller than it needs to be
+   once each column is only 40px wide, and the holiday circle is brought down
+   with it so it stays a circle instead of overflowing its own tile. */
+
+@media (max-width: 480px) {
+  .holiday-calendar .react-calendar__navigation {
+    height: 36px;
+    margin-bottom: 8px;
+  }
+
+  .holiday-calendar .react-calendar__navigation button {
+    font-size: 13px;
+    min-width: 30px;
+  }
+
+  .holiday-calendar .react-calendar__month-view__weekdays {
+    font-size: 10px;
+  }
+
+  .holiday-calendar .react-calendar__tile {
+    height: 38px;
+    font-size: 12px;
+  }
+
+  .holiday-calendar .holiday-national abbr,
+  .holiday-calendar .holiday-festival abbr,
+  .holiday-calendar .holiday-company abbr {
+    width: 26px;
+    height: 26px;
+  }
+}

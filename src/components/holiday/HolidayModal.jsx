@@ -185,27 +185,31 @@ function HolidayForm({
 
   return (
 
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-sm">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-3 backdrop-blur-sm sm:p-4">
 
-      <div className="hide-scrollbar max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-2xl bg-white shadow-2xl">
+      {/*
+      | Taller on a phone, where the browser chrome already takes a slice of
+      | the viewport and a 90vh sheet leaves the footer buttons floating.
+      */}
+      <div className="hide-scrollbar max-h-[92vh] w-full max-w-3xl overflow-y-auto rounded-2xl bg-white shadow-2xl sm:max-h-[90vh]">
 
         {/* Header */}
 
-        <div className="sticky top-0 z-10 flex items-center justify-between gap-4 border-b border-slate-200 bg-white px-6 py-5 sm:px-8">
+        <div className="sticky top-0 z-10 flex items-center justify-between gap-3 border-b border-slate-200 bg-white px-4 py-4 sm:gap-4 sm:px-8 sm:py-5">
 
           <div className="flex min-w-0 items-center gap-3">
 
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600 sm:h-11 sm:w-11">
               <FiCalendar size={20} />
             </div>
 
             <div className="min-w-0">
 
-              <h2 className="text-xl font-bold text-slate-900">
+              <h2 className="text-lg font-bold text-slate-900 sm:text-xl">
                 {isEdit ? "Edit Holiday" : "Add Holiday"}
               </h2>
 
-              <p className="mt-0.5 truncate text-sm text-slate-500">
+              <p className="mt-0.5 truncate text-xs text-slate-500 sm:text-sm">
                 {isEdit
                   ? "Update the holiday details."
                   : `Declare a holiday on the ${year} calendar.`}
@@ -229,7 +233,7 @@ function HolidayForm({
 
         {/* Body */}
 
-        <div className="space-y-7 p-6 sm:p-8">
+        <div className="space-y-5 p-4 sm:space-y-7 sm:p-8">
 
           {/* Name */}
 
@@ -440,13 +444,13 @@ function HolidayForm({
 
         {/* Footer */}
 
-        <div className="sticky bottom-0 flex flex-col-reverse gap-3 border-t border-slate-200 bg-white px-6 py-5 sm:flex-row sm:justify-end sm:px-8">
+        <div className="sticky bottom-0 flex flex-col-reverse gap-3 border-t border-slate-200 bg-white px-4 py-4 sm:flex-row sm:justify-end sm:px-8 sm:py-5">
 
           <button
             type="button"
             onClick={onClose}
             disabled={submitting}
-            className="cursor-pointer rounded-xl border border-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+            className="w-full cursor-pointer rounded-xl border border-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
           >
             Cancel
           </button>
@@ -455,7 +459,7 @@ function HolidayForm({
             type="button"
             onClick={handleSubmit}
             disabled={submitting}
-            className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-blue-600/20 transition-all duration-200 hover:-translate-y-0.5 hover:bg-blue-700 hover:shadow-lg hover:shadow-blue-600/30 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0"
+            className="inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-blue-600/20 transition-all duration-200 hover:-translate-y-0.5 hover:bg-blue-700 hover:shadow-lg hover:shadow-blue-600/30 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0 sm:w-auto"
           >
 
             {submitting && <FiLoader className="animate-spin" />}

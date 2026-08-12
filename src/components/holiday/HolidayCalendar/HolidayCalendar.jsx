@@ -57,17 +57,17 @@ function HolidayCalendar({
 
   return (
 
-    <div className="flex h-full flex-col rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+    <div className="flex h-full flex-col rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
 
       {/* Header */}
 
-      <div className="mb-5">
+      <div className="mb-4 sm:mb-5">
 
-        <h2 className="text-lg font-semibold text-slate-900">
+        <h2 className="text-base font-semibold text-slate-900 sm:text-lg">
           Holiday Calendar
         </h2>
 
-        <p className="mt-1 text-sm text-slate-500">
+        <p className="mt-1 text-xs text-slate-500 sm:text-sm">
           Company holidays across {year}
         </p>
 
@@ -117,9 +117,14 @@ function HolidayCalendar({
 
       {!loading && selected && (
 
-        <div className="mt-5 rounded-xl border border-slate-200 bg-slate-50 p-4">
+        <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-3 sm:mt-5 sm:p-4">
 
-          <div className="flex items-start justify-between gap-3">
+          {/*
+          | The badge drops under the name on a phone: a type and an optional
+          | pill beside a wrapping holiday name leaves neither enough width to
+          | be read.
+          */}
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
 
             <div className="min-w-0">
 
@@ -136,11 +141,13 @@ function HolidayCalendar({
 
             </div>
 
-            <HolidayTypeBadge
-              type={selected.holiday.type}
-              isOptional={selected.holiday.isOptional}
-              size="sm"
-            />
+            <span className="shrink-0">
+              <HolidayTypeBadge
+                type={selected.holiday.type}
+                isOptional={selected.holiday.isOptional}
+                size="sm"
+              />
+            </span>
 
           </div>
 
@@ -150,16 +157,16 @@ function HolidayCalendar({
 
       {/* Legend */}
 
-      <div className="mt-auto grid grid-cols-3 gap-2 pt-6">
+      <div className="mt-auto grid grid-cols-3 gap-2 pt-5 sm:pt-6">
 
         {HOLIDAY_CALENDAR_LEGEND.map((item) => (
 
           <div
             key={item.label}
-            className="flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2 text-xs font-medium text-slate-600"
+            className="flex items-center gap-1.5 rounded-lg bg-slate-50 px-2 py-2 text-[11px] font-medium text-slate-600 sm:gap-2 sm:px-3 sm:text-xs"
           >
-            <span className={`h-2 w-2 rounded-full ${item.color}`} />
-            {item.label}
+            <span className={`h-2 w-2 shrink-0 rounded-full ${item.color}`} />
+            <span className="truncate">{item.label}</span>
           </div>
 
         ))}
