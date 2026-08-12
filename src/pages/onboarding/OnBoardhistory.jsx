@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useOutletContext } from "react-router-dom";
 import { FiArrowLeft, FiClock } from "react-icons/fi";
 
 import { getOnboardingHistory } from "../../services/OnboardingService";
@@ -37,13 +37,14 @@ function Onboardinghistory() {
 
     const navigate = useNavigate();
 
+    // The search box lives in the navbar; the layout hands it down here.
+    const { search, setSearch, setSearchPlaceholder } = useOutletContext();
+
     const [requests, setRequests] = useState([]);
 
     const [filteredRequests, setFilteredRequests] = useState([]);
 
     const [loading, setLoading] = useState(true);
-
-    const [search, setSearch] = useState("");
 
     const loadRequests = async () => {
 
@@ -92,16 +93,33 @@ function Onboardinghistory() {
         loadRequests();
     }, []);
 
+    // The navbar box is shared, so the page names it on arrival and hands it
+    // back — placeholder and typed term both — when you leave.
+    useEffect(() => {
+
+        setSearchPlaceholder("Search onboarding history...");
+
+        return () => {
+            setSearch("");
+            setSearchPlaceholder("Search...");
+        };
+
+    }, [setSearch, setSearchPlaceholder]);
+
+    // The same fields the rows show: the record id, the name, and the two
+    // columns that fold into the card line below `lg`.
     useEffect(() => {
         setFilteredRequests(
             filterData(
                 requests,
                 search,
                 [
-                    "basic.employeeId",
-                    "basic.name",
-                    "basic.department",
-                    "basic.designation",
+                    "id",
+                    "request.employmentInfo.name",
+                    "request.employmentInfo.department",
+                    "request.employmentInfo.designation",
+                    "action",
+                    "approvedBy",
                 ]
             )
         );
