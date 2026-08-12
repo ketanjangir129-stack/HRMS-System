@@ -54,7 +54,7 @@ function PermissionGroup({ page, tree, onToggle, disabled = false }) {
     >
 
       {/* Header */}
-      <div className="flex items-center gap-4 px-4 py-4 sm:px-5">
+      <div className="flex items-center gap-2.5 px-3 py-3 sm:gap-4 sm:px-5 sm:py-4">
 
         <PermissionCheckbox
           size="md"
@@ -65,8 +65,13 @@ function PermissionGroup({ page, tree, onToggle, disabled = false }) {
           ariaLabel={`${page.label} access`}
         />
 
+        {/*
+        | The page icon is decoration next to a label that already names the
+        | page, so it is the first thing to go when the row has to fit a phone
+        | beside a checkbox, a counter and the expander.
+        */}
         <div
-          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-colors duration-200 ${
+          className={`hidden h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-colors duration-200 sm:flex ${
             enabled
               ? "bg-blue-50 text-blue-600"
               : "bg-slate-100 text-slate-400"
@@ -77,10 +82,10 @@ function PermissionGroup({ page, tree, onToggle, disabled = false }) {
 
         <div className="min-w-0 flex-1">
 
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
 
             <p
-              className={`text-[15px] font-semibold ${
+              className={`text-sm font-semibold sm:text-[15px] ${
                 enabled ? "text-slate-900" : "text-slate-500"
               }`}
             >
@@ -89,22 +94,42 @@ function PermissionGroup({ page, tree, onToggle, disabled = false }) {
 
             {sections.length > 0 && (
               <span
-                className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${
+                className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold sm:px-2.5 ${
                   enabled
                     ? "bg-blue-50 text-blue-700"
                     : "bg-slate-100 text-slate-500"
                 }`}
               >
-                {enabled
-                  ? `${enabledCount} of ${sections.length} sections`
-                  : "Hidden"}
+
+                {!enabled ? (
+                  "Hidden"
+                ) : (
+                  <>
+                    {/*
+                    | "3 of 5 sections" is most of a phone's line width for a
+                    | count, so the narrow screen gets the count alone.
+                    */}
+                    <span className="sm:hidden">
+                      {enabledCount}/{sections.length}
+                    </span>
+
+                    <span className="hidden sm:inline">
+                      {enabledCount} of {sections.length} sections
+                    </span>
+                  </>
+                )}
+
               </span>
             )}
 
           </div>
 
+          {/*
+          | Two lines on a phone rather than an ellipsis: at this width a
+          | truncated description is cut before it has said anything.
+          */}
           {page.description && (
-            <p className="mt-0.5 truncate text-xs text-slate-500">
+            <p className="mt-0.5 line-clamp-2 text-xs text-slate-500 sm:line-clamp-1">
               {page.description}
             </p>
           )}
@@ -132,10 +157,10 @@ function PermissionGroup({ page, tree, onToggle, disabled = false }) {
 
       {/* Sections */}
       {open && sections.length > 0 && (
-        <div className="border-t border-slate-200 bg-slate-50/60 px-4 py-4 sm:px-5">
+        <div className="border-t border-slate-200 bg-slate-50/60 px-2.5 py-3 sm:px-5 sm:py-4">
 
           {!enabled && (
-            <p className="mb-3 rounded-lg bg-amber-50 px-3 py-2 text-xs font-medium text-amber-700">
+            <p className="mx-1 mb-3 rounded-lg bg-amber-50 px-3 py-2 text-xs font-medium text-amber-700">
               {page.label} is switched off, so none of these sections are
               shown. Ticking one will switch the page back on.
             </p>
@@ -150,12 +175,12 @@ function PermissionGroup({ page, tree, onToggle, disabled = false }) {
               return (
                 <label
                   key={section.key}
-                  className={`flex cursor-pointer items-start gap-3 rounded-xl px-3 py-2.5 transition-colors duration-200 hover:bg-white ${
+                  className={`flex cursor-pointer items-start gap-3 rounded-xl px-2.5 py-2.5 transition-colors duration-200 hover:bg-white sm:px-3 ${
                     enabled ? "" : "opacity-60"
                   }`}
                 >
 
-                  <span className="mt-0.5">
+                  <span className="mt-0.5 shrink-0">
                     <PermissionCheckbox
                       checked={active}
                       disabled={disabled}

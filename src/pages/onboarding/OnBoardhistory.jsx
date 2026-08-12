@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { FiClock } from "react-icons/fi";
+import { FiArrowLeft, FiClock } from "react-icons/fi";
 
 import { getOnboardingHistory } from "../../services/OnboardingService";
 import { filterData } from "../../utils/search/filterData";
@@ -143,15 +143,28 @@ function Onboardinghistory() {
             {/* Header */}
             <div className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:gap-5 sm:p-6 lg:flex-row lg:items-center lg:justify-between">
 
-                <div className="flex min-w-0 items-center gap-3 sm:gap-4">
+                {/* Back button, icon and title share one row at every width.
+                    Below `sm` the two squares and the heading step down a size
+                    so all three fit without the title wrapping mid-phrase. */}
+                <div className="flex min-w-0 items-center gap-2.5 sm:gap-4">
 
-                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-blue-600 text-lg text-white shadow-sm shadow-blue-600/20 sm:h-12 sm:w-12 sm:text-xl">
+                    <button
+                        type="button"
+                        onClick={() => navigate("/OnboardDashboard")}
+                        title="Go back"
+                        aria-label="Go back"
+                        className="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 shadow-sm transition-all hover:border-blue-500 hover:text-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 sm:h-12 sm:w-12"
+                    >
+                        <FiArrowLeft size={18} />
+                    </button>
+
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-blue-600 text-base text-white shadow-sm shadow-blue-600/20 sm:h-12 sm:w-12 sm:text-xl">
                         <FiClock />
                     </div>
 
                     <div className="min-w-0">
 
-                        <h1 className="text-xl font-bold text-slate-900 sm:text-2xl">
+                        <h1 className="text-lg font-bold text-slate-900 max-sm:leading-tight sm:text-2xl">
                             Onboarding History
                         </h1>
 

@@ -112,28 +112,28 @@ function RoleAccessPanel() {
         type="button"
         onClick={() => setOpen((value) => !value)}
         aria-expanded={open}
-        className={`flex w-full cursor-pointer items-center gap-4 px-5 py-5 text-left transition-colors duration-200 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-400 sm:px-6 ${
+        className={`flex w-full cursor-pointer items-center gap-3 p-4 text-left transition-colors duration-200 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-400 sm:gap-4 sm:px-6 sm:py-5 ${
           open ? "border-b border-slate-200" : ""
         }`}
       >
 
-        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-white shadow-sm shadow-blue-600/20">
-          <FiShield size={20} />
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-white shadow-sm shadow-blue-600/20 sm:h-11 sm:w-11">
+          <FiShield className="text-lg sm:text-xl" />
         </div>
 
         <div className="min-w-0 flex-1">
 
-          <h2 className="text-lg font-semibold text-slate-900">
+          <h2 className="text-base font-semibold text-slate-900 sm:text-lg">
             Roles &amp; Access
           </h2>
 
-          <p className="mt-0.5 text-sm text-slate-500">
+          <p className="mt-0.5 text-xs text-slate-500 sm:text-sm">
             Choose which pages and sections each role can open.
           </p>
 
         </div>
 
-        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-slate-400">
+        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-slate-400 sm:h-9 sm:w-9">
           <FiChevronDown
             size={20}
             className={`transition-transform duration-200 ${
@@ -147,17 +147,17 @@ function RoleAccessPanel() {
       {open && (
       <>
 
-      <div className="space-y-4 p-5 sm:p-6">
+      <div className="space-y-4 p-4 sm:p-6">
 
         {/* Owner notice */}
-        <div className="flex items-start gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3">
+        <div className="flex items-start gap-2.5 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2.5 sm:gap-3 sm:px-4 sm:py-3">
 
           <FiShield
             className="mt-0.5 shrink-0 text-emerald-600"
             size={16}
           />
 
-          <p className="text-sm text-emerald-800">
+          <p className="text-xs text-emerald-800 sm:text-sm">
             <span className="font-semibold">Owner</span> has full access and
             cannot be restricted.
           </p>
@@ -171,14 +171,14 @@ function RoleAccessPanel() {
         | write them.
         */}
         {error && (
-          <div className="flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3">
+          <div className="flex items-start gap-2.5 rounded-xl border border-red-200 bg-red-50 px-3 py-2.5 sm:gap-3 sm:px-4 sm:py-3">
 
             <FiAlertCircle
               className="mt-0.5 shrink-0 text-red-600"
               size={16}
             />
 
-            <p className="text-sm text-red-700">
+            <p className="text-xs text-red-700 sm:text-sm">
               {error} Showing the default permissions until it can be loaded
               again.
             </p>
@@ -226,9 +226,9 @@ function RoleAccessPanel() {
       | Sticky, because the list is long enough that Save would otherwise sit
       | below the fold from the moment the first box is ticked.
       */}
-      <div className="sticky bottom-0 flex flex-col gap-3 border-t border-slate-200 bg-white/95 px-5 py-4 backdrop-blur sm:flex-row sm:items-center sm:justify-between sm:px-6">
+      <div className="sticky bottom-0 flex flex-col gap-3 border-t border-slate-200 bg-white/95 px-4 py-3.5 backdrop-blur sm:flex-row sm:items-center sm:justify-between sm:px-6 sm:py-4">
 
-        <p className="text-sm text-slate-500">
+        <p className="text-xs text-slate-500 sm:text-sm">
           {dirty
             ? "You have unsaved changes."
             : isDefault
@@ -236,25 +236,42 @@ function RoleAccessPanel() {
               : "All changes saved."}
         </p>
 
-        <div className="flex flex-wrap items-center gap-3">
+        {/*
+        | On a phone the three actions are a two column grid rather than a
+        | wrapped row: reset and cancel share a line and Save takes a full
+        | width line of its own, so the action that matters is a whole thumb
+        | target instead of whatever width is left at the end of a wrap.
+        |
+        | `col-span-2` is a grid property, so it is simply ignored once the
+        | container becomes the inline flex row from `sm` up.
+        */}
+        <div className="grid grid-cols-2 gap-2.5 sm:flex sm:flex-wrap sm:items-center sm:gap-3">
 
           <button
             type="button"
             onClick={handleReset}
             disabled={saving || loading}
-            className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-600 transition-all duration-200 hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+            className="inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-600 transition-all duration-200 hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto sm:px-4"
           >
-            <FiRotateCcw size={16} />
-            Reset to Defaults
+
+            <FiRotateCcw size={16} className="shrink-0" />
+
+            {/*
+            | The full label does not fit half of a 360px line without
+            | wrapping to two rows, and the icon already carries the meaning.
+            */}
+            <span className="sm:hidden">Reset</span>
+            <span className="hidden sm:inline">Reset to Defaults</span>
+
           </button>
 
           <button
             type="button"
             onClick={cancel}
             disabled={!dirty || saving}
-            className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-600 transition-all duration-200 hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+            className="inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-600 transition-all duration-200 hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto sm:px-4"
           >
-            <FiX size={16} />
+            <FiX size={16} className="shrink-0" />
             Cancel
           </button>
 
@@ -262,17 +279,17 @@ function RoleAccessPanel() {
             type="button"
             onClick={handleSave}
             disabled={!dirty || saving || loading}
-            className="inline-flex cursor-pointer items-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-blue-600/20 transition-all duration-200 hover:-translate-y-0.5 hover:bg-blue-700 hover:shadow-lg hover:shadow-blue-600/30 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0"
+            className="col-span-2 inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-blue-600/20 transition-all duration-200 hover:-translate-y-0.5 hover:bg-blue-700 hover:shadow-lg hover:shadow-blue-600/30 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0 sm:w-auto"
           >
 
             {saving ? (
               <>
-                <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+                <span className="h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-white/40 border-t-white" />
                 Saving...
               </>
             ) : (
               <>
-                <FiSave size={16} />
+                <FiSave size={16} className="shrink-0" />
                 Save Changes
               </>
             )}

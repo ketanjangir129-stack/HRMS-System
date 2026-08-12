@@ -35,7 +35,7 @@ function Settings() {
   }
 
   return (
-    <div className="mx-auto max-w-[1600px] space-y-6 p-1 sm:p-2">
+    <div className="mx-auto w-full max-w-[1600px] space-y-4 p-0 sm:space-y-6 sm:p-2">
 
       <SettingsHeader companyName={company?.companyName} />
 

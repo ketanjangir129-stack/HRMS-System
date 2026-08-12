@@ -11,6 +11,16 @@ import { FiCheck, FiMinus } from "react-icons/fi";
 | focusable, still toggles on space and still reads as a checkbox to a screen
 | reader. `indeterminate` cannot be set from markup, so the dash is drawn
 | rather than set on the element.
+|
+| An 18px box is a fine mouse target and a poor thumb one, so below `sm` the
+| wrapper is padded and the same amount pulled back off as negative margin.
+| The input fills that padded box, which puts the phone target near 40px while
+| the drawn box and every gap around it stay exactly where they were - the two
+| cancel, so nothing in the rows outside this file moves.
+|
+| Padding the wrapper rather than stretching the input is deliberate: an
+| absolutely positioned checkbox is a replaced element, so offsets alone leave
+| it at its intrinsic size instead of growing it to meet them.
 |--------------------------------------------------------------------------
 */
 
@@ -33,7 +43,7 @@ function PermissionCheckbox({
   const active = checked || indeterminate;
 
   return (
-    <span className="relative inline-flex shrink-0 items-center justify-center">
+    <span className="relative -m-2.5 inline-flex shrink-0 items-center justify-center p-2.5 sm:m-0 sm:p-0">
 
       <input
         type="checkbox"

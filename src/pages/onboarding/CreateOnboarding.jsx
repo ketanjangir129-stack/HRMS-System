@@ -3,6 +3,7 @@ import { toast } from "react-toastify";
 import { useNavigate } from "react-router-dom";
 import {
   FiAlertCircle,
+  FiArrowLeft,
   FiBriefcase,
   FiInfo,
   FiLoader,
@@ -176,19 +177,32 @@ function OnBoardForm() {
       {/* Page header */}
       <div className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white px-5 py-5 shadow-sm sm:px-6 md:flex-row md:items-center md:justify-between">
 
-        <div className="flex items-center gap-3 sm:gap-4">
+        {/* Back button, icon and title share one row at every width. Below `sm`
+            the two squares and the heading step down a size so all three fit
+            without the title wrapping mid-phrase. */}
+        <div className="flex min-w-0 items-center gap-2.5 sm:gap-4">
 
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-600 shadow-sm shadow-blue-600/20">
-            <FiUserPlus className="text-xl text-white" />
+          <button
+            type="button"
+            onClick={() => navigate("/OnboardDashboard")}
+            title="Go back"
+            aria-label="Go back"
+            className="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 shadow-sm transition-all hover:border-blue-500 hover:text-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 sm:h-11 sm:w-11"
+          >
+            <FiArrowLeft size={18} />
+          </button>
+
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-600 shadow-sm shadow-blue-600/20 sm:h-11 sm:w-11">
+            <FiUserPlus className="text-lg text-white sm:text-xl" />
           </div>
 
-          <div>
+          <div className="min-w-0">
 
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
+            <h1 className="text-xl font-bold tracking-tight text-slate-900 max-sm:leading-tight sm:text-3xl">
               Onboard Employee
             </h1>
 
-            <p className="mt-1 text-sm text-slate-500 sm:text-base">
+            <p className="mt-1 hidden text-sm text-slate-500 sm:block sm:text-base">
               Create an onboarding invitation for a new employee.
             </p>
 
