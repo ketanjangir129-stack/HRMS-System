@@ -41,18 +41,26 @@ function TeamWorkload({ workload, className = "" }) {
         | card ke title se aage khisak jaata.
         */
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[420px] border-collapse text-left">
+          {/*
+            Phone par koi min-w nahi — teen column (naam, total, progress)
+            jitni jagah hai usi mein sikud jaate hain, isliye scrollbar aata
+            hi nahi. min-w sirf sm se lagti hai, jahan do chhipe hue column
+            wapas aate hain aur unhe jagah chahiye hoti hai.
+          */}
+          <table className="w-full border-collapse text-left sm:min-w-[420px]">
             <thead className="border-b border-slate-200 text-xs uppercase tracking-wide text-slate-500">
               <tr>
                 <th className="px-3 pb-3 font-semibold first:pl-0">Employee</th>
                 <th className="px-3 pb-3 text-center font-semibold">Total</th>
-                <th className="px-3 pb-3 text-center font-semibold">
+                <th className="hidden px-3 pb-3 text-center font-semibold sm:table-cell">
                   In progress
                 </th>
-                <th className="px-3 pb-3 text-center font-semibold">
+                <th className="hidden px-3 pb-3 text-center font-semibold sm:table-cell">
                   Completed
                 </th>
-                <th className="w-28 px-3 pb-3 font-semibold last:pr-0">
+                {/* Phone par patli — min-w hatne ke baad jo jagah bachti hai
+                    wo naam ko milni chahiye, warna wo jaldi kat jaata hai */}
+                <th className="w-20 px-3 pb-3 font-semibold last:pr-0 sm:w-28">
                   Progress
                 </th>
               </tr>
@@ -70,17 +78,40 @@ function TeamWorkload({ workload, className = "" }) {
                       <span className="block truncate text-sm font-medium text-slate-800">
                         {person.name}
                       </span>
+
+                      {/*
+                        Wahi do ginti jo is chaudai par apne column se hat
+                        chuki hain. sm:hidden — bilkul us breakpoint par
+                        gayab jahan columns wapas aate hain, isliye kabhi do
+                        baar nahi dikhtin. Rang bhi wahi jo unke column ka
+                        hai, taaki dono jagah ek hi bhasha rahe.
+                      */}
+                      <span className="mt-1 block space-y-0.5 text-xs sm:hidden">
+                        <span className="block">
+                          <span className="font-semibold text-blue-600">
+                            {person.active}
+                          </span>
+                          <span className="text-slate-400"> in progress</span>
+                        </span>
+
+                        <span className="block">
+                          <span className="font-semibold text-emerald-600">
+                            {person.completed}
+                          </span>
+                          <span className="text-slate-400"> completed</span>
+                        </span>
+                      </span>
                     </td>
 
                     <td className="px-3 py-3 text-center text-sm font-bold text-slate-900">
                       {person.total}
                     </td>
 
-                    <td className="px-3 py-3 text-center text-sm font-semibold text-blue-600">
+                    <td className="hidden px-3 py-3 text-center text-sm font-semibold text-blue-600 sm:table-cell">
                       {person.active}
                     </td>
 
-                    <td className="px-3 py-3 text-center text-sm font-semibold text-emerald-600">
+                    <td className="hidden px-3 py-3 text-center text-sm font-semibold text-emerald-600 sm:table-cell">
                       {person.completed}
                     </td>
 

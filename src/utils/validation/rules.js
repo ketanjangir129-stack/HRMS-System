@@ -180,7 +180,7 @@ export const rules = {
   },
 
   taskDescription: {
-    required: false,
+    required: true,
     // Newline bhi allowed — isliye [\s\S]
     pattern: /^[\s\S]{0,500}$/,
     message: "Description cannot exceed 500 characters.",

@@ -1,9 +1,5 @@
 import { STATUS_DOTS } from "../../utils/tasks/taskConstants";
-import {
-  activityLabel,
-  formatTimestamp,
-  isCreatedEntry,
-} from "../../utils/tasks/taskUtils";
+import { activityLabel, formatTimestamp } from "../../utils/tasks/taskUtils";
 
 /*
 |--------------------------------------------------------------------------
@@ -21,16 +17,9 @@ import {
 |--------------------------------------------------------------------------
 */
 
-/*
-| Dot ka rang wahi jo us status ke badge ka hai — timeline aur pill ek hi
-| bhasha bolte hain. Created ke liye koi status hai hi nahi, isliye saada
-| slate.
-*/
-const dotClass = (entry) => {
-  if (isCreatedEntry(entry)) return "bg-slate-400";
-
-  return STATUS_DOTS[entry.toStatus] || "bg-slate-400";
-};
+// Dot ka rang wahi jo us status ke badge ka hai — timeline aur pill ek hi
+// bhasha bolte hain
+const dotClass = (entry) => STATUS_DOTS[entry.toStatus] || "bg-slate-400";
 
 function TaskActivity({ entries = [] }) {
   return (
@@ -65,7 +54,7 @@ function TaskActivity({ entries = [] }) {
               />
 
               <p className="truncate text-sm font-semibold text-slate-800">
-                {entry.actorName || "Unknown"}
+                {entry.actionBy || "Unknown"}
               </p>
 
               <p className="text-sm text-slate-600">{activityLabel(entry)}</p>

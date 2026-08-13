@@ -15,7 +15,7 @@ import {
   assigneeName,
   dueLabel,
   filterOwnTasks,
-  getCurrentActor,
+  getCurrentActionUser,
   getCurrentEmployeeId,
   todayInputValue,
 } from "../utils/tasks/taskUtils";
@@ -138,7 +138,7 @@ function EmployeeTasks() {
     try {
       /*
       | Poora task jaata hai, sirf id nahi — service usi se purana status
-      | padhkar activity entry banati hai. actor bhi zaroori hai, warna
+      | padhkar activity entry banati hai. actionUser bhi zaroori hai, warna
       | dashboard se complete kiya task "kisne kiya" ke bina reh jaata.
       |
       | Yahan pauseTasks nahi bhejte: complete karne se kisi doosre task ka
@@ -146,7 +146,7 @@ function EmployeeTasks() {
       */
       // Row khud hat jaayegi — listener ko naya status turant mil jaata hai
       await updateTaskStatus(companyCode, task, COMPLETED_STATUS, {
-        actor: getCurrentActor(currentUser),
+        actionUser: getCurrentActionUser(currentUser),
       });
       toast.success("Task marked as completed.");
     } catch (err) {

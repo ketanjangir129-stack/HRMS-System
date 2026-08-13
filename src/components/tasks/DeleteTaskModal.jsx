@@ -75,12 +75,15 @@ function DeleteTaskModal({ open, task, deleting, onConfirm, onClose }) {
 
         {/* Body */}
         <div className="px-6 py-5">
+          {/*
+            Header already keh chuka hai ki ye wapas nahi hoga, isliye yahan
+            wo baat dobara nahi — bas kaunsa task ja raha hai aur kiske liye.
+          */}
           <p className="text-sm text-slate-600">
-            Are you sure you want to delete{" "}
             <span className="font-semibold text-slate-800">
-              {task?.title || "this task"}
-            </span>
-            ? It will be permanently removed for everyone.
+              {task?.title || "This task"}
+            </span>{" "}
+            will be removed for everyone.
           </p>
         </div>
 

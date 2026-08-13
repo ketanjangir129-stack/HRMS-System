@@ -1,5 +1,6 @@
-import { useEffect } from "react";
-import { Clock, X } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Clock, Timer, X } from "lucide-react";
+import { formatDuration, taskTimeSpent } from "../../utils/tasks/taskUtils";
 import TaskActivity from "./TaskActivity";
 
 /*
@@ -20,8 +21,73 @@ import TaskActivity from "./TaskActivity";
 | loading tab dikhta hai jab records se pehli baar entries aa rahi hon.
 | Pehle activity task ke saath hi aa jaati thi, ab uska apna listener hai —
 | bina iske ek pal ke liye "No activity yet" jhalak jaata hai.
+|
+| Upar "Time spent" — wo bhi inhi entries se gina jaata hai, Firebase mein
+| kahin store nahi hota.
 |--------------------------------------------------------------------------
 */
+
+// Chalu task ka waqt badhta rehta hai. Minute se chhota kuch dikhta nahi,
+// isliye minute mein ek baar hi ginti dobara karni padti hai.
+const TICK_MS = 60000;
+
+/*
+|--------------------------------------------------------------------------
+| Time Spent
+|--------------------------------------------------------------------------
+| Apna component isliye hai ki "abhi kitna baja hai" iske mount hone par
+| tay ho — aur ye tabhi mount hota hai jab modal khulta hai.
+|
+| Modal khud page ke saath hi mount ho jaata hai (band hone par sirf null
+| return karta hai). Waqt wahan rakhte to wo ek hi baar banta — page khulne
+| ka waqt. Subah page kholkar shaam ko modal kholne par ginti subah ke
+| hisaab se banti, aur ek minute baad pehle tick par achanak sahi value par
+| kood jaati.
+|
+| Yahan ye dikkat hai hi nahi: modal band hote hi ye unmount ho jaata hai,
+| aur khulte hi naya Date.now() leta hai.
+*/
+function TimeSpent({ entries }) {
+  const [now, setNow] = useState(() => Date.now());
+
+  const time = taskTimeSpent(entries, now);
+
+  // Ghadi sirf chalu task par — ruke hue ka waqt badhta nahi, to har minute
+  // render karne ka koi matlab nahi
+  useEffect(() => {
+    if (!time.running) return;
+
+    const id = setInterval(() => setNow(Date.now()), TICK_MS);
+
+    return () => clearInterval(id);
+  }, [time.running]);
+
+  return (
+    <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50/70 p-3.5">
+      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white text-slate-500 ring-1 ring-slate-200">
+        <Timer size={17} />
+      </span>
+
+      <div className="min-w-0 flex-1">
+        <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+          Time spent
+        </p>
+        <p className="mt-0.5 text-sm font-bold text-slate-900">
+          {formatDuration(time.total)}
+        </p>
+      </div>
+
+      {/* Chalu hai to wo batana zaroori hai — warna ginti kam lagti hai aur
+          pata nahi chalta ki abhi badh rahi hai */}
+      {time.running && (
+        <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700">
+          <span className="h-1.5 w-1.5 rounded-full bg-blue-500" />
+          Running
+        </span>
+      )}
+    </div>
+  );
+}
 
 function TaskActivityModal({ open, task, entries = [], loading = false, onClose }) {
   // Escape se band, aur peeche ka page scroll na ho
@@ -93,13 +159,25 @@ function TaskActivityModal({ open, task, entries = [], loading = false, onClose 
         </div>
 
         {/* Body — lambi history par yahi hissa scroll hota hai */}
-        <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
+        <div className="min-h-0 flex-1 space-y-5 overflow-y-auto px-6 py-5">
           {loading ? (
             <p className="py-6 text-center text-sm text-slate-400">
               Loading activity...
             </p>
           ) : (
-            <TaskActivity entries={entries} />
+            <>
+              {/*
+                Time spent sabse upar — yahi wo ek line hai jiske liye
+                zyadatar log ye modal kholte hain. Timeline uske peeche ka
+                hisaab hai.
+
+                Entry hi na ho to ye tile bhi nahi — tab kaam shuru hi nahi
+                hua, aur "0m" likhna kuch batata nahi.
+              */}
+              {entries.length > 0 && <TimeSpent entries={entries} />}
+
+              <TaskActivity entries={entries} />
+            </>
           )}
         </div>
 

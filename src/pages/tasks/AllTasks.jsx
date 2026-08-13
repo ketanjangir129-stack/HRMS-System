@@ -25,10 +25,9 @@ import {
   TASK_CONTEXT_LABELS,
 } from "../../utils/tasks/taskConstants";
 import {
-  assigneeName,
   filterOwnTasks,
   filterTasks,
-  getCurrentActor,
+  getCurrentActionUser,
   getCurrentEmployeeId,
   isTaskCreator,
   recentTasks,
@@ -108,24 +107,6 @@ function AllTasks() {
   const canEditTask = (task) =>
     canUpdateTask || (canUpdateOwn && isTaskCreator(task, myEmployeeId));
 
-  /*
-  | Status badalna baaki haqon se bilkul alag chalta hai: dekhne, banane,
-  | assign karne ya edit karne se koi kaam nahi hota — kaam wahi karta hai
-  | jise task mila hai. Isliye ek hi niyam sab par:
-  |
-  |   apna status hi badal sakte ho.
-  |
-  | Owner khud-ba-khud bahar ho jaata hai — uska employee record hi nahi,
-  | to koi task uska ho hi nahi sakta. HR sabke tasks dekh sakta hai (aur
-  | dena/edit karna bhi uska haq hai), par jo usne Employee ko diya hai
-  | usko chalu ya poora wahi Employee karega.
-  |
-  | Per-task check hai, ek global boolean nahi — HR ki list mein uske apne
-  | aur doosron ke, dono tarah ke tasks ek saath hote hain.
-  */
-  const canChangeStatus = (task) =>
-    !isOwner && Boolean(myEmployeeId) && task?.assignedTo === myEmployeeId;
-
   // Actions column ka faisla — kisi bhi task par kuch kar sakte ho ya nahi.
   // Filtered list se nahi nikalte, warna column aata-jaata rehta.
   const canActOnTasks = canUpdateTask || canUpdateOwn || canDeleteTask;
@@ -139,7 +120,7 @@ function AllTasks() {
   | pehle yahin khuli padi thi; ab taskUtils mein hai taaki dashboard card
   | bhi wahi naam likhe.
   */
-  const actor = getCurrentActor(currentUser);
+  const actionUser = getCurrentActionUser(currentUser);
 
   // Toggle tabhi, jab sabke tasks dekh sakte ho AUR apna employee record ho.
   // Owner ka record hota hi nahi — uske liye toggle bekaar hai.
@@ -474,46 +455,18 @@ function AllTasks() {
       assignedTo: selfAssignOnly ? myEmployeeId : formData.assignedTo,
     };
 
-    /*
-    | Jise task mil raha hai uska naam — activity entry ke saath jaata hai,
-    | taaki timeline "Task assigned to Sakshi Jethi" keh sake bina employees
-    | list ke (Employee ke paas wo hoti hi nahi).
-    |
-    | Apne liye banaya task: assigneeName() employees list mein dhoondhta
-    | hai, par selfAssign wale ke paas list hai hi nahi — us soorat mein
-    | naam khud uska hai.
-    */
-    const assignedToName =
-      payload.assignedTo === myEmployeeId
-        ? actor.name
-        : assigneeName(payload, employees);
-
     setSaving(true);
     try {
       if (editingTask) {
-        /*
-        | Audit fields nahi bhejte — updateTask khud sirf editable fields
-        | chhaanta hai, to createdBy/createdById/createdAt bache rehte hain.
-        |
-        | actor aur purana task isliye ki assignee badle to uski entry bhi
-        | usi write mein jaaye. Baaki edit (title/priority/date) history mein
-        | nahi jaate.
-        */
-        await updateTask(companyCode, editingTask.id, payload, {
-          actor,
-          previous: editingTask,
-          assignedToName,
-        });
+        // Audit fields nahi bhejte — updateTask khud sirf editable fields
+        // chhaanta hai, to createdBy/createdById/createdAt bache rehte hain
+        await updateTask(companyCode, editingTask.id, payload);
       } else {
-        await createTask(
-          companyCode,
-          {
-            ...payload,
-            createdBy: actor.name,
-            createdById: actor.id,
-          },
-          { assignedToName }
-        );
+        await createTask(companyCode, {
+          ...payload,
+          createdBy: actionUser.name,
+          createdById: actionUser.id,
+        });
       }
 
       // List khud update ho jaayegi — subscribeTasks listener se
@@ -551,7 +504,7 @@ function AllTasks() {
 
     try {
       const changed = await updateTaskStatus(companyCode, task, status, {
-        actor,
+        actionUser,
         pauseTasks: running,
       });
 
@@ -608,7 +561,13 @@ function AllTasks() {
             <button
               type="button"
               onClick={openCreateForm}
-              className={PRIMARY_BUTTON_CLASS}
+              /*
+              | Phone par poori chaudai, sm se apni — wahi jo HolidayHeader ke
+              | "Add Holiday" aur LeaveHeader ke "Apply Leave" par hai.
+              | justify-center saath mein zaroori hai, warna chaudi hui patti
+              | mein icon aur text baayein kinare chipke reh jaate.
+              */
+              className={`${PRIMARY_BUTTON_CLASS} w-full justify-center sm:w-auto`}
             >
               <FiPlus />
               Create task
@@ -738,7 +697,6 @@ function AllTasks() {
             showAssignee={canViewAll}
             canUpdate={canEditTask}
             canDelete={canDeleteTask}
-            canChangeStatus={canChangeStatus}
             showActions={canActOnTasks}
             showActivity={canViewActivity}
             onStatusChange={changeStatus}

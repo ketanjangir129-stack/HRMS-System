@@ -1,6 +1,5 @@
 import {db} from "../firebase/firebase";
-import {ref, onValue, push, update} from "firebase/database";
-import { OWNER_ROLE } from "../utils/permissions/permissionConstants";
+import {ref, onValue, push, set, update} from "firebase/database";
 
 /*
 | Paused "In Progress" aur "Completed" ke beech mein hai — ek shuru kiya hua
@@ -42,6 +41,7 @@ export const COMPLETED_STATUS = TASK_STATUSES[TASK_STATUSES.length - 1];
 */
 const tasksPath = (companyCode) => `companies/${companyCode}/tasks`;
 const runPath = (companyCode) => `${tasksPath(companyCode)}/run`;
+const taskPath = (companyCode, taskId) => `${runPath(companyCode)}/${taskId}`;
 const taskActivityPath = (companyCode, taskId) =>
   `${tasksPath(companyCode)}/records/${taskId}/activity`;
 
@@ -114,7 +114,7 @@ const EDITABLE_FIELDS = [
 | par bharosa kiya ja sakta hai. Entry status ke saath usi ek update() mein
 | jaati hai, to activity aur status kabhi alag nahi ho sakte.
 |
-| employeeId wo hai jisne badlaav kiya (actor), jise task assign hai wo
+| employeeId wo hai jisne badlaav kiya (action user), jise task assign hai wo
 | nahi — entry ka matlab hi "kisne kiya" hai, aur HR/Owner bhi kisi ka task
 | badal sakta hai. Isse ek hi employee ki poori timeline ek jagah rehti hai.
 |
@@ -145,22 +145,20 @@ const EDITABLE_FIELDS = [
 | hi pehchaanta hai, isliye kisi migration ki zaroorat nahi padi.
 */
 export const ACTIVITY_TYPE = {
-  CREATED: "created",
-  ASSIGNED: "assigned",
   STATUS_CHANGED: "status_changed",
   AUTO_PAUSED: "auto_paused",
 };
 
 /*
-| Actor ki key: HR/Employee ke liye unki employeeId ("EMP001"), Owner ke
-| liye fixed "owner" — dono getCurrentActor() se banke aate hain.
+| Action user ki key: HR/Employee ke liye unki employeeId ("EMP001"), Owner
+| ke liye fixed "owner" — dono getCurrentActionUser() se banke aate hain.
 |
 | Khaali id par likhte nahi, throw karte hain. Pehle yahan "unknown" ka
 | fallback tha, aur jiski bhi id nahi milti uski activity usi ek dabbe mein
 | chali jaati thi — history ka matlab hi wahin khatam. Ab galti chhupti
 | nahi: dono call site try/catch mein hain aur user ko toast dikh jaata hai.
 */
-const actorKeyOf = (value) => {
+const actionUserKeyOf = (value) => {
   const key = String(value || "").trim();
 
   if (!key) {
@@ -173,53 +171,22 @@ const actorKeyOf = (value) => {
 };
 
 /*
-| actor { id, name } page se aata hai — service currentUser padh nahi
+| actionUser { id, name } page se aata hai — service currentUser padh nahi
 | sakti, bilkul waise hi jaise createdBy/createdById ke saath hota hai.
 |
-| actorId entry mein nahi jaata: wo path mein hi hai. Waise hi timestamp
-| bhi nahi — wo key hai. actorName rehta hai kyunki timeline har line par
+| Uski id entry mein nahi jaati: wo path mein hi hai. Waise hi timestamp
+| bhi nahi — wo key hai. actionBy rehta hai kyunki timeline har line par
 | naam dikhati hai, aur Owner employees list mein hota hi nahi — id se
 | uska naam kabhi nikalta nahi.
 |
 | Khaali string isliye ki Firebase undefined leta hi nahi.
 */
-const activityEntry = (type, from, to, actor, extra = {}) => ({
+const activityEntry = (type, from, to, actionUser, extra = {}) => ({
   type,
   fromStatus: from,
   toStatus: to,
-  actorName: actor?.name || "",
+  actionBy: actionUser?.name || "",
   ...extra,
-});
-
-/*
-| Task ban gaya — bas itni baat. Status yahan nahi rakhte: "kahan se kahan"
-| tabhi maayne rakhta hai jab kuch badla ho, aur banne se pehle to kuch tha
-| hi nahi. Pehli asli status entry apne aap se hi puri kahani keh deti hai.
-*/
-const createdEntry = (actor) => ({
-  type: ACTIVITY_TYPE.CREATED,
-  actorName: actor?.name || "",
-});
-
-/*
-| Assignment/reassignment ki entry. Isme fromStatus/toStatus hote hi nahi —
-| kisi ko dena status badalna nahi hai, aur khaali status likhne se timeline
-| ka dot jhoothi baat kehne lagta.
-|
-| Yahi do field is entry ki pehchaan bhi hain: assignedToId ho to entry
-| assignment ki hai. Isliye alag "type" field nahi chahiye — bilkul waise
-| hi jaise khaali fromStatus "Task created" ka nishaan hai.
-|
-| Naam bhi saath rakhte hain, sirf id nahi: Employee ke paas employees list
-| hoti hi nahi (wo load hi nahi hoti), aur employee record kal delete ho
-| jaye to purani entry bina naam ke reh jaati. Text phir bhi store nahi
-| hota — wo activityLabel() runtime par banata hai.
-*/
-const assignmentEntry = (actor, assignee) => ({
-  type: ACTIVITY_TYPE.ASSIGNED,
-  actorName: actor?.name || "",
-  assignedToId: assignee?.id || "",
-  assignedToName: assignee?.name || assignee?.id || "",
 });
 
 /*
@@ -229,67 +196,34 @@ const assignmentEntry = (actor, assignee) => ({
 |
 | id record ke andar store nahi hoti — wo Firebase ki key hi hai, aur
 | toTaskList padhte waqt usi key se laga deta hai.
+|
+| records mein yahan kuch nahi jaata. Activity sirf status ka hisaab hai —
+| task ka banna aur kisi ko milna kaam nahi hai, aur wo dono baatein run ke
+| createdBy/createdAt/assignedTo mein pehle se poori tarah likhi hain.
+| History pehle status change par shuru hoti hai.
 */
-export const createTask = async (companyCode, task, { assignedToName } = {}) => {
+export const createTask = async (companyCode, task) => {
   const taskId = push(ref(db, runPath(companyCode))).key;
 
   /*
-  | Actor wahi hai jo createdBy/createdById mein ja raha hai; iske liye
-  | koi nayi pehchaan nahi maangi jaati.
+  | Bina pehchaan ke task banta hi nahi — ownership isi par tiki hai
+  | (isTaskCreator). Khaali chhod dene par har us task ka maalik ek jaisa
+  | ho jaata jiska koi maalik nahi.
   */
-  const creator = {
-    id: task.createdById || "",
-    name: task.createdBy || "",
-  };
-
-  /*
-  | Bina pehchaan ke task banta hi nahi. createdById par ownership tiki hai
-  | (isTaskCreator) aur wahi activity ki key bhi banti hai — khaali chhod
-  | dene par dono jhoothe ho jaate hain. Key banane se pehle rok dete hain,
-  | taaki adhoora task run mein pahunche hi nahi.
-  */
-  const creatorKey = actorKeyOf(creator.id);
+  if (!task.createdById) {
+    throw new Error("Cannot create a task without a signed-in user.");
+  }
 
   const now = Date.now();
 
   const newTask = {
     ...task,
     status: DEFAULT_TASKS_STATUS,
-    createdBy: creator.name,
-    createdById: creator.id,
     createdAt: now,
     updatedAt: now,
   };
 
-  /*
-  | Task aur uski pehli entry ek hi update() mein — dono alag node par hain,
-  | par write ek hi hai, warna task ban jaata aur uski pehli entry na banti.
-  |
-  | Entry apna type khud batati hai — "created". Iske pehle ye baat khaali
-  | fromStatus se samjhi jaati thi.
-  */
-  const updates = {
-    [`run/${taskId}`]: newTask,
-    [`records/${taskId}/activity/${creatorKey}/${now}`]: createdEntry(creator),
-  };
-
-  /*
-  | Banana aur kisi ko dena do alag baatein hain, isliye do entry — timeline
-  | par "Task created" ke upar "Task assigned to X" dikhta hai.
-  |
-  | now + 1 isliye ki key actorId + timestamp hai: dono ek hi millisecond par
-  | likhte to doosri pehli ko chup-chaap kha jaati. Ek millisecond aage rakhne
-  | se kram bhi wahi rehta hai jo hua tha.
-  */
-  if (newTask.assignedTo) {
-    updates[`records/${taskId}/activity/${creatorKey}/${now + 1}`] =
-      assignmentEntry(creator, {
-        id: newTask.assignedTo,
-        name: assignedToName,
-      });
-  }
-
-  await update(ref(db, tasksPath(companyCode)), updates);
+  await set(ref(db, taskPath(companyCode, taskId)), newTask);
 
   return {id:taskId, ...newTask};
 };
@@ -301,49 +235,20 @@ export const createTask = async (companyCode, task, { assignedToName } = {}) => 
 | audit field (createdBy/createdById/createdAt) galti se overwrite na ho.
 | undefined field skip hoti hai, warna Firebase usko delete maan leta hai.
 |
-| Title/priority/due date badalna history mein nahi jaata — wo roz ka
-| sudhaar hai. Assignee badalna jaata hai: kaam kisi aur ke sar par chala
-| gaya, aur baad mein "ye mere paas kaise aaya" ka jawab yahi entry deti hai.
-|
-| Isliye ab write tasks node par hai, sirf run/{taskId} par nahi: badla hua
-| assignee aur uski entry ek hi update() mein jaate hain — wahi tehen jo
-| createTask aur updateTaskStatus ki hai.
-|
-| previous purana task hai (page ke paas pehle se hai). Uske bina "badla ya
-| nahi" ka pata nahi chalta, aur har edit par entry ban jaati.
+| Edit history mein nahi jaata — assignee badalna bhi nahi. Activity sirf
+| status ka hisaab hai: kaam kab shuru hua, kab ruka, kab pura hua. Kiske
+| paas hai, wo run/{taskId}/assignedTo hamesha taaza batata hai.
 */
-export const updateTask = async (
-  companyCode,
-  taskId,
-  task,
-  { actor, previous, assignedToName } = {}
-) => {
-  const now = Date.now();
-
-  // Keys tasks node ke sapeksh — run/... live data, records/... history
-  const updates = { [`run/${taskId}/updatedAt`]: now };
+export const updateTask = async (companyCode, taskId, task) => {
+  const updates = { updatedAt: Date.now() };
 
   EDITABLE_FIELDS.forEach((field) => {
     if (task?.[field] !== undefined) {
-      updates[`run/${taskId}/${field}`] = task[field];
+      updates[field] = task[field];
     }
   });
 
-  /*
-  | Entry tabhi jab assignee sach mein badla ho. Wahi naam dobara save karne
-  | par history mein jhoothi reassignment nahi dikhni chahiye.
-  |
-  | actor na ho to entry nahi — purane call site (agar koi bacha ho) waise
-  | hi chalte rahein, bas unki edit history mein na dikhe.
-  */
-  const nextAssignee = task?.assignedTo;
-
-  if (actor && nextAssignee && nextAssignee !== previous?.assignedTo) {
-    updates[`records/${taskId}/activity/${actorKeyOf(actor.id)}/${now}`] =
-      assignmentEntry(actor, { id: nextAssignee, name: assignedToName });
-  }
-
-  await update(ref(db, tasksPath(companyCode)), updates);
+  await update(ref(db, taskPath(companyCode, taskId)), updates);
 };
 
 /*
@@ -367,38 +272,20 @@ export const updateTask = async (
 | bekaar write aur jhooti entry, dono se bachne ke liye. Page isi se tay
 | karta hai ki toast dikhana hai ya nahi.
 |
-| Status wahi badal sakta hai jise task mila hai — apna kaam apna status.
-| Dekhne, dene ya edit karne se koi kaam nahi hota, isliye HR ka diya hua
-| task chalu ya poora wahi Employee karega jiske paas hai.
-|
-| Owner isi niyam se bahar ho jaata hai (uska employee record hi nahi, to
-| koi task uska ho hi nahi sakta), par uske liye alag saaf message rakha
-| hai — ye rok Settings ki kisi switch se nahi aa sakti, kyunki har section
-| Owner ke liye apne aap true hai.
-|
-| UI dropdown deta hi nahi jahan haq nahi — ye uske peeche ki doosri deewar
-| hai, purane khule tab ya seedhi call ke liye.
-|
-| Bina assignee wale purane task par ye rok nahi lagti: unka koi maalik hi
-| nahi, aur unhe hamesha ke liye jam karna theek nahi.
+| Kaun badal sakta hai, ye service tay nahi karti — Owner, HR aur Employee,
+| teenon. Employee ko waise bhi apne hi tasks dikhte hain (list tasks.viewAll
+| par chhanti hai), isliye "apna hi status" wala niyam wahin se aa jaata hai.
+| Entry mein action user jaata hi hai, to kisne badla wo history mein rehta hai.
 */
 export const updateTaskStatus = async (
   companyCode,
   task,
   status,
-  { actor, pauseTasks = [] } = {}
+  { actionUser, pauseTasks = [] } = {}
 ) => {
   const taskId = task?.id;
 
   if (!taskId) return false;
-
-  if (actor?.id === OWNER_ROLE) {
-    throw new Error("Owner cannot change task status.");
-  }
-
-  if (task.assignedTo && actor?.id !== task.assignedTo) {
-    throw new Error("Only the assigned employee can change this task status.");
-  }
 
   const fromStatus = task.status || DEFAULT_TASKS_STATUS;
 
@@ -407,7 +294,7 @@ export const updateTaskStatus = async (
   const now = Date.now();
   // Kaam karne wale ki key — status likhne se pehle, taaki bina pehchaan
   // wala change run mein bhi na jaye aur records mein bhi na
-  const actorKey = actorKeyOf(actor?.id);
+  const actionUserKey = actionUserKeyOf(actionUser?.id);
   const updates = {};
 
   /*
@@ -422,11 +309,11 @@ export const updateTaskStatus = async (
   const addChange = (id, type, from, to, extra = {}) => {
     updates[`run/${id}/status`] = to;
     updates[`run/${id}/updatedAt`] = now;
-    updates[`records/${id}/activity/${actorKey}/${now}`] = activityEntry(
+    updates[`records/${id}/activity/${actionUserKey}/${now}`] = activityEntry(
       type,
       from,
       to,
-      actor,
+      actionUser,
       extra
     );
   };
@@ -439,8 +326,8 @@ export const updateTaskStatus = async (
 
     /*
     | auto_paused apna alag type hai, aur auto: true bhi rehta hai — purani
-    | entries usi flag se pehchani jaati hain, isliye wo hataya nahi. Actor
-    | phir bhi wahi hai jisne doosra task start kiya — zimmedari usi ki hai.
+    | entries usi flag se pehchani jaati hain, isliye wo hataya nahi. Action
+    | user phir bhi wahi hai jisne doosra task start kiya — zimmedari usi ki hai.
     */
     addChange(
       item.id,

@@ -170,7 +170,7 @@ function CreateTaskModal({
             />
           </Field>
 
-          <Field label="Description (optional)" error={errors.description}>
+          <Field label="Description" error={errors.description}>
             <textarea
               rows={3}
               value={formData.description}
@@ -215,7 +215,12 @@ function CreateTaskModal({
             </Field>
           )}
 
-          <div className="grid grid-cols-2 gap-4">
+          {/*
+            Phone par upar-neeche: 360px screen par modal ki padding ke baad
+            har field ~130px ki reh jaati thi, jisme date ka apna calendar
+            icon aur uska text dono tang ho jaate the.
+          */}
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Field label="Due date" error={errors.dueDate}>
               <input
                 type="date"

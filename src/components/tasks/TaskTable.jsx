@@ -33,6 +33,17 @@ const STATUS_OPTIONS = TASK_STATUSES.map((status) => ({
   dot: STATUS_DOTS[status],
 }));
 
+/*
+| Button apna event khud rok leta hai — row par bhi click hai, aur bina iske
+| Edit dabate hi peeche details modal bhi khul jaata.
+|
+| Ye rok button par hai, uske cell par nahi: cell mein px-4 py-4 lg:px-6 ki padding
+| hai, aur wo padding pehle poori click kha jaati thi. Row bhar mein click
+| chalti dikhti thi par teen column chup-chaap bekaar the.
+|
+| Keyboard bhi rokna padta hai: button par Enter dabao to click ke saath
+| keydown bhi upar jaata hai, aur row usi Enter par khul jaati.
+*/
 function RowAction({ tone, title, onClick, icon }) {
   const styles = {
     // Activity kuch badalti nahi, sirf dikhati hai — isliye saada slate,
@@ -45,7 +56,11 @@ function RowAction({ tone, title, onClick, icon }) {
   return (
     <button
       type="button"
-      onClick={onClick}
+      onClick={(event) => {
+        event.stopPropagation();
+        onClick(event);
+      }}
+      onKeyDown={(event) => event.stopPropagation()}
       title={title}
       aria-label={title}
       className={`inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition-all ${styles[tone]}`}
@@ -85,15 +100,6 @@ function TaskTable({
   canUpdate = () => true,
   canDelete = true,
   /*
-  | canUpdate ki tarah ye bhi FUNCTION hai — status ka haq har row par alag
-  | hota hai: apna task badal sakte ho, doosre ka nahi. HR ki list mein dono
-  | tarah ke rows ek saath hote hain, isliye per-row poochhna padta hai.
-  |
-  | Haq na ho to badge saada pill rehti hai (dropdown nahi) — status phir
-  | bhi dikhta hai, bas badla nahi ja sakta.
-  */
-  canChangeStatus = () => true,
-  /*
   | Actions column dikhe ya nahi. Page se aata hai, yahan tasks se nahi
   | nikalte — warna filter se editable rows hat jaate hi column gayab ho
   | jaata aur filter hatane par wapas aa jaata.
@@ -102,8 +108,16 @@ function TaskTable({
 }) {
   const today = todayInputValue();
 
-  // Status/Edit/Delete row ke andar hain — unka event upar na jaye,
-  // warna status badalte hi details modal bhi khul jaata
+  /*
+  | Status dropdown row ke andar baithi hai — uska event upar na jaye, warna
+  | status badalte hi details modal bhi khul jaata.
+  |
+  | Ye sirf dropdown ke apne dabbe par lagti hai, poore cell par nahi: cell
+  | ki khaali jagah row ki hai, aur wahan click par details khulni chahiye.
+  |
+  | Dropdown ki khuli hui list portal se bahar render hoti hai, isliye uske
+  | option par click yahan se guzarta hi nahi.
+  */
   const stopRowActivation = {
     onClick: (event) => event.stopPropagation(),
     onKeyDown: (event) => event.stopPropagation(),
@@ -119,9 +133,203 @@ function TaskTable({
     onRowClick(task);
   };
 
+  // Status dropdown — row mein bhi wahi, mobile card mein bhi. Ek jagah likha
+  // hai taaki dono jagah ek hi cheez badle.
+  const statusSelect = (task) => (
+    <TaskSelect
+      options={STATUS_OPTIONS}
+      value={task.status || TASK_STATUSES[0]}
+      onChange={(next) => onStatusChange(task, next)}
+      ariaLabel={`Change status of ${task.title}`}
+      className="cursor-pointer rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+      trigger={<TaskBadge value={task.status || TASK_STATUSES[0]} withCaret />}
+    />
+  );
+
+  /*
+  | Mobile card ke teen buttons ek hi kataar mein. Table mein ye alag-alag
+  | baithte hain — Activity ka apna column hai — par card mein sab neeche ek
+  | saath aate hain, wahi jo HolidayTable apne card ke footer mein karta hai.
+  |
+  | Har button apni wahi permission dekhta hai jo table mein dekhta hai,
+  | isliye jo haq row par nahi hai wo card par bhi nahi milta.
+  */
+  const rowActions = (task) => (
+    <>
+      {showActivity && (
+        <RowAction
+          tone="activity"
+          title={`View activity of ${task.title}`}
+          onClick={() => onActivityClick(task)}
+          icon={<FiClock size={16} />}
+        />
+      )}
+
+      {showActions && canUpdate(task) && (
+        <RowAction
+          tone="edit"
+          title={`Edit ${task.title}`}
+          onClick={() => onEdit(task)}
+          icon={<FiEdit2 size={16} />}
+        />
+      )}
+
+      {showActions && canDelete && (
+        <RowAction
+          tone="delete"
+          title={`Delete ${task.title}`}
+          onClick={() => onDelete(task)}
+          icon={<FiTrash2 size={16} />}
+        />
+      )}
+    </>
+  );
+
+  const hasRowActions = (task) =>
+    showActivity || (showActions && (canUpdate(task) || canDelete));
+
+  /*
+  |--------------------------------------------------------------------------
+  | Mobile
+  |--------------------------------------------------------------------------
+  | md se neeche wahi task ek stacked card hai, row nahi — saat column 360px
+  | mein har row par sideways scroll ban jaate the.
+  |
+  | Card wahi tarteeb rakhta hai jo scan karte waqt chahiye: title sabse upar
+  | (list isi ke liye padhi jaati hai) aur status uske bilkul saamne, kyunki
+  | wahi sabse zyada badla jaata hai. Due date aur priority neeche tinted
+  | block mein — bilkul HolidayTable ke card jaisa.
+  */
+  const mobileCard = (task) => {
+    const overdue = isOverdue(task, today);
+
+    return (
+      <div className="space-y-3">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-semibold text-slate-900">{task.title}</p>
+
+            {showAssignee && (
+              <p className="mt-0.5 truncate text-xs text-slate-500">
+                {assigneeName(task, employees)}
+              </p>
+            )}
+          </div>
+
+          {/* shrink-0 — lamba title pill ko nichod na de */}
+          <span className="shrink-0" {...stopRowActivation}>
+            {statusSelect(task)}
+          </span>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2 rounded-xl bg-slate-50 px-3 py-2.5">
+          <span
+            className={`inline-flex whitespace-nowrap rounded-lg bg-white px-2.5 py-1 text-xs font-semibold ring-1 ${
+              overdue
+                ? "text-red-600 ring-red-200"
+                : "text-slate-700 ring-slate-200"
+            }`}
+          >
+            {formatDate(task.dueDate)}
+          </span>
+
+          {overdue && (
+            <span className="text-xs font-semibold text-red-500">Overdue</span>
+          )}
+
+          {/* ml-auto — priority hamesha daayein kinare, chahe date kitni
+              chhoti ho */}
+          <span className="ml-auto">
+            <TaskBadge value={task.priority || "Medium"} variant="priority" />
+          </span>
+        </div>
+
+        {hasRowActions(task) && (
+          <div className="flex items-center justify-end gap-2">
+            {rowActions(task)}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  /*
+  | Khaali list par table ka dhaancha hi nahi banta — na thead, na mobile
+  | cards. DataTable bhi yahi karta hai: rows 0 hon to seedha EmptyState.
+  | Pehle ye colSpan wali row thi, jo ab do layouts mein do baar dikhti.
+  */
+  if (tasks.length === 0) {
+    return (
+      <div className="flex flex-col items-center gap-4 px-6 py-20 text-center">
+        <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100 text-slate-400">
+          <FiInbox size={26} />
+        </span>
+
+        {hasTasks ? (
+          // Tasks hain, bas filter se match nahi hue
+          <div>
+            <p className="font-semibold text-slate-800">No matching tasks</p>
+            <p className="mt-1 text-sm text-slate-500">
+              Try a different search or status filter.
+            </p>
+          </div>
+        ) : (
+          <>
+            <div>
+              <p className="font-semibold text-slate-800">
+                {showAssignee ? "No tasks yet" : "Nothing assigned yet"}
+              </p>
+              <p className="mt-1 text-sm text-slate-500">
+                {onCreate
+                  ? "Create your first task to start tracking work."
+                  : "Tasks assigned to you will show up here."}
+              </p>
+            </div>
+
+            {onCreate && (
+              <button
+                type="button"
+                onClick={onCreate}
+                className={PRIMARY_BUTTON_CLASS}
+              >
+                <FiPlus />
+                Create task
+              </button>
+            )}
+          </>
+        )}
+      </div>
+    );
+  }
+
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full min-w-[800px] border-collapse text-left">
+    <>
+      {/* Mobile — card wrapper par wahi click/Enter jo row par hai */}
+      <div className="divide-y divide-slate-100 md:hidden">
+        {tasks.map((task) => (
+          <div
+            key={task.id}
+            onClick={() => onRowClick?.(task)}
+            onKeyDown={(event) => handleRowKeyDown(event, task)}
+            tabIndex={onRowClick ? 0 : undefined}
+            className={`px-4 py-4 transition-colors ${
+              onRowClick
+                ? "cursor-pointer active:bg-slate-50 focus:outline-none focus-visible:bg-slate-50 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-500"
+                : ""
+            }`}
+          >
+            {mobileCard(task)}
+          </div>
+        ))}
+      </div>
+
+      {/*
+        Table md se shuru hoti hai, isliye sabse tang chaudai ab phone ki
+        nahi tablet ki hai. min-w un columns ke saath badhti hai jo har
+        breakpoint par wapas aate hain.
+      */}
+      <div className="hidden overflow-x-auto md:block">
+        <table className="w-full min-w-[560px] border-collapse text-left lg:min-w-[720px] xl:min-w-[860px]">
         {/* thead/tbody classes DataTable jaisi — poore project ka table pattern */}
         <thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
           <tr>
@@ -130,25 +338,33 @@ function TaskTable({
               badges center, actions right. Koi fixed width nahi — column
               apne aap size lete hain, wahi in tables mein hota hai.
             */}
-            <th className="px-6 py-3 font-semibold">Task</th>
+            <th className="px-4 py-3 lg:px-6 font-semibold">Task</th>
             {showAssignee && (
-              <th className="px-6 py-3 font-semibold">Assignee</th>
+              <th className="px-4 py-3 lg:px-6 font-semibold">Assignee</th>
             )}
-            <th className="whitespace-nowrap px-6 py-3 font-semibold">
+            <th className="whitespace-nowrap px-4 py-3 lg:px-6 font-semibold">
               Due date
             </th>
-            <th className="px-6 py-3 text-center font-semibold">Priority</th>
-            <th className="px-6 py-3 text-center font-semibold">Status</th>
+            {/*
+              Priority tablet par nikal jaati hai aur Task cell ke andar
+              chali jaati hai — HolidayTable bhi apne type/description column
+              ke saath yahi karta hai. Kuch chhupta nahi, bas jagah badal
+              jaati hai.
+            */}
+            <th className="hidden px-4 py-3 lg:px-6 text-center font-semibold lg:table-cell">
+              Priority
+            </th>
+            <th className="px-4 py-3 lg:px-6 text-center font-semibold">Status</th>
             {/*
               Activity ka apna column — Actions ke bahar, kyunki wo sirf
               padhne wala kaam hai aur uska haq (tasks.activity) edit/delete
               se bilkul alag chalta hai.
             */}
             {showActivity && (
-              <th className="px-6 py-3 text-center font-semibold">Activity</th>
+              <th className="px-4 py-3 lg:px-6 text-center font-semibold">Activity</th>
             )}
             {showActions && (
-              <th className="whitespace-nowrap px-6 py-3 text-right font-semibold">
+              <th className="whitespace-nowrap px-4 py-3 lg:px-6 text-right font-semibold">
                 Actions 
               </th>
             )}
@@ -177,7 +393,7 @@ function TaskTable({
                 {/* min-w-0 wrapper + truncate — HolidayTable ke name column
                     jaisa. Column ki width nahi bandhi, bas lamba text kinare
                     par kat jaata hai. */}
-                <td className="px-6 py-4">
+                <td className="px-4 py-4 lg:px-6">
                   <div className="min-w-0">
                     <p className="truncate text-sm font-semibold text-slate-900">
                       {task.title}
@@ -187,11 +403,24 @@ function TaskTable({
                         {task.description}
                       </p>
                     )} */}
+
+                    {/*
+                      Wahi priority jo is chaudai par apne column se hat
+                      chuki hai. lg:hidden — bilkul us breakpoint par gayab
+                      jahan column wapas aata hai, isliye do baar kabhi nahi
+                      dikhti aur beech mein kabhi gayab nahi hoti.
+                    */}
+                    <span className="mt-1.5 inline-block lg:hidden">
+                      <TaskBadge
+                        value={task.priority || "Medium"}
+                        variant="priority"
+                      />
+                    </span>
                   </div>
                 </td>
 
                 {showAssignee && (
-                  <td className="px-6 py-4">
+                  <td className="px-4 py-4 lg:px-6">
                     <span className="block truncate text-sm font-medium text-slate-800">
                       {name}
                     </span>
@@ -199,7 +428,7 @@ function TaskTable({
                 )}
 
                 {/* whitespace-nowrap — warna "Aug 15, 2026" do line mein tootti */}
-                <td className="whitespace-nowrap px-6 py-4">
+                <td className="whitespace-nowrap px-4 py-4 lg:px-6">
                   <span
                     className={`text-sm ${
                       overdue
@@ -216,15 +445,11 @@ function TaskTable({
                   )}
                 </td>
 
-                <td className="px-6 py-4 text-center">
+                <td className="hidden px-4 py-4 lg:px-6 text-center lg:table-cell">
                   <TaskBadge value={task.priority || "Medium"} variant="priority" />
                 </td>
 
-                {/* Status badalne par details modal nahi khulna chahiye */}
-                <td
-                  className="px-6 py-4 text-center"
-                  {...stopRowActivation}
-                >
+                <td className="px-4 py-4 lg:px-6 text-center">
                   {/*
                     Badge hi dropdown ka trigger hai — pehle uske upar ek
                     paardarshi native <select> baithta tha, par uski khuli
@@ -234,52 +459,31 @@ function TaskTable({
                     withCaret pill ke andar chevron laga deta hai — warna
                     badge bilkul static lagta hai.
                   */}
-                  {canChangeStatus(task) ? (
-                    <TaskSelect
-                      options={STATUS_OPTIONS}
-                      value={task.status || TASK_STATUSES[0]}
-                      onChange={(next) => onStatusChange(task, next)}
-                      ariaLabel={`Change status of ${task.title}`}
-                      className="cursor-pointer rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
-                      trigger={
-                        <TaskBadge
-                          value={task.status || TASK_STATUSES[0]}
-                          withCaret
-                        />
-                      }
-                    />
-                  ) : (
-                    // Bina caret ke — pill dikhti hai par khulne ka ishaara
-                    // nahi deti
-                    <TaskBadge value={task.status || TASK_STATUSES[0]} />
-                  )}
+                  {/* inline-block — rok utni hi chaudai leti hai jitni pill,
+                      baaki cell row ke click ke liye khula rehta hai */}
+                  <span className="inline-block" {...stopRowActivation}>
+                    {statusSelect(task)}
+                  </span>
                 </td>
 
-                {/* Activity dekhna row kholne se alag hai — event yahin ruk
-                    jaata hai, warna peeche details modal bhi khul jaata */}
+                {/* Activity dekhna row kholne se alag hai — button apna
+                    event khud rok leta hai (RowAction), isliye uske aas-paas
+                    ki khaali jagah par details khulti hai */}
                 {showActivity && (
-                  <td className="px-6 py-4 text-center" {...stopRowActivation}>
+                  <td className="px-4 py-4 lg:px-6 text-center">
                     <RowAction
                       tone="activity"
                       title={`View activity of ${task.title}`}
-                      // Cell par pehle se stopRowActivation hai, par yahan
-                      // bhi rokte hain — kal button kahin aur jaye to bhi
-                      // row activate na ho
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        onActivityClick(task);
-                      }}
+                      onClick={() => onActivityClick(task)}
                       icon={<FiClock size={16} />}
                     />
                   </td>
                 )}
 
                 {showActions && (
-                  // Edit/Delete dabane par bhi modal nahi khulna chahiye
-                  <td
-                    className="whitespace-nowrap px-6 py-4"
-                    {...stopRowActivation}
-                  >
+                  // Edit/Delete apna event khud rokte hain, isliye cell par
+                  // koi rok nahi — dash wali row bhi poori click ho jaati hai
+                  <td className="whitespace-nowrap px-4 py-4 lg:px-6">
                     {/*
                       h-9 — button ki hi height, taaki dash wali row aur
                       button wali row barabar rahein
@@ -324,69 +528,10 @@ function TaskTable({
               </tr>
             );
           })}
-
-          {tasks.length === 0 && (
-            <tr>
-              {/*
-                Task + Due date + Priority + Status = 4 pakke column,
-                Assignee, Activity aur Actions chhip sakte hain
-              */}
-              <td
-                colSpan={
-                  4 +
-                  (showAssignee ? 1 : 0) +
-                  (showActivity ? 1 : 0) +
-                  (showActions ? 1 : 0)
-                }
-                className="px-6 py-20"
-              >
-                <div className="flex flex-col items-center gap-4 text-center">
-                  <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100 text-slate-400">
-                    <FiInbox size={26} />
-                  </span>
-
-                  {hasTasks ? (
-                    // Tasks hain, bas filter se match nahi hue
-                    <div>
-                      <p className="font-semibold text-slate-800">
-                        No matching tasks
-                      </p>
-                      <p className="mt-1 text-sm text-slate-500">
-                        Try a different search or status filter.
-                      </p>
-                    </div>
-                  ) : (
-                    <>
-                      <div>
-                        <p className="font-semibold text-slate-800">
-                          {showAssignee ? "No tasks yet" : "Nothing assigned yet"}
-                        </p>
-                        <p className="mt-1 text-sm text-slate-500">
-                          {onCreate
-                            ? "Create your first task to start tracking work."
-                            : "Tasks assigned to you will show up here."}
-                        </p>
-                      </div>
-
-                      {onCreate && (
-                        <button
-                          type="button"
-                          onClick={onCreate}
-                          className={PRIMARY_BUTTON_CLASS}
-                        >
-                          <FiPlus />
-                          Create task
-                        </button>
-                      )}
-                    </>
-                  )}
-                </div>
-              </td>
-            </tr>
-          )}
-        </tbody>
-      </table>
-    </div>
+          </tbody>
+        </table>
+      </div>
+    </>
   );
 }
 

@@ -66,7 +66,7 @@ export const getCurrentEmployeeId = (currentUser) =>
 | khaali string aati thi aur service usko "unknown" bana deti thi — ek hi
 | dabbe mein sabki activity.
 */
-export const getCurrentActor = (currentUser) => ({
+export const getCurrentActionUser = (currentUser) => ({
   id: isOwnerRole(getUserRole(currentUser))
     ? OWNER_ROLE
     : getCurrentEmployeeId(currentUser),
@@ -114,6 +114,33 @@ export const formatTimestamp = (ms) =>
         minute: "2-digit",
       })
     : "--";
+
+/*
+| Kitna waqt laga — formatTimestamp waqt ka bindu batata hai, ye lambai.
+|
+| Sirf do sabse badi ikaai dikhti hain: "2d 5h" mein minute jodne se ginti
+| padhne layak nahi rehti, aur itni barikee ka koi kaam bhi nahi.
+|
+| Second nahi dikhate — status manually badla jaata hai, to itni barikee ka
+| matlab hi nahi. Ek minute se kam ko "< 1m" kehte hain, warna abhi-abhi
+| shuru kiya task "0m" dikhata jo galat lagta hai.
+|
+| 9900000 → "2h 45m"
+*/
+export const formatDuration = (ms) => {
+  const minutes = Math.floor(Math.max(0, ms || 0) / 60000);
+
+  if (minutes < 1) return ms > 0 ? "< 1m" : "0m";
+
+  const days = Math.floor(minutes / 1440);
+  const hours = Math.floor((minutes % 1440) / 60);
+  const mins = minutes % 60;
+
+  if (days) return hours ? `${days}d ${hours}h` : `${days}d`;
+  if (hours) return mins ? `${hours}h ${mins}m` : `${hours}h`;
+
+  return `${mins}m`;
+};
 
 // Aaj ki date YYYY-MM-DD mein — local, UTC nahi.
 // Seedha toISOString() lagane par India mein ek din pichhe chala jaata hai.
@@ -356,10 +383,10 @@ export const fieldClass = (error) => (error ? ERROR_INPUT_CLASS : INPUT_CLASS);
 |--------------------------------------------------------------------------
 | Activity
 |--------------------------------------------------------------------------
-| Firebase se activity do parat mein aati hai — actor ki id (Owner ke liye
-| "owner"), uske andar timestamp:
+| Firebase se activity do parat mein aati hai — action user ki id (Owner ke
+| liye "owner"), uske andar timestamp:
 |
-|   { "EMP01": { "1754640000000": { fromStatus, toStatus, actorName } } }
+|   { "EMP01": { "1754640000000": { fromStatus, toStatus, actionBy } } }
 |
 | UI ko ek seedhi list chahiye, isliye dono parat kholkar flat kar dete
 | hain — wahi kaam jo toTaskList tasks ke saath karta hai.
@@ -386,37 +413,82 @@ export const taskActivityList = (activity) =>
         timestamp: Number(key) || entry?.timestamp || 0,
       }))
     )
+    .filter(isStatusEntry)
     .sort((a, b) => b.timestamp - a.timestamp);
 
 /*
-|--------------------------------------------------------------------------
-| Entry kis baat ki hai
-|--------------------------------------------------------------------------
-| Nayi entries apna type khud batati hain. Purani entries mein type hai hi
-| nahi — unhe usi purane tareeke se pehchanna padta hai jis se pehle pehchana
-| jaata tha, warna Firebase mein jo history pehle se padi hai wo apna matlab
-| kho de. Isliye har check do parat ka hai: pehle type, phir purana ishaara.
+| Sirf status ke badlaav timeline mein aate hain — "kisne, kab, kahan se
+| kahan". Task ka banna aur kisi ko milna activity nahi hai; wo baatein run
+| ke createdAt/createdBy/assignedTo mein poori tarah padi hain.
 |
-| Ye do parat hamesha rehni hain: history append-only hai, purani entries
-| kabhi type nahi paayengi, aur unhe badalna hi nahi hai.
+| toStatus hi is entry ki pehchaan hai: status badla ho tabhi wo hota hai.
+| Purani create/assignment entries mein wo hai hi nahi, isliye Firebase mein
+| jo pehle se padi hain wo apne aap chhant jaati hain — na dikhti hain, na
+| delete karni padti hain.
 */
-
-// Purani assignment entry mein assignedToId hamesha tha — wahi uska ishaara
-export const isAssignmentEntry = (entry) =>
-  entry?.type === ACTIVITY_TYPE.ASSIGNED || Boolean(entry?.assignedToId);
+const isStatusEntry = (entry) => Boolean(entry?.toStatus);
 
 /*
-| Pehli entry — iske pehle task ka koi status tha hi nahi.
+|--------------------------------------------------------------------------
+| Time spent
+|--------------------------------------------------------------------------
+| Task par kitna waqt laga. Kahin store nahi hota — usi activity se gina
+| jaata hai jo pehle se padi hai. Isliye ye ginti kabhi purani nahi pad
+| sakti, aur purane tasks par bhi apne aap chal jaati hai.
 |
-| Purane tareeke mein ishaara khaali fromStatus tha, isliye assignment entry
-| ko pehle chhaanna padta hai (usme fromStatus hota hi nahi). Ye jhamela sirf
-| bina-type wali entries ke liye bacha hai — jinme type hai, unme koi shak
-| hi nahi rehta.
+| Niyam ek hi: "In Progress" par ghadi chalu, aur agla koi bhi status use
+| band kar deta hai. Paused ho ya Completed — dono se kaam rukta hai, isliye
+| dono barabar hain. Auto-pause bhi apne aap ginti mein aa jaata hai: uski
+| entry bhi In Progress → Paused hi hoti hai.
+|
+| Entries ek saath sort hoti hain, employee-wise alag nahi. Wajah: status
+| koi bhi badal sakta hai, to ek session Himanshu shuru kare aur HR band
+| kare — ye do alag branches mein padte hain. Alag-alag ginte to jodi hi na
+| banti. Waqt phir bhi usi ke khaate mein jaata hai jisne shuru kiya.
+|
+| Chalu task ka chalta hua waqt bhi jodte hain, warna 2 ghante se chal raha
+| task 0m dikhata.
+|
+| Math.max isliye ki timestamp har user ki apni ghadi se aata hai
+| (Date.now(), server ka waqt nahi). Kisi ki ghadi aage ho to band karne ka
+| waqt shuru karne se pehle ka nikal sakta hai — us soorat mein wo session
+| 0 gina jaata hai, minus nahi. Ginti thodi kam-zyada ho sakti hai; ye
+| andaza hai, hisaab-kitaab nahi.
 */
-export const isCreatedEntry = (entry) => {
-  if (entry?.type) return entry.type === ACTIVITY_TYPE.CREATED;
+export const taskTimeSpent = (entries = [], now = Date.now()) => {
+  // taskActivityList naya-sabse-upar deti hai — ginti purane se nayi chahiye
+  const ordered = [...entries].sort((a, b) => a.timestamp - b.timestamp);
 
-  return !isAssignmentEntry(entry) && !entry?.fromStatus;
+  const perEmployee = {};
+  let total = 0;
+  // null matlab abhi koi session chalu nahi
+  let openedAt = null;
+  let openedBy = null;
+
+  const closeSession = (endedAt) => {
+    const spent = Math.max(0, endedAt - openedAt);
+
+    total += spent;
+    perEmployee[openedBy] = (perEmployee[openedBy] || 0) + spent;
+    openedAt = null;
+  };
+
+  ordered.forEach((entry) => {
+    if (openedAt !== null && entry.fromStatus === IN_PROGRESS_STATUS) {
+      closeSession(entry.timestamp);
+    }
+
+    if (entry.toStatus === IN_PROGRESS_STATUS) {
+      openedAt = entry.timestamp;
+      openedBy = entry.employeeId;
+    }
+  });
+
+  const running = openedAt !== null;
+
+  if (running) closeSession(now);
+
+  return { total, running, perEmployee };
 };
 
 /*
@@ -434,22 +506,15 @@ export const isCreatedEntry = (entry) => {
 export const activityLabel = (entry) => {
   if (!entry) return "";
 
-  /*
-  | Assignment ka text bhi yahin banta hai, store nahi hota — entry mein
-  | sirf kis ko mila (id aur naam) rehta hai. Naam entry se aata hai,
-  | employees list se nahi: Employee ke paas wo list hoti hi nahi.
-  */
-  if (isAssignmentEntry(entry)) {
-    return `Task assigned to ${entry.assignedToName || entry.assignedToId}`;
-  }
-
   // Auto-pause: message mein us doosre task ka naam hai jo shuru hua, aur wo
   // baat kisi field mein nahi — isliye yahi ek text store hota hai
   if (entry.type === ACTIVITY_TYPE.AUTO_PAUSED || entry.message) {
     return entry.message || `Status changed from ${entry.fromStatus} to ${entry.toStatus}`;
   }
 
-  if (isCreatedEntry(entry)) return "Task created";
+  // Pehla status change: iske pehle koi status tha hi nahi, to "kahan se"
+  // likhne ko kuch nahi
+  if (!entry.fromStatus) return `Status set to ${entry.toStatus}`;
 
   return `Status changed from ${entry.fromStatus} to ${entry.toStatus}`;
 };
