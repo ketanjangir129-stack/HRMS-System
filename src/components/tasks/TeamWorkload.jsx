@@ -29,7 +29,7 @@ function TeamWorkload({ workload, className = "" }) {
       icon={<FiUsers />}
     >
       {workload.length === 0 ? (
-        <p className="py-6 text-center text-sm text-slate-400">
+        <p className="py-4 text-center text-sm text-slate-400">
           No tasks assigned to anyone yet.
         </p>
       ) : (
@@ -40,7 +40,7 @@ function TeamWorkload({ workload, className = "" }) {
         | apna px-6 already deta hai, warna do baar padding lagti aur naam
         | card ke title se aage khisak jaata.
         */
-        <div className="overflow-x-auto">
+        <div className="hide-scrollbar max-h-64 overflow-x-auto overflow-y-auto">
           {/*
             Phone par koi min-w nahi — teen column (naam, total, progress)
             jitni jagah hai usi mein sikud jaate hain, isliye scrollbar aata
@@ -48,19 +48,29 @@ function TeamWorkload({ workload, className = "" }) {
             wapas aate hain aur unhe jagah chahiye hoti hai.
           */}
           <table className="w-full border-collapse text-left sm:min-w-[420px]">
-            <thead className="border-b border-slate-200 text-xs uppercase tracking-wide text-slate-500">
+            {/*
+              Sticky — scroll karte waqt column ke naam upar tike rehte hain,
+              warna neeche jaate hi sirf ginti reh jaati aur pata nahi chalta
+              ki kaunsa number kis column ka hai.
+
+              Border ki jagah inset shadow: table border-collapse hai, aur
+              collapsed border sticky element ke saath nahi chipakta — wo
+              table ke saath scroll ho jaata hai. Shadow th par lagti hai,
+              isliye wo header ke saath hi tiki rehti hai.
+            */}
+            <thead className="sticky top-0 z-10 text-xs uppercase tracking-wide text-slate-500 [&_th]:bg-slate-50 [&_th]:shadow-[inset_0_-1px_0_0_#e2e8f0]">
               <tr>
-                <th className="px-3 pb-3 font-semibold first:pl-0">Employee</th>
-                <th className="px-3 pb-3 text-center font-semibold">Total</th>
-                <th className="hidden px-3 pb-3 text-center font-semibold sm:table-cell">
+                <th className="px-3 py-2 font-semibold first:pl-0">Employee</th>
+                <th className="px-3 py-2 text-center font-semibold">Total</th>
+                <th className="hidden px-3 py-2 text-center font-semibold sm:table-cell">
                   In progress
                 </th>
-                <th className="hidden px-3 pb-3 text-center font-semibold sm:table-cell">
+                <th className="hidden px-3 py-2 text-center font-semibold sm:table-cell">
                   Completed
                 </th>
                 {/* Phone par patli — min-w hatne ke baad jo jagah bachti hai
                     wo naam ko milni chahiye, warna wo jaldi kat jaata hai */}
-                <th className="w-20 px-3 pb-3 font-semibold last:pr-0 sm:w-28">
+                <th className="w-20 px-3 py-2 font-semibold last:pr-0 sm:w-28">
                   Progress
                 </th>
               </tr>
@@ -74,7 +84,7 @@ function TeamWorkload({ workload, className = "" }) {
 
                 return (
                   <tr key={person.id} className="transition-colors hover:bg-slate-50">
-                    <td className="px-3 py-3 first:pl-0">
+                    <td className="px-3 py-2.5 first:pl-0">
                       <span className="block truncate text-sm font-medium text-slate-800">
                         {person.name}
                       </span>
@@ -86,7 +96,7 @@ function TeamWorkload({ workload, className = "" }) {
                         baar nahi dikhtin. Rang bhi wahi jo unke column ka
                         hai, taaki dono jagah ek hi bhasha rahe.
                       */}
-                      <span className="mt-1 block space-y-0.5 text-xs sm:hidden">
+                      <span className="mt-0.5 block space-y-0.5 text-xs sm:hidden">
                         <span className="block">
                           <span className="font-semibold text-blue-600">
                             {person.active}
@@ -103,26 +113,26 @@ function TeamWorkload({ workload, className = "" }) {
                       </span>
                     </td>
 
-                    <td className="px-3 py-3 text-center text-sm font-bold text-slate-900">
+                    <td className="px-3 py-2.5 text-center text-sm font-bold text-slate-900">
                       {person.total}
                     </td>
 
-                    <td className="hidden px-3 py-3 text-center text-sm font-semibold text-blue-600 sm:table-cell">
+                    <td className="hidden px-3 py-2.5 text-center text-sm font-semibold text-blue-600 sm:table-cell">
                       {person.active}
                     </td>
 
-                    <td className="hidden px-3 py-3 text-center text-sm font-semibold text-emerald-600 sm:table-cell">
+                    <td className="hidden px-3 py-2.5 text-center text-sm font-semibold text-emerald-600 sm:table-cell">
                       {person.completed}
                     </td>
 
-                    <td className="px-3 py-3 last:pr-0">
+                    <td className="px-3 py-2.5 last:pr-0">
                       <div className="h-1.5 overflow-hidden rounded-full bg-slate-100">
                         <div
                           style={{ width: `${donePercent}%` }}
                           className={`h-full rounded-full transition-all duration-500 ${PROGRESS_BARS.Completed}`}
                         />
                       </div>
-                      <p className="mt-1 text-xs font-medium text-slate-400">
+                      <p className="mt-0.5 text-xs font-medium text-slate-400">
                         {Math.round(donePercent)}% done
                       </p>
                     </td>

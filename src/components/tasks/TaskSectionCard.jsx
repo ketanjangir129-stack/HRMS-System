@@ -25,7 +25,7 @@ function TaskSectionCard({
   return (
     // h-full — grid mein saath wala card lamba ho to dono barabar dikhein
     <section className={`${SECTION_CARD_CLASS} flex h-full flex-col ${className}`}>
-      <div className="flex flex-col gap-3 border-b border-slate-200 px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-3 border-b border-slate-200 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex min-w-0 items-center gap-3">
           {icon && (
             <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-lg text-blue-600">
@@ -54,7 +54,7 @@ function TaskSectionCard({
         )}
       </div>
 
-      <div className="flex-1 px-6 py-5">{children}</div>
+      <div className="flex-1 px-6 py-4">{children}</div>
     </section>
   );
 }

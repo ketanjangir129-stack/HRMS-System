@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { FiCalendar } from "react-icons/fi";
+import { FiCalendar, FiMapPin } from "react-icons/fi";
 import { ATTENDANCE_STATUS_OPTIONS } from "../../utils/attendance/attendanceConstants";
 import { formatTime } from "../../utils/attendance/attendanceDate";
 import { downloadCsv, searchRows } from "../../utils/attendance/attendanceTable";
@@ -12,6 +12,7 @@ import {
 import AttendanceStatusBadge from "./common/AttendanceStatusBadge";
 import DataTable from "./common/DataTable";
 import EmployeeCell from "./common/EmployeeCell";
+import LocationModal from "./LocationModal";
 
 /*
 |--------------------------------------------------------------------------
@@ -81,6 +82,13 @@ function AttendanceRecordsTable({
 
   const [statusFilter, setStatusFilter] = useState("");
   const [departmentFilter, setDepartmentFilter] = useState("");
+
+  /*
+  | The row whose location is being shown. The record itself is held rather
+  | than an id: it already carries both punch locations and the employee
+  | name, so nothing has to be looked up again.
+  */
+  const [locationRecord, setLocationRecord] = useState(null);
 
   const filtered = useMemo(
     () =>
@@ -178,6 +186,38 @@ function AttendanceRecordsTable({
             {record.workingHours || "--"}
           </span>
         ),
+      },
+      /*
+      | Offered on the location node existing rather than on which punch
+      | recorded it: a day can carry a punch in location, a punch out
+      | location or both, and the modal is where that is told apart.
+      |
+      | Not sortable - there is nothing meaningful to order coordinates by.
+      */
+      {
+        key: "location",
+        label: "Location",
+        className: "whitespace-nowrap",
+        render: (record) => {
+
+          const hasLocation =
+            Boolean(record.location?.punchIn) ||
+            Boolean(record.location?.punchOut);
+
+          if (!hasLocation) return "--";
+
+          return (
+            <button
+              type="button"
+              onClick={() => setLocationRecord(record)}
+              className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs font-semibold text-slate-700 transition-colors hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-200"
+            >
+              <FiMapPin />
+              View
+            </button>
+          );
+
+        },
       },
       {
         key: "status",
@@ -338,6 +378,12 @@ function AttendanceRecordsTable({
       />
 
       {footer}
+
+      <LocationModal
+        open={Boolean(locationRecord)}
+        record={locationRecord}
+        onClose={() => setLocationRecord(null)}
+      />
 
     </AttendancePanel>
   );

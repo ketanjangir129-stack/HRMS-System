@@ -5,6 +5,7 @@ import {
   subscribeToEmployeeDay,
 } from "../services/attendanceServices/attendanceService";
 import { getDateKey } from "../utils/attendance/attendanceDate";
+import { getPunchLocation } from "../utils/attendance/attendanceLocation";
 import { getCurrentEmployeeId } from "../utils/attendance/attendanceRequestUtils";
 
 /*
@@ -66,12 +67,44 @@ const useAttendance = (companyCode, currentUser) => {
   }, [companyCode, employeeId, enabled, key]);
 
   const punchIn = useCallback(
-    () => punchInEmployee(companyCode, employeeId),
+    async () => {
+
+      const location = await getPunchLocation();
+
+      /*
+      | The punch is not attempted without a position, so a denied prompt
+      | leaves the day untouched rather than recording a punch nobody can
+      | place.
+      */
+
+      if (!location) {
+        return {
+          success: false,
+          message: "Location permission is required to punch in.",
+        };
+      }
+
+      return punchInEmployee(companyCode, employeeId, location);
+
+    },
     [companyCode, employeeId]
   );
 
   const punchOut = useCallback(
-    () => punchOutEmployee(companyCode, employeeId),
+    async () => {
+
+      const location = await getPunchLocation();
+
+      if (!location) {
+        return {
+          success: false,
+          message: "Location permission is required to punch out.",
+        };
+      }
+
+      return punchOutEmployee(companyCode, employeeId, location);
+
+    },
     [companyCode, employeeId]
   );
 

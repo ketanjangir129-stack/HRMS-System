@@ -33,7 +33,7 @@ function TaskProgress({ progress }) {
           No tasks to measure yet.
         </p>
       ) : (
-        <div className="space-y-6">
+        <div className="space-y-4">
           {/* Stacked bar — teen segment, jod poora 100% */}
           <div className="flex h-3 overflow-hidden rounded-full bg-slate-100">
             {segments.map((segment) => (
@@ -51,7 +51,7 @@ function TaskProgress({ progress }) {
           </div>
 
           {/* Legend — har status ka count aur % */}
-          <div className="space-y-4">
+          <div className="space-y-3">
             {segments.map((segment) => (
               <div key={segment.label}>
                 <div className="flex items-center justify-between text-sm">
@@ -72,7 +72,7 @@ function TaskProgress({ progress }) {
                   </span>
                 </div>
 
-                <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-slate-100">
+                <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-slate-100">
                   <div
                     style={{ width: `${segment.share}%` }}
                     className={`h-full rounded-full transition-all duration-500 ${

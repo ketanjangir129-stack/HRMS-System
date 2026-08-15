@@ -547,7 +547,7 @@ function AllTasks() {
 
   return (
     // space-y-6 — header ab khud ek card hai, isliye gap poore page ka ek jaisa
-    <div className="space-y-6 p-2">
+    <div className="mx-auto max-w-[1600px] space-y-4 p-1 sm:space-y-6 sm:p-2">
       <TaskPageHeader
         title="Tasks"
         subtitle={
@@ -592,53 +592,6 @@ function AllTasks() {
         )}
 
         <TaskSummaryCards summary={summary} />
-
-        {/*
-          Har panel apni permission par. Ek chhip jaye to doosra poori chaudai
-          le leta hai — Dashboard.jsx bhi yahi karta hai.
-          Summary cards bahar hain: unme koi assignee naam nahi aata.
-        */}
-        {(showProgress || showWorkload) && (
-          <div
-            className={`grid grid-cols-1 gap-6 ${
-              showProgress && showWorkload ? "lg:grid-cols-3" : ""
-            }`}
-          >
-            {showProgress && <TaskProgress progress={progress} />}
-
-            {showWorkload && (
-              <TeamWorkload
-                workload={workload}
-                className={showProgress ? "lg:col-span-2" : ""}
-              />
-            )}
-          </div>
-        )}
-
-        {(showUrgent || showRecent) && (
-          <div
-            className={`grid grid-cols-1 gap-6 ${
-              showUrgent && showRecent ? "lg:grid-cols-2" : ""
-            }`}
-          >
-            {showUrgent && (
-              <UrgentTasks
-                tasks={urgent}
-                employees={employees}
-                today={today}
-                onViewAll={() => showTableContext(TASK_CONTEXT.URGENT)}
-              />
-            )}
-
-            {showRecent && (
-              <RecentTasks
-                tasks={recent}
-                employees={employees}
-                onViewAll={() => showTableContext(TASK_CONTEXT.RECENT)}
-              />
-            )}
-          </div>
-        )}
 
         {/* ref — dono "View all" isi card par scroll karte hain */}
         <div
@@ -719,6 +672,48 @@ function AllTasks() {
             onPageSizeChange={changePageSize}
           />
         </div>
+
+        {/*
+          Har panel apni permission par. Ek chhip jaye to doosra poori chaudai
+          le leta hai — Dashboard.jsx bhi yahi karta hai.
+          Summary cards bahar hain: unme koi assignee naam nahi aata.
+        */}
+        {(showProgress || showWorkload) && (
+          <div
+            className={`grid grid-cols-1 items-start gap-6 ${
+              showProgress && showWorkload ? "lg:grid-cols-2" : ""
+            }`}
+          >
+            {showProgress && <TaskProgress progress={progress} />}
+
+            {showWorkload && <TeamWorkload workload={workload} />}
+          </div>
+        )}
+
+        {(showUrgent || showRecent) && (
+          <div
+            className={`grid grid-cols-1 gap-6 ${
+              showUrgent && showRecent ? "lg:grid-cols-2" : ""
+            }`}
+          >
+            {showUrgent && (
+              <UrgentTasks
+                tasks={urgent}
+                employees={employees}
+                today={today}
+                onViewAll={() => showTableContext(TASK_CONTEXT.URGENT)}
+              />
+            )}
+
+            {showRecent && (
+              <RecentTasks
+                tasks={recent}
+                employees={employees}
+                onViewAll={() => showTableContext(TASK_CONTEXT.RECENT)}
+              />
+            )}
+          </div>
+        )}
       </div>
 
       <CreateTaskModal

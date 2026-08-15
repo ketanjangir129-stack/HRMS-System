@@ -214,7 +214,8 @@ export const subscribeToEmployeeAttendanceHistory = (
 
 export const punchInEmployee = async (
   companyCode,
-  employeeId
+  employeeId,
+  location = null
 ) => {
 
   if (!employeeId) {
@@ -273,6 +274,10 @@ export const punchInEmployee = async (
         punchInTime: formatTime(punchIn),
       };
 
+      if (location) {
+        updates["location/punchIn"] = location;
+      }
+
       await update(attendanceRef, updates);
 
       return {
@@ -295,11 +300,15 @@ export const punchInEmployee = async (
     punchIn: Date.now(),
   });
 
-  await set(attendanceRef, attendance);
+  const record = location
+    ? { ...attendance, location: { punchIn: location } }
+    : attendance;
+
+  await set(attendanceRef, record);
 
   return {
     success: true,
-    data: attendance,
+    data: record,
   };
 
 };
@@ -312,7 +321,8 @@ export const punchInEmployee = async (
 
 export const punchOutEmployee = async (
   companyCode,
-  employeeId
+  employeeId,
+  location = null
 ) => {
 
   const attendanceRef = ref(
@@ -353,14 +363,20 @@ export const punchOutEmployee = async (
 
   const punchOut = Date.now();
 
-  await update(attendanceRef, {
+  const updates = {
     punchOut,
     punchOutTime: formatTime(punchOut),
     workingHours: calculateWorkingHours(
       attendance.punchIn,
       punchOut
     ),
-  });
+  };
+
+  if (location) {
+    updates["location/punchOut"] = location;
+  }
+
+  await update(attendanceRef, updates);
 
   return { success: true };
 
@@ -397,7 +413,11 @@ export const saveAttendance = async (
   await set(
     attendanceRef,
     existing
-      ? { ...record, createdAt: existing.createdAt || record.createdAt }
+      ? {
+          ...record,
+          createdAt: existing.createdAt || record.createdAt,
+          ...(existing.location ? { location: existing.location } : {}),
+        }
       : record
   );
 
@@ -604,6 +624,8 @@ export const applyLeaveAttendance = async (
 
       createdAt: current?.createdAt || Date.now(),
 
+      ...(current?.location ? { location: current.location } : {}),
+
       leaveRequestId,
 
       leaveStatusBefore: current?.status || "",
@@ -685,6 +707,8 @@ export const clearLeaveAttendance = async (
         }),
 
         createdAt: current.createdAt || Date.now(),
+
+        ...(current.location ? { location: current.location } : {}),
 
       };
 
