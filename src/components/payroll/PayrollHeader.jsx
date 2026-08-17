@@ -66,21 +66,21 @@ function PayrollHeader({
 
   return (
 
-    <div className="flex flex-col gap-5 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm lg:flex-row lg:items-center lg:justify-between">
+    <div className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:gap-5 sm:p-6 lg:flex-row lg:items-center lg:justify-between">
 
-      <div className="flex items-center gap-4">
+      <div className="flex min-w-0 items-center gap-3 sm:gap-4">
 
-        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-blue-600 text-xl text-white shadow-sm shadow-blue-600/20">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-blue-600 text-lg text-white shadow-sm shadow-blue-600/20 sm:h-12 sm:w-12 sm:text-xl">
           <TbReportMoney />
         </div>
 
-        <div>
+        <div className="min-w-0">
 
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+          <h1 className="text-lg font-bold tracking-tight text-slate-900 sm:text-2xl">
             Payroll Dashboard
           </h1>
 
-          <p className="mt-1 text-sm text-slate-500">
+          <p className="mt-0.5 text-xs text-slate-500 sm:mt-1 sm:text-sm">
             {totalEmployees > 0
               ? `${totalEmployees - pendingCount} of ${totalEmployees} generated for ${formatPayrollMonth(payrollMonth)}.`
               : "Generate and review the monthly payroll run."}
@@ -90,21 +90,26 @@ function PayrollHeader({
 
       </div>
 
-      <div className="flex flex-wrap items-center gap-3">
+      {/*
+      | On a phone the month takes a line of its own and the two buttons split
+      | the one under it — three controls on one line is what pushed the run
+      | button off the card at that width.
+      */}
+      <div className="flex flex-wrap items-center gap-2 sm:gap-3">
 
         <input
           type="month"
           value={payrollMonth}
           onChange={(event) => setPayrollMonth(event.target.value)}
           aria-label="Payroll month"
-          className="cursor-pointer rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 outline-none transition-all focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+          className="w-full cursor-pointer rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 outline-none transition-all focus:border-blue-500 focus:ring-2 focus:ring-blue-100 sm:w-auto"
         />
 
         <button
           type="button"
           onClick={onRefresh}
           disabled={busy}
-          className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 transition-all hover:border-blue-500 hover:bg-blue-50 hover:text-blue-600 disabled:cursor-not-allowed disabled:opacity-60"
+          className="inline-flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 transition-all hover:border-blue-500 hover:bg-blue-50 hover:text-blue-600 disabled:cursor-not-allowed disabled:opacity-60 sm:flex-none"
         >
 
           <FiRefreshCw className={loading ? "animate-spin" : ""} />
@@ -118,12 +123,24 @@ function PayrollHeader({
           onClick={onGenerateAll}
           disabled={runDisabled}
           title={runHint}
-          className="inline-flex cursor-pointer items-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-blue-600/20 transition-all duration-200 hover:-translate-y-0.5 hover:bg-blue-700 hover:shadow-lg hover:shadow-blue-600/30 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:shadow-md"
+          className="inline-flex flex-1 cursor-pointer items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-md shadow-blue-600/20 transition-all duration-200 hover:-translate-y-0.5 hover:bg-blue-700 hover:shadow-lg hover:shadow-blue-600/30 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:shadow-md sm:flex-none sm:px-5"
         >
 
-          <FiPlayCircle className={generatingAll ? "animate-spin" : ""} />
+          <FiPlayCircle className={`shrink-0 ${generatingAll ? "animate-spin" : ""}`} />
 
-          {generatingAll ? "Generating..." : "Generate Payroll"}
+          {/*
+          | Sharing the line with Refresh leaves about half a phone for this
+          | button, which "Generate Payroll" does not fit — the word the month
+          | picker above already supplies is the one dropped.
+          */}
+          {generatingAll ? (
+            "Generating..."
+          ) : (
+            <>
+              <span className="sm:hidden">Generate</span>
+              <span className="hidden sm:inline">Generate Payroll</span>
+            </>
+          )}
 
         </button>
 

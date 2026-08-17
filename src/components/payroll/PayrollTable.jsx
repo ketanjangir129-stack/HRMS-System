@@ -15,6 +15,7 @@ import {
 } from "../../utils/Payroll/payrollConstants";
 import { formatPayrollMonth } from "../../utils/Payroll/payrollDate";
 import { formatCurrency } from "../../utils/salary/formatCurrency";
+import PayrollEmployeeCard from "./PayrollEmployeeCard";
 import PayrollStatusBadge from "./common/PayrollStatusBadge";
 
 /*
@@ -31,6 +32,9 @@ import PayrollStatusBadge from "./common/PayrollStatusBadge";
 | the amount and the action stay on every screen, and the department and the
 | designation drop out as the viewport narrows. Both are repeated inside the
 | employee cell, so nothing is lost on a small screen.
+|
+| Below `md` even that is too many columns for the width, so the same rows are
+| rendered as cards instead — see `PayrollEmployeeCard`.
 |--------------------------------------------------------------------------
 */
 
@@ -260,6 +264,43 @@ function PayrollTable({
 
   ];
 
+  /*
+  | The phone card puts the row's action behind its three dot button. It is
+  | the same action and the same gate as the column above, except that a row
+  | which may not be generated offers nothing at all: a menu of one disabled
+  | item is worse than no menu, and the banner over the table already says
+  | why the month cannot be run.
+  */
+  const getActions = (row) => {
+
+    if (row.payrollGenerated) {
+
+      return [
+        {
+          key: "payslip",
+          label: "Payslip",
+          title: "Open payslip",
+          icon: <FiFileText size={15} />,
+          onClick: () => onViewPayslip(row.employeeId),
+        },
+      ];
+
+    }
+
+    if (isFutureMonth || !generateGate.allowed) return [];
+
+    return [
+      {
+        key: "generate",
+        label: "Generate",
+        title: "Generate payroll for this employee",
+        icon: <FiPlay size={15} />,
+        onClick: () => onGenerate(row.employeeId),
+      },
+    ];
+
+  };
+
   return (
 
     <AttendancePanel
@@ -311,9 +352,15 @@ function PayrollTable({
         resetKey={`${keyword}|${status}`}
         pageSize={PAYROLL_PAGE_SIZE}
         paginationLabel="employees"
+        mobileCard={(row) => (
+          <PayrollEmployeeCard
+            employee={row}
+            actions={getActions(row)}
+          />
+        )}
         /*
-        | Grows with the columns that appear at each breakpoint, so a phone
-        | scrolls a compact four column table instead of a 1100px one.
+        | Grows with the columns that appear at each breakpoint, so a narrow
+        | tablet scrolls a compact four column table instead of a 1100px one.
         */
         minWidthClass="min-w-[520px] md:min-w-[680px] lg:min-w-[880px]"
         loadingMessage="Loading payroll..."

@@ -1,0 +1,232 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+
+    "//": "Company codes are claimed before the company node is written, so the create rule below can verify the claim. Any signed-in user may read them: registration needs an availability check.",
+    "companyCodes": {
+      ".read": "auth != null",
+
+      "$companyCode": {
+        "//": "Claim an unused code, or release a claim you made. Releasing matters during migration: an owner who mistypes their code would otherwise have locked it away with no way back.",
+        ".write": "auth != null && ((!data.exists() && newData.val() === auth.uid) || (data.val() === auth.uid && !newData.exists()))",
+        ".validate": "newData.isString()"
+      }
+    },
+
+    "//userIndex": "The only thing that maps a Firebase Auth uid to a company and a role. Every rule below reads it. A client cannot forge its own row: an owner row is only accepted once the company already names that uid as its owner, and hr/employee rows may only be written by a manager of the same company.",
+    "userIndex": {
+      "$uid": {
+        ".read": "auth != null && (auth.uid === $uid || (root.child('userIndex').child(auth.uid).child('companyCode').val() === data.child('companyCode').val() && root.child('userIndex').child(auth.uid).child('role').val().matches(/^(owner|hr)$/)))",
+
+        "//write": "Two ways in. An owner bootstraps their own row — and only their own, hence $uid === auth.uid — which is accepted solely because the company already names them as owner. Otherwise a manager writes hr/employee rows inside their own company. Nobody can promote themselves: the second branch cannot mint an 'owner' row, and the first is pinned to a company that already vouches for the uid.",
+        ".write": "auth != null && ((!data.exists() && newData.exists() && $uid === auth.uid && newData.child('role').val() === 'owner' && root.child('companies').child(newData.child('companyCode').val()).child('details').child('ownerUid').val() === auth.uid) || (root.child('userIndex').child(auth.uid).child('role').val().matches(/^(owner|hr)$/) && root.child('userIndex').child(auth.uid).child('companyCode').val() === (newData.exists() ? newData.child('companyCode').val() : data.child('companyCode').val()) && (!newData.exists() || newData.child('role').val().matches(/^(hr|employee)$/))))",
+
+        ".validate": "newData.hasChildren(['uid', 'companyCode', 'role']) && newData.child('uid').val() === $uid && newData.child('role').val().matches(/^(owner|hr|employee)$/)",
+
+        "uid": { ".validate": "newData.isString()" },
+        "companyCode": { ".validate": "newData.isString()" },
+        "role": { ".validate": "newData.isString()" },
+        "employeeId": { ".validate": "newData.isString()" },
+        "status": { ".validate": "newData.isString()" },
+        "createdAt": { ".validate": "newData.isNumber()" },
+        "$other": { ".validate": false }
+      }
+    },
+
+    "companies": {
+      "$companyCode": {
+        "//create": "Grants write only while the node does not exist, so this cannot be used as a back door into an existing company's subtree.",
+        ".write": "auth != null && !data.exists() && newData.child('details/ownerUid').val() === auth.uid && root.child('companyCodes').child($companyCode).val() === auth.uid",
+
+        "details": {
+          ".read": "auth != null && root.child('userIndex').child(auth.uid).child('companyCode').val() === $companyCode",
+          ".write": "auth != null && root.child('userIndex').child(auth.uid).child('companyCode').val() === $companyCode && root.child('userIndex').child(auth.uid).child('role').val() === 'owner'",
+
+          "ownerUid": { ".validate": "!data.exists() || newData.val() === data.val()" }
+        },
+
+        "//employees": "Readable by every member — the directory feeds names into attendance, tasks and leave screens. Nothing secret lives here: passwords are held by Firebase Auth, and pay lives under salaries/payroll, which stay manager-only.",
+        "employees": {
+          ".read": "auth != null && root.child('userIndex').child(auth.uid).child('companyCode').val() === $companyCode",
+          ".write": "auth != null && root.child('userIndex').child(auth.uid).child('companyCode').val() === $companyCode && root.child('userIndex').child(auth.uid).child('role').val().matches(/^(owner|hr)$/)",
+
+          "$employeeId": {
+            "personalInfo": {
+              ".write": "auth != null && root.child('userIndex').child(auth.uid).child('companyCode').val() === $companyCode && root.child('userIndex').child(auth.uid).child('employeeId').val() === $employeeId"
+            },
+
+            "bankInfo": {
+              ".write": "auth != null && root.child('userIndex').child(auth.uid).child('companyCode').val() === $companyCode && root.child('userIndex').child(auth.uid).child('employeeId').val() === $employeeId"
+            },
+
+            "account": {
+              "//password": "Refuses the write outright. Credentials belong to Firebase Auth; this is what stops the old plaintext-password field from coming back.",
+              "password": { ".validate": false },
+
+              "isPasswordChanged": {
+                ".write": "auth != null && root.child('userIndex').child(auth.uid).child('companyCode').val() === $companyCode && root.child('userIndex').child(auth.uid).child('employeeId').val() === $employeeId",
+                ".validate": "newData.isBoolean()"
+              },
+
+              "role": { ".validate": "newData.val().matches(/^(hr|employee)$/)" },
+              "status": { ".validate": "newData.isString()" }
+            }
+          }
+        },
+
+        "departments": {
+          ".read": "auth != null && root.child('userIndex').child(auth.uid).child('companyCode').val() === $companyCode",
+          ".write": "auth != null && root.child('userIndex').child(auth.uid).child('companyCode').val() === $companyCode && root.child('userIndex').child(auth.uid).child('role').val().matches(/^(owner|hr)$/)"
+        },
+
+        "holidays": {
+          ".read": "auth != null && root.child('userIndex').child(auth.uid).child('companyCode').val() === $companyCode",
+          ".write": "auth != null && root.child('userIndex').child(auth.uid).child('companyCode').val() === $companyCode && root.child('userIndex').child(auth.uid).child('role').val().matches(/^(owner|hr)$/)"
+        },
+
+        "//tasks": "Every member reads the board; the app's permission registry decides what is actually shown. Writes are manager-only, except for a task the member created or was assigned.",
+        "tasks": {
+          ".read": "auth != null && root.child('userIndex').child(auth.uid).child('companyCode').val() === $companyCode",
+          ".write": "auth != null && root.child('userIndex').child(auth.uid).child('companyCode').val() === $companyCode && root.child('userIndex').child(auth.uid).child('role').val().matches(/^(owner|hr)$/)",
+
+          "$taskId": {
+            ".write": "auth != null && root.child('userIndex').child(auth.uid).child('companyCode').val() === $companyCode && (data.child('assignedTo').val() === root.child('userIndex').child(auth.uid).child('employeeId').val() || data.child('createdBy').val() === root.child('userIndex').child(auth.uid).child('employeeId').val() || newData.child('createdBy').val() === root.child('userIndex').child(auth.uid).child('employeeId').val())"
+          }
+        },
+
+        "attendance": {
+          "records": {
+            ".read": "auth != null && root.child('userIndex').child(auth.uid).child('companyCode').val() === $companyCode",
+            ".write": "auth != null && root.child('userIndex').child(auth.uid).child('companyCode').val() === $companyCode && root.child('userIndex').child(auth.uid).child('role').val().matches(/^(owner|hr)$/)",
+
+            "$year": {
+              "$month": {
+                "$date": {
+                  "$employeeId": {
+                    "//": "Punch in and punch out: a member writes only their own day.",
+                    ".write": "auth != null && root.child('userIndex').child(auth.uid).child('companyCode').val() === $companyCode && root.child('userIndex').child(auth.uid).child('employeeId').val() === $employeeId"
+                  }
+                }
+              }
+            }
+          },
+
+          "requests": {
+            ".read": "auth != null && root.child('userIndex').child(auth.uid).child('companyCode').val() === $companyCode",
+            ".write": "auth != null && root.child('userIndex').child(auth.uid).child('companyCode').val() === $companyCode && root.child('userIndex').child(auth.uid).child('role').val().matches(/^(owner|hr)$/)",
+
+            "$year": {
+              "$month": {
+                "$date": {
+                  "$employeeId": {
+                    ".write": "auth != null && root.child('userIndex').child(auth.uid).child('companyCode').val() === $companyCode && root.child('userIndex').child(auth.uid).child('employeeId').val() === $employeeId"
+                  }
+                }
+              }
+            }
+          },
+
+          "settings": {
+            ".read": "auth != null && root.child('userIndex').child(auth.uid).child('companyCode').val() === $companyCode",
+            ".write": "auth != null && root.child('userIndex').child(auth.uid).child('companyCode').val() === $companyCode && root.child('userIndex').child(auth.uid).child('role').val() === 'owner'"
+          }
+        },
+
+        "leave": {
+          "settings": {
+            ".read": "auth != null && root.child('userIndex').child(auth.uid).child('companyCode').val() === $companyCode",
+            ".write": "auth != null && root.child('userIndex').child(auth.uid).child('companyCode').val() === $companyCode && root.child('userIndex').child(auth.uid).child('role').val().matches(/^(owner|hr)$/)"
+          },
+
+          "usage": {
+            ".read": "auth != null && root.child('userIndex').child(auth.uid).child('companyCode').val() === $companyCode",
+            ".write": "auth != null && root.child('userIndex').child(auth.uid).child('companyCode').val() === $companyCode && root.child('userIndex').child(auth.uid).child('role').val().matches(/^(owner|hr)$/)"
+          },
+
+          "requests": {
+            ".read": "auth != null && root.child('userIndex').child(auth.uid).child('companyCode').val() === $companyCode",
+            ".write": "auth != null && root.child('userIndex').child(auth.uid).child('companyCode').val() === $companyCode && root.child('userIndex').child(auth.uid).child('role').val().matches(/^(owner|hr)$/)",
+
+            "$year": {
+              "$month": {
+                "$appliedDate": {
+                  "$employeeId": {
+                    "//": "Applying for leave. Approving one goes through the manager rule on the branch above.",
+                    ".write": "auth != null && root.child('userIndex').child(auth.uid).child('companyCode').val() === $companyCode && root.child('userIndex').child(auth.uid).child('employeeId').val() === $employeeId"
+                  }
+                }
+              }
+            }
+          }
+        },
+
+        "salaries": {
+          ".read": "auth != null && root.child('userIndex').child(auth.uid).child('companyCode').val() === $companyCode && root.child('userIndex').child(auth.uid).child('role').val().matches(/^(owner|hr)$/)",
+          ".write": "auth != null && root.child('userIndex').child(auth.uid).child('companyCode').val() === $companyCode && root.child('userIndex').child(auth.uid).child('role').val().matches(/^(owner|hr)$/)",
+
+          "$employeeId": {
+            ".read": "auth != null && root.child('userIndex').child(auth.uid).child('companyCode').val() === $companyCode && root.child('userIndex').child(auth.uid).child('employeeId').val() === $employeeId"
+          }
+        },
+
+        "salaryHistory": {
+          ".read": "auth != null && root.child('userIndex').child(auth.uid).child('companyCode').val() === $companyCode && root.child('userIndex').child(auth.uid).child('role').val().matches(/^(owner|hr)$/)",
+          ".write": "auth != null && root.child('userIndex').child(auth.uid).child('companyCode').val() === $companyCode && root.child('userIndex').child(auth.uid).child('role').val().matches(/^(owner|hr)$/)",
+
+          "$employeeId": {
+            ".read": "auth != null && root.child('userIndex').child(auth.uid).child('companyCode').val() === $companyCode && root.child('userIndex').child(auth.uid).child('employeeId').val() === $employeeId"
+          }
+        },
+
+        "payroll": {
+          "runs": {
+            ".read": "auth != null && root.child('userIndex').child(auth.uid).child('companyCode').val() === $companyCode && root.child('userIndex').child(auth.uid).child('role').val().matches(/^(owner|hr)$/)",
+            ".write": "auth != null && root.child('userIndex').child(auth.uid).child('companyCode').val() === $companyCode && root.child('userIndex').child(auth.uid).child('role').val().matches(/^(owner|hr)$/)"
+          },
+
+          "records": {
+            ".read": "auth != null && root.child('userIndex').child(auth.uid).child('companyCode').val() === $companyCode && root.child('userIndex').child(auth.uid).child('role').val().matches(/^(owner|hr)$/)",
+            ".write": "auth != null && root.child('userIndex').child(auth.uid).child('companyCode').val() === $companyCode && root.child('userIndex').child(auth.uid).child('role').val().matches(/^(owner|hr)$/)",
+
+            "$payrollMonth": {
+              "$employeeId": {
+                "//": "An employee may open their own payslip.",
+                ".read": "auth != null && root.child('userIndex').child(auth.uid).child('companyCode').val() === $companyCode && root.child('userIndex').child(auth.uid).child('employeeId').val() === $employeeId"
+              }
+            }
+          }
+        },
+
+        "settings": {
+          "//rolesAccess": "Every member reads the permission matrix — the sidebar and the route guards are built from it. Only the owner edits it.",
+          "rolesAccess": {
+            ".read": "auth != null && root.child('userIndex').child(auth.uid).child('companyCode').val() === $companyCode",
+            ".write": "auth != null && root.child('userIndex').child(auth.uid).child('companyCode').val() === $companyCode && root.child('userIndex').child(auth.uid).child('role').val() === 'owner'"
+          },
+
+          "hrPolicy": {
+            ".read": "auth != null && root.child('userIndex').child(auth.uid).child('companyCode').val() === $companyCode",
+            ".write": "auth != null && root.child('userIndex').child(auth.uid).child('companyCode').val() === $companyCode && root.child('userIndex').child(auth.uid).child('role').val().matches(/^(owner|hr)$/)"
+          }
+        },
+
+        "onboardingRequests": {
+          ".read": "auth != null && root.child('userIndex').child(auth.uid).child('companyCode').val() === $companyCode && root.child('userIndex').child(auth.uid).child('role').val().matches(/^(owner|hr)$/)",
+          ".write": "auth != null && root.child('userIndex').child(auth.uid).child('companyCode').val() === $companyCode && root.child('userIndex').child(auth.uid).child('role').val().matches(/^(owner|hr)$/)",
+
+          "$employeeId": {
+            "account": {
+              "password": { ".validate": false }
+            }
+          }
+        },
+
+        "onboardingHistory": {
+          ".read": "auth != null && root.child('userIndex').child(auth.uid).child('companyCode').val() === $companyCode && root.child('userIndex').child(auth.uid).child('role').val().matches(/^(owner|hr)$/)",
+          ".write": "auth != null && root.child('userIndex').child(auth.uid).child('companyCode').val() === $companyCode && root.child('userIndex').child(auth.uid).child('role').val().matches(/^(owner|hr)$/)"
+        }
+      }
+    }
+  }
+}

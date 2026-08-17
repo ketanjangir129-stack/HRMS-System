@@ -1,7 +1,8 @@
-import {Routes,Route} from "react-router-dom";
+import {Routes,Route,Navigate} from "react-router-dom";
 import Register from "../pages/authenticate/Register";
 import Login from "../pages/authenticate/login";
 import ChangePassword from "../pages/authenticate/ChangePassword";
+import MigrateAuth from "../pages/authenticate/MigrateAuth";
 import DashboardLayout from "../layouts/DashboardLayout";
 import Dashboard from "../pages/Dashboard";
 import Departments from "../pages/Departments";
@@ -28,13 +29,12 @@ import LeaveDashboard from "../pages/leave/LeaveDashboard";
 import LeaveApprovals from "../pages/leave/LeaveApprovals";
 import HolidayDashboard from "../pages/holiday/HolidayDashboard";
 import EmployeeOnboarding from "../pages/onboarding/EmployeeOnboarding/EmployeeOnboarding";
-import SalaryDashboard from "../pages/salary/SalaryDashBoard";
 import SalaryCRUD from "../pages/salary/SalaryCRUD";
 import SalaryForm from "../pages/salary/SalaryForm";
 import SalaryHistory from "../pages/salary/SalaryHistory";
-import SalaryRevisions from "../pages/salary/SalaryRevisions";
 import PayrolllDashboard from "../pages/payroll/PayrollDashboard";
 import PaySlip from "../pages/payroll/PaySlip";
+import HRPolicy from "../pages/hrPolicy/HRPolicy";
 import AllTasks from "../pages/tasks/AllTasks";
 import Settings from "../pages/settings/Settings";
 import Profile from "../pages/Profile";
@@ -68,6 +68,13 @@ function AppRoutes(){
                     </GuestRoute>
                 }
             />
+
+            {/*
+              One-time authentication migration. Not behind GuestRoute: until it
+              has run the owner has no /userIndex row, so no session can exist
+              for the guard to check. Remove once every company is migrated.
+            */}
+            <Route path="/migrate" element={<MigrateAuth />} />
 
             <Route
                 element={
@@ -269,31 +276,32 @@ function AppRoutes(){
                     }
                 />
 
-                {/* Salary Routing */}
+                {/*
+                  Salary Routing
+
+                  One screen for the module, reached from the sidebar. The
+                  register and the revision history are tabs on it rather than
+                  pages of their own, so the two addresses they used to have
+                  are kept only to carry an old link onto the right tab.
+                */}
                 <Route
                     path="/salarydashboard"
                     element={
                         <PermissionRoute permission="salary">
-                            <SalaryDashboard />
-                        </PermissionRoute>
-                    }
-                />
-
-                <Route
-                    path="/salarydashboard/salary"
-                    element={
-                        <PermissionRoute permission="salary.manage">
                             <SalaryCRUD />
                         </PermissionRoute>
                     }
                 />
 
                 <Route
+                    path="/salarydashboard/salary"
+                    element={<Navigate to="/salarydashboard" replace />}
+                />
+
+                <Route
                     path="/salarydashboard/salary/revisions"
                     element={
-                        <PermissionRoute permission="salary.revisions">
-                            <SalaryRevisions />
-                        </PermissionRoute>
+                        <Navigate to="/salarydashboard?tab=revisions" replace />
                     }
                 />
 
@@ -343,6 +351,16 @@ function AppRoutes(){
                     element={
                         <PermissionRoute permission="payroll.payslip">
                             <PaySlip />
+                        </PermissionRoute>
+                    }
+                />
+
+                {/* HR Policy - the PF and ESI rules payslips are priced against */}
+                <Route
+                    path="/hr-policy"
+                    element={
+                        <PermissionRoute permission="hrPolicy">
+                            <HRPolicy />
                         </PermissionRoute>
                     }
                 />

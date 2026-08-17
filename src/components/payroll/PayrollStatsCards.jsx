@@ -27,13 +27,13 @@ function PayrollStatsCards({
 
     return (
 
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 xl:grid-cols-4">
 
         {Array.from({ length: 4 }).map((_, index) => (
 
           <div
             key={index}
-            className="h-40 animate-pulse rounded-2xl border border-slate-200 bg-white"
+            className="h-32 animate-pulse rounded-2xl border border-slate-200 bg-white sm:h-40"
           />
 
         ))}
@@ -89,7 +89,7 @@ function PayrollStatsCards({
       | Currency runs far wider than a count, so this one card steps its value
       | down instead of letting the number wrap out of the card.
       */
-      valueClass: "text-2xl sm:text-3xl",
+      valueClass: "text-xl sm:text-3xl",
       subtitle:
         pendingCount > 0
           ? `Across ${generatedCount} generated payslip${generatedCount === 1 ? "" : "s"}`
@@ -104,13 +104,13 @@ function PayrollStatsCards({
 
   return (
 
-    <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-4">
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 xl:grid-cols-4">
 
       {cards.map((card) => (
 
         <div
           key={card.title}
-          className="group relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg"
+          className="group relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg sm:p-6"
         >
 
           <span className={`absolute left-0 top-0 h-1 w-full ${card.color}`} />
@@ -119,12 +119,12 @@ function PayrollStatsCards({
 
             <div className="min-w-0">
 
-              <p className="text-sm font-medium text-slate-500">
+              <p className="truncate text-sm font-medium text-slate-500">
                 {card.title}
               </p>
 
               <h2
-                className={`mt-2 truncate font-bold text-slate-900 ${card.valueClass || "text-4xl"}`}
+                className={`mt-1.5 truncate font-bold text-slate-900 sm:mt-2 ${card.valueClass || "text-3xl sm:text-4xl"}`}
               >
                 {card.value}
               </h2>
@@ -132,14 +132,14 @@ function PayrollStatsCards({
             </div>
 
             <div
-              className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-xl ${card.iconBg} ${card.iconColor}`}
+              className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl text-lg sm:h-12 sm:w-12 sm:text-xl ${card.iconBg} ${card.iconColor}`}
             >
               {card.icon}
             </div>
 
           </div>
 
-          <p className="mt-6 text-sm text-slate-500">
+          <p className="mt-4 text-xs text-slate-500 sm:mt-6 sm:text-sm">
             {card.subtitle}
           </p>
 

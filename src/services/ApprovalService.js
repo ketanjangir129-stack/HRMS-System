@@ -1,5 +1,11 @@
 import {db} from "../firebase/firebase"
 import {ref , get , set,remove , update} from  "firebase/database";
+import { provisionAuthUser } from "../firebase/secondaryAuth";
+import { createEmployeeIndex } from "./userIndexService";
+import {
+  buildDefaultPassword,
+  buildEmployeeEmail,
+} from "../utils/auth/employeeIdentity";
 
 // Onboarding requests store contact details in employmentInfo, but the
 // employees node uses the personalInfo/employmentInfo/bankInfo shape that
@@ -54,6 +60,10 @@ const toEmployeeRecord = (request, employeeId) => {
 
     account: {
       ...(request.account || {}),
+      // The onboarding request carried a plaintext password. Credentials now
+      // live in Firebase Auth, and the rules refuse this field, so drop
+      // whatever the request had rather than copying it across.
+      password: null,
       status: "Active",
     },
   };
@@ -83,8 +93,32 @@ export const approveOnboarding = async (
 
     const request = snapshot.val();
 
+    const record = toEmployeeRecord(request, employeeId);
+
+    /*
+    | Approval is the moment the joiner becomes someone who can sign in, so it
+    | is where their Firebase Auth account is created — same as addEmployee.
+    | Done before any write, so a failure here leaves the request untouched and
+    | still approvable.
+    */
+    const temporaryPassword = buildDefaultPassword(employeeId);
+
+    const provision = await provisionAuthUser(
+      buildEmployeeEmail(companyCode, employeeId),
+      temporaryPassword
+    );
+
+    if (!provision.success) {
+      return { success: false, message: provision.message };
+    }
+
     const employee = {
-      ...toEmployeeRecord(request, employeeId),
+      ...record,
+      account: {
+        ...record.account,
+        uid: provision.uid,
+        isPasswordChanged: false,
+      },
       approvedAt: Date.now(),
       approvedBy,
       createdAt: request.createdAt || Date.now(),
@@ -97,6 +131,13 @@ export const approveOnboarding = async (
       ),
       employee
     );
+
+    await createEmployeeIndex({
+      uid: provision.uid,
+      companyCode,
+      employeeId,
+      role: employee.account.role || "employee",
+    });
 
     const history = {
       employeeId,
@@ -119,6 +160,7 @@ export const approveOnboarding = async (
     return {
       success: true,
       message: "Employee onboarded successfully.",
+      temporaryPassword,
     };
 
   } catch (error) {

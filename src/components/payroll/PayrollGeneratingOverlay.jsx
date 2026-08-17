@@ -49,7 +49,7 @@ function PayrollGeneratingOverlay({ open, payrollMonth, employeeId = "" }) {
             className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-sm"
         >
 
-            <div className="w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-2xl">
+            <div className="w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-6 text-center shadow-2xl sm:p-8">
 
                 <div className="relative mx-auto flex h-16 w-16 items-center justify-center">
 

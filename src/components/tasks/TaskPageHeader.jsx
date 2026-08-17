@@ -7,8 +7,8 @@
 | Project mein do tarah ke header hain:
 |   - sub-page wale (AttendancePageHeader, SalaryPageHeader) — back arrow
 |     ke saath, bare, koi card nahi
-|   - top-level dashboard wale (AttendanceHeader, SalaryDashboard) — white
-|     card mein, back arrow nahi
+|   - top-level dashboard wale (AttendanceHeader, PayrollHeader, aur
+|     SalaryPageHeader ka `card` variant) — white card mein, back arrow nahi
 |
 | /tasks Sidebar ka apna page hai (jaise /attendance aur /salarydashboard),
 | iske peeche jaane ko kuch nahi. Isliye ye doosra pattern follow karta hai

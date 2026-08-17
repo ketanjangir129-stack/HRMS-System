@@ -38,6 +38,17 @@ const MAX_SCALE = 1.5;
 const MIN_SCALE = 0.7;
 
 /*
+| The narrowest the design is worth scaling to. Under this the sheet would be
+| shrunk past reading size, so it reflows to the compact layout instead — see
+| the compact section of PaySlip.module.css.
+|
+| It is measured against the room the sheet actually has rather than the
+| viewport, so a tablet whose sidebar is open reflows at the same point a
+| phone does.
+*/
+const COMPACT_WIDTH = 720;
+
+/*
 | A4 portrait at 96dpi minus the 10mm `@page` margins the stylesheet asks
 | for: 210 - 20 = 190mm wide, 297 - 20 = 277mm tall, less a millimetre of
 | slack so rounding can never tip the sheet onto a second page.
@@ -332,6 +343,7 @@ const PaySlip = () => {
   const sheetRef = useRef(null);
   const [scale, setScale] = useState(1);
   const [designHeight, setDesignHeight] = useState(0);
+  const [compact, setCompact] = useState(false);
 
   /*
   | `offsetHeight` is the sheet's pre-transform height — both the size the
@@ -351,13 +363,33 @@ const PaySlip = () => {
       const availableWidth = frame.clientWidth;
       if (!availableWidth) return;
 
+      const isCompact = availableWidth < COMPACT_WIDTH;
+      setCompact(isCompact);
+
+      /*
+      | Always measure the design layout, even while the compact one is the
+      | one on screen: this height sizes the printed page, and print is given
+      | the design sheet whatever the screen is showing. Dropping the class
+      | and putting it back inside a single layout pass never reaches a paint,
+      | and leaves the sheet the size the observer last saw it.
+      */
+      if (isCompact) sheet.classList.remove(styles.compact);
       const naturalHeight = sheet.offsetHeight;
+      if (isCompact) sheet.classList.add(styles.compact);
+
+      setDesignHeight(naturalHeight);
+
+      // A reflowed sheet is already the width it should be; nothing to scale.
+      if (isCompact) {
+        setScale(1);
+        return;
+      }
+
       const widthScale = availableWidth / DESIGN_WIDTH;
       const heightScale = naturalHeight
         ? measureAvailableHeight(canvas) / naturalHeight
         : widthScale;
 
-      setDesignHeight(naturalHeight);
       setScale(
         Math.min(
           MAX_SCALE,
@@ -420,7 +452,7 @@ const PaySlip = () => {
   };
 
   if (loading) {
-    return <div className="p-8">Loading Payslip...</div>;
+    return <div className="p-4 text-sm sm:p-8 sm:text-base">Loading Payslip...</div>;
   }
 
   if (error || !payroll) {
@@ -441,9 +473,9 @@ const PaySlip = () => {
       : fallbackPath || "/dashboard";
 
     return (
-      <div className="p-8 space-y-4">
+      <div className="space-y-4 p-4 sm:p-8">
         <div
-          className={`rounded-lg px-4 py-3 ${
+          className={`rounded-lg px-4 py-3 text-sm sm:text-base ${
             isWaiting
               ? "bg-amber-50 text-amber-700 ring-1 ring-amber-200"
               : "bg-red-100 text-red-700"
@@ -457,7 +489,7 @@ const PaySlip = () => {
         <button
           type="button"
           onClick={() => navigate(backPath)}
-          className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 sm:w-auto sm:text-base"
         >
           <FiArrowLeft />
           {backPath === "/payrolldashboard" ? "Back to Payroll" : "Go Back"}
@@ -487,14 +519,15 @@ const PaySlip = () => {
     <div className={styles.page}>
       <div ref={frameRef} className={styles.frame}>
         {/* Dropped by the print rules in the stylesheet */}
-        <div className={styles.toolbar}>
+        <div
+          className={`${styles.toolbar} ${compact ? styles.toolbarCompact : ""}`}
+        >
           <button
             type="button"
             onClick={() => navigate("/payrolldashboard")}
-            className={styles.downloadButton}
-            style={{ background: "#475569", marginRight: "auto" }}
+            className={`${styles.downloadButton} ${styles.backButton}`}
           >
-            <FiArrowLeft />
+            <FiArrowLeft className="shrink-0" />
             Back
           </button>
 
@@ -505,7 +538,8 @@ const PaySlip = () => {
           <select
             value={selectedMonth}
             onChange={(event) => setSelectedMonth(event.target.value)}
-            className="border border-gray-300 rounded-xl px-3 py-2 mr-3 text-sm font-semibold bg-white"
+            aria-label="Payslip month"
+            className={styles.monthSelect}
           >
             {payrolls.map((item) => (
               <option key={item.payrollMonth} value={item.payrollMonth}>
@@ -519,14 +553,19 @@ const PaySlip = () => {
             onClick={handleDownload}
             className={styles.downloadButton}
           >
-            <FiDownload />
-            Download Payslip
+            <FiDownload className="shrink-0" />
+            {/*
+            | Sharing the line with Back leaves about half a phone for this
+            | button, which "Download Payslip" does not fit — and the sheet
+            | directly under it already says what is being downloaded.
+            */}
+            {compact ? "Download" : "Download Payslip"}
           </button>
         </div>
 
         <div
           ref={canvasRef}
-          className={styles.canvas}
+          className={`${styles.canvas} ${compact ? styles.canvasCompact : ""}`}
           style={{
             "--payslip-width": `${DESIGN_WIDTH}px`,
             "--payslip-height": `${designHeight}px`,
@@ -534,7 +573,10 @@ const PaySlip = () => {
             "--payslip-print-zoom": printZoom,
           }}
         >
-          <div ref={sheetRef} className={styles.sheet}>
+          <div
+            ref={sheetRef}
+            className={`${styles.sheet} ${compact ? styles.compact : ""}`}
+          >
             {/* Header */}
             <div className={styles.header}>
               <div className={styles.headerLeft}>

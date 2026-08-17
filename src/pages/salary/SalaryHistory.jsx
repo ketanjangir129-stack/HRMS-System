@@ -13,6 +13,7 @@ import { TbMoneybagEdit } from "react-icons/tb";
 import { getSalaryHistory } from "../../services/SalaryService";
 import { getFieldLabel } from "../../utils/salary/salaryFields";
 import { formatCurrency } from "../../utils/salary/formatCurrency";
+import { formatSalaryDate } from "../../utils/salary/formatSalaryDate";
 import SalaryPageHeader from "../../components/salary/SalaryPageHeader";
 import Loader from "../../components/common/Loader";
 
@@ -48,30 +49,17 @@ function SalaryHistory() {
         loadHistory();
     }, []);
 
-    const formatDate = (value) => {
-        if (!value) {
-            return "—";
-        }
-        const date = new Date(value);
-        if (Number.isNaN(date.getTime())) {
-            return value;
-        }
-        return date.toLocaleDateString("en-US", {
-            day: "numeric",
-            month: "short",
-            year: "numeric",
-        });
-    };
-
     const header = (
         <SalaryPageHeader
             title="Salary History"
             subtitle={`Revision timeline for employee ${employeeId}`}
             icon={<BsClockHistory />}
-            backTo="/salarydashboard/salary"
+            backTo="/salarydashboard"
+            /* The count is small enough to sit beside the title on a phone. */
+            inlineAction
             action={
                 history.length > 0 && (
-                    <span className="inline-flex w-fit items-center gap-2 rounded-full bg-blue-50 px-3 py-1 text-sm font-medium text-blue-700">
+                    <span className="inline-flex w-fit items-center gap-2 whitespace-nowrap rounded-full bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700 sm:px-3 sm:text-sm">
                         {history.length}{" "}
                         {history.length === 1 ? "revision" : "revisions"}
                     </span>
@@ -110,7 +98,7 @@ function SalaryHistory() {
                     </p>
 
                     <button
-                        onClick={() => navigate("/salarydashboard/salary")}
+                        onClick={() => navigate("/salarydashboard")}
                         className="mt-6 inline-flex cursor-pointer items-center justify-center rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-blue-600/20 transition-all duration-200 hover:-translate-y-0.5 hover:bg-blue-700 hover:shadow-lg hover:shadow-blue-600/30"
                     >
                         Back to Salaries
@@ -205,7 +193,7 @@ function SalaryHistory() {
 
                                             <FiCalendar size={14} />
 
-                                            Recorded on {formatDate(record.updatedAt)}
+                                            Recorded on {formatSalaryDate(record.updatedAt)}
 
                                         </p>
 

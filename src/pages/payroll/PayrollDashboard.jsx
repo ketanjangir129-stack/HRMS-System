@@ -412,7 +412,7 @@ function PayrollDashboard() {
 
     return (
 
-        <div className="mx-auto max-w-[1600px] space-y-6 p-1 sm:p-2">
+        <div className="mx-auto max-w-[1600px] space-y-4 p-0 sm:space-y-6 sm:p-2">
 
             {/*
             | Held open for the whole run, the reload of the month included,
@@ -492,7 +492,7 @@ function PayrollDashboard() {
             */}
             {isFutureMonth && (
 
-                <div className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-700">
+                <div className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-700 sm:p-4 sm:text-sm">
 
                     <FiInfo className="mt-0.5 shrink-0" size={16} />
 
@@ -507,7 +507,7 @@ function PayrollDashboard() {
 
             {notice && (
 
-                <div className="flex items-start gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-700">
+                <div className="flex items-start gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-xs text-emerald-700 sm:p-4 sm:text-sm">
 
                     <FiCheckCircle className="mt-0.5 shrink-0" size={16} />
 
@@ -519,7 +519,7 @@ function PayrollDashboard() {
 
             {error && (
 
-                <div className="flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-600">
+                <div className="flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-600 sm:p-4 sm:text-sm">
 
                     <FiAlertCircle className="mt-0.5 shrink-0" size={16} />
 

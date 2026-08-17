@@ -174,7 +174,7 @@ function Employees() {
                             size={18}
                             className="transition-transform duration-200 group-hover:scale-110"
                         />
-                        Add Employee
+                        
                     </button>
                 )}
 
@@ -263,9 +263,7 @@ function Employees() {
                     | rendered as cards instead. Same array, same page, same
                     | handlers — only the markup differs.
                     */}
-                        {/* Tinted behind the cards so the white cards read as
-                            separate rows rather than one flat panel. */}
-                        <div className="space-y-3 bg-slate-50/70 p-4 md:hidden">
+                        <div className="space-y-3 p-4 md:hidden">
 
                             {paginatedEmployees.map((emp) => (
                                 <EmployeeCard

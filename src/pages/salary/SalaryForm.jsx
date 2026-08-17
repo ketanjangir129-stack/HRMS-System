@@ -268,7 +268,7 @@ function SalaryForm() {
                 alert(result.message);
 
             }
-            navigate("/salarydashboard/salary");
+            navigate("/salarydashboard");
         }
         catch (error) {
             console.error(error)
@@ -307,7 +307,7 @@ function SalaryForm() {
                     title="Salary Structure"
                     subtitle="Employee not found"
                     icon={<TbMoneybagEdit />}
-                    backTo="/salarydashboard/salary"
+                    backTo="/salarydashboard"
                 />
 
                 <div className="rounded-2xl border border-slate-200 bg-white p-10 text-center shadow-sm">
@@ -429,10 +429,12 @@ function SalaryForm() {
                         : "Set up the salary structure for this employee"
                 }
                 icon={<TbMoneybagEdit />}
-                backTo="/salarydashboard/salary"
+                backTo="/salarydashboard"
+                /* The pill is small enough to sit beside the title on a phone. */
+                inlineAction
                 action={
                     <span
-                        className={`inline-flex w-fit items-center rounded-full px-3 py-1 text-sm font-medium ${
+                        className={`inline-flex w-fit items-center whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-medium sm:px-3 sm:text-sm ${
                             isEditMode
                                 ? "bg-amber-50 text-amber-700"
                                 : "bg-emerald-50 text-emerald-700"
@@ -663,7 +665,7 @@ function SalaryForm() {
                 <div className="flex items-center gap-3">
 
                     <button
-                        onClick={() => navigate("/salarydashboard/salary")}
+                        onClick={() => navigate("/salarydashboard")}
                         className="inline-flex cursor-pointer items-center justify-center rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-600 shadow-sm transition-all duration-200 hover:border-slate-300 hover:bg-slate-50"
                     >
                         Cancel

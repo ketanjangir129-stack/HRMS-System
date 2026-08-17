@@ -1,4 +1,4 @@
-import { MdDashboard, MdOutlineBeachAccess, MdOutlineCelebration } from "react-icons/md";
+import { MdDashboard, MdOutlineBeachAccess, MdOutlineCelebration, MdOutlinePolicy } from "react-icons/md";
 import { MdChevronLeft, MdChevronRight, MdClose } from "react-icons/md";
 import { FaBuilding, FaTasks } from "react-icons/fa";
 import { BsFillPersonLinesFill,BsCalendarCheck } from "react-icons/bs";
@@ -82,6 +82,12 @@ const menuItems = [
     path: "/payrolldashboard",
     icon: BadgeIndianRupee ,
     permission: "payroll",
+  },
+  {
+    label: "HR Policy",
+    path: "/hr-policy",
+    icon: MdOutlinePolicy,
+    permission: "hrPolicy",
   },
   {
     label: "Settings",

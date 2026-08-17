@@ -16,6 +16,10 @@
 |
 | `.page` deliberately has no min-height: it must be free to end above the
 | fold, and the shell's `main` already paints the same grey behind it.
+|
+| Scaling only survives while the sheet stays readable. Once the room runs
+| out the component switches the sheet to `.compact` and the document reflows
+| instead — see the compact section at the foot of this file.
 */
 
 .page {
@@ -62,10 +66,36 @@
 |--------------------------------------------------------------------------
 */
 
+/*
+| Back sits on the left, the month and the download on the right. The row is
+| allowed to wrap so a narrow shell breaks it instead of pushing the download
+| off the edge.
+*/
+
 .toolbar {
   display: flex;
-  justify-content: flex-end;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
   margin-bottom: 1rem;
+}
+
+.monthSelect {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.75rem;
+  background: #fff;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  font-weight: 600;
+  color: #334155;
+  cursor: pointer;
+}
+
+.monthSelect:focus-visible {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgb(59 130 246 / 0.15);
 }
 
 .downloadButton {
@@ -80,6 +110,7 @@
   font-size: 0.875rem;
   line-height: 1.25rem;
   font-weight: 600;
+  white-space: nowrap;
   cursor: pointer;
   box-shadow:
     0 4px 6px -1px rgb(37 99 235 / 0.2),
@@ -104,6 +135,26 @@
 
 .downloadButton:active {
   transform: translateY(0);
+}
+
+/*
+| The same button in a quieter colour. It follows `.downloadButton` so its
+| hover wins on the element that carries both classes.
+*/
+
+.backButton {
+  margin-right: auto;
+  background: #475569;
+  box-shadow:
+    0 4px 6px -1px rgb(71 85 105 / 0.2),
+    0 2px 4px -2px rgb(71 85 105 / 0.2);
+}
+
+.backButton:hover {
+  background: #334155;
+  box-shadow:
+    0 10px 15px -3px rgb(71 85 105 / 0.3),
+    0 4px 6px -4px rgb(71 85 105 / 0.3);
 }
 
 /*
@@ -349,6 +400,167 @@
 
 .netSalaryTable td:last-child {
   text-align: right;
+}
+
+/*
+|--------------------------------------------------------------------------
+| Compact
+|--------------------------------------------------------------------------
+| Fitting an 800px design into a phone means scaling it to about four tenths,
+| and a payslip nobody can read without pinching is not a payslip. Below the
+| width the component calls compact the sheet stops being scaled and reflows
+| instead: it fills the screen, the paired columns stack, and the type drops
+| to phone sizes.
+|
+| Screen only, deliberately. The printed payslip is always the design layout —
+| the component measures the sheet at its design size even while these rules
+| are on screen — so a download from a phone gives the same page as a
+| download from a desktop.
+|
+| Only the sheet carries `.compact`, because that measurement works by taking
+| the class off and reading the height the design layout would have. Anything
+| outside the sheet that reflows gets a class of its own, so removing the
+| sheet's really does take every one of these rules off it.
+*/
+
+@media screen {
+  .canvas.canvasCompact {
+    width: 100%;
+    height: auto;
+  }
+
+  .sheet.compact {
+    width: 100%;
+    transform: none;
+    overflow-wrap: break-word;
+  }
+
+  /* The header keeps its two halves, at a size the narrower sheet can hold. */
+
+  .compact .header {
+    height: auto;
+    min-height: 5.5rem;
+  }
+
+  .compact .headerLeft {
+    width: 58%;
+    padding: 0.75rem;
+  }
+
+  .compact .companyName {
+    font-size: 1.125rem;
+    line-height: 1.5rem;
+  }
+
+  .compact .companyLine {
+    font-size: 0.6875rem;
+    line-height: 1rem;
+  }
+
+  .compact .triangle {
+    right: -18px;
+    border-top-width: 18px;
+    border-left-width: 18px;
+  }
+
+  .compact .logo {
+    top: 0.75rem;
+    right: 0.75rem;
+    width: 4rem;
+    height: 4rem;
+  }
+
+  .compact .logoTop {
+    font-size: 0.625rem;
+    line-height: 0.875rem;
+  }
+
+  .compact .logoMain {
+    font-size: 1rem;
+    line-height: 1.25rem;
+  }
+
+  .compact .title {
+    margin-top: 1.5rem;
+    font-size: 1.375rem;
+    line-height: 1.75rem;
+  }
+
+  /* The 80% inset becomes a plain gutter — 20% of a phone is a lot to give up. */
+
+  .compact .section {
+    width: auto;
+    margin-inline: 0.875rem;
+    margin-top: 1.25rem;
+  }
+
+  /*
+  | Side by side, the two detail blocks leave each other half a phone. They
+  | stack, and the pay period is free to wrap now that nothing sits beside it
+  | to stay level with.
+  */
+
+  .compact .employee {
+    display: block;
+    margin-top: 1.5rem;
+    font-size: 0.8125rem;
+  }
+
+  .compact .payDetails {
+    margin-top: 0.75rem;
+    white-space: normal;
+  }
+
+  .compact .summaryGrid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1rem;
+  }
+
+  .compact .netSalary {
+    padding-bottom: 1.5rem;
+  }
+
+  .compact .amountTable,
+  .compact .cardTable,
+  .compact .netSalaryTable {
+    font-size: 0.75rem;
+    line-height: 1.125rem;
+  }
+
+  .compact .amountTable th,
+  .compact .amountTable td,
+  .compact .cardHeading,
+  .compact .cardTable td,
+  .compact .netSalaryTable td {
+    padding: 0.375rem 0.5rem;
+  }
+
+  .compact .cardHeading {
+    font-size: 0.75rem;
+    line-height: 1.125rem;
+  }
+
+  /*
+  | The month takes a line of its own above the two buttons, which then split
+  | the line under it — the same three-controls-on-one-line break the payroll
+  | header solves this way.
+  */
+
+  .toolbar.toolbarCompact {
+    gap: 0.5rem;
+  }
+
+  .toolbarCompact .monthSelect {
+    order: -1;
+    width: 100%;
+  }
+
+  .toolbarCompact .backButton,
+  .toolbarCompact .downloadButton {
+    flex: 1 1 0;
+    justify-content: center;
+    padding-inline: 0.75rem;
+  }
 }
 
 /*

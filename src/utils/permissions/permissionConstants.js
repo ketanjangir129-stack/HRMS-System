@@ -327,15 +327,15 @@ export const PERMISSION_PAGES = [
     defaults: { hr: true, employee: false },
     sections: [
       /*
-      | The screen the two actions below are performed on. Withholding it takes
-      | the module card and the route away; withholding an action leaves the
-      | screen readable but takes that one button off it.
+      | The tab the two actions below are performed on. Withholding it takes
+      | the tab off the salary screen; withholding an action leaves the tab
+      | readable but takes that one button off it.
       */
       {
         key: "manage",
-        label: "Create & Update Screen",
+        label: "Create & Update Tab",
         description: "Open the salary create and update list",
-        path: "/salarydashboard/salary",
+        path: "/salarydashboard",
         defaults: { hr: true, employee: false },
       },
       {
@@ -354,9 +354,9 @@ export const PERMISSION_PAGES = [
       },
       {
         key: "revisions",
-        label: "Revisions",
+        label: "Revisions Tab",
         description: "Salary revision history",
-        path: "/salarydashboard/salary/revisions",
+        path: "/salarydashboard?tab=revisions",
         defaults: { hr: true, employee: false },
       },
       {
@@ -400,6 +400,42 @@ export const PERMISSION_PAGES = [
         label: "Lock Payroll",
         description: "Make an approved month final. This cannot be undone",
         defaults: { hr: false, employee: false },
+      },
+    ],
+  },
+
+  {
+    key: "hrPolicy",
+    label: "HR Policy",
+    description: "Statutory deduction rules for the company",
+    path: "/hr-policy",
+    defaults: { hr: true, employee: false },
+    sections: [
+      /*
+      | The two policies are panels rather than sub-routes: withholding one
+      | takes its card off the screen and leaves the other readable.
+      */
+      {
+        key: "pf",
+        label: "PF Policy",
+        description: "Provident Fund rate and calculation base",
+        defaults: { hr: true, employee: false },
+      },
+      {
+        key: "esi",
+        label: "ESI Policy",
+        description: "ESI rates and salary eligibility limit",
+        defaults: { hr: true, employee: false },
+      },
+      /*
+      | Reading a rate and setting it are different rights: without this the
+      | cards are still shown, with their switches, fields and Save closed.
+      */
+      {
+        key: "update",
+        label: "Save Policy",
+        description: "Change and save the PF and ESI policies",
+        defaults: { hr: true, employee: false },
       },
     ],
   },

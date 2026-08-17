@@ -49,9 +49,13 @@ export const createOnboardingRequest = async (
             employeeType: employeeInfo.employeeType,
             role: employeeInfo.role,
         },
-         account: {
+        /*
+        | No password here. A pending joiner has no sign-in yet — the Firebase
+        | Auth account is created at approval, in ApprovalService. The rules
+        | reject this field, so writing it would fail the whole request.
+        */
+        account: {
             username: employeeId,
-            password: employeeId,
             role: employeeInfo.role,
             status: "Pending",
             isPasswordChanged: false,

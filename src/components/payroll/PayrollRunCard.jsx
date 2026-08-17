@@ -48,9 +48,14 @@ const formatStamp = (at, by) => {
   return by?.name ? `${when} · ${by.name}` : when;
 };
 
+/*
+| A stamp is a date, a time and a name on one line, so it takes the full width
+| of the phone grid — half of it truncates the name away, which is the half
+| that makes the month auditable.
+*/
 const Step = ({ label, at, by, pending }) => (
-  <div className="min-w-0">
-    <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+  <div className="col-span-2 min-w-0 sm:col-span-1">
+    <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400 sm:text-xs">
       {label}
     </p>
 
@@ -67,11 +72,13 @@ const Step = ({ label, at, by, pending }) => (
 
 const Total = ({ label, value }) => (
   <div className="min-w-0">
-    <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+    <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400 sm:text-xs">
       {label}
     </p>
 
-    <p className="mt-1 truncate text-lg font-bold text-slate-900">{value}</p>
+    <p className="mt-1 truncate text-base font-bold text-slate-900 sm:text-lg">
+      {value}
+    </p>
   </div>
 );
 
@@ -87,7 +94,7 @@ const ActionButton = ({ gate, busy, busyLabel, label, icon, tone, onClick }) => 
     onClick={onClick}
     disabled={!gate.allowed || busy}
     title={gate.reason || label}
-    className={`inline-flex cursor-pointer items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold text-white shadow-md transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-offset-2 active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:shadow-md ${tone}`}
+    className={`inline-flex flex-1 cursor-pointer items-center justify-center gap-2 whitespace-nowrap rounded-xl px-4 py-2.5 text-sm font-semibold text-white shadow-md transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-offset-2 active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:shadow-md sm:flex-none sm:px-5 ${tone}`}
   >
     {icon}
     {busy ? busyLabel : label}
@@ -117,15 +124,15 @@ function PayrollRunCard({
 
   return (
 
-    <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+    <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
 
-      <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+      <div className="flex flex-col gap-4 sm:gap-5 lg:flex-row lg:items-start lg:justify-between">
 
         <div className="min-w-0">
 
-          <div className="flex flex-wrap items-center gap-3">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
 
-            <h2 className="text-lg font-bold tracking-tight text-slate-900">
+            <h2 className="text-base font-bold tracking-tight text-slate-900 sm:text-lg">
               {formatPayrollMonth(payrollMonth)} Run
             </h2>
 
@@ -133,7 +140,7 @@ function PayrollRunCard({
 
           </div>
 
-          <p className="mt-1 text-sm text-slate-500">
+          <p className="mt-1 text-xs text-slate-500 sm:text-sm">
             {isPending
               ? "This month has not been generated yet."
               : status === PAYROLL_RUN_STATUS.LOCKED
@@ -145,7 +152,8 @@ function PayrollRunCard({
 
         </div>
 
-        <div className="flex flex-wrap items-center gap-3">
+        {/* Two buttons, half a phone each, rather than one wrapping under. */}
+        <div className="flex items-center gap-2 sm:gap-3">
 
           <ActionButton
             gate={approveGate}
@@ -178,7 +186,7 @@ function PayrollRunCard({
       */}
       {!isPending && (
 
-        <div className="mt-6 grid grid-cols-2 gap-5 border-t border-slate-100 pt-5 sm:grid-cols-3 lg:grid-cols-6">
+        <div className="mt-5 grid grid-cols-2 gap-4 border-t border-slate-100 pt-4 sm:mt-6 sm:grid-cols-3 sm:gap-5 sm:pt-5 lg:grid-cols-6">
 
           <Total label="Employees" value={run?.totalEmployees ?? 0} />
 
@@ -219,7 +227,7 @@ function PayrollRunCard({
 
       {isPending && (
 
-        <div className="mt-6 flex items-center gap-3 border-t border-slate-100 pt-5 text-sm text-slate-500">
+        <div className="mt-5 flex items-center gap-3 border-t border-slate-100 pt-4 text-xs text-slate-500 sm:mt-6 sm:pt-5 sm:text-sm">
 
           <FiPlayCircle className="shrink-0 text-slate-400" />
 
