@@ -1,4 +1,5 @@
 import RoleAccessPanel from "../../components/settings/rolesAccess/RoleAccessPanel";
+import OfficeLocationPanel from "../../components/settings/officeLocation/OfficeLocationPanel";
 import SettingsHeader from "../../components/settings/SettingsHeader";
 import useAuth from "../../hooks/useAuth";
 import useRoleAccess from "../../hooks/useRoleAccess";
@@ -40,6 +41,8 @@ function Settings() {
       <SettingsHeader companyName={company?.companyName} />
 
       <RoleAccessPanel />
+
+      <OfficeLocationPanel />
 
     </div>
   );

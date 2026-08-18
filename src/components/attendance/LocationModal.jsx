@@ -1,8 +1,12 @@
+import { useEffect, useRef } from "react";
+import L from "leaflet";
+import "leaflet/dist/leaflet.css";
 import {
   FiAlertTriangle,
   FiClock,
   FiCrosshair,
   FiExternalLink,
+  FiHome,
   FiLogIn,
   FiLogOut,
   FiMapPin,
@@ -13,7 +17,9 @@ import { formatDateTime } from "../../utils/attendance/attendanceDate";
 import {
   locationQuality,
   movementBetween,
+  officeComparison,
 } from "../../utils/attendance/attendanceLocation";
+import useOfficeLocation from "../../hooks/useOfficeLocation";
 
 /*
 |--------------------------------------------------------------------------
@@ -25,35 +31,19 @@ import {
 | a punch in location, a punch out location or both, and which of them exists
 | is not something the table can ask before the modal is open.
 |
-| The map is an OpenStreetMap embed, so no map package and no API key are
-| needed. The link below it opens the same point in a full map for anybody
+| One map carries both punches. An OpenStreetMap embed takes a single marker
+| per frame, which meant a map each and no way to see the pair against one
+| another; Leaflet draws the tiles itself, so the two sit in the same view.
+| The tiles are still OpenStreetMap's and there is still no API key.
+|
+| The link under each punch opens that one point in a full map for anybody
 | who wants to pan away from it.
 |--------------------------------------------------------------------------
 */
 
-/*
-| Roughly 200m around the point, which is close enough to see the building
-| and wide enough that a poor fix still lands inside the frame.
-*/
-
-const MAP_DELTA = 0.002;
-
 const isPlottable = (location) =>
   Number.isFinite(location?.latitude) &&
   Number.isFinite(location?.longitude);
-
-const embedUrl = ({ latitude, longitude }) => {
-
-  const bbox = [
-    longitude - MAP_DELTA,
-    latitude - MAP_DELTA,
-    longitude + MAP_DELTA,
-    latitude + MAP_DELTA,
-  ].join(",");
-
-  return `https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik&marker=${latitude},${longitude}`;
-
-};
 
 const mapsUrl = ({ latitude, longitude }) =>
   `https://www.google.com/maps?q=${latitude},${longitude}`;
@@ -68,6 +58,128 @@ const mapsUrl = ({ latitude, longitude }) =>
 */
 const directionsUrl = (from, to) =>
   `https://www.google.com/maps/dir/${from.latitude},${from.longitude}/${to.latitude},${to.longitude}`;
+
+/*
+|--------------------------------------------------------------------------
+| Punch Map
+|--------------------------------------------------------------------------
+| One map for the day, carrying whichever punches were recorded.
+|
+| Drawn rather than embedded. An iframe of OpenStreetMap's own page takes a
+| single marker, so two punches meant two maps and no way to read one against
+| the other; here the tiles are laid down directly and both markers go onto
+| the same view.
+|
+| The markers are `divIcon`s - plain HTML, styled with the colours the two
+| punches already carry elsewhere in this modal. Leaflet's default marker
+| points at image files by relative path, which a bundler moves, and the
+| usual fix is to re-import those images just to put them back where the
+| library expects. Markup avoids the whole exchange and reads in the same
+| language as the rest of the screen.
+|--------------------------------------------------------------------------
+*/
+
+const OSM_TILES = "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
+
+// Close enough to make out the building when there is only one point to show
+const SINGLE_POINT_ZOOM = 16;
+
+const markerIcon = (label, colour) =>
+  L.divIcon({
+    // Leaflet puts its own classes on the element otherwise, and they carry
+    // a white box this pin does not want
+    className: "",
+    html:
+      `<span style="display:flex;align-items:center;justify-content:center;` +
+      `height:26px;width:34px;border-radius:9999px;background:${colour};` +
+      `color:#fff;font:600 11px/1 ui-sans-serif,system-ui,sans-serif;` +
+      `box-shadow:0 1px 3px rgba(15,23,42,.4)">${label}</span>`,
+    iconSize: [34, 26],
+    // Centred on the coordinate rather than hanging below it, because the
+    // point is the reading itself and not a pin stuck next to it
+    iconAnchor: [17, 13],
+  });
+
+function PunchMap({ punchIn, punchOut }) {
+
+  const containerRef = useRef(null);
+
+  useEffect(() => {
+
+    const points = [
+      { location: punchIn, label: "In", colour: "#059669" },
+      { location: punchOut, label: "Out", colour: "#d97706" },
+    ].filter((point) => isPlottable(point.location));
+
+    if (!points.length || !containerRef.current) return undefined;
+
+    /*
+    | Scroll wheel zoom is off: the map sits inside a scrolling modal body,
+    | and a wheel over it would zoom the map instead of moving the panel.
+    */
+    const map = L.map(containerRef.current, { scrollWheelZoom: false });
+
+    L.tileLayer(OSM_TILES, {
+      attribution: "© OpenStreetMap contributors",
+      maxZoom: 19,
+    }).addTo(map);
+
+    points.forEach((point) => {
+
+      L.marker(
+        [point.location.latitude, point.location.longitude],
+        { icon: markerIcon(point.label, point.colour) }
+      )
+        .addTo(map)
+        .bindTooltip(point.label === "In" ? "Punch In" : "Punch Out");
+
+    });
+
+    if (points.length > 1) {
+
+      // Padding keeps a marker sitting on the boundary off the very edge
+      map.fitBounds(
+        points.map((point) => [
+          point.location.latitude,
+          point.location.longitude,
+        ]),
+        { padding: [40, 40] }
+      );
+
+    } else {
+
+      map.setView(
+        [points[0].location.latitude, points[0].location.longitude],
+        SINGLE_POINT_ZOOM
+      );
+
+    }
+
+    /*
+    | The modal animates in, so the container can still be settling when the
+    | map measures it - which leaves Leaflet drawing tiles for a size that is
+    | already wrong. One re-measure on the next frame covers it.
+    */
+    const settle = requestAnimationFrame(() => map.invalidateSize());
+
+    return () => {
+      cancelAnimationFrame(settle);
+      map.remove();
+    };
+
+  }, [punchIn, punchOut]);
+
+  // A day with nothing plottable gets no map rather than an empty grey frame
+  if (!isPlottable(punchIn) && !isPlottable(punchOut)) return null;
+
+  return (
+    <div
+      ref={containerRef}
+      className="h-64 w-full overflow-hidden rounded-xl border border-slate-200"
+    />
+  );
+
+}
 
 function DetailItem({ icon, label, value }) {
   return (
@@ -98,6 +210,23 @@ const QUALITY_STYLES = {
   unknown: "bg-slate-100 text-slate-600",
 };
 
+/*
+| Outside is amber rather than red. A punch made away from the office is not
+| a fault - a site visit, a client meeting and a delivery all look like this
+| - so the tone says worth noticing, not worth answering for.
+*/
+const OFFICE_STYLES = {
+  inside: "border-emerald-200 bg-emerald-50 text-emerald-700",
+  outside: "border-amber-200 bg-amber-50 text-amber-700",
+  unclear: "border-slate-200 bg-slate-50 text-slate-600",
+};
+
+const OFFICE_LABELS = {
+  inside: "Inside office",
+  outside: "Outside office",
+  unclear: "Can't tell",
+};
+
 function QualityBadge({ quality }) {
   return (
     <span
@@ -117,11 +246,18 @@ function QualityBadge({ quality }) {
   );
 }
 
-function PunchLocation({ icon, label, location }) {
+function PunchLocation({ icon, label, location, office }) {
 
   if (!isPlottable(location)) return null;
 
   const quality = locationQuality(location);
+
+  /*
+  | Null whenever there is nothing to compare against - no office configured,
+  | or one that could not be read. The section below simply does not appear,
+  | and everything above it is unchanged.
+  */
+  const againstOffice = officeComparison(location, office);
 
   return (
     <section>
@@ -140,16 +276,6 @@ function PunchLocation({ icon, label, location }) {
 
         <QualityBadge quality={quality} />
 
-      </div>
-
-      <div className="overflow-hidden rounded-xl border border-slate-200">
-        <iframe
-          title={`${label} location map`}
-          src={embedUrl(location)}
-          className="block h-52 w-full border-0"
-          loading="lazy"
-          referrerPolicy="no-referrer"
-        />
       </div>
 
       <div className="mt-3 grid grid-cols-2 gap-2.5">
@@ -206,6 +332,50 @@ function PunchLocation({ icon, label, location }) {
         </div>
       )}
 
+      {/*
+      | Below the accuracy caveat, because it is a conclusion drawn from the
+      | reading rather than another fact about it, and the caveat is what
+      | says how much the conclusion is worth.
+      */}
+      {againstOffice && (
+        <div
+          className={`mt-3 flex items-start gap-2.5 rounded-xl border px-3 py-2.5 ${
+            OFFICE_STYLES[againstOffice.verdict]
+          }`}
+        >
+
+          <FiHome className="mt-0.5 shrink-0" size={15} />
+
+          <div className="min-w-0">
+
+            <p className="text-xs font-semibold">
+              {OFFICE_LABELS[againstOffice.verdict]}
+
+              {/* Straight line, the same as everywhere else in this modal */}
+              <span className="font-medium opacity-75">
+                {" "}· {againstOffice.label} from the office
+              </span>
+            </p>
+
+            {!againstOffice.weighed && (
+              <p className="mt-0.5 text-xs font-medium opacity-90">
+                GPS accuracy was not reported for this punch, so this could not
+                be compared against the office boundary.
+              </p>
+            )}
+
+            {againstOffice.verdict === "unclear" && (
+              <p className="mt-0.5 text-xs font-medium opacity-90">
+                The reported accuracy reaches past the office boundary, so
+                neither answer would be honest.
+              </p>
+            )}
+
+          </div>
+
+        </div>
+      )}
+
       <a
         href={mapsUrl(location)}
         target="_blank"
@@ -222,6 +392,14 @@ function PunchLocation({ icon, label, location }) {
 }
 
 function LocationModal({ open, record, onClose }) {
+
+  /*
+  | Above the early return, because a hook cannot be called conditionally.
+  | `open` is passed through as the switch instead: the read happens when
+  | somebody asks to see a location, not on every attendance page that
+  | merely mounts this component and returns null from it.
+  */
+  const { office } = useOfficeLocation(open);
 
   if (!open || !record) return null;
 
@@ -284,16 +462,25 @@ function LocationModal({ open, record, onClose }) {
         {/* Body */}
         <div className="min-h-0 flex-1 space-y-6 overflow-y-auto p-4 sm:p-6">
 
+          {/*
+          | One map above both readings rather than one inside each: the pair
+          | is only worth anything held against each other, and two frames
+          | showing the same street from two angles said nothing.
+          */}
+          <PunchMap punchIn={punchIn} punchOut={punchOut} />
+
           <PunchLocation
             icon={<FiLogIn className="text-emerald-600" />}
             label="Punch In"
             location={punchIn}
+            office={office}
           />
 
           <PunchLocation
             icon={<FiLogOut className="text-amber-600" />}
             label="Punch Out"
             location={punchOut}
+            office={office}
           />
 
           {/*
