@@ -7,6 +7,7 @@ import {
 }
     from "firebase/database";
 import { checkEmployeeUniqueness } from "./ValidationService";
+import { notifyOnboardingSubmitted } from "./notifications/onboardingNotificationService";
 export const createOnboardingRequest = async (
     companyCode,
     employeeInfo
@@ -217,6 +218,32 @@ export const submitOnboardingForm = async (
             submittedAt: Date.now(),
             updatedAt: Date.now(),
         });
+
+        /*
+        | Announced only once the submission is safely stored, and never
+        | allowed to fail it: the form is filled in through a public link the
+        | candidate cannot open a second time, so a submission lost to a
+        | notification error would strand them. A request that was stored but
+        | not announced is recoverable from the requests screen; one that was
+        | announced but not stored is not.
+        */
+
+        try {
+
+            await notifyOnboardingSubmitted(
+                companyCode,
+                existingData,
+                employeeId
+            );
+
+        } catch (notificationError) {
+
+            console.error(
+                "Failed to notify onboarding approvers:",
+                notificationError
+            );
+
+        }
 
         return {
             success: true,
