@@ -37,6 +37,7 @@ const EXPORT_HEADER = [
   "Late",
   "Absent",
   "Leave",
+  "Pending Approval",
   "Attendance Rate (%)",
   "Total Working Hours",
 ];
@@ -46,6 +47,7 @@ const COUNT_STYLES = {
   late: "ring-amber-200 bg-amber-50 text-amber-700",
   absent: "ring-red-200 bg-red-50 text-red-700",
   leave: "ring-blue-200 bg-blue-50 text-blue-700",
+  pending: "ring-slate-200 bg-slate-100 text-slate-700",
 };
 
 /*
@@ -82,14 +84,22 @@ const COUNT_TEXT = {
   late: "text-amber-600",
   absent: "text-red-600",
   leave: "text-blue-600",
+  pending: "text-slate-600",
 };
 
-/* The four counts, in the order they read on both the table and the card. */
+/* The counts, in the order they read on both the table and the card. */
 const COUNT_TONES = [
   { key: "present", label: "Present" },
   { key: "late", label: "Late" },
   { key: "absent", label: "Absent" },
   { key: "leave", label: "Leave" },
+  /*
+  | Last, and in grey. A pending day is not a kind of attendance sitting
+  | alongside the other four, it is a day that has not been decided yet: it is
+  | the reason a Present count is lower than the days marked, which is a
+  | question the row is only asked when the numbers do not add up.
+  */
+  { key: "pending", label: "Pending" },
 ];
 
 function CountPill({ value, tone }) {
@@ -222,6 +232,16 @@ function MonthlyAttendanceTable({
         render: (row) => <CountPill value={row.leave} tone="leave" />,
       },
       {
+        key: "pending",
+        label: "Pending",
+        align: "center",
+        sortable: true,
+        ...hideBelow("xl"),
+        render: (row) => (
+          <CountPill value={row.pending || 0} tone="pending" />
+        ),
+      },
+      {
         key: "attendanceRate",
         label: "Attendance Rate",
         sortable: true,
@@ -274,7 +294,7 @@ function MonthlyAttendanceTable({
       | one ends where the card does. A rule above them separates the month's
       | make up from the identity without drawing a box around either.
       */}
-      <div className="grid grid-cols-4 gap-2 border-t border-slate-100 pt-3">
+      <div className="grid grid-cols-3 gap-2 border-t border-slate-100 pt-3 sm:grid-cols-5">
 
         {COUNT_TONES.map((count) => (
 
@@ -287,7 +307,7 @@ function MonthlyAttendanceTable({
             <p
               className={`mt-0.5 text-sm font-semibold ${COUNT_TEXT[count.key]}`}
             >
-              {row[count.key]}
+              {row[count.key] || 0}
             </p>
 
           </div>
@@ -323,6 +343,7 @@ function MonthlyAttendanceTable({
         row.late,
         row.absent,
         row.leave,
+        row.pending || 0,
         row.attendanceRate,
         row.workingHours,
       ])
@@ -394,7 +415,7 @@ function MonthlyAttendanceTable({
         | fit a docked sidebar and a 1024px laptop without a sideways scroll,
         | and the floor only rises where a column is actually added.
         */
-        minWidthClass="min-w-[560px] xl:min-w-[820px] 2xl:min-w-[1040px]"
+        minWidthClass="min-w-[560px] xl:min-w-[920px] 2xl:min-w-[1140px]"
         empty={{
           icon: <FiUsers size={28} />,
           title:

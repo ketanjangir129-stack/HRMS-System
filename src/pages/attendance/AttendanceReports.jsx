@@ -55,6 +55,19 @@ import { isWeeklyOff } from "../../utils/holiday/holidayUtils";
 const selectClass =
   "w-full cursor-pointer rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 outline-none transition-all focus:border-blue-500 focus:ring-2 focus:ring-blue-100 sm:w-64";
 
+/*
+| A report is read, not decided: the approving is done on the daily attendance
+| page, where the day is live. The column is still shown, and filterable, so a
+| report says which of the days it is reporting have actually been signed off
+| - a sheet that does not is the sheet this page produced before approval
+| existed, and payroll cannot tell the two apart.
+|
+| Declared once at module level so the reference is stable, and the table's
+| columns are not rebuilt on every render of the page.
+*/
+
+const READ_ONLY_APPROVAL = { canReview: false };
+
 function AttendanceReports() {
 
   const { company } = useAuth();
@@ -258,7 +271,16 @@ function AttendanceReports() {
 
         <ReportTabs value={reportType} onChange={setReportType} />
 
-        <AttendanceSummaryCards summary={summary} />
+        {/*
+        | Reported alongside the rest so the figures on a report add up: days
+        | still waiting on a decision are not counted as present, and without
+        | the card there is nothing on the page saying where they went.
+        */}
+        <AttendanceSummaryCards
+          summary={summary}
+          showPending
+          gridClassName="grid-cols-2 xl:grid-cols-5"
+        />
 
         {isDaily && (
           <>
@@ -304,6 +326,7 @@ function AttendanceReports() {
               title="Daily Report"
               subtitle="Punch in and punch out for the selected day"
               exportName={`daily-attendance-${date}`}
+              approval={READ_ONLY_APPROVAL}
               emptyMessage={
                 selectedDayHoliday
                   ? `The office was closed for ${selectedDayHoliday.name}, so no attendance was expected.`

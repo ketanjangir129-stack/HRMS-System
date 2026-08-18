@@ -5,8 +5,14 @@ import { FiAlertCircle, FiLoader, FiX } from "react-icons/fi";
 |--------------------------------------------------------------------------
 | Reject Request
 |--------------------------------------------------------------------------
-| Rejecting always needs a reason, so the request is never turned down
-| without the employee being told why.
+| Rejecting always needs a reason, so nothing is ever turned down without the
+| employee being told why.
+|
+| The wording is overridable because the same box turns down two different
+| things: a correction request, and a day of attendance that was not
+| approved. Both need exactly one thing from the reviewer - the reason - and
+| the defaults are the request wording every existing caller already passes
+| nothing for.
 |--------------------------------------------------------------------------
 */
 
@@ -15,6 +21,11 @@ function RejectForm({
   onConfirm,
   loading = false,
   employeeName = "",
+  title = "Reject Request",
+  subject = "attendance request",
+  confirmLabel = "Reject Request",
+  loadingLabel = "Rejecting...",
+  placeholder = "Enter the reason for rejecting this request...",
 }) {
 
   const [remarks, setRemarks] = useState("");
@@ -53,12 +64,12 @@ function RejectForm({
 
             <div className="min-w-0">
               <h2 className="text-lg font-semibold text-slate-900">
-                Reject Request
+                {title}
               </h2>
               <p className="truncate text-sm text-slate-500">
                 {employeeName
-                  ? `${employeeName}'s attendance request`
-                  : "Attendance request"}
+                  ? `${employeeName}'s ${subject}`
+                  : subject.charAt(0).toUpperCase() + subject.slice(1)}
               </p>
             </div>
 
@@ -88,14 +99,14 @@ function RejectForm({
             value={remarks}
             onChange={(event) => setRemarks(event.target.value)}
             onBlur={() => setTouched(true)}
-            placeholder="Enter the reason for rejecting this request..."
+            placeholder={placeholder}
             className="w-full resize-none rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-800 outline-none transition-all placeholder:text-slate-400 focus:border-red-500 focus:bg-white focus:ring-2 focus:ring-red-100"
           />
 
           {touched && isEmpty && (
             <p className="mt-1.5 flex items-center gap-1 text-xs font-medium text-red-500">
               <FiAlertCircle />
-              Remarks are required to reject this request.
+              Remarks are required to reject this {subject}.
             </p>
           )}
 
@@ -120,7 +131,7 @@ function RejectForm({
             className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-xl bg-red-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-red-600/20 transition-all duration-200 hover:-translate-y-0.5 hover:bg-red-700 hover:shadow-lg hover:shadow-red-600/30 focus:outline-none focus:ring-2 focus:ring-red-400 focus:ring-offset-2 active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {loading && <FiLoader className="animate-spin" />}
-            {loading ? "Rejecting..." : "Reject Request"}
+            {loading ? loadingLabel : confirmLabel}
           </button>
 
         </div>

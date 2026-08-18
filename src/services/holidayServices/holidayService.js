@@ -21,6 +21,7 @@ import {
   UPCOMING_HOLIDAY_LIMIT,
 } from "../../utils/holiday/holidayConstants";
 import { getHolidayYear } from "../../utils/holiday/holidayUtils";
+import { notifyHolidayAdded } from "../notifications/holidayNotificationService";
 
 /*
 |--------------------------------------------------------------------------
@@ -334,6 +335,29 @@ export const createHoliday = async (
         date,
       })
     );
+
+    /*
+    | Announced after the holiday is stored, and never allowed to fail the
+    | call: the holiday exists either way, and one that was declared but not
+    | announced is recoverable, one that was announced but not declared is not.
+    */
+
+    try {
+
+      await notifyHolidayAdded(
+        companyCode,
+        { ...holiday, date },
+        holidayId
+      );
+
+    } catch (notificationError) {
+
+      console.error(
+        "Holiday notification failed:",
+        notificationError
+      );
+
+    }
 
     return {
       success: true,

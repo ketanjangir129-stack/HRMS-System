@@ -86,6 +86,65 @@ export const getLeaveApproverIds = async (
 
 /*
 |--------------------------------------------------------------------------
+| Get Every Employee Id
+|--------------------------------------------------------------------------
+| The recipient list for something announced to the whole company rather than
+| routed to whoever has to act on it — a declared holiday concerns everybody,
+| not just the approvers.
+|
+| Only active employees are included: a resigned or suspended account still
+| sits in the directory, and writing to it would build up a box nobody ever
+| opens.
+|
+| The owner is added the same way `getLeaveApproverIds` adds them, and for
+| the same reason: owners sign in through Firebase Auth and have no employee
+| record, so no filter over `employees` can ever return one.
+*/
+
+export const getAllEmployeeIds = async (
+  companyCode
+) => {
+
+  if (!companyCode) {
+    return [];
+  }
+
+  const snapshot = await get(
+    ref(
+      db,
+      `companies/${companyCode}/employees`
+    )
+  );
+
+  if (!snapshot.exists()) {
+    return [OWNER_ROLE];
+  }
+
+  const employeeIds = Object.entries(
+    snapshot.val()
+  )
+    .filter(
+      ([, employee]) =>
+        employee?.account?.status
+          ?.toLowerCase() === "active"
+    )
+    .map(
+      ([employeeId]) =>
+        employeeId
+    );
+
+  return Array.from(
+    new Set([
+      OWNER_ROLE,
+      ...employeeIds,
+    ])
+  );
+
+};
+
+
+/*
+|--------------------------------------------------------------------------
 | Employee Display Name
 |--------------------------------------------------------------------------
 | A leave request stores the employee id and nothing else; the name shown on

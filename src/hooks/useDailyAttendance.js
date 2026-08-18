@@ -1,9 +1,12 @@
 import { useCallback, useEffect, useState } from "react";
 import {
+  approveAttendanceDay,
   saveAttendance,
+  setAttendanceApproval,
   subscribeToDailyAttendance,
 } from "../services/attendanceServices/attendanceService";
 import { getDateKey } from "../utils/attendance/attendanceDate";
+import { APPROVAL_STATUS } from "../utils/attendance/attendanceConstants";
 
 /*
 |--------------------------------------------------------------------------
@@ -68,8 +71,48 @@ const useDailyAttendance = (companyCode, date = getDateKey()) => {
   | new record, so nothing has to be merged into state here.
   */
   const markAttendance = useCallback(
-    (record) => saveAttendance(companyCode, record),
+    (record, approvedBy = "") =>
+      saveAttendance(companyCode, record, approvedBy),
     [companyCode]
+  );
+
+  /*
+  | Daily approval. Each takes the record itself rather than an id: the date
+  | and the employee are what locate a day, and the row that was clicked
+  | already carries both.
+  |
+  | Like the entry above, none of them touch state - the subscription is what
+  | reports the decision back, so the row updates for everybody watching the
+  | day and not only for the person who pressed the button.
+  */
+
+  const approveAttendance = useCallback(
+    (record, approvedBy) =>
+      setAttendanceApproval(companyCode, {
+        date: record?.date,
+        employeeId: record?.employeeId,
+        status: APPROVAL_STATUS.APPROVED,
+        approvedBy,
+      }),
+    [companyCode]
+  );
+
+  const rejectAttendance = useCallback(
+    (record, approvedBy, remarks) =>
+      setAttendanceApproval(companyCode, {
+        date: record?.date,
+        employeeId: record?.employeeId,
+        status: APPROVAL_STATUS.REJECTED,
+        approvedBy,
+        remarks,
+      }),
+    [companyCode]
+  );
+
+  const approveDay = useCallback(
+    (employeeIds, approvedBy) =>
+      approveAttendanceDay(companyCode, date, employeeIds, approvedBy),
+    [companyCode, date]
   );
 
   return {
@@ -77,6 +120,9 @@ const useDailyAttendance = (companyCode, date = getDateKey()) => {
     loading: enabled && !isCurrent,
     error: isCurrent ? state.error : "",
     markAttendance,
+    approveAttendance,
+    rejectAttendance,
+    approveDay,
   };
 
 };

@@ -7,15 +7,21 @@ import {
   FiLoader,
   FiLogIn,
   FiLogOut,
+  FiPauseCircle,
+  FiXCircle,
 } from "react-icons/fi";
 import { toast } from "react-toastify";
 import useAttendance from "../../hooks/useAttendance";
 import useAuth from "../../hooks/useAuth";
-import { ATTENDANCE_STATUS } from "../../utils/attendance/attendanceConstants";
+import {
+  APPROVAL_STATUS,
+  ATTENDANCE_STATUS,
+} from "../../utils/attendance/attendanceConstants";
 import {
   formatTime,
   getDateKey,
 } from "../../utils/attendance/attendanceDate";
+import { getApprovalLabel } from "../../utils/attendance/attendanceUtils";
 import {
   getDayName,
   isWeeklyOff,
@@ -60,6 +66,107 @@ const useClock = () => {
 | both kept on one line: a wrapped "Punch Out" over a wrapped "02:58 pm" is
 | what makes a stat tile look broken.
 */
+
+/*
+|--------------------------------------------------------------------------
+| Approval Notice
+|--------------------------------------------------------------------------
+| Whether HR has signed today off yet, which is the second thing an employee
+| opens this card to find out. Punching in records what they say happened; it
+| is the approval that turns it into a day of attendance, so a day still
+| sitting Pending is not counting towards their month and a day that was
+| turned down needs a correction raised against it.
+|
+| A strip of its own under the stats rather than a fifth tile: two of the
+| three states have something to say beyond their name - who signed the day
+| off, or why it was refused - and that does not fit in a tile.
+|--------------------------------------------------------------------------
+*/
+
+const APPROVAL_NOTICE = {
+
+  [APPROVAL_STATUS.PENDING]: {
+    icon: <FiPauseCircle />,
+    title: "Waiting for approval",
+    detail:
+      "HR has not signed off today's attendance yet, so it is not counted as present.",
+    className: "border-amber-200 bg-amber-50 text-amber-800",
+    iconClassName: "text-amber-600",
+  },
+
+  /*
+  | The only state with nothing to add: the day was signed off and counts,
+  | which is the whole of it. A second line explaining that an approval means
+  | approved is a line that exists to fill the box, and this card shares a row
+  | with the summary cards - every line it grows is empty space handed to them.
+  */
+  [APPROVAL_STATUS.APPROVED]: {
+    icon: <FiCheckCircle />,
+    title: "Attendance approved",
+    detail: "",
+    className: "border-emerald-200 bg-emerald-50 text-emerald-800",
+    iconClassName: "text-emerald-600",
+  },
+
+  [APPROVAL_STATUS.REJECTED]: {
+    icon: <FiXCircle />,
+    title: "Attendance rejected",
+    detail:
+      "Today was not approved, so it is not counted. Raise a correction request if this is wrong.",
+    className: "border-red-200 bg-red-50 text-red-800",
+    iconClassName: "text-red-600",
+  },
+
+};
+
+function ApprovalNotice({ record }) {
+
+  const notice = APPROVAL_NOTICE[getApprovalLabel(record)];
+
+  if (!notice) return null;
+
+  /*
+  | The reviewer's own words whenever there are any: a rejection always
+  | carries a remark, and it says more than the generic line ever can.
+  */
+  const detail = record?.approvalRemarks || notice.detail;
+
+  return (
+    /*
+    | One line unless there is a second thing to say, and no taller at any
+    | width. The card shares a stretching row with the summary cards on the
+    | dashboard, so every pixel it grows is a pixel of empty space handed to
+    | the four cards beside it.
+    |
+    | With one line the icon centres against it; with two it aligns to the
+    | first, so it sits beside the heading rather than floating between them.
+    */
+    <div
+      className={`mt-4 flex gap-2.5 rounded-xl border px-3 py-2.5 sm:px-4 ${detail ? "items-start" : "items-center"} ${notice.className}`}
+    >
+
+      <span
+        className={`shrink-0 text-base ${detail ? "mt-0.5" : ""} ${notice.iconClassName}`}
+      >
+        {notice.icon}
+      </span>
+
+      <div className="min-w-0">
+
+        <p className="text-sm font-semibold">{notice.title}</p>
+
+        {detail && (
+          <p className="mt-0.5 wrap-break-word text-xs leading-snug opacity-90">
+            {detail}
+          </p>
+        )}
+
+      </div>
+
+    </div>
+  );
+
+}
 
 function Stat({ label, value }) {
   return (
@@ -240,6 +347,13 @@ function TodayAttendanceCard({ className = "" }) {
         />
 
       </div>
+
+      {/*
+      | A full day of approved leave already says so in its own line below, and
+      | saying "approved" twice about the same day reads as two different
+      | approvals rather than one.
+      */}
+      {!onApprovedLeave && <ApprovalNotice record={attendance} />}
 
       <div className="mt-5 border-t border-slate-100 pt-4 sm:mt-6 sm:pt-5">
 

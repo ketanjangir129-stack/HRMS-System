@@ -3,6 +3,7 @@ import {
   FiXCircle,
   FiClock,
   FiCalendar,
+  FiPauseCircle,
 } from "react-icons/fi";
 
 /*
@@ -16,12 +17,19 @@ const DEFAULT_SUBTITLES = {
   absent: "Employees Absent",
   late: "Late Arrivals",
   leave: "Employees On Leave",
+  pending: "Awaiting Approval",
 };
 
 /*
 | Two across on a phone rather than one. Stacked, the four cards are a screen
 | and a half of scrolling before the page below them starts, and the number on
 | each is short enough to read at half the width.
+|
+| `showPending` adds a fifth card for the days nobody has signed off yet. It
+| is opt in because it needs a grid with room for it, and because it only
+| answers a question the screens that can act on it are asking: on those, a
+| Present count that looks low is explained by the card next to it instead of
+| looking like half the company stayed home.
 */
 
 function AttendanceSummaryCards({
@@ -29,6 +37,7 @@ function AttendanceSummaryCards({
   gridClassName = "grid-cols-2 xl:grid-cols-4",
   compact = false,
   subtitles,
+  showPending = false,
 }) {
 
   const caption = { ...DEFAULT_SUBTITLES, ...subtitles };
@@ -74,6 +83,26 @@ function AttendanceSummaryCards({
       iconColor: "text-blue-600",
       bar: "bg-blue-500",
     },
+    ...(showPending
+      ? [
+        {
+          title: "Pending",
+          value: summary.pending || 0,
+          percentage: summary.pendingPercentage || 0,
+          subtitle: caption.pending,
+          icon: <FiPauseCircle />,
+          iconBg: "bg-slate-100",
+          iconColor: "text-slate-600",
+          bar: "bg-slate-400",
+          /*
+          | Fifth of five in a two column grid, so it would otherwise sit on a
+          | row of its own with an empty half beside it. Run full width until
+          | the grid is wide enough to hold all five across.
+          */
+          spanClassName: "col-span-2 xl:col-span-1",
+        },
+      ]
+      : []),
   ];
 
   return (
@@ -83,11 +112,23 @@ function AttendanceSummaryCards({
 
         <div
           key={card.title}
-          className={`group relative overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg ${
+          /*
+          | A centred column. These sit in a stretching grid beside a panel
+          | whose height is decided by its own contents, so a card is regularly
+          | given more room than its two lines need.
+          |
+          | Centring is what makes that extra room disappear: the figure and
+          | its bar stay together as one block with the slack split evenly
+          | above and below, which reads as padding. Left at the top it pools
+          | underneath as a hole, and pinned top and bottom it becomes a gap
+          | through the middle - both of which look like the card is broken
+          | rather than roomy.
+          */
+          className={`group relative flex flex-col justify-center overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg ${
             compact
               ? "min-h-32 p-3 sm:min-h-36.25 sm:p-4"
               : "p-4 sm:p-6"
-          }`}
+          } ${card.spanClassName || ""}`}
         >
 
           {/* Top Border */}

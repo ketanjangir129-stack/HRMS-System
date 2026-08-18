@@ -14,9 +14,13 @@ import {
 } from "../../utils/attendance/attendanceDate";
 import {
   calculateWorkingHours,
+  getApprovalStatus,
   resolvePunchInStatus,
 } from "../../utils/attendance/attendanceUtils";
-import { ATTENDANCE_STATUS } from "../../utils/attendance/attendanceConstants";
+import {
+  APPROVAL_STATUS,
+  ATTENDANCE_STATUS,
+} from "../../utils/attendance/attendanceConstants";
 
 /*
 |--------------------------------------------------------------------------
@@ -57,6 +61,49 @@ const recordPath = (companyCode, date, employeeId) =>
   `${recordsPath(companyCode)}/${dayPath(date, employeeId)}`;
 
 /*
+|--------------------------------------------------------------------------
+| Daily Approval
+|--------------------------------------------------------------------------
+| The four fields that carry HR's sign off on a day. They live on the record
+| itself rather than in a branch of their own, so a day and its approval can
+| never disagree and every read that already loads the record already has the
+| decision with it.
+|
+| Which state a record is born in depends on who wrote it. Only a punch is
+| self reported: the other three writers are HR marking a day by hand, an
+| approver applying a correction, and the leave module booking a leave that
+| was already granted, and all three were decided by somebody entitled to
+| decide. Sending those back round for a second approval would bury the
+| handful of days that genuinely need looking at.
+|
+|   punchInEmployee        Pending     the employee says they were here
+|   saveAttendance         Approved    HR wrote the day itself
+|   updateAttendanceRecord Approved    an approver accepted the correction
+|   applyLeaveAttendance   Approved    the leave request was approved
+|
+| A pending record carries no approver and no timestamp: nobody has decided
+| yet, and writing a name against a decision that has not been made is how a
+| record ends up saying it was approved by whoever last touched it.
+*/
+
+const buildApproval = ({
+  status = APPROVAL_STATUS.PENDING,
+  by = "",
+  remarks = "",
+} = {}) => {
+
+  const decided = status !== APPROVAL_STATUS.PENDING;
+
+  return {
+    approvalStatus: status,
+    approvedBy: decided ? by : "",
+    approvedAt: decided ? Date.now() : null,
+    approvalRemarks: remarks,
+  };
+
+};
+
+/*
 | Firebase rejects `undefined`, so every field is written explicitly.
 */
 
@@ -67,6 +114,7 @@ const buildAttendanceRecord = ({
   punchOut = null,
   status,
   remarks = "",
+  approval,
 }) => ({
 
   employeeId,
@@ -86,6 +134,8 @@ const buildAttendanceRecord = ({
     (punchIn ? resolvePunchInStatus(punchIn) : ""),
 
   remarks,
+
+  ...buildApproval(approval),
 
   createdAt: Date.now(),
 
@@ -269,9 +319,17 @@ export const punchInEmployee = async (
 
       const punchIn = Date.now();
 
+      /*
+      | The day was approved as a half day of leave, and a punch has just been
+      | added to it that nobody has seen. The half that was worked is exactly
+      | the part that needs reviewing, so the day goes back into the queue
+      | rather than keeping the sign off it was given for the leave alone.
+      */
+
       const updates = {
         punchIn,
         punchInTime: formatTime(punchIn),
+        ...buildApproval(),
       };
 
       if (location) {
@@ -392,11 +450,18 @@ export const punchOutEmployee = async (
 |
 | The original `createdAt` is kept, so the day still reports when it was
 | first recorded.
+|
+| Marking a day by hand is itself the approval: only HR and the owner can open
+| the form, so the decision has been made by the time it is saved and asking
+| them to approve their own entry afterwards would be asking twice. The
+| previous approval is deliberately not carried over - this is a new decision
+| about a day that has just changed, signed by whoever made it.
 */
 
 export const saveAttendance = async (
   companyCode,
-  attendance
+  attendance,
+  approvedBy = ""
 ) => {
 
   const attendanceRef = ref(
@@ -408,7 +473,13 @@ export const saveAttendance = async (
 
   const existing = snapshot.exists() ? snapshot.val() : null;
 
-  const record = buildAttendanceRecord(attendance);
+  const record = buildAttendanceRecord({
+    ...attendance,
+    approval: {
+      status: APPROVAL_STATUS.APPROVED,
+      by: approvedBy,
+    },
+  });
 
   await set(
     attendanceRef,
@@ -438,11 +509,18 @@ export const saveAttendance = async (
 | accepted by HR, so the day counts as Present and the Late flag it was given
 | at punch in time is cleared. A punch out only correction leaves the status
 | alone, because it says nothing about when the employee arrived.
+|
+| The day is signed off at the same time, by the approver who accepted the
+| correction. They have just decided this is what the day was, so leaving it
+| Pending would ask them the same question twice - and on a day that had
+| already been approved, saying nothing would let the punch times change
+| underneath a sign off that was given for different ones.
 */
 
 export const updateAttendanceRecord = async (
   companyCode,
-  request
+  request,
+  approvedBy = ""
 ) => {
 
   const attendanceRef = ref(
@@ -478,6 +556,10 @@ export const updateAttendanceRecord = async (
         punchOut: request.requestedPunchOut || null,
         status: ATTENDANCE_STATUS.PRESENT,
         remarks: request.reason || "",
+        approval: {
+          status: APPROVAL_STATUS.APPROVED,
+          by: approvedBy,
+        },
       })
     );
 
@@ -505,6 +587,14 @@ export const updateAttendanceRecord = async (
   const punchOut = updates.punchOut ?? attendance.punchOut;
 
   updates.workingHours = calculateWorkingHours(punchIn, punchOut);
+
+  Object.assign(
+    updates,
+    buildApproval({
+      status: APPROVAL_STATUS.APPROVED,
+      by: approvedBy,
+    })
+  );
 
   await update(attendanceRef, updates);
 
@@ -579,6 +669,7 @@ export const applyLeaveAttendance = async (
     status,
     remarks = "",
     leaveRequestId = "",
+    approvedBy = "",
   }
 ) => {
 
@@ -620,6 +711,15 @@ export const applyLeaveAttendance = async (
         punchOut: current?.punchOut || null,
         status,
         remarks,
+        /*
+        | The leave request this day comes from has already been approved, so
+        | the day it books is approved with it. Queueing it would ask for a
+        | second decision on a day whose decision is the reason it exists.
+        */
+        approval: {
+          status: APPROVAL_STATUS.APPROVED,
+          by: approvedBy,
+        },
       }),
 
       createdAt: current?.createdAt || Date.now(),
@@ -704,6 +804,12 @@ export const clearLeaveAttendance = async (
           */
           status: current.leaveStatusBefore || "",
           remarks: "",
+          /*
+          | Back to a plain punched day, so back to Pending like any other.
+          | The approval it is losing was the one the leave gave it, and that
+          | leave has just been deleted; what is left is a punch in nobody has
+          | reviewed on its own terms.
+          */
         }),
 
         createdAt: current.createdAt || Date.now(),
@@ -722,5 +828,188 @@ export const clearLeaveAttendance = async (
   });
 
   return writeDays(companyCode, updates);
+
+};
+
+/*
+|--------------------------------------------------------------------------
+| Daily Approval
+|--------------------------------------------------------------------------
+| HR and the owner sign off the days their employees recorded themselves.
+| Only the four approval fields are ever written here: the punch times, the
+| status and the hours are what is being reviewed, so approving a day must
+| not be able to change what the day says.
+|
+| A decision can be revisited. Unlike a correction request, which is answered
+| once and closed, a day of attendance is a standing record: HR can approve a
+| day in the morning, find out at lunch that the employee never came in, and
+| reject it. Only a decision that would not change anything is refused.
+|--------------------------------------------------------------------------
+*/
+
+const readDay = (companyCode, date, employeeId) =>
+  get(ref(db, recordPath(companyCode, date, employeeId)));
+
+export const setAttendanceApproval = async (
+  companyCode,
+  {
+    date,
+    employeeId,
+    status,
+    approvedBy = "",
+    remarks = "",
+  }
+) => {
+
+  /*
+  | Both are part of the path. A missing one would build a path pointing at
+  | the whole day, or at the records root, and the approval would then be
+  | written over every employee on it. The month comes from the date, so a
+  | date that is not a real key fails the same check.
+  */
+
+  if (!getMonthPath(date) || !employeeId) {
+    return {
+      success: false,
+      message: "Attendance record not found.",
+    };
+  }
+
+  if (
+    status !== APPROVAL_STATUS.APPROVED &&
+    status !== APPROVAL_STATUS.REJECTED
+  ) {
+    return {
+      success: false,
+      message: "A day of attendance can only be approved or rejected.",
+    };
+  }
+
+  /*
+  | Rejecting takes a day of attendance away from somebody, so it says why.
+  | The employee reads the remark and knows what to raise a correction about.
+  */
+
+  if (
+    status === APPROVAL_STATUS.REJECTED &&
+    !remarks.trim()
+  ) {
+    return {
+      success: false,
+      message: "Remarks are required to reject a day of attendance.",
+    };
+  }
+
+  const snapshot = await readDay(companyCode, date, employeeId);
+
+  if (!snapshot.exists()) {
+    return {
+      success: false,
+      message: "Attendance record not found.",
+    };
+  }
+
+  /*
+  | The list this was pressed from is realtime, so the day can have been
+  | decided by somebody else between the moment the row was rendered and the
+  | moment the button was pressed.
+  */
+
+  if (getApprovalStatus(snapshot.val()) === status) {
+    return {
+      success: false,
+      message: `This day has already been ${status.toLowerCase()}.`,
+    };
+  }
+
+  await update(
+    ref(db, recordPath(companyCode, date, employeeId)),
+    buildApproval({
+      status,
+      by: approvedBy,
+      remarks: remarks.trim(),
+    })
+  );
+
+  return { success: true };
+
+};
+
+/*
+|--------------------------------------------------------------------------
+| Approve A Whole Day
+|--------------------------------------------------------------------------
+| Signing off a morning one row at a time is how a feature like this stops
+| being used by the second week, so the whole day goes in one action.
+|
+| Only the days that are actually pending are touched. A day already approved
+| is left alone, and a day that was rejected is not quietly reinstated by
+| somebody clearing the queue: undoing a rejection is a decision of its own
+| and goes through the single record path above.
+|
+| Every path is written in one multi location update, so the day either lands
+| completely or not at all.
+|--------------------------------------------------------------------------
+*/
+
+export const approveAttendanceDay = async (
+  companyCode,
+  date,
+  employeeIds = [],
+  approvedBy = ""
+) => {
+
+  if (!getMonthPath(date) || employeeIds.length === 0) {
+    return { success: true, approved: 0 };
+  }
+
+  const snapshots = await Promise.all(
+    employeeIds.map((employeeId) =>
+      readDay(companyCode, date, employeeId)
+    )
+  );
+
+  const approval = buildApproval({
+    status: APPROVAL_STATUS.APPROVED,
+    by: approvedBy,
+  });
+
+  const updates = {};
+
+  let approved = 0;
+
+  employeeIds.forEach((employeeId, index) => {
+
+    const snapshot = snapshots[index];
+
+    if (!snapshot.exists()) return;
+
+    if (
+      getApprovalStatus(snapshot.val()) !== APPROVAL_STATUS.PENDING
+    ) {
+      return;
+    }
+
+    const path = dayPath(date, employeeId);
+
+    /*
+    | Field by field rather than the whole record: a multi location update
+    | replaces whatever sits at each path it is given, so writing the record
+    | would overwrite punch times that may have moved since it was read.
+    */
+
+    Object.entries(approval).forEach(([field, value]) => {
+      updates[`${path}/${field}`] = value;
+    });
+
+    approved++;
+
+  });
+
+  if (approved > 0) {
+    await update(ref(db, recordsPath(companyCode)), updates);
+  }
+
+  return { success: true, approved };
 
 };

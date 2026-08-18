@@ -84,6 +84,35 @@ export const WORK_RULES = {
 
 /*
 |--------------------------------------------------------------------------
+| Daily Approval
+|--------------------------------------------------------------------------
+| Every day of attendance is signed off by HR or the owner before it counts.
+| Until somebody has, the day is Pending: the punch happened, but nobody has
+| confirmed it, so it is reported on its own instead of being counted as a
+| day of attendance.
+|
+| The three values are the same as `REQUEST_STATUS` and this is deliberately
+| not that constant. A correction request and a day of attendance are two
+| different things that happen to share a vocabulary, and pointing one at the
+| other would tie the two flows together the first time either of them needs
+| a fourth state.
+|--------------------------------------------------------------------------
+*/
+
+export const APPROVAL_STATUS = {
+  PENDING: "Pending",
+  APPROVED: "Approved",
+  REJECTED: "Rejected",
+};
+
+export const APPROVAL_STATUS_OPTIONS = [
+  APPROVAL_STATUS.PENDING,
+  APPROVAL_STATUS.APPROVED,
+  APPROVAL_STATUS.REJECTED,
+];
+
+/*
+|--------------------------------------------------------------------------
 | Request Status
 |--------------------------------------------------------------------------
 */

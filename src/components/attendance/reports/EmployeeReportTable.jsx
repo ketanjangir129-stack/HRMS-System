@@ -5,6 +5,7 @@ import {
   formatTime,
 } from "../../../utils/attendance/attendanceDate";
 import { downloadCsv } from "../../../utils/attendance/attendanceTable";
+import { getApprovalLabel } from "../../../utils/attendance/attendanceUtils";
 import {
   AttendancePanel,
   ExportButton,
@@ -27,6 +28,8 @@ const EXPORT_HEADER = [
   "Punch Out",
   "Working Hours",
   "Status",
+  "Approval",
+  "Approved By",
   "Remarks",
 ];
 
@@ -121,11 +124,29 @@ function EmployeeReportTable({
         sortable: true,
         render: (row) => <AttendanceStatusBadge status={row.status} />,
       },
+      /*
+      | Whether the day has been signed off, and why not if it was turned
+      | down. A day that was rejected is the one an employee has to see: it is
+      | not counting towards their month, and the remark is what tells them
+      | what to raise a correction about.
+      */
+      {
+        key: "approvalStatus",
+        label: "Approval",
+        sortable: true,
+        className: "whitespace-nowrap",
+        render: (row) => (
+          <AttendanceStatusBadge
+            status={getApprovalLabel(row)}
+            variant="approval"
+          />
+        ),
+      },
       {
         key: "remarks",
         label: "Remarks",
         ...hideBelow("xl"),
-        render: (row) => row.remarks || "--",
+        render: (row) => row.approvalRemarks || row.remarks || "--",
       },
     ],
     []
@@ -174,8 +195,32 @@ function EmployeeReportTable({
 
       </div>
 
-      {row.remarks && (
-        <p className="text-xs text-slate-500">{row.remarks}</p>
+      {/*
+      | Its own line rather than a second badge beside the date. Two pills up
+      | there push the date into an ellipsis on a narrow phone, and the date is
+      | what the row is: a day of the month, not the widest thing that fits
+      | after the badges have taken their share.
+      */}
+      {getApprovalLabel(row) && (
+        <div className="flex items-center justify-between gap-3 border-t border-slate-100 pt-3">
+
+          <p className="text-[11px] font-medium uppercase tracking-wide text-slate-400">
+            Approval
+          </p>
+
+          <AttendanceStatusBadge
+            status={getApprovalLabel(row)}
+            variant="approval"
+            size="sm"
+          />
+
+        </div>
+      )}
+
+      {(row.approvalRemarks || row.remarks) && (
+        <p className="wrap-break-word text-xs text-slate-500">
+          {row.approvalRemarks || row.remarks}
+        </p>
       )}
 
     </div>
@@ -192,7 +237,9 @@ function EmployeeReportTable({
         formatTime(row.punchOut),
         row.workingHours || "--",
         row.status,
-        row.remarks || "",
+        getApprovalLabel(row) || "--",
+        row.approvedBy || "",
+        row.approvalRemarks || row.remarks || "",
       ])
     );
 
@@ -234,7 +281,7 @@ function EmployeeReportTable({
         | Grows with the columns that appear at each breakpoint, so a tablet
         | scrolls a compact four column table instead of an 800px one.
         */
-        minWidthClass="min-w-[520px] lg:min-w-[660px] xl:min-w-[800px]"
+        minWidthClass="min-w-[640px] lg:min-w-[780px] xl:min-w-[940px]"
         empty={{
           icon: <FiUser size={28} />,
           title: employee ? "No Attendance Records" : "No Employee Selected",
