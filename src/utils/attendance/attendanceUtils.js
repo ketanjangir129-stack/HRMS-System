@@ -1,4 +1,5 @@
 import {
+    APPROVAL_STATUS,
     ATTENDANCE_STATUS,
     WORK_RULES,
 } from "./attendanceConstants";
@@ -82,6 +83,81 @@ export const resolvePunchInStatus = (punchIn) => {
         : ATTENDANCE_STATUS.PRESENT;
 
 };
+
+/*
+| The statuses that describe a day nobody was expected in. Neither is ever
+| stored on a record - both are derived for a day that has none - so on the
+| company wide views, where a row is an employee rather than a day, no row can
+| carry one and the total is the roster exactly as before.
+|
+| On an employee's own month a row is a day, and these are the days that are
+| left out of the total: dividing a month's attendance by its Sundays reports
+| somebody who never missed a day as four fifths present.
+*/
+
+const NON_WORKING_STATUSES = [
+    ATTENDANCE_STATUS.HOLIDAY,
+    ATTENDANCE_STATUS.WEEKLY_OFF,
+];
+
+/*
+|--------------------------------------------------------------------------
+| Daily Approval
+|--------------------------------------------------------------------------
+| A day of attendance only counts once HR or the owner has signed it off. The
+| three helpers below are the only place that reads the decision, so every
+| table, card and total agrees on what a day is worth.
+|
+| A record written before daily approval existed carries no approval field at
+| all, and is read as Approved rather than Pending. Nobody ever held it back:
+| reading it as Pending would empty every month already on record and drop
+| every rate reported so far to zero, over days that were never in question.
+|
+| Everything written since says what it is, so only history is grandfathered
+| in. Flipping the fallback to `PENDING` makes the whole archive reviewable
+| if that is ever wanted.
+|--------------------------------------------------------------------------
+*/
+
+export const getApprovalStatus = (record) =>
+    record?.approvalStatus || APPROVAL_STATUS.APPROVED;
+
+export const isApproved = (record) =>
+    getApprovalStatus(record) === APPROVAL_STATUS.APPROVED;
+
+export const isPendingApproval = (record) =>
+    getApprovalStatus(record) === APPROVAL_STATUS.PENDING;
+
+export const isRejected = (record) =>
+    getApprovalStatus(record) === APPROVAL_STATUS.REJECTED;
+
+/*
+| What an approval column shows, which is not always what the maths uses. A
+| day that was never recorded at all - a holiday, a weekly off, an absence
+| derived from a missing record - has no decision to show and gets nothing,
+| so the column does not invent one for a day nobody ever reviewed.
+|
+| A record from before daily approval existed shows Approved, because that is
+| exactly how it is being counted.
+*/
+
+export const getApprovalLabel = (record) =>
+    record?.approvalStatus ||
+    (record?.punchIn ? APPROVAL_STATUS.APPROVED : "");
+
+/*
+| The records of a day still waiting on a decision. Days nobody was expected
+| in are left out: a holiday or a weekly off is not a day anybody has to sign
+| off, and offering it for approval would put the whole roster in the queue
+| every Sunday.
+*/
+
+export const getPendingApprovals = (records = []) =>
+    records.filter(
+        (record) =>
+            isPendingApproval(record) &&
+            !NON_WORKING_STATUSES.includes(record.status)
+    );
 
 /*
 |--------------------------------------------------------------------------
@@ -242,22 +318,6 @@ export const getInitials = (name = "") =>
 | omitted the record based counting is kept.
 */
 
-/*
-| The statuses that describe a day nobody was expected in. Neither is ever
-| stored on a record - both are derived for a day that has none - so on the
-| company wide views, where a row is an employee rather than a day, no row can
-| carry one and the total is the roster exactly as before.
-|
-| On an employee's own month a row is a day, and these are the days that are
-| left out of the total: dividing a month's attendance by its Sundays reports
-| somebody who never missed a day as four fifths present.
-*/
-
-const NON_WORKING_STATUSES = [
-    ATTENDANCE_STATUS.HOLIDAY,
-    ATTENDANCE_STATUS.WEEKLY_OFF,
-];
-
 export const getAttendanceSummary = (
     attendance = [],
     totalEmployees = null,
@@ -270,6 +330,7 @@ export const getAttendanceSummary = (
         late: 0,
         leave: 0,
         halfDay: 0,
+        pending: 0,
         total: attendance.filter(
             (employee) =>
                 !NON_WORKING_STATUSES.includes(employee.status)
@@ -278,6 +339,35 @@ export const getAttendanceSummary = (
     };
 
     attendance.forEach((employee) => {
+
+        /*
+        | A day nobody has signed off is not attendance yet, whatever its
+        | punch times say it was. It is counted once, as Pending, and left out
+        | of Present, Late and Half Day until HR decides: counting it as
+        | attendance would make the approval an empty gesture, since the day
+        | would already have been credited before anybody looked at it.
+        */
+
+        if (isPendingApproval(employee)) {
+
+            if (!NON_WORKING_STATUSES.includes(employee.status)) {
+                summary.pending++;
+            }
+
+            return;
+
+        }
+
+        /*
+        | A day that was reviewed and turned down is an absence. The punch is
+        | still on the record and still visible, but it buys no time until the
+        | employee raises a correction and that correction is approved.
+        */
+
+        if (isRejected(employee)) {
+            summary.absent++;
+            return;
+        }
 
         switch (employee.status) {
 
@@ -313,6 +403,12 @@ export const getAttendanceSummary = (
     | covers records explicitly marked Absent. Half days are attendance, so
     | they are excluded from that count the same way the other statuses are.
     |
+    | Days waiting on approval are excluded too, and for the opposite reason:
+    | somebody with a punch in nobody has signed off yet has not been marked
+    | absent, they have not been marked anything. Leaving them in the
+    | subtraction would report the whole morning as absent until HR works
+    | through the list, and every rejected day is already counted above.
+    |
     | On a day nobody was expected in - a declared holiday or a weekly off -
     | that rule is dropped: the office was closed, so a day with no record is
     | not an absence and the roster is not turned into one. Records that do
@@ -332,7 +428,8 @@ export const getAttendanceSummary = (
                 summary.present -
                 summary.late -
                 summary.leave -
-                summary.halfDay,
+                summary.halfDay -
+                summary.pending,
                 0
             );
 
@@ -360,6 +457,14 @@ export const getAttendanceSummary = (
 
         leavePercentage: percentage(summary.leave),
 
+        pendingPercentage: percentage(summary.pending),
+
+        /*
+        | Only the days that were actually signed off. The rate is what the
+        | company can stand behind, so a morning of unreviewed punches reads
+        | as a low rate with a pending count next to it explaining why, rather
+        | than as a full day of attendance nobody has checked.
+        */
         presentRate: percentage(
             summary.present + summary.late + summary.halfDay
         ),
@@ -435,15 +540,24 @@ export const getAttendanceAnalytics = (
                 workingMinutes.length
             );
 
-    const lateEmployees = attendance.filter(
-        (employee) => employee.status === ATTENDANCE_STATUS.LATE
-    ).length;
+    /*
+    | Read off the summary rather than counted again here, so a late day
+    | waiting on approval is not reported as late by one panel and as pending
+    | by the one beside it.
+    |
+    | The two averages above are deliberately left over every record with a
+    | punch time, approved or not: what time people arrived and how long they
+    | stayed is a fact about the day, not a claim that needs signing off.
+    */
+    const lateEmployees = summary.late;
 
     return {
 
         presentRate: summary.presentRate,
 
         presentEmployees: summary.present,
+
+        pendingApprovals: summary.pending,
 
         averagePunchIn: averagePunchInTime(punchIns),
 
@@ -631,6 +745,7 @@ export const buildMonthlyReport = (
             absent: 0,
             leave: 0,
             halfDay: 0,
+            pending: 0,
             workingDays: 0,
             totalMinutes: 0,
         };
@@ -644,6 +759,34 @@ export const buildMonthlyReport = (
             if (!record) return;
 
             summary.workingDays++;
+
+            /*
+            | Counted exactly as the daily summary counts it: a day still
+            | waiting on approval is Pending and nothing else, and a day that
+            | was turned down is an absence. The hours below are still added
+            | either way - they are what was worked, and the month has to show
+            | them for the day to be reviewable at all.
+            */
+
+            if (isPendingApproval(record)) {
+
+                summary.pending++;
+
+                summary.totalMinutes += parseWorkingMinutes(record.workingHours);
+
+                return;
+
+            }
+
+            if (isRejected(record)) {
+
+                summary.absent++;
+
+                summary.totalMinutes += parseWorkingMinutes(record.workingHours);
+
+                return;
+
+            }
 
             switch (record.status) {
 
@@ -691,6 +834,7 @@ export const buildMonthlyReport = (
             absent: summary.absent,
             leave: summary.leave,
             halfDay: summary.halfDay,
+            pending: summary.pending,
             workingDays: summary.workingDays,
 
             holidays: monthHolidays,
@@ -765,6 +909,12 @@ export const buildEmployeeReport = (
                     status = ATTENDANCE_STATUS.WEEKLY_OFF;
                 }
 
+                /*
+                | Nothing was ever recorded for this day, so there is nothing
+                | to approve: the empty approval keeps it out of the pending
+                | queue and out of the approval column.
+                */
+
                 return {
                     date,
                     employeeId,
@@ -772,6 +922,7 @@ export const buildEmployeeReport = (
                     punchOut: null,
                     workingHours: "",
                     status,
+                    approvalStatus: "",
                     remarks:
                         holiday?.name ||
                         (weeklyOff ? getDayName(date) : ""),
@@ -810,6 +961,7 @@ export const buildDepartmentReport = (monthlyRows = []) => {
                 absent: 0,
                 leave: 0,
                 halfDay: 0,
+                pending: 0,
                 workingDays: 0,
                 totalMinutes: 0,
             };
@@ -824,6 +976,7 @@ export const buildDepartmentReport = (monthlyRows = []) => {
         department.absent += row.absent;
         department.leave += row.leave;
         department.halfDay += row.halfDay;
+        department.pending += row.pending;
         department.workingDays += row.workingDays;
         department.totalMinutes += row.totalMinutes;
 
@@ -870,6 +1023,7 @@ export const getMonthlySummary = (monthlyRows = []) => {
             absent: totals.absent + row.absent,
             leave: totals.leave + row.leave,
             halfDay: totals.halfDay + row.halfDay,
+            pending: totals.pending + (row.pending || 0),
             total: totals.total + row.workingDays,
         }),
         {
@@ -878,6 +1032,7 @@ export const getMonthlySummary = (monthlyRows = []) => {
             absent: 0,
             leave: 0,
             halfDay: 0,
+            pending: 0,
             total: 0,
         }
     );
@@ -898,6 +1053,8 @@ export const getMonthlySummary = (monthlyRows = []) => {
         latePercentage: percentage(summary.late),
 
         leavePercentage: percentage(summary.leave),
+
+        pendingPercentage: percentage(summary.pending),
 
         presentRate: percentage(
             summary.present + summary.late + summary.halfDay

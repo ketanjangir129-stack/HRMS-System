@@ -11,6 +11,11 @@ import {
 import { updateAttendanceRecord } from "./attendanceService";
 import { REQUEST_STATUS } from "../../utils/attendance/attendanceConstants";
 import { getMonthPath } from "../../utils/attendance/attendanceDate";
+import {
+    notifyAttendanceCorrectionApprovers,
+    notifyAttendanceCorrectionApproved,
+    notifyAttendanceCorrectionRejected,
+} from "../notifications/attendanceNotificationService";
 
 /*
 |--------------------------------------------------------------------------
@@ -212,6 +217,29 @@ export const createAttendanceRequest = async (
 
     });
 
+    /*
+    | Sent after the request is stored, and never allowed to fail the call:
+    | the request exists either way, and a request that was raised but not
+    | announced is recoverable, one that was announced but not raised is not.
+    */
+
+    try {
+
+        await notifyAttendanceCorrectionApprovers(
+            companyCode,
+            { ...request, employeeId, date },
+            requestId
+        );
+
+    } catch (notificationError) {
+
+        console.error(
+            "Attendance correction notification failed:",
+            notificationError
+        );
+
+    }
+
     return { success: true };
 
 };
@@ -347,9 +375,18 @@ export const approveAttendanceRequest = async (
 
     try {
 
+        /*
+        | The approver is passed through so the day is signed off by the same
+        | person who accepted the correction. Nothing about the request flow
+        | changes: it is the attendance record on the other side that carries
+        | the daily approval, and it would otherwise sit Pending behind a
+        | decision that has already been made.
+        */
+
         attendanceResult = await updateAttendanceRecord(
             companyCode,
-            pending.request
+            pending.request,
+            approvedBy
         );
 
     } catch (error) {
@@ -374,6 +411,31 @@ export const approveAttendanceRequest = async (
         approvedAt: Date.now(),
         remarks: "",
     });
+
+    /*
+    | Told only once the attendance is written and the request is marked
+    | Approved. Both steps above leave the request Pending when they fail, and
+    | a notification cannot be taken back: sending it any earlier leaves the
+    | employee holding a permanent "approved" for a request that is pending.
+    */
+
+    try {
+
+        await notifyAttendanceCorrectionApproved(
+            companyCode,
+            pending.request,
+            pending.request.requestId,
+            approvedBy
+        );
+
+    } catch (notificationError) {
+
+        console.error(
+            "Attendance correction approval notification failed:",
+            notificationError
+        );
+
+    }
 
     return { success: true };
 
@@ -415,6 +477,25 @@ export const rejectAttendanceRequest = async (
         approvedAt: Date.now(),
         remarks: remarks.trim(),
     });
+
+    try {
+
+        await notifyAttendanceCorrectionRejected(
+            companyCode,
+            pending.request,
+            pending.request.requestId,
+            approvedBy,
+            remarks
+        );
+
+    } catch (notificationError) {
+
+        console.error(
+            "Attendance correction rejection notification failed:",
+            notificationError
+        );
+
+    }
 
     return { success: true };
 

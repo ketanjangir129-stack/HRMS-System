@@ -45,6 +45,7 @@ const SUMMARY_SUBTITLES = {
   absent: "Days Absent",
   late: "Days Late",
   leave: "Days On Leave",
+  pending: "Awaiting Approval",
 };
 
 function MyAttendance() {
@@ -196,9 +197,16 @@ function MyAttendance() {
 
       <div className="mt-5 space-y-4 sm:mt-6 sm:space-y-6">
 
+        {/*
+        | The pending card matters most here: it is where an employee finds
+        | out that a day they worked has not been signed off yet, which is why
+        | their own present count is lower than the days they turned up.
+        */}
         <AttendanceSummaryCards
           summary={summary}
           subtitles={SUMMARY_SUBTITLES}
+          showPending
+          gridClassName="grid-cols-2 xl:grid-cols-5"
         />
 
         <EmployeeReportTable

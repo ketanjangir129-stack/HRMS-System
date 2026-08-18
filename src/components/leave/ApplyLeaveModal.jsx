@@ -20,6 +20,7 @@ import {
   calculateRemainingBalance,
   formatLeaveDuration,
   getLeaveDaysBreakdown,
+  getTodayLeaveDate,
   validateLeaveRequest,
 } from "../../utils/leave/leaveUtils";
 
@@ -41,6 +42,10 @@ import {
 | Declared holidays and weekly offs inside the range are not charged, and the
 | preview says how many were skipped: a five day range that costs three days
 | looks like a bug unless the reason is on screen.
+|
+| Every date field starts at today. Leave is applied for in advance, so a day
+| that has already passed is not offered by the picker at all, and
+| `validateLeaveRequest` refuses one that arrives anyway.
 |--------------------------------------------------------------------------
 */
 
@@ -77,6 +82,13 @@ function ApplyLeaveForm({
       window.removeEventListener("keydown", handleKeyDown);
 
   }, [submitting, onClose]);
+
+  /*
+  | The earliest day that may be picked. Read on every render rather than
+  | held in state, so a modal left open across midnight moves its floor with
+  | the day instead of still offering yesterday.
+  */
+  const minDate = getTodayLeaveDate();
 
   const durationType =
     requestType === LEAVE_REQUEST_TYPE.HALF_DAY
@@ -304,6 +316,7 @@ function ApplyLeaveForm({
               <input
                 type="date"
                 value={fromDate}
+                min={minDate}
                 onChange={(e) =>
                   handleFromDateChange(e.target.value)
                 }
@@ -327,6 +340,7 @@ function ApplyLeaveForm({
                 <input
                   type="date"
                   value={fromDate}
+                  min={minDate}
                   onChange={(e) =>
                     handleFromDateChange(e.target.value)
                   }
@@ -344,7 +358,7 @@ function ApplyLeaveForm({
                 <input
                   type="date"
                   value={toDate}
-                  min={fromDate || undefined}
+                  min={fromDate || minDate}
                   onChange={(e) =>
                     setToDate(e.target.value)
                   }
@@ -370,6 +384,7 @@ function ApplyLeaveForm({
                 <input
                   type="date"
                   value={fromDate}
+                  min={minDate}
                   onChange={(e) =>
                     handleFromDateChange(e.target.value)
                   }

@@ -172,7 +172,11 @@ function MonthlyAttendance() {
 
       <div className="mt-5 space-y-4 sm:mt-6 sm:space-y-6">
 
-        <AttendanceSummaryCards summary={summary} />
+        <AttendanceSummaryCards
+          summary={summary}
+          showPending
+          gridClassName="grid-cols-2 xl:grid-cols-5"
+        />
 
         <MonthlyAttendanceTable
           rows={rows}

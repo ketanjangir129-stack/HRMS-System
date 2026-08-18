@@ -299,7 +299,6 @@ function AttendanceDashboard() {
       {todayWeeklyOff && <WeeklyOffNotice date={todayKey} label="Today" />}
 
       <div className="grid grid-cols-1 items-stretch gap-4 sm:gap-6 xl:grid-cols-12">
-
         <div
           className={
             showSummary
@@ -403,7 +402,11 @@ function AttendanceDashboard() {
       <MarkAttendanceModal
         open={markOpen}
         onClose={() => setMarkOpen(false)}
-        onSave={markAttendance}
+        /*
+        | Only a reviewer can open this form, so marking a day by hand is
+        | itself the approval and is filed under whoever recorded it.
+        */
+        onSave={(record) => markAttendance(record, actorName)}
         employees={activeEmployees}
         dayRecords={records}
         recordsDate={getDateKey()}

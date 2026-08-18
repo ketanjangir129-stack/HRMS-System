@@ -52,6 +52,37 @@ export const parseLeaveDate = (value) => {
 };
 
 /*
+| Today as a `YYYY-MM-DD` key, which is the same shape the date inputs and the
+| stored leave dates use. Two keys in that shape compare correctly as plain
+| strings, so no parsing is needed to tell one day from another.
+*/
+
+export const getTodayLeaveDate = () => getDateKey();
+
+/*
+| A date that has already passed. Leave is asked for, not recorded after the
+| fact: a day that is already over cannot be planned around, and backdating a
+| request would let an absence already marked on the attendance sheet be
+| rewritten as approved leave.
+|
+| Today itself is allowed, so someone falling ill in the morning can still
+| raise the request for the day they are taking.
+*/
+
+export const isPastLeaveDate = (value) => {
+
+  const dateKey =
+    value instanceof Date
+      ? getDateKey(value)
+      : String(value || "");
+
+  if (!dateKey) return false;
+
+  return dateKey < getTodayLeaveDate();
+
+};
+
+/*
 | Whole days between two `YYYY-MM-DD` values, both ends included.
 |
 | The difference is taken from the calendar parts rather than the millisecond
@@ -320,11 +351,33 @@ export const validateLeaveRequest = ({
     return "Please select leave date.";
   }
 
+  /*
+  | The pickers already refuse a past day, but the check is repeated here:
+  | the input `min` is only a hint the browser enforces, and a value typed in
+  | or left over from a modal opened before midnight would otherwise be
+  | written as a backdated request.
+  */
+
+  if (isPastLeaveDate(fromDate)) {
+
+    return requestType === LEAVE_REQUEST_TYPE.MULTIPLE_DAY
+      ? "Leave cannot start on a past date."
+      : "Leave cannot be applied for a past date.";
+
+  }
+
   if (
     requestType === LEAVE_REQUEST_TYPE.MULTIPLE_DAY &&
     !toDate
   ) {
     return "Please select end date.";
+  }
+
+  if (
+    requestType === LEAVE_REQUEST_TYPE.MULTIPLE_DAY &&
+    isPastLeaveDate(toDate)
+  ) {
+    return "Leave cannot end on a past date.";
   }
 
   if (

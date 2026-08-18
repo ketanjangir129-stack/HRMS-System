@@ -72,6 +72,16 @@ function TodayFooter({ records }) {
 
 }
 
+/*
+| The approval column is shown here without its buttons: the dashboard is
+| where a day is read, and the deciding is done on the daily attendance page,
+| where the filters that pick the pending days out of a full roster are. What
+| it is for is the Pending badges - the reason a present count on this page
+| can look lower than the punches under it.
+*/
+
+const READ_ONLY_APPROVAL = { canReview: false };
+
 function AttendanceTodayTable({ attendance = [], loading, error, onRetry }) {
   return (
     <AttendanceRecordsTable
@@ -84,6 +94,7 @@ function AttendanceTodayTable({ attendance = [], loading, error, onRetry }) {
       live
       showFilters={false}
       showExport={false}
+      approval={READ_ONLY_APPROVAL}
       emptyMessage="No employee has punched in today."
       footer={
         attendance.length > 0 ? (

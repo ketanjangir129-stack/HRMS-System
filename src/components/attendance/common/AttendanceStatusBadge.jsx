@@ -11,9 +11,14 @@ import {
 |--------------------------------------------------------------------------
 | Status Badge
 |--------------------------------------------------------------------------
-| One pill for both attendance statuses (Present / Late / ...) and request
-| statuses (Pending / Approved / Rejected), so the colours stay identical
-| everywhere they appear.
+| One pill for attendance statuses (Present / Late / ...), request statuses
+| and daily approval states (both Pending / Approved / Rejected), so the
+| colours stay identical everywhere they appear.
+|
+| Only `attendance` picks the attendance palette. A decision is a decision
+| whether it was made about a correction request or about a day of
+| attendance, and both read better sharing one set of colours than they would
+| with a second identical map to keep in step.
 |--------------------------------------------------------------------------
 */
 
@@ -27,11 +32,11 @@ function AttendanceStatusBadge({
     return <span className="text-sm text-slate-400">--</span>;
   }
 
-  const badges =
-    variant === "request" ? REQUEST_STATUS_BADGES : STATUS_BADGES;
+  const isAttendance = variant === "attendance";
 
-  const dots =
-    variant === "request" ? REQUEST_STATUS_DOTS : STATUS_DOTS;
+  const badges = isAttendance ? STATUS_BADGES : REQUEST_STATUS_BADGES;
+
+  const dots = isAttendance ? STATUS_DOTS : REQUEST_STATUS_DOTS;
 
   const sizeClass =
     size === "sm"

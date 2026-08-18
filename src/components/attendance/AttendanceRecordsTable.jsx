@@ -1,8 +1,16 @@
 import { useMemo, useState } from "react";
-import { FiCalendar, FiMapPin } from "react-icons/fi";
-import { ATTENDANCE_STATUS_OPTIONS } from "../../utils/attendance/attendanceConstants";
+import { FiCalendar, FiCheck, FiMapPin, FiX } from "react-icons/fi";
+import {
+  APPROVAL_STATUS,
+  APPROVAL_STATUS_OPTIONS,
+  ATTENDANCE_STATUS_OPTIONS,
+} from "../../utils/attendance/attendanceConstants";
 import { formatTime } from "../../utils/attendance/attendanceDate";
 import { downloadCsv, searchRows } from "../../utils/attendance/attendanceTable";
+import {
+  getApprovalLabel,
+  getApprovalStatus,
+} from "../../utils/attendance/attendanceUtils";
 import {
   AttendancePanel,
   ExportButton,
@@ -50,6 +58,12 @@ const hideBelow = (breakpoint) => ({
   className: HIDDEN_UNTIL[breakpoint],
 });
 
+/*
+| The approval travels with the day in the export too. A sheet of attendance
+| that does not say which days were signed off is the same sheet as before
+| daily approval existed, and payroll cannot tell the difference.
+*/
+
 const EXPORT_HEADER = [
   "Employee ID",
   "Employee Name",
@@ -60,8 +74,113 @@ const EXPORT_HEADER = [
   "Punch Out",
   "Working Hours",
   "Status",
+  "Approval",
+  "Approved By",
+  "Approval Remarks",
   "Remarks",
 ];
+
+/*
+|--------------------------------------------------------------------------
+| Approval Cell
+|--------------------------------------------------------------------------
+| The decision on a day, and the two buttons that make it.
+|
+| Both buttons are always offered to a reviewer, each disabled on the state
+| the day is already in. A decision can be revisited - a day approved at nine
+| can turn out at eleven to have been nobody's day at all - and hiding the
+| buttons the moment a day is decided is what would make that impossible.
+|--------------------------------------------------------------------------
+*/
+
+const REVIEW_BUTTON =
+  "inline-flex shrink-0 cursor-pointer items-center justify-center rounded-lg border transition-colors focus:outline-none focus:ring-2 disabled:cursor-not-allowed disabled:opacity-40";
+
+/*
+| A table cell is read with a mouse and a card is tapped with a thumb, so the
+| buttons are sized for whichever is being used. 28px is as much as a row of a
+| dense table can give a button without pushing the row taller than the rest;
+| on a card there is no such constraint and no excuse for a target that small.
+*/
+
+const REVIEW_BUTTON_SIZE = {
+  md: "h-7 w-7",
+  sm: "h-9 w-9",
+};
+
+function ApprovalCell({ record, approval, size = "md" }) {
+
+  const label = getApprovalLabel(record);
+
+  /*
+  | Nothing was ever recorded for this day, so there is nothing to decide.
+  */
+  if (!label) {
+    return <span className="text-sm text-slate-400">--</span>;
+  }
+
+  const status = getApprovalStatus(record);
+
+  const busy =
+    approval.busyKey === `${record.date}-${record.employeeId}`;
+
+  const buttonClass = `${REVIEW_BUTTON} ${REVIEW_BUTTON_SIZE[size] || REVIEW_BUTTON_SIZE.md}`;
+
+  const iconSize = size === "sm" ? 16 : 14;
+
+  return (
+    <div className="flex items-center gap-2">
+
+      <AttendanceStatusBadge
+        status={label}
+        variant="approval"
+        size={size}
+      />
+
+      {approval.canReview && (
+
+        <span className="flex shrink-0 items-center gap-1">
+
+          <button
+            type="button"
+            title="Approve this day"
+            aria-label="Approve this day"
+            disabled={busy || status === APPROVAL_STATUS.APPROVED}
+            onClick={() => approval.onApprove(record)}
+            className={`${buttonClass} border-emerald-200 text-emerald-600 hover:bg-emerald-50 focus:ring-emerald-200`}
+          >
+            <FiCheck size={iconSize} />
+          </button>
+
+          <button
+            type="button"
+            title="Reject this day"
+            aria-label="Reject this day"
+            disabled={busy || status === APPROVAL_STATUS.REJECTED}
+            onClick={() => approval.onReject(record)}
+            className={`${buttonClass} border-red-200 text-red-600 hover:bg-red-50 focus:ring-red-200`}
+          >
+            <FiX size={iconSize} />
+          </button>
+
+        </span>
+
+      )}
+
+    </div>
+  );
+
+}
+
+/*
+| `approval` turns the column on:
+|
+|   { canReview, onApprove, onReject, busyKey }
+|
+| Left out, the table is exactly the table it was before - which is how the
+| report views, where a day is being read rather than decided, keep their
+| existing columns.
+*/
 
 function AttendanceRecordsTable({
   records = [],
@@ -77,11 +196,13 @@ function AttendanceRecordsTable({
   showExport = true,
   exportName = "attendance",
   footer = null,
+  approval = null,
   emptyMessage = "No employee has punched in for this day.",
 }) {
 
   const [statusFilter, setStatusFilter] = useState("");
   const [departmentFilter, setDepartmentFilter] = useState("");
+  const [approvalFilter, setApprovalFilter] = useState("");
 
   /*
   | The row whose location is being shown. The record itself is held rather
@@ -100,10 +221,19 @@ function AttendanceRecordsTable({
         const matchesDepartment =
           !departmentFilter || record.department === departmentFilter;
 
-        return matchesStatus && matchesDepartment;
+        /*
+        | Filtered on the resolved decision rather than the stored field, so
+        | "Approved" also finds the days recorded before daily approval
+        | existed - which is how they are being counted.
+        */
+        const matchesApproval =
+          !approvalFilter ||
+          getApprovalStatus(record) === approvalFilter;
+
+        return matchesStatus && matchesDepartment && matchesApproval;
 
       }),
-    [records, search, statusFilter, departmentFilter]
+    [records, search, statusFilter, departmentFilter, approvalFilter]
   );
 
   /*
@@ -227,8 +357,26 @@ function AttendanceRecordsTable({
           <AttendanceStatusBadge status={record.status} />
         ),
       },
+      /*
+      | Sorted on the stored field rather than the resolved one, which puts
+      | the days waiting on a decision together at one end of the list: the
+      | order the column is most often clicked for.
+      */
+      ...(approval
+        ? [
+          {
+            key: "approvalStatus",
+            label: "Approval",
+            sortable: true,
+            className: "whitespace-nowrap",
+            render: (record) => (
+              <ApprovalCell record={record} approval={approval} />
+            ),
+          },
+        ]
+        : []),
     ],
-    []
+    [approval]
   );
 
   /*
@@ -278,6 +426,27 @@ function AttendanceRecordsTable({
 
       </div>
 
+      {/*
+      | The decision gets its own line on a phone rather than being squeezed
+      | in beside the status: with the two review buttons next to it, it is a
+      | row of its own and not a value.
+      */}
+      {approval && (
+        <div className="flex items-center justify-between gap-3 border-t border-slate-100 pt-3">
+
+          <p className="text-[11px] font-medium uppercase tracking-wide text-slate-400">
+            Approval
+          </p>
+
+          <ApprovalCell
+            record={record}
+            approval={approval}
+            size="sm"
+          />
+
+        </div>
+      )}
+
     </div>
   );
 
@@ -296,6 +465,9 @@ function AttendanceRecordsTable({
         formatTime(record.punchOut),
         record.workingHours || "--",
         record.status,
+        getApprovalLabel(record) || "--",
+        record.approvedBy || "",
+        record.approvalRemarks || "",
         record.remarks || "",
       ])
     );
@@ -303,9 +475,11 @@ function AttendanceRecordsTable({
   };
 
   const toolbar =
-    showFilters || showExport ? (
+    showFilters || showExport || approval ? (
       <>
-        <div className="grid w-full grid-cols-1 gap-3 sm:grid-cols-2 lg:w-auto lg:grid-cols-2">
+        <div
+          className={`grid w-full grid-cols-1 gap-3 sm:grid-cols-2 lg:w-auto ${approval ? "lg:grid-cols-3" : "lg:grid-cols-2"}`}
+        >
 
           {showFilters && (
             <FilterSelect
@@ -324,6 +498,21 @@ function AttendanceRecordsTable({
               options={departments}
               placeholder="All Departments"
               ariaLabel="Filter by department"
+            />
+          )}
+
+          {/*
+          | Offered whenever the column is, filters or not: picking the days
+          | still waiting on a decision out of a full day of attendance is the
+          | whole job, and scrolling for them is not a way to do it.
+          */}
+          {approval && (
+            <FilterSelect
+              value={approvalFilter}
+              onChange={setApprovalFilter}
+              options={APPROVAL_STATUS_OPTIONS}
+              placeholder="All Approvals"
+              ariaLabel="Filter by approval"
             />
           )}
 
@@ -356,14 +545,20 @@ function AttendanceRecordsTable({
         onRetry={onRetry}
         loadingMessage="Loading attendance..."
         defaultSortBy="employeeName"
-        resetKey={`${search}|${statusFilter}|${departmentFilter}`}
+        resetKey={`${search}|${statusFilter}|${departmentFilter}|${approvalFilter}`}
         paginationLabel="records"
         mobileCard={mobileCard}
         /*
         | Grows with the columns that appear at each breakpoint, so a tablet
-        | scrolls a compact four column table instead of a 900px one.
+        | scrolls a compact four column table instead of a 900px one. The
+        | approval column adds a badge and two buttons, so each floor rises
+        | with it rather than the times being squeezed to make room.
         */
-        minWidthClass="min-w-[560px] lg:min-w-[720px] xl:min-w-[900px]"
+        minWidthClass={
+          approval
+            ? "min-w-[720px] lg:min-w-[880px] xl:min-w-[1060px]"
+            : "min-w-[560px] lg:min-w-[720px] xl:min-w-[900px]"
+        }
         empty={{
           icon: <FiCalendar size={28} />,
           title:
