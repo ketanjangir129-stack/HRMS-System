@@ -14,6 +14,7 @@ import RejectRequestModal from "../../components/attendance/requests/RejectReque
 import HolidayNotice from "../../components/holiday/HolidayNotice";
 import WeeklyOffNotice from "../../components/holiday/WeeklyOffNotice";
 import useAttendanceHistory from "../../hooks/useAttendanceHistory";
+import useAttendanceQuickActions from "../../hooks/useAttendanceQuickActions";
 import useAttendanceRequests from "../../hooks/useAttendanceRequests";
 import useAuth from "../../hooks/useAuth";
 import useDailyAttendance from "../../hooks/useDailyAttendance";
@@ -75,6 +76,17 @@ function AttendanceDashboard() {
   const showActivity = canAccessSection("attendance.recentActivity");
   const showAnalytics = canAccessSection("attendance.analytics");
   const showRequests = canAccessSection("attendance.requests");
+
+  /*
+  | Without the summary cards the punch card had the full width of the page to
+  | itself and four values to put in it, so quick actions moves up beside it
+  | and takes the columns the summary would have had. It only moves if there
+  | is something in it: a role with no actions at all renders no card, and a
+  | column reserved for nothing is the empty space this was meant to close.
+  */
+  const quickActions = useAttendanceQuickActions();
+
+  const quickActionsBesideCard = !showSummary && quickActions.length > 0;
 
   /*
   | The insights row holds up to three panels across twelve columns. The span
@@ -288,7 +300,15 @@ function AttendanceDashboard() {
 
       <div className="grid grid-cols-1 items-stretch gap-4 sm:gap-6 xl:grid-cols-12">
 
-        <div className={showSummary ? "xl:col-span-5" : "xl:col-span-12"}>
+        <div
+          className={
+            showSummary
+              ? "xl:col-span-5"
+              : quickActionsBesideCard
+                ? "xl:col-span-6"
+                : "xl:col-span-12"
+          }
+        >
           <TodayAttendanceCard className="h-full" />
         </div>
 
@@ -299,6 +319,12 @@ function AttendanceDashboard() {
               compact
               gridClassName="grid-cols-2 sm:grid-rows-2"
             />
+          </div>
+        )}
+
+        {quickActionsBesideCard && (
+          <div className="xl:col-span-6">
+            <AttendanceQuickActions gridClassName="grid grid-cols-1 gap-2" />
           </div>
         )}
 
@@ -322,7 +348,7 @@ function AttendanceDashboard() {
         />
       )}
 
-      <AttendanceQuickActions />
+      {!quickActionsBesideCard && <AttendanceQuickActions />}
 
       {/* Insights */}
       {insightCount > 0 && (

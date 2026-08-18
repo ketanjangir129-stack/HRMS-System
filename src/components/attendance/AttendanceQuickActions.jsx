@@ -1,90 +1,28 @@
-import {
-  FiBarChart2,
-  FiCalendar,
-  FiChevronRight,
-  FiFileText,
-  FiSettings,
-  FiUser,
-} from "react-icons/fi";
+import { FiChevronRight } from "react-icons/fi";
 import { useNavigate } from "react-router-dom";
-import useRoleAccess from "../../hooks/useRoleAccess";
+import useAttendanceQuickActions from "../../hooks/useAttendanceQuickActions";
 
 /*
 |--------------------------------------------------------------------------
 | Quick Actions
 |--------------------------------------------------------------------------
-| Every action is a route, and every route is guarded, so each one is offered
-| under the same permission that lets it open. An action the role cannot use
-| is left out rather than shown and then refused on arrival, and the card
-| disappears entirely once nothing is left in it.
+| The actions this role is allowed to open, as cards. The card disappears
+| entirely once nothing is left in it.
 |--------------------------------------------------------------------------
 */
 
-const ACTIONS = [
-  {
-    title: "My Attendance",
-    description: "Your month, day by day",
-    icon: <FiUser size={20} />,
-    color: "bg-indigo-50 text-indigo-600",
-    path: "/attendance/my",
-    permission: "attendance.myAttendance",
-  },
-  {
-    title: "Daily Attendance",
-    description: "View today's attendance",
-    icon: <FiCalendar size={20} />,
-    color: "bg-blue-50 text-blue-600",
-    path: "/attendance/daily",
-    permission: "attendance.daily",
-  },
-  // {
-  //   title: "Monthly Attendance",
-  //   description: "Every employee's month",
-  //   icon: <FiClock size={20} />,
-  //   color: "bg-emerald-50 text-emerald-600",
-  //   path: "/attendance/monthly",
-  //   permission: "attendance.monthly",
-  // },
-  {
-    title: "Requests",
-    description: "Corrections and approvals",
-    icon: <FiFileText size={20} />,
-    color: "bg-amber-50 text-amber-600",
-    path: "/attendance/requests",
-    permission: "attendance.requests",
-  },
-  {
-    title: "Reports",
-    description: "Attendance analytics",
-    icon: <FiBarChart2 size={20} />,
-    color: "bg-pink-50 text-pink-600",
-    path: "/attendance/reports",
-    permission: "attendance.reports",
-  },
-  {
-    title: "Settings",
-    description: "Attendance preferences",
-    icon: <FiSettings size={20} />,
-    color: "bg-slate-100 text-slate-600",
-    path: "/attendance/settings",
-    permission: "attendance.settings",
-  },
-];
-
-function AttendanceQuickActions() {
+function AttendanceQuickActions({ className = "", gridClassName = "" }) {
 
   const navigate = useNavigate();
 
-  const { canAccessSection } = useRoleAccess();
-
-  const actions = ACTIONS.filter(
-    (action) => canAccessSection(action.permission)
-  );
+  const actions = useAttendanceQuickActions();
 
   if (actions.length === 0) return null;
 
   return (
-    <div className="h-full rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
+    <div
+      className={`h-full rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6 ${className}`}
+    >
 
       {/* Header */}
       <div className="mb-4">
@@ -105,8 +43,16 @@ function AttendanceQuickActions() {
       | Three across at most. The list is five or six actions depending on the
       | role, and spreading them any thinner leaves a column too narrow to
       | hold "Monthly Attendance" on one line.
+      |
+      | Beside the punch card the column is narrower and the list is shorter,
+      | so the caller can ask for fewer.
       */}
-      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+      <div
+        className={
+          gridClassName ||
+          "grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3"
+        }
+      >
 
         {actions.map((action) => (
 
@@ -122,7 +68,7 @@ function AttendanceQuickActions() {
               <div
                 className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-transform duration-200 group-hover:scale-105 ${action.color}`}
               >
-                {action.icon}
+                <action.icon size={20} />
               </div>
 
               <div className="min-w-0">

@@ -11,6 +11,7 @@ import useAuth from "../hooks/useAuth";
 import useRoleAccess from "../hooks/useRoleAccess";
 import ProfileDrawer from "./ProfileDrawer";
 import { getInitials } from "../utils/user";
+import NotificationBell from "./notifications/NotificationBell";
 
 
 const Navbar = ({ search, setSearch, searchPlaceholder, onMenuClick }) => {
@@ -68,15 +69,20 @@ const Navbar = ({ search, setSearch, searchPlaceholder, onMenuClick }) => {
       </div>
 
       {/* Right Section */}
-      <div className="flex shrink-0 items-center gap-4 sm:gap-7">
+      <div className="flex shrink-0 items-center gap-4 sm:gap-4">
+
+
         {/* Notification */}
-        <div className="relative cursor-pointer">
+        <NotificationBell />
+        {/* <div className="relative cursor-pointer">
           <FaBell className="text-lg sm:text-xl text-gray-600" />
 
           <span className="absolute -top-2 -right-2 w-5 h-5 rounded-full bg-red-500 text-white text-[11px] font-semibold flex items-center justify-center">
             3
           </span>
-        </div>
+        </div> */}
+
+
         {/* Settings - the cog is where Roles & Access lives, so it is the
             owner's only. */}
         {isOwner && (

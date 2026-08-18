@@ -188,3 +188,67 @@ export const movementBetween = (from, to) => {
     withinMargin: comparable ? metres <= margin : null,
   };
 };
+
+/*
+| A punch held against the company's configured office.
+|
+| The distance is the same haversine the two punches are measured with -
+| `officeLocation` stores latitude and longitude under exactly those names,
+| so the existing helper takes it unchanged.
+|
+| What differs is the uncertainty. `movementBetween` adds two accuracy radii
+| because both of its points were measured; here only one was. The office is
+| a point somebody typed into Settings - declared rather than observed - so
+| it carries no error of its own, and the margin is the punch's accuracy
+| alone. Radius is policy and accuracy is measurement; adding them together
+| would blur a boundary the company chose with a number the device reported.
+|
+| Three verdicts, for the same reason `withinMargin` has three values:
+|
+|   inside   the accuracy circle fits entirely within the radius
+|   outside  the accuracy circle falls entirely beyond it
+|   unclear  the circle straddles the boundary, and neither answer is honest
+|
+| A loose fix does not mean unclear on its own. A punch fifty kilometres out
+| with a two kilometre error is still plainly outside - the uncertainty only
+| decides the verdict when it reaches as far as the boundary does.
+|
+| `weighed` is false when the punch carries no accuracy. The verdict is then
+| the bare comparison, which is worth showing and worth labelling as
+| something that could not be weighed rather than passing off as certain.
+*/
+export const officeComparison = (punch, office) => {
+
+  const metres = distanceBetween(punch, office);
+
+  if (metres === null) return null;
+
+  // Sanitized on the way out of storage, but this is read on every render
+  // and a radius that never arrived is not a boundary
+  const radius = Number.isFinite(office?.radius) ? office.radius : null;
+
+  if (radius === null) return null;
+
+  const accuracy = Number.isFinite(punch?.accuracy) ? punch.accuracy : null;
+
+  const verdict =
+    accuracy === null
+      ? metres <= radius
+        ? "inside"
+        : "outside"
+      : metres + accuracy <= radius
+        ? "inside"
+        : metres - accuracy > radius
+          ? "outside"
+          : "unclear";
+
+  return {
+    metres,
+    label: formatMetres(metres),
+    radius,
+    accuracy,
+    verdict,
+    weighed: accuracy !== null,
+  };
+
+};

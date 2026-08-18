@@ -27,6 +27,12 @@ import {
   getDateKey,
   getMonthPath,
 } from "../../utils/attendance/attendanceDate";
+import {
+    notifyLeaveApprovers,
+    notifyLeaveApproved,
+    notifyLeaveRejected,
+} from "../notifications/leaveNotificationService";
+
 
 const DEFAULT_SETTINGS = {
   annualLeaves: 12,
@@ -39,30 +45,57 @@ const DEFAULT_SETTINGS = {
 |--------------------------------------------------------------------------
 | Where A Request Lives
 |--------------------------------------------------------------------------
-| companies/{companyCode}/leave/requests/{year}/{Month}/{appliedDate}/{employeeId}
+| companies/{companyCode}/leave/requests/{year}/{Month}/{appliedDate}/{employeeId}/{requestId}
 |
 | Keyed the way an attendance record is: a year, a month, a date, then the
 | employee. The date here is the day the request was raised, not the days it
 | asks for, because a request can span a range and only one node holds it.
 |
-| One employee therefore has one request per day of applying: applying twice
-| on the same day replaces the earlier request.
+| The request id is the last step of the address. Without it the employee and
+| the day of applying were the whole key, so a second application raised on
+| the same day overwrote the first one whatever its state: an approved leave
+| would vanish from the history while the days it booked stayed spent on the
+| balance and stayed written on the attendance sheet under an id no surviving
+| request carried, which left them impossible to release.
 |
-| `appliedDate` is stored on the request as well as being its key. Deriving it
-| from `requestedAt` on every read would rebuild the key from a timestamp in
-| whatever timezone the reader happens to be in, and a request raised late in
-| the evening would then be looked for under the wrong day.
+| `appliedDate` is stored on the request as well as being part of its key.
+| Deriving it from `requestedAt` on every read would rebuild the key from a
+| timestamp in whatever timezone the reader happens to be in, and a request
+| raised late in the evening would then be looked for under the wrong day.
 |
 | The year and month are not stored: they are the nodes the request lives in,
 | and deriving them from `appliedDate` is the only way they can never
 | disagree.
+|
+| Requests written before the id was part of the address sit one level higher,
+| directly under the employee. They are still read and still decided, so the
+| tree needs no migration: `isRequestNode` tells a request written the old way
+| apart from the map of requests written the new way.
 */
 
 const requestsPath = (companyCode) =>
   `companies/${companyCode}/leave/requests`;
 
-const requestPath = (companyCode, appliedDate, employeeId) =>
+const employeeRequestsPath = (companyCode, appliedDate, employeeId) =>
   `${requestsPath(companyCode)}/${getMonthPath(appliedDate)}/${appliedDate}/${employeeId}`;
+
+const requestPath = (companyCode, appliedDate, employeeId, requestId) =>
+  `${employeeRequestsPath(companyCode, appliedDate, employeeId)}/${requestId}`;
+
+/*
+| A request itself, as opposed to the map of requests an employee raised on a
+| day. Only a request carries its own fields; the map is keyed by request id
+| and carries none of them.
+*/
+
+const isRequestNode = (value) =>
+  Boolean(value) &&
+  typeof value === "object" &&
+  (
+    "requestId" in value ||
+    "employeeId" in value ||
+    "fromDate" in value
+  );
 
 /*
 | The address of a request. Requests written before this tree was keyed by
@@ -77,7 +110,56 @@ const requestKeys = (request) => ({
 
   employeeId: request?.employeeId,
 
+  requestId: request?.requestId,
+
 });
+
+/*
+| Where a request actually is, read back with it.
+|
+| The id is tried first and the node it used to live at second, so a request
+| raised before the id joined the address is still found. The old address is
+| the parent of the new one, so what is found there is only accepted if it is
+| a request and not the map of requests now filed beneath it.
+*/
+
+const findRequestRef = async (
+  companyCode,
+  { appliedDate, employeeId, requestId }
+) => {
+
+  const paths = [];
+
+  if (requestId) {
+    paths.push(
+      requestPath(companyCode, appliedDate, employeeId, requestId)
+    );
+  }
+
+  paths.push(
+    employeeRequestsPath(companyCode, appliedDate, employeeId)
+  );
+
+  for (const path of paths) {
+
+    const nodeRef = ref(db, path);
+
+    const snapshot = await get(nodeRef);
+
+    if (snapshot.exists() && isRequestNode(snapshot.val())) {
+
+      return {
+        ref: nodeRef,
+        value: snapshot.val(),
+      };
+
+    }
+
+  }
+
+  return null;
+
+};
 
 /*
 | The id stays a field of the request rather than its key: nothing addresses a
@@ -332,7 +414,12 @@ export const createLeaveRequest = async (
 
             ref(
                 db,
-                requestPath(companyCode, appliedDate, employeeId)
+                requestPath(
+                    companyCode,
+                    appliedDate,
+                    employeeId,
+                    requestId
+                )
             ),
 
             {
@@ -354,6 +441,19 @@ export const createLeaveRequest = async (
             }
 
         );
+        // Creating notifications
+        try {
+            await notifyLeaveApprovers(
+                companyCode,
+                request,
+                requestId
+            );
+        } catch (notificationError) {
+            console.error(
+                "Leave application notification failed:",
+                notificationError
+            );
+        }
 
         return {
             success: true,
@@ -379,6 +479,11 @@ export const createLeaveRequest = async (
 | The year, month and date buckets are flattened away here: every page above
 | works on a plain list of requests and none of them cares which node a
 | request is filed under.
+|
+| The last bucket is the employee's requests for that day, which is a map of
+| them keyed by id. A request raised before the id joined the address sits at
+| that spot itself, so it is returned as it is found rather than being read
+| for children it does not have.
 */
 
 export const getLeaveRequests = async (
@@ -405,7 +510,12 @@ export const getLeaveRequests = async (
         ).flatMap(
             (months) => Object.values(months || {}).flatMap(
                 (dates) => Object.values(dates || {}).flatMap(
-                    (employees) => Object.values(employees || {})
+                    (employees) => Object.values(employees || {}).flatMap(
+                        (employeeRequests) =>
+                            isRequestNode(employeeRequests)
+                                ? [employeeRequests]
+                                : Object.values(employeeRequests || {})
+                    )
                 )
             )
         );
@@ -454,14 +564,16 @@ export const approveLeaveRequest = async (
 
     try {
 
-        const { appliedDate, employeeId } = requestKeys(request);
+        const keys = requestKeys(request);
 
-        if (!getMonthPath(appliedDate) || !employeeId) {
+        if (!getMonthPath(keys.appliedDate) || !keys.employeeId) {
             return {
                 success: false,
                 message: "Leave request not found.",
             };
         }
+
+        const employeeId = keys.employeeId;
 
         const year = getLeaveRequestYear(request);
 
@@ -474,21 +586,18 @@ export const approveLeaveRequest = async (
             };
         }
 
-        const requestRef = ref(
-            db,
-            requestPath(companyCode, appliedDate, employeeId)
-        );
+        const found = await findRequestRef(companyCode, keys);
 
-        const snapshot = await get(requestRef);
-
-        if (!snapshot.exists()) {
+        if (!found) {
             return {
                 success: false,
                 message: "This leave request no longer exists.",
             };
         }
 
-        if (snapshot.val().status !== LEAVE_STATUS.PENDING) {
+        const requestRef = found.ref;
+
+        if (found.value.status !== LEAVE_STATUS.PENDING) {
             return {
                 success: false,
                 message: "This leave request has already been reviewed.",
@@ -588,6 +697,29 @@ export const approveLeaveRequest = async (
 
         }
 
+        /*
+        | Told only once the approval is paid for and written onto the
+        | attendance sheet. Both steps above put the request back to pending
+        | when they fail, and a notification cannot be taken back: sending it
+        | any earlier leaves the employee holding a permanent "approved" for a
+        | request that is pending again.
+        */
+
+        try {
+            await notifyLeaveApproved(
+                companyCode,
+                request,
+                request.requestId,
+                approver
+            );
+
+        } catch (notificationError) {
+            console.error(
+                "Leave approval notification failed:",
+                notificationError
+            );
+        }
+
         return {
             success: true,
         };
@@ -624,30 +756,27 @@ export const rejectLeaveRequest = async (
 
     try {
 
-        const { appliedDate, employeeId } = requestKeys(request);
+        const keys = requestKeys(request);
 
-        if (!getMonthPath(appliedDate) || !employeeId) {
+        if (!getMonthPath(keys.appliedDate) || !keys.employeeId) {
             return {
                 success: false,
                 message: "Leave request not found.",
             };
         }
 
-        const requestRef = ref(
-            db,
-            requestPath(companyCode, appliedDate, employeeId)
-        );
+        const found = await findRequestRef(companyCode, keys);
 
-        const snapshot = await get(requestRef);
-
-        if (!snapshot.exists()) {
+        if (!found) {
             return {
                 success: false,
                 message: "This leave request no longer exists.",
             };
         }
 
-        if (snapshot.val().status !== LEAVE_STATUS.PENDING) {
+        const requestRef = found.ref;
+
+        if (found.value.status !== LEAVE_STATUS.PENDING) {
             return {
                 success: false,
                 message: "This leave request has already been reviewed.",
@@ -665,6 +794,22 @@ export const rejectLeaveRequest = async (
             remarks,
 
         });
+
+        // Creating notifications
+        try {
+            await notifyLeaveRejected(
+                companyCode,
+                request,
+                request.requestId,
+                approver
+            );
+
+        } catch (notificationError) {
+            console.error(
+                "Leave rejection notification failed:",
+                notificationError
+            );
+        }
 
         return {
             success: true,
@@ -697,12 +842,28 @@ export const deleteLeaveRequest = async (
 
     try {
 
-        const { appliedDate, employeeId } = requestKeys(request);
+        const keys = requestKeys(request);
 
-        if (!getMonthPath(appliedDate) || !employeeId) {
+        if (!getMonthPath(keys.appliedDate) || !keys.employeeId) {
             return {
                 success: false,
                 message: "Leave request not found.",
+            };
+        }
+
+        const employeeId = keys.employeeId;
+
+        /*
+        | Located before anything is given back, so a request that is already
+        | gone cannot release days a second time.
+        */
+
+        const found = await findRequestRef(companyCode, keys);
+
+        if (!found) {
+            return {
+                success: false,
+                message: "This leave request no longer exists.",
             };
         }
 
@@ -726,14 +887,7 @@ export const deleteLeaveRequest = async (
 
         }
 
-        await remove(
-
-            ref(
-                db,
-                requestPath(companyCode, appliedDate, employeeId)
-            )
-
-        );
+        await remove(found.ref);
 
         if (wasApproved) {
 
