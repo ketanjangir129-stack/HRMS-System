@@ -127,6 +127,24 @@
   background: #14b8a6;
 }
 
+/* A day still waiting on HR or the owner to sign it off. Drawn as a ring
+   around whatever the day already is, not as a fill: the approval is a note
+   on a status rather than a status of its own, and amber is already taken by
+   Late. The geometry is repeated here so a status with no fill of its own is
+   still ringed as a circle instead of tight around its digits, and the white
+   inner ring keeps the amber off the fill it sits on. */
+
+.attendance-calendar .pending abbr {
+  width: 30px;
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  box-shadow: 0 0 0 2px #ffffff, 0 0 0 4px #f59e0b;
+  transition: transform 0.2s ease;
+}
+
 /* The weekly off. Greyed rather than filled: it is the absence of a working
    day rather than a status somebody ended up with, and a solid circle on
    every Sunday would out-shout the four that were earned. */
@@ -167,8 +185,16 @@
   .attendance-calendar .late abbr,
   .attendance-calendar .absent abbr,
   .attendance-calendar .leave abbr,
-  .attendance-calendar .holiday abbr {
+  .attendance-calendar .holiday abbr,
+  .attendance-calendar .pending abbr {
     width: 26px;
     height: 26px;
+  }
+
+  /* The ring is thinned with the circle, so a 26px tile is not spent on
+     4px of outline. */
+
+  .attendance-calendar .pending abbr {
+    box-shadow: 0 0 0 1.5px #ffffff, 0 0 0 3px #f59e0b;
   }
 }
