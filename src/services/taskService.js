@@ -1,5 +1,11 @@
 import {db} from "../firebase/firebase";
 import {ref, onValue, push, set, update} from "firebase/database";
+import {
+  notifyTaskAssigned,
+  notifyTaskReassigned,
+  notifyTaskStatusChanged,
+  notifyTaskUpdated,
+} from "./notifications/taskNotificationService";
 
 /*
 | Paused "In Progress" aur "Completed" ke beech mein hai — ek shuru kiya hua
@@ -101,6 +107,46 @@ const EDITABLE_FIELDS = [
   "dueDate",
   "priority",
 ];
+
+/*
+|--------------------------------------------------------------------------
+| Due / Overdue Nishaan
+|--------------------------------------------------------------------------
+| "Ye khabar ja chuki hai" — task ke saath hi likha jaata hai.
+|
+| Due date aane par khud koi likhta nahi: waqt guzarta hai, aur koi na koi
+| app kholta hai. Isliye ye khabar wahi list banati hai jo pehle se khuli
+| padi hai. Par app din mein das baar khulta hai, aur har baar wahi khabar
+| dobara bhejna bell ko bekaar kar dega — isliye nishaan.
+|
+| Nishaan run ke andar hai, records mein nahi, aur wajah seedhi hai:
+| subscribeTasks poora run node pehle se utaar raha hai, to nishaan bina
+| kisi nayi read ke saath aa jaata hai. records mein rakhte to har task ke
+| liye ek alag get() lagti — jitne tasks, utni read, har baar.
+|
+| EDITABLE_FIELDS mein ye do naam hain hi nahi, isliye koi edit inhe mita
+| nahi sakta, chahe payload mein aa hi jayein. deleteTask run/{taskId}
+| poora uda deta hai, to nishaan bhi task ke saath hi chala jaata hai.
+|
+| DUE_TODAY mein taareekh rakhi jaati hai (kis din bheji thi), OVERDUE
+| sirf ek baar likha jaata hai — nikal chuki date par roz tokna madad
+| nahi, chidh hai.
+*/
+export const TASK_NOTIFIED_FIELDS = {
+  DUE_TODAY: "notifiedDueToday",
+  OVERDUE: "notifiedOverdue",
+};
+
+/*
+| Sirf nishaan — na updatedAt, na koi aur field. updatedAt chhoo dete to
+| "Recent tasks" ka kram har subah apne aap badal jaata, bina kisi ke kuch
+| kiye.
+*/
+export const markTaskDueNotified = async (companyCode, taskId, field, value) => {
+  if (!companyCode || !taskId || !field) return;
+
+  await update(ref(db, taskPath(companyCode, taskId)), { [field]: value });
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -225,7 +271,29 @@ export const createTask = async (companyCode, task) => {
 
   await set(ref(db, taskPath(companyCode, taskId)), newTask);
 
-  return {id:taskId, ...newTask};
+  const created = {id:taskId, ...newTask};
+
+  /*
+  | Task pehle banta hai, khabar baad mein — aur khabar na ja paaye to bhi
+  | task bana hua hi rehta hai. Wahi tarika leaveService bhi apnata hai:
+  | notification ki galti user ke kaam ko kabhi nahi rokti, sirf console
+  | tak jaati hai.
+  |
+  | Action user alag se nahi maangte — wo record mein pehle se hai.
+  | createdById/createdBy wahi jodi hai jo getCurrentActionUser() deta hai,
+  | isliye "apne hi liye banaya task" wala case service ke guard mein khud
+  | pakda jaata hai: recipient aur actor dono ek hi id.
+  */
+  try {
+    await notifyTaskAssigned(companyCode, created, {
+      id: newTask.createdById,
+      name: newTask.createdBy,
+    });
+  } catch (notificationError) {
+    console.error("Task assignment notification failed:", notificationError);
+  }
+
+  return created;
 };
 
 /*
@@ -239,7 +307,23 @@ export const createTask = async (companyCode, task) => {
 | status ka hisaab hai: kaam kab shuru hua, kab ruka, kab pura hua. Kiske
 | paas hai, wo run/{taskId}/assignedTo hamesha taaza batata hai.
 */
-export const updateTask = async (companyCode, taskId, task) => {
+/*
+| previousTask aur actionUser dono optional hain — sirf khabar bhejne ke
+| liye. updates mein sirf nayi value hoti hai, isliye "assignee badla ya
+| nahi" ka jawab yahan se nikal nahi sakta: purani copy page ke paas hi
+| hai (editingTask), wahi se aati hai. Kisne badla, wo bhi service padh
+| nahi sakti.
+|
+| Dono na aayein to edit pehle jaisa hi chalta hai, bas chup-chaap — isliye
+| purane call site kabhi tootenge nahi.
+*/
+export const updateTask = async (
+  companyCode,
+  taskId,
+  task,
+  previousTask,
+  actionUser
+) => {
   const updates = { updatedAt: Date.now() };
 
   EDITABLE_FIELDS.forEach((field) => {
@@ -249,6 +333,51 @@ export const updateTask = async (companyCode, taskId, task) => {
   });
 
   await update(ref(db, taskPath(companyCode, taskId)), updates);
+
+  /*
+  | Bina purani copy ke kuch compare nahi ho sakta — na "assignee badla",
+  | na "kya badla". Us soorat mein edit chup-chaap ho jaata hai.
+  */
+  if (!previousTask) return;
+
+  /*
+  | Purani copy par nayi values chadha kar poora task banta hai — service
+  | ko title, due date aur assignee ek saath chahiye, aur id bhi, jo
+  | updates mein kabhi nahi hoti.
+  */
+  const updatedTask = { ...previousTask, ...updates, id: taskId };
+
+  /*
+  | Field tabhi hoti hai jab payload mein aayi ho, isliye pehle uska hona
+  | dekhte hain: bina assignedTo wala edit purani value se takra kar jhooti
+  | "reassign" na bana de.
+  */
+  const reassigned =
+    updates.assignedTo !== undefined &&
+    previousTask.assignedTo !== updates.assignedTo;
+
+  try {
+    /*
+    | Ek edit, ek khabar. Assignee badla to reassign hi jaata hai — us
+    | khabar mein title aur due date pehle se hain, to uske upar "Task
+    | Updated" bhejna wahi baat do baar kehna hoga.
+    |
+    | Warna kya-kya badla ye service khud tay karti hai (title, dueDate,
+    | priority). Sirf description badli ho to wo kuch likhti hi nahi.
+    */
+    if (reassigned) {
+      await notifyTaskReassigned(
+        companyCode,
+        updatedTask,
+        previousTask.assignedTo,
+        actionUser
+      );
+    } else {
+      await notifyTaskUpdated(companyCode, updatedTask, previousTask, actionUser);
+    }
+  } catch (notificationError) {
+    console.error("Task update notification failed:", notificationError);
+  }
 };
 
 /*
@@ -344,6 +473,27 @@ export const updateTaskStatus = async (
   });
 
   await update(ref(db, tasksPath(companyCode)), updates);
+
+  /*
+  | Khabar sirf poora hone par. Task jitni baar shuru-ruka hota hai, utni
+  | baar creator ko batana matlab bell ko shor bana dena — aur jo shor hai
+  | use koi padhta nahi. Kaam kahan tak pahuncha, wo /tasks par hamesha
+  | dikhta hi hai; khatam hona wahi ek mod hai jiska intezaar hota hai.
+  |
+  | Sirf wahi task jise user ne badla. pauseTasks isme nahi aate: unka
+  | status kisi ne chuna nahi, wo "ek waqt par ek kaam" ke niyam ka side
+  | effect hain — aur wo tasks usi employee ke apne hote hain.
+  |
+  | Yahan tak pahunche hain, matlab status sach mein badla hai: upar
+  | fromStatus === status wala check pehle hi false lauta chuka hota.
+  */
+  if (status === COMPLETED_STATUS) {
+    try {
+      await notifyTaskStatusChanged(companyCode, task, status, actionUser);
+    } catch (notificationError) {
+      console.error("Task status notification failed:", notificationError);
+    }
+  }
 
   return true;
 };

@@ -10,6 +10,7 @@ import {
 import { getEmployees } from "../services/EmployeeService";
 import useAuth from "../hooks/useAuth";
 import useRoleAccess from "../hooks/useRoleAccess";
+import useTaskDueNotifications from "../hooks/useTaskDueNotifications";
 import { PRIORITY_STYLES } from "../utils/tasks/taskConstants";
 import {
   assigneeName,
@@ -133,6 +134,16 @@ function EmployeeTasks() {
         console.error("Failed to load employees:", err);
       });
   }, [companyCode, canViewAll]);
+
+  /*
+  | Due/overdue ka sweep yahan bhi — Dashboard hi wo screen hai jo sabse
+  | pehle khulti hai, aur bell bhi wahin hai. Card ki list pehle se chhanti
+  | hui hai (agle 7 din, pending), jisme aaj aur pichhli dono aa jaati hain.
+  |
+  | /tasks par bhi yahi hook lagta hai; dono ek saath khulte nahi (alag
+  | route), aur nishaan waise bhi dobara nahi hone deta.
+  */
+  useTaskDueNotifications(companyCode, tasks);
 
   const completeTask = async (task) => {
     try {
