@@ -654,6 +654,11 @@ export const getAttendanceActivities = (attendance = []) => {
 | worked anyway still shows the record: the tile only falls back to "holiday"
 | when there is nothing else to show for the day, which is the same rule the
 | reports use.
+|
+| A day still waiting on a decision keeps the colour of what it was and is
+| marked with a second class rather than replaced by one: the approval is not
+| a status, it is a note on top of one, and a day drawn only as Pending would
+| no longer say whether it was a present day or a late one.
 */
 
 export const getAttendanceCalendar = (
@@ -675,7 +680,11 @@ export const getAttendanceCalendar = (
 
         if (!record?.date || !record?.status) return;
 
-        calendar[record.date] = String(record.status).toLowerCase();
+        const status = String(record.status).toLowerCase();
+
+        calendar[record.date] = isPendingApproval(record)
+            ? `${status} pending`
+            : status;
 
     });
 

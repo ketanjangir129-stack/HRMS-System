@@ -19,6 +19,13 @@ import { isWeeklyOff } from "../../../utils/holiday/holidayUtils";
 |--------------------------------------------------------------------------
 */
 
+/*
+| The six things a day can be, and below them the one thing a day can be
+| waiting on. Pending is given the whole of the last row rather than a seventh
+| cell: it is a mark drawn over a status instead of a status of its own, and
+| six is what divides evenly into the columns above it.
+*/
+
 const LEGEND = [
   { label: "Present", color: "bg-emerald-500" },
   { label: "Late", color: "bg-amber-500" },
@@ -26,6 +33,11 @@ const LEGEND = [
   { label: "Leave", color: "bg-blue-500" },
   { label: "Holiday", color: "bg-teal-500" },
   { label: "Weekly Off", color: "bg-slate-300" },
+  {
+    label: "Pending Approval",
+    color: "bg-white ring-2 ring-amber-500",
+    span: "col-span-2 sm:col-span-3 xl:col-span-2",
+  },
 ];
 
 /*
@@ -132,7 +144,7 @@ function AttendanceCalendar({
 
           <div
             key={item.label}
-            className="flex items-center gap-2 rounded-lg bg-slate-50 px-2.5 py-2 text-[11px] font-medium text-slate-600 sm:px-3 sm:text-xs"
+            className={`flex items-center gap-2 rounded-lg bg-slate-50 px-2.5 py-2 text-[11px] font-medium text-slate-600 sm:px-3 sm:text-xs ${item.span || ""}`}
           >
             <span className={`h-2 w-2 shrink-0 rounded-full ${item.color}`} />
             <span className="truncate">{item.label}</span>

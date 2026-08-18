@@ -16,6 +16,7 @@ import { validateField } from "../../utils/validation/validateField";
 import useAuth from "../../hooks/useAuth";
 import useRoleAccess from "../../hooks/useRoleAccess";
 import usePagination from "../../hooks/usePagination";
+import useTaskDueNotifications from "../../hooks/useTaskDueNotifications";
 import {
   ALL_STATUSES,
   EMPTY_TASK_FORM,
@@ -245,6 +246,13 @@ function AllTasks() {
     [showOnlyMine, tasks, currentUser]
   );
 
+  /*
+  | Due aur overdue ki khabar — roleTasks par, poori list par nahi. Employee
+  | ko sirf apne tasks dikhte hain, to uska sweep bhi utna hi hai; viewAll
+  | wale ka sabke liye.
+  */
+  useTaskDueNotifications(companyCode, roleTasks);
+
   // Local "today" — todayInputValue() timezone sambhaal leta hai
   const today = todayInputValue();
 
@@ -460,7 +468,15 @@ function AllTasks() {
       if (editingTask) {
         // Audit fields nahi bhejte — updateTask khud sirf editable fields
         // chhaanta hai, to createdBy/createdById/createdAt bache rehte hain
-        await updateTask(companyCode, editingTask.id, payload);
+        // Purani copy saath jaati hai — assignee badla ya nahi, service usi
+        // se tay karti hai. actionUser wahi jo create aur activity par jaata hai.
+        await updateTask(
+          companyCode,
+          editingTask.id,
+          payload,
+          editingTask,
+          actionUser
+        );
       } else {
         await createTask(companyCode, {
           ...payload,
