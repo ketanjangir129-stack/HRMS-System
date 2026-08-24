@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { FiCalendar, FiCheck, FiMapPin, FiX } from "react-icons/fi";
 import {
   APPROVAL_STATUS,
@@ -57,6 +57,14 @@ const hideBelow = (breakpoint) => ({
   headerClassName: HIDDEN_UNTIL[breakpoint],
   className: HIDDEN_UNTIL[breakpoint],
 });
+
+/*
+| A day can carry a punch in location, a punch out location or both. The
+| location is offered on the node existing rather than on which punch
+| recorded it - the modal is where that is told apart.
+*/
+const hasLocation = (record) =>
+  Boolean(record.location?.punchIn) || Boolean(record.location?.punchOut);
 
 /*
 | The approval travels with the day in the export too. A sheet of attendance
@@ -211,6 +219,30 @@ function AttendanceRecordsTable({
   */
   const [locationRecord, setLocationRecord] = useState(null);
 
+  /*
+  | Shared by the column and the mobile card. Below `md` the table is not
+  | rendered at all - only the card is - so a button that lives solely in a
+  | column is a button a phone never gets, and the location modal has no way
+  | to be opened there.
+  |
+  | Offered on the location node existing rather than on which punch recorded
+  | it: a day can carry a punch in location, a punch out location or both, and
+  | the modal is where that is told apart.
+  */
+  const viewLocationButton = useCallback(
+    (record) => (
+      <button
+        type="button"
+        onClick={() => setLocationRecord(record)}
+        className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs font-semibold text-slate-700 transition-colors hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-200"
+      >
+        <FiMapPin />
+        View
+      </button>
+    ),
+    []
+  );
+
   const filtered = useMemo(
     () =>
       searchRows(records, search, SEARCH_FIELDS).filter((record) => {
@@ -318,36 +350,14 @@ function AttendanceRecordsTable({
         ),
       },
       /*
-      | Offered on the location node existing rather than on which punch
-      | recorded it: a day can carry a punch in location, a punch out
-      | location or both, and the modal is where that is told apart.
-      |
       | Not sortable - there is nothing meaningful to order coordinates by.
       */
       {
         key: "location",
         label: "Location",
         className: "whitespace-nowrap",
-        render: (record) => {
-
-          const hasLocation =
-            Boolean(record.location?.punchIn) ||
-            Boolean(record.location?.punchOut);
-
-          if (!hasLocation) return "--";
-
-          return (
-            <button
-              type="button"
-              onClick={() => setLocationRecord(record)}
-              className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs font-semibold text-slate-700 transition-colors hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-200"
-            >
-              <FiMapPin />
-              View
-            </button>
-          );
-
-        },
+        render: (record) =>
+          hasLocation(record) ? viewLocationButton(record) : "--",
       },
       {
         key: "status",
@@ -376,7 +386,7 @@ function AttendanceRecordsTable({
         ]
         : []),
     ],
-    [approval]
+    [approval, viewLocationButton]
   );
 
   /*
@@ -425,6 +435,28 @@ function AttendanceRecordsTable({
         ))}
 
       </div>
+
+      {/*
+      | The table is not rendered below `md` at all, so the Location column
+      | never reaches a phone and the button has to be offered here too -
+      | otherwise the location modal is unreachable on the screen where the
+      | punches were actually made.
+      |
+      | A row of its own, the same shape as the approval row below: a label
+      | on the left and the control on the right, rather than a fourth cell
+      | squeezed into the three column times grid.
+      */}
+      {hasLocation(record) && (
+        <div className="flex items-center justify-between gap-3 border-t border-slate-100 pt-3">
+
+          <p className="text-[11px] font-medium uppercase tracking-wide text-slate-400">
+            Location
+          </p>
+
+          {viewLocationButton(record)}
+
+        </div>
+      )}
 
       {/*
       | The decision gets its own line on a phone rather than being squeezed

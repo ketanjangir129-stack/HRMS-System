@@ -117,7 +117,7 @@ function NotificationBell() {
           setOpen((value) => !value)
         }
         aria-label="Notifications"
-        className="relative flex h-10 w-10 items-center justify-center rounded-xl text-gray-600 transition hover:bg-gray-100 hover:text-blue-600 cursor-pointer"
+        className="relative flex h-10 w-10 items-center justify-center rounded-xl text-ink-subtle transition-colors hover:bg-surface-muted hover:text-brand cursor-pointer"
       >
 
         <FaBell className="text-lg" />
@@ -140,22 +140,22 @@ function NotificationBell() {
       {open && (
 
         <div
-          className="absolute right-0 top-12 z-50 w-[360px] overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-xl"
+          className="absolute right-0 top-12 z-50 w-[360px] overflow-hidden rounded-2xl border border-line bg-surface shadow-xl"
         >
 
           {/* Header */}
 
           <div
-            className="flex items-center justify-between border-b border-gray-100 px-4 py-3"
+            className="flex items-center justify-between border-b border-line-subtle px-4 py-3"
           >
 
             <div>
 
-              <h3 className="text-sm font-semibold text-gray-900">
+              <h3 className="text-sm font-semibold text-ink">
                 Notifications
               </h3>
 
-              <p className="text-xs text-gray-500">
+              <p className="text-xs text-ink-subtle">
                 {unreadCount} unread
               </p>
 
@@ -166,7 +166,7 @@ function NotificationBell() {
               <button
                 type="button"
                 onClick={markAllAsRead}
-                className="flex items-center gap-1 text-xs font-medium text-blue-600 hover:text-blue-700"
+                className="flex items-center gap-1 text-xs font-medium text-brand hover:text-brand-hover"
               >
                 <FaCheck />
                 Mark all read
@@ -183,7 +183,7 @@ function NotificationBell() {
 
             {loading ? (
 
-              <div className="px-4 py-10 text-center text-sm text-gray-400">
+              <div className="px-4 py-10 text-center text-sm text-ink-faint">
                 Loading notifications...
               </div>
 
@@ -191,15 +191,15 @@ function NotificationBell() {
 
               <div className="px-4 py-12 text-center">
 
-                <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-gray-100 text-gray-400">
+                <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-surface-muted text-ink-faint">
                   <FaBell />
                 </div>
 
-                <p className="text-sm font-medium text-gray-700">
+                <p className="text-sm font-medium text-ink-muted">
                   No notifications
                 </p>
 
-                <p className="mt-1 text-xs text-gray-400">
+                <p className="mt-1 text-xs text-ink-faint">
                   You're all caught up.
                 </p>
 
@@ -218,9 +218,9 @@ function NotificationBell() {
                         notification
                       )
                     }
-                    className={`flex w-full gap-3 border-b border-gray-100 px-4 py-3 text-left transition hover:bg-gray-50 ${
+                    className={`flex w-full gap-3 border-b border-line-subtle px-4 py-3 text-left transition-colors hover:bg-surface-muted ${
                       !notification.isRead
-                        ? "bg-blue-50/40"
+                        ? "bg-blue-50/40 dark:bg-blue-500/10"
                         : ""
                     }`}
                   >
@@ -231,13 +231,13 @@ function NotificationBell() {
 
                       <div className="flex items-start justify-between gap-3">
 
-                        <p className="text-sm font-semibold text-gray-800">
+                        <p className="text-sm font-semibold text-ink">
                           {notification.title}
                         </p>
 
                         {!notification.isRead && (
 
-                          <span className="shrink-0 text-[10px] font-semibold text-blue-600">
+                          <span className="shrink-0 text-[10px] font-semibold text-brand">
                             NEW
                           </span>
 
@@ -245,11 +245,11 @@ function NotificationBell() {
 
                       </div>
 
-                      <p className="mt-1 text-xs leading-5 text-gray-500">
+                      <p className="mt-1 text-xs leading-5 text-ink-subtle">
                         {notification.message}
                       </p>
 
-                      <p className="mt-2 text-[10px] text-gray-400">
+                      <p className="mt-2 text-[10px] text-ink-faint">
                         {formatNotificationTime(
                           notification.createdAt
                         )}
