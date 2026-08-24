@@ -60,6 +60,37 @@ body {
   color: var(--color-ink-muted);
 }
 
+/*
+|--------------------------------------------------------------------------
+| Theme switch - transitions held off for the swap
+|--------------------------------------------------------------------------
+| Most of the app's cards carry `transition-all`, which includes
+| `background-color` and `border-color`. Flipping `.dark` therefore made a
+| card fade to its new colour over its own duration - 200ms here, 300ms
+| there, 500ms on a progress bar - while the page canvas behind it, which
+| has no transition at all, repainted on the same frame. The result read as
+| the cards lagging behind the theme.
+|
+| Rather than hunt down sixty-one `transition-all` classes, the transitions
+| are switched off for the one frame the swap happens in. The class is added
+| immediately before `.dark` moves and taken off immediately after, so it is
+| never in the DOM long enough for a hover to notice it.
+|
+| `transition`, not `animation`: the pulsing skeletons have to keep pulsing
+| through the swap, and only transitions are the ones that were fading.
+|
+| `!important` because it is competing with utility classes rather than
+| other rules of ours, and there is no specificity that reliably beats an
+| arbitrary `transition-[...]` a component might carry.
+|--------------------------------------------------------------------------
+*/
+.theme-switching,
+.theme-switching *,
+.theme-switching *::before,
+.theme-switching *::after {
+  transition: none !important;
+}
+
 .hide-scrollbar::-webkit-scrollbar {
   display: none;
 }

@@ -32,6 +32,9 @@ const STORAGE_KEY = "hrms-theme";
 const LIGHT = "light";
 const DARK = "dark";
 
+// Matches the rule in index.css that holds transitions off during the swap.
+const SWITCHING = "theme-switching";
+
 /*
 |--------------------------------------------------------------------------
 | TEMPORARY - theme switched off
@@ -69,6 +72,37 @@ const applyTheme = (theme) => {
 };
 
 /*
+| The same class move, with the app's colour transitions held off around it.
+|
+| Nothing about which theme is chosen changes here - only how it arrives.
+| Without this the cards fade to their new colour over their own duration
+| while the canvas behind them repaints at once, and the swap reads as the
+| cards lagging.
+|
+| Reading `offsetHeight` between the two steps is the load bearing line: it
+| forces the browser to recompute style and layout there and then, while the
+| rule in index.css still has transitions switched off, so the new colours
+| are committed with nothing to animate from. By the time the class comes
+| off, the elements are already painted and there is no change left to
+| transition. Without that read the browser would batch all three steps into
+| one recalculation, see the class arrive and leave in the same frame, and
+| fade exactly as before.
+*/
+const applyThemeInstantly = (theme) => {
+
+  const root = document.documentElement;
+
+  root.classList.add(SWITCHING);
+
+  applyTheme(theme);
+
+  void root.offsetHeight;
+
+  root.classList.remove(SWITCHING);
+
+};
+
+/*
 | Applied as this module is imported, which happens before the tree is
 | mounted in main.jsx. The stored theme is therefore on <html> for React's
 | first render instead of arriving an effect later.
@@ -87,7 +121,7 @@ export const ThemeProvider = ({ children }) => {
   */
   useEffect(() => {
 
-    applyTheme(theme);
+    applyThemeInstantly(theme);
 
     /*
     | Switched off, so the forced light theme is not written over whatever
