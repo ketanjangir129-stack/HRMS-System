@@ -34,11 +34,11 @@ const Dashboard = () => {
     currentUser?.name || "Loading....";
 
   return (
-    <div className="flex-1 p-2 sm:p-4 lg:p-6 bg-gray-100 min-h-full">
+    <div className="flex-1 p-2 sm:p-4 lg:p-6 bg-canvas min-h-full">
       {/* Welcome Section */}
       <div className="flex flex-wrap justify-between items-center gap-4 mb-6 sm:mb-8 lg:mb-9">
         <div className="min-w-0">
-          <p className="text-base sm:text-xl lg:text-2xl text-black mb-1 sm:mb-2 font-semibold">
+          <p className="text-base sm:text-xl lg:text-2xl text-ink mb-1 sm:mb-2 font-semibold">
             {today}
           </p>
 
@@ -46,7 +46,7 @@ const Dashboard = () => {
             Hello, {displayName}
           </h1>
 
-          <p className="text-sm sm:text-base text-gray-500">
+          <p className="text-sm sm:text-base text-ink-subtle">
             Here's what's happening with your HRMS today.
           </p>
         </div>

@@ -60,7 +60,7 @@ import {
 | place so a future `/tasks/:id` route is a single edit rather than four.
 |
 | `entityId` is the task's Firebase push key. It is not stored inside the
-| record — `toTaskList` re-attaches it as `id` on the way out — so that is
+| record — `flattenRun` re-attaches it as `id` on the way out — so that is
 | where it is read from.
 */
 
@@ -541,7 +541,7 @@ export const sweepTaskDueNotifications = async (
 
         await markTaskDueNotified(
           companyCode,
-          task.id,
+          task,
           notice.field,
           notice.value
         );

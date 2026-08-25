@@ -67,7 +67,7 @@ function DashboardLayout() {
           onMenuClick={() => setIsSidebarOpen(true)}
         />
 
-        <main className="flex-1 overflow-y-auto bg-gray-100 p-4 sm:p-6 lg:p-8 hide-scrollbar">
+        <main className="flex-1 overflow-y-auto bg-canvas p-4 sm:p-6 lg:p-8 hide-scrollbar">
           <Outlet context={{search,setSearch,setSearchPlaceholder}}  />
         </main>
       </div>

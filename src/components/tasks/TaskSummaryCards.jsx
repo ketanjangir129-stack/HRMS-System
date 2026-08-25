@@ -30,9 +30,9 @@ function TaskSummaryCards({ summary }) {
       percentage: 100,
       subtitle: "Total assigned",
       icon: <FiLayers />,
-      iconBg: "bg-slate-100",
-      iconColor: "text-slate-700",
-      bar: "bg-slate-800",
+      iconBg: "bg-violet-50",
+      iconColor: "text-violet-600",
+      bar: "bg-violet-500",
     },
     {
       title: "Due today",

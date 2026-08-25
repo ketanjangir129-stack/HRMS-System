@@ -4,6 +4,7 @@ import {
   IN_PROGRESS_STATUS,
   PAUSED_STATUS,
 } from "../../services/taskService";
+import { getDateKey } from "../attendance/attendanceDate";
 import { getUserRole } from "../attendance/attendanceRequestUtils";
 import { OWNER_ROLE } from "../permissions/permissionConstants";
 import { isOwnerRole } from "../permissions/permissionUtils";
@@ -142,13 +143,20 @@ export const formatDuration = (ms) => {
   return `${mins}m`;
 };
 
-// Aaj ki date YYYY-MM-DD mein — local, UTC nahi.
-// Seedha toISOString() lagane par India mein ek din pichhe chala jaata hai.
-export const todayInputValue = () => {
-  const today = new Date();
-  today.setMinutes(today.getMinutes() - today.getTimezoneOffset());
-  return today.toISOString().slice(0, 10);
-};
+/*
+| Aaj ki date YYYY-MM-DD mein — local, UTC nahi.
+|
+| Ginti ab attendance ke getDateKey() se hoti hai, apni alag nahi. Pehle
+| yahan timezone offset khud ghataya jaata tha aur toISOString() se kaata
+| jaata tha — nateeja bilkul wahi tha, par do implementation ka matlab hai
+| ki wo kabhi alag jawab de sakti hain, aur us din Tasks ka "aaj" Attendance
+| ke "aaj" se alag ho jaata.
+|
+| Naam yahin rehta hai: poora module isi se "aaj" maangta hai, aur wahi
+| tarika leaveUtils ka getTodayLeaveDate() bhi apnata hai — apna naam, kaam
+| canonical helper ka.
+*/
+export const todayInputValue = () => getDateKey();
 
 // Kitne din ka farak hai — negative matlab date nikal chuki hai
 const daysBetween = (from, to) =>
@@ -174,6 +182,196 @@ export const isOverdue = (task, today) =>
   Boolean(task.dueDate) &&
   task.status !== COMPLETED_STATUS &&
   task.dueDate < today;
+
+/*
+|--------------------------------------------------------------------------
+| Date-wise
+|--------------------------------------------------------------------------
+| Tasks ko unki due date ke hisaab se dekhna: ek din ke, ek range ke, ya
+| poori list din-ke-hisaab se bandhi hui.
+|
+| Teenon dueDate par chalte hain — us jagah par nahi jahan task Firebase
+| mein padi hai. Ye farak maayne rakhta hai: purane tasks aaj bhi
+| run/{taskId} par hain aur unka koi date-khaana hai hi nahi, par unki
+| dueDate poori tarah theek hai. Isliye ye teenon function legacy, dated
+| aur undated — teenon par ek jaisa chalte hain.
+|
+| Isi wajah se yahan ek bhi Firebase read nahi hai. Seedha us din ke node
+| par listener lagana sasta zaroor hota (khaana structure hai hi isliye),
+| par wo legacy tasks ko dekh hi nahi paata — wo us din ke khaane mein hain
+| hi nahi. Jab tak purane tasks maujood hain, "us din kya due hai" ka sahi
+| jawab poori list se hi nikalta hai, aur wo list subscribeTasks se pehle
+| se aa rahi hai.
+*/
+
+// Ek din ke tasks. Date na ho to khaali list — "sab dikha do" nahi, kyunki
+// bina din ke is sawaal ka koi matlab hi nahi
+export const filterTasksByDate = (tasks = [], date) =>
+  date ? tasks.filter((task) => task.dueDate === date) : [];
+
+/*
+| Do taareekhon ke beech ke tasks, dono sire shaamil.
+|
+| Keys zero-padded hain, isliye seedha string compare kaafi hai — wahi
+| tarika holidayUtils bhi apnata hai. Sire ulte aayein to khaali list,
+| warna ek galat range chup-chaap sab kuch de deti.
+|
+| Bina dueDate wale kabhi nahi aate: wo kisi range mein hote hi nahi.
+*/
+export const filterTasksByDateRange = (tasks = [], from, to) => {
+  if (!from || !to || from > to) return [];
+
+  return tasks.filter(
+    (task) => task.dueDate && task.dueDate >= from && task.dueDate <= to
+  );
+};
+
+/*
+| Poori list din-ke-hisaab se bandhi hui:
+|
+|   [{ date: "2026-08-18", label: "Aug 18, 2026", tasks: [A, B] },
+|    { date: "2026-08-19", label: "Aug 19, 2026", tasks: [C] },
+|    { date: "",           label: "No due date",  tasks: [D] }]
+|
+| Shakal wahi hai jo holidayUtils ke groupHolidaysByMonth ki hai: pehle
+| bandho, phir kram lagao. Khaali khaane bante hi nahi, isliye jitne din
+| hain utni hi rows.
+|
+| Label formatDate se aata hai, alag se nahi banta — wo khaali date par
+| pehle se "No due date" kehta hai, aur isse task ki date har jagah ek hi
+| shakal mein dikhti hai.
+|
+| Bina date wale sabse aakhir mein: wo kisi din ke hain hi nahi, aur beech
+| mein aa jaayein to dinon ka kram hi toot jaata hai.
+|
+| Ek din ke andar tasks ka kram wahi rehta hai jo aaya tha (flattenRun se
+| naya sabse upar), isliye caller pehle apni marzi ka sort lagakar bhej
+| sakta hai — grouping use bigaadti nahi.
+*/
+export const groupTasksByDueDate = (tasks = []) => {
+  const groups = new Map();
+
+  tasks.forEach((task) => {
+    // undefined aur "" dono ek hi khaana — "koi date nahi"
+    const date = task?.dueDate || "";
+
+    if (!groups.has(date)) {
+      groups.set(date, {
+        date,
+        label: formatDate(date),
+        tasks: [],
+      });
+    }
+
+    groups.get(date).tasks.push(task);
+  });
+
+  return [...groups.values()].sort((a, b) => {
+    if (!a.date) return 1;
+    if (!b.date) return -1;
+
+    return a.date.localeCompare(b.date);
+  });
+};
+
+/*
+|--------------------------------------------------------------------------
+| Assign-wise
+|--------------------------------------------------------------------------
+| Upar ke teenon "us din kya due hai" poochte hain. Ye teen "us din kya
+| diya gaya" poochte hain — wahi sawaal, doosre sire se.
+|
+| Dono ka jawab ek hi list se nikalta hai, kyunki Firebase ka khaana dueDate
+| ka hai (taskService ka taskBucket) — createdAt ka nahi. Ek hi din banaye
+| gaye do tasks ki due date alag ho to wo do alag nodes mein padte hain,
+| isliye "us din kya diya gaya" ka jawab kisi ek node se aa hi nahi sakta.
+| Poori list par filter hi ek tarika hai, aur wo list subscribeTasks se
+| pehle se aa rahi hai — yahan bhi ek bhi Firebase read nahi hai.
+|
+| Ye reassignment nahi jaanti. createdAt task BANNE ka waqt hai, aur
+| assignedTo baad mein edit ho sakta hai (EDITABLE_FIELDS) — us edit se
+| createdAt hilta nahi. Matlab jawab "task is din banaya gaya tha", na ki
+| "ye employee ko is din mila". Jab tak koi task ka assignee badalta nahi,
+| dono ek hi baat hain.
+*/
+
+/*
+| Task kis din banaya gaya, local calendar din ke hisaab se.
+|
+| createdAt millisecond timestamp hai, dueDate ki tarah pehle se key nahi
+| (formatTimestamp ke paas wahi wajah likhi hai), isliye din getDateKey se
+| banta hai — wahi helper jo attendance aur dueDate dono ka din tay karta
+| hai, taaki "aaj" har jagah ek hi din ho.
+|
+| Bahut purane tasks mein createdAt na ho to khaali string — undated dueDate
+| ki tarah, "koi din nahi" apne aap mein ek jawab hai.
+*/
+export const assignedDateKey = (task) =>
+  Number.isFinite(task?.createdAt) ? getDateKey(task.createdAt) : "";
+
+// filterTasksByDate ka jodidaar. Date na ho to khaali list, wahi wajah —
+// bina din ke is sawaal ka koi matlab hi nahi
+export const filterTasksByAssignedDate = (tasks = [], date) =>
+  date ? tasks.filter((task) => assignedDateKey(task) === date) : [];
+
+/*
+| Do taareekhon ke beech assign hue tasks, dono sire shaamil.
+|
+| Keys zero-padded hain isliye string compare kaafi hai, aur ulte sire par
+| khaali list — bilkul filterTasksByDateRange jaisa. Bina createdAt wale
+| kabhi nahi aate: unka koi din hi nahi, to wo kisi range mein bhi nahi.
+*/
+export const filterTasksByAssignedDateRange = (tasks = [], from, to) => {
+  if (!from || !to || from > to) return [];
+
+  return tasks.filter((task) => {
+    const date = assignedDateKey(task);
+
+    return date && date >= from && date <= to;
+  });
+};
+
+/*
+| Poori list assign-din ke hisaab se bandhi hui — groupTasksByDueDate ki
+| shakal wahi ki wahi:
+|
+|   [{ date: "2026-08-18", label: "Aug 18, 2026", tasks: [A, B] },
+|    { date: "",           label: "No due date",  tasks: [C] }]
+|
+| Ek farq: kram ulta hai. Due dates aage ki taraf padhi jaati hain (aaj,
+| phir kal), par assign hui taareekhein peeche ki taraf — naya kaam sabse
+| upar, wahi kram jo flattenRun list ko deta hai.
+|
+| Label formatDate se hi aata hai taaki din har jagah ek shakal mein dikhe.
+| Uska khaali-date wala jawab "No due date" hai, jo yahan theek nahi baithta
+| — isliye wo yahan alag se likha hai.
+*/
+export const groupTasksByAssignedDate = (tasks = []) => {
+  const groups = new Map();
+
+  tasks.forEach((task) => {
+    const date = assignedDateKey(task);
+
+    if (!groups.has(date)) {
+      groups.set(date, {
+        date,
+        label: date ? formatDate(date) : "No assigned date",
+        tasks: [],
+      });
+    }
+
+    groups.get(date).tasks.push(task);
+  });
+
+  // Bina din wale sabse aakhir mein: wo kisi din ke hain hi nahi, aur beech
+  // mein aa jaayein to dinon ka kram hi toot jaata hai
+  return [...groups.values()].sort((a, b) => {
+    if (!a.date) return 1;
+    if (!b.date) return -1;
+
+    return b.date.localeCompare(a.date);
+  });
+};
 
 // Task mein sirf employee ki id save hai — naam employees list se aata hai
 export const assigneeName = (task, employees) =>
@@ -389,7 +587,7 @@ export const fieldClass = (error) => (error ? ERROR_INPUT_CLASS : INPUT_CLASS);
 |   { "EMP01": { "1754640000000": { fromStatus, toStatus, actionBy } } }
 |
 | UI ko ek seedhi list chahiye, isliye dono parat kholkar flat kar dete
-| hain — wahi kaam jo toTaskList tasks ke saath karta hai.
+| hain — wahi kaam jo flattenRun tasks ke saath karta hai.
 |
 | employeeId entry ke andar nahi hota (wo path mein hai), par baad mein
 | "kisne kiya" par filter karna ho to chahiye — isliye padhte waqt laga

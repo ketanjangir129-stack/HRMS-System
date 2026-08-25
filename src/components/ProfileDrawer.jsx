@@ -76,33 +76,33 @@ const ProfileDrawer = ({ isOpen, onClose }) => {
       <aside
         role="dialog"
         aria-label="Profile"
-        className={`fixed right-0 top-0 z-50 flex h-dvh w-full max-w-70 flex-col bg-white shadow-2xl transition-transform duration-300 ease-out ${
+        className={`fixed right-0 top-0 z-50 flex h-dvh w-full max-w-70 flex-col bg-surface shadow-2xl transition-transform duration-300 ease-out ${
           isOpen ? "translate-x-0" : "translate-x-full"
         }`}
       >
         {/* Header + back button */}
-        <div className="flex items-center gap-3 border-b border-gray-200 px-4 py-4">
+        <div className="flex items-center gap-3 border-b border-line px-4 py-4">
           <button
             type="button"
             onClick={onClose}
             aria-label="Back"
-            className="flex h-9 w-9 items-center justify-center rounded-lg text-gray-500 transition hover:bg-gray-100 hover:text-gray-700 cursor-pointer"
+            className="flex h-9 w-9 items-center justify-center rounded-lg text-ink-subtle transition hover:bg-surface-muted hover:text-ink cursor-pointer"
           >
             <ArrowLeft className="h-5 w-5" />
           </button>
 
-          <h2 className="text-base font-semibold text-gray-800">Profile</h2>
+          <h2 className="text-base font-semibold text-ink">Profile</h2>
         </div>
 
         {/* User card */}
-        <div className="flex items-center gap-3 border-b border-gray-100 px-4 py-5">
+        <div className="flex items-center gap-3 border-b border-line-subtle px-4 py-5">
           <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-lg font-bold text-white">
             {initials}
           </div>
 
           <div className="min-w-0">
-            <p className="truncate text-sm font-semibold text-gray-800">{name}</p>
-            <p className="truncate text-xs capitalize text-gray-500">{role}</p>
+            <p className="truncate text-sm font-semibold text-ink">{name}</p>
+            <p className="truncate text-xs capitalize text-ink-subtle">{role}</p>
           </div>
         </div>
 
@@ -111,30 +111,30 @@ const ProfileDrawer = ({ isOpen, onClose }) => {
           <button
             type="button"
             onClick={handleViewProfile}
-            className="flex items-center justify-between gap-3 rounded-xl px-3 py-3 text-left transition hover:bg-gray-50 cursor-pointer"
+            className="flex items-center justify-between gap-3 rounded-xl px-3 py-3 text-left transition hover:bg-surface-muted cursor-pointer"
           >
             <span className="flex items-center gap-3">
-              <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-indigo-50 text-indigo-600">
+              <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-indigo-50 text-indigo-600 dark:bg-indigo-500/15 dark:text-indigo-300">
                 <UserRound className="h-4 w-4" />
               </span>
-              <span className="text-sm font-medium text-gray-700">
+              <span className="text-sm font-medium text-ink-muted">
                 View Profile Info
               </span>
             </span>
 
-            <ChevronRight className="h-4 w-4 shrink-0 text-gray-400" />
+            <ChevronRight className="h-4 w-4 shrink-0 text-ink-faint" />
           </button>
 
           <button
             type="button"
             onClick={handleLogout}
             disabled={loggingOut}
-            className="flex items-center gap-3 rounded-xl px-3 py-3 text-left transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60 cursor-pointer"
+            className="flex items-center gap-3 rounded-xl px-3 py-3 text-left transition hover:bg-red-50 dark:hover:bg-red-500/10 disabled:cursor-not-allowed disabled:opacity-60 cursor-pointer"
           >
-            <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-red-50 text-red-600">
+            <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-red-50 text-red-600 dark:bg-red-500/15 dark:text-red-300">
               <LogOut className="h-4 w-4" />
             </span>
-            <span className="text-sm font-medium text-red-600">
+            <span className="text-sm font-medium text-red-600 dark:text-red-400">
               {loggingOut ? "Logging out…" : "Logout"}
             </span>
           </button>

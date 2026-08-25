@@ -11,6 +11,7 @@ import { getEmployees } from "../services/EmployeeService";
 import useAuth from "../hooks/useAuth";
 import useRoleAccess from "../hooks/useRoleAccess";
 import useTaskDueNotifications from "../hooks/useTaskDueNotifications";
+import { getDateKey } from "../utils/attendance/attendanceDate";
 import { PRIORITY_STYLES } from "../utils/tasks/taskConstants";
 import {
   assigneeName,
@@ -37,12 +38,13 @@ const DUE_WINDOW_DAYS = 7;
 // Kitne tasks card mein dikhein — baaki "+N more" mein
 const VISIBLE_LIMIT = 4;
 
-// Aaj se N din aage ki date, YYYY-MM-DD mein
+// Aaj se N din aage ki date, YYYY-MM-DD mein. Key banane ka kaam
+// getDateKey() ka hai — wahi jo todayInputValue() ke peechhe bhi hai, taaki
+// window ke dono sire ek hi tarike se banein
 const dateAfterDays = (days) => {
   const date = new Date();
   date.setDate(date.getDate() + days);
-  date.setMinutes(date.getMinutes() - date.getTimezoneOffset());
-  return date.toISOString().slice(0, 10);
+  return getDateKey(date);
 };
 
 function EmployeeTasks() {
@@ -170,20 +172,20 @@ function EmployeeTasks() {
   const hiddenCount = tasks.length - visible.length;
 
   return (
-    <div className="bg-white rounded-2xl p-4 sm:p-6 shadow-md">
+    <div className="bg-surface rounded-2xl p-4 sm:p-6 shadow-md">
       <div className="flex flex-wrap justify-between items-center gap-3 mb-4 sm:mb-6">
-        <h2 className="text-xl sm:text-2xl font-semibold text-gray-800">Today's Tasks</h2>
+        <h2 className="text-xl sm:text-2xl font-semibold text-ink">Today's Tasks</h2>
 
         <button
           onClick={() => navigate("/tasks")}
-          className="cursor-pointer bg-blue-600 text-white text-sm sm:text-base px-3 sm:px-4 py-2 rounded-lg hover:bg-blue-700 transition"
+          className="cursor-pointer bg-brand text-white text-sm sm:text-base px-3 sm:px-4 py-2 rounded-lg hover:bg-brand-hover transition-colors"
         >
           View All
         </button>
       </div>
 
       {loading ? (
-        <p className="py-8 text-center text-sm text-gray-400">
+        <p className="py-8 text-center text-sm text-ink-faint">
           Loading tasks...
         </p>
       ) : error ? (
@@ -198,8 +200,8 @@ function EmployeeTasks() {
           </span>
 
           <div>
-            <p className="font-medium text-gray-700">You're all caught up</p>
-            <p className="mt-1 text-sm text-gray-400">
+            <p className="font-medium text-ink-muted">You're all caught up</p>
+            <p className="mt-1 text-sm text-ink-faint">
               Nothing due in the next {DUE_WINDOW_DAYS} days.
             </p>
           </div>
@@ -207,7 +209,7 @@ function EmployeeTasks() {
           {canCreateTask && (
             <button
               onClick={() => navigate("/tasks")}
-              className="mt-1 cursor-pointer text-sm font-medium text-blue-600 transition hover:underline"
+              className="mt-1 cursor-pointer text-sm font-medium text-brand transition-colors hover:underline"
             >
               Create a task
             </button>
@@ -218,7 +220,7 @@ function EmployeeTasks() {
           {visible.map((task) => (
             <div
               key={task.id}
-              className="flex items-start gap-3 sm:gap-4 py-3 sm:py-4 border-b border-gray-200 last:border-b-0"
+              className="flex items-start gap-3 sm:gap-4 py-3 sm:py-4 border-b border-line last:border-b-0"
             >
               {canCompleteTask(task) && (
                 <input
@@ -231,8 +233,8 @@ function EmployeeTasks() {
               )}
 
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm sm:text-base text-gray-700">{task.title}</p>
-                <p className="mt-0.5 text-xs text-gray-400">
+                <p className="truncate text-sm sm:text-base text-ink-muted">{task.title}</p>
+                <p className="mt-0.5 text-xs text-ink-faint">
                   {canViewAll ? `${assigneeName(task, employees)} · ` : ""}
                   {dueLabel(task.dueDate, today)}
                 </p>
@@ -251,7 +253,7 @@ function EmployeeTasks() {
           {hiddenCount > 0 && (
             <button
               onClick={() => navigate("/tasks")}
-              className="mt-4 cursor-pointer text-sm font-medium text-blue-600 transition hover:underline"
+              className="mt-4 cursor-pointer text-sm font-medium text-brand transition-colors hover:underline"
             >
               +{hiddenCount} more
             </button>

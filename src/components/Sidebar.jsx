@@ -118,15 +118,15 @@ function SidebarSkeleton({ isCollapsed }) {
 
         <li key={index}>
           <div
-            className={`flex h-[52px] items-center gap-4 rounded-xl bg-slate-100 px-[18px] ${
+            className={`flex h-[52px] items-center gap-4 rounded-xl bg-surface-muted px-[18px] ${
               isCollapsed ? "lg:justify-center lg:gap-0 lg:px-2" : ""
             }`}
           >
 
-            <span className="h-5 w-5 shrink-0 animate-pulse rounded-md bg-slate-200" />
+            <span className="h-5 w-5 shrink-0 animate-pulse rounded-md bg-surface-raised" />
 
             <span
-              className={`h-4 w-28 animate-pulse rounded-md bg-slate-200 ${
+              className={`h-4 w-28 animate-pulse rounded-md bg-surface-raised ${
                 isCollapsed ? "lg:hidden" : ""
               }`}
             />
@@ -162,14 +162,14 @@ function Sidebar({ isCollapsed, onToggle, isMobileOpen = false, onMobileClose })
   */
   return (
     <aside
-      className={`fixed inset-y-0 left-0 z-50 flex h-dvh w-[280px] flex-col border-r border-gray-200 bg-white transition-transform duration-300 ease-in-out
-        lg:static lg:translate-x-0 lg:transition-all
+      className={`fixed inset-y-0 left-0 z-50 flex h-dvh w-[280px] flex-col border-r border-line bg-surface transition-[transform,width] duration-300 ease-in-out
+        lg:static lg:translate-x-0
         ${isMobileOpen ? "translate-x-0" : "-translate-x-full"}
         ${isCollapsed ? "lg:w-[88px]" : "lg:w-[280px]"}`}
     >
 
       {/* Logo */}
-      <div className={`h-[95px] shrink-0 border-b border-gray-200 flex items-center justify-between px-6 ${isCollapsed ? "lg:justify-center lg:px-3" : ""}`}>
+      <div className={`h-[95px] shrink-0 border-b border-line flex items-center justify-between px-6 ${isCollapsed ? "lg:justify-center lg:px-3" : ""}`}>
 
           <div className="flex items-center gap-3 overflow-hidden">
 
@@ -180,11 +180,11 @@ function Sidebar({ isCollapsed, onToggle, isMobileOpen = false, onMobileClose })
               </div>
 
               <div className={`whitespace-nowrap transition-opacity duration-200 ${isCollapsed ? "lg:hidden" : "block"}`}>
-                  <h2 className="text-lg font-bold text-slate-900 leading-none">
+                  <h2 className="text-lg font-bold text-ink leading-none">
                       HRMS
                   </h2>
 
-                  <p className="text-xs text-slate-500 mt-1">
+                  <p className="text-xs text-ink-subtle mt-1">
                       Workforce Management
                   </p>
               </div>
@@ -196,7 +196,7 @@ function Sidebar({ isCollapsed, onToggle, isMobileOpen = false, onMobileClose })
           <button
             type="button"
             onClick={onMobileClose}
-            className="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-xl text-slate-500 transition-colors hover:bg-gray-100 hover:text-slate-900 lg:hidden"
+            className="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-xl text-ink-subtle transition-colors hover:bg-surface-muted hover:text-ink lg:hidden"
             aria-label="Close menu"
           >
             <MdClose size={22} />
@@ -235,10 +235,10 @@ function Sidebar({ isCollapsed, onToggle, isMobileOpen = false, onMobileClose })
                     to={item.path}
                     onClick={onMobileClose}
                     className={({ isActive }) =>
-                      `flex items-center h-[52px] rounded-xl transition-all duration-200 font-semibold gap-4 px-[18px]
+                      `flex items-center h-[52px] rounded-xl transition-[gap,padding] duration-200 font-semibold gap-4 px-[18px]
                         ${isCollapsed ? "lg:justify-center lg:gap-0 lg:px-2" : ""}
-                        ${isActive ? "bg-gray-100 text-gray-900 "
-                        : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
+                        ${isActive ? "bg-surface-muted text-ink "
+                        : "text-ink-muted hover:bg-surface-muted hover:text-ink"
                     }`}
                     title={isCollapsed ? item.label : undefined}
                   >
@@ -259,11 +259,11 @@ function Sidebar({ isCollapsed, onToggle, isMobileOpen = false, onMobileClose })
 
       {/* Collapsing is a desktop affordance - the drawer is either open or
           gone, so there is no half state to offer on a phone. */}
-      <div className={`hidden shrink-0 border-t border-gray-200 p-4 lg:block ${isCollapsed ? "lg:flex lg:justify-center" : ""}`}>
+      <div className={`hidden shrink-0 border-t border-line p-4 lg:block ${isCollapsed ? "lg:flex lg:justify-center" : ""}`}>
         <button
           type="button"
           onClick={onToggle}
-          className={`flex h-11 cursor-pointer items-center rounded-xl text-slate-500 transition-colors hover:bg-gray-100 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+          className={`flex h-11 cursor-pointer items-center rounded-xl text-ink-subtle transition-colors hover:bg-surface-muted hover:text-ink focus:outline-none focus:ring-2 focus:ring-blue-500 ${
             isCollapsed ? "w-11 justify-center" : "w-full justify-between px-4"
           }`}
           aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}

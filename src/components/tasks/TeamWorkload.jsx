@@ -36,18 +36,28 @@ function TeamWorkload({ workload, className = "" }) {
         /*
         | Chhoti screen par table sirf isi box ke andar scroll hoga.
         |
-        | Cells ke kinare par padding nahi (first:pl-0 / last:pr-0) — card
-        | apna px-6 already deta hai, warna do baar padding lagti aur naam
-        | card ke title se aage khisak jaata.
+        | -mx-6 card ka apna px-6 wapas kaat deta hai, taaki table card ke
+        | dono kinare tak pahunche. Padding wapas cells par aati hai
+        | (first:pl-6 / last:pr-6) — matlab naam wahin rehta hai jahan pehle
+        | tha, card ke title ke seedhe neeche, lekin sticky header ki patti
+        | ab pooree chaudai mein phailti hai.
+        |
+        | Yeh farq tabhi dikhta hai jab patti ka apna background ho: pehle
+        | wo table ki edge par khatam hoti thi aur "Employee" bilkul uske
+        | kinare se chipka hua lagta tha.
         */
-        <div className="hide-scrollbar max-h-64 overflow-x-auto overflow-y-auto">
+        <div className="hide-scrollbar -mx-6 max-h-64 overflow-x-auto overflow-y-auto">
           {/*
             Phone par koi min-w nahi — teen column (naam, total, progress)
             jitni jagah hai usi mein sikud jaate hain, isliye scrollbar aata
             hi nahi. min-w sirf sm se lagti hai, jahan do chhipe hue column
             wapas aate hain aur unhe jagah chahiye hoti hai.
+
+            468 = 420 + 48, kyunki pehla aur aakhri cell ab 24px padding
+            khud uthate hain. Column ko jagah utni hi milti hai jitni pehle
+            420 par milti thi.
           */}
-          <table className="w-full border-collapse text-left sm:min-w-[420px]">
+          <table className="w-full border-collapse text-left sm:min-w-[468px]">
             {/*
               Sticky — scroll karte waqt column ke naam upar tike rehte hain,
               warna neeche jaate hi sirf ginti reh jaati aur pata nahi chalta
@@ -58,9 +68,9 @@ function TeamWorkload({ workload, className = "" }) {
               table ke saath scroll ho jaata hai. Shadow th par lagti hai,
               isliye wo header ke saath hi tiki rehti hai.
             */}
-            <thead className="sticky top-0 z-10 text-xs uppercase tracking-wide text-slate-500 [&_th]:bg-slate-50 [&_th]:shadow-[inset_0_-1px_0_0_#e2e8f0]">
+            <thead className="sticky top-0 z-10 text-xs uppercase tracking-wide text-slate-500 [&_th]:bg-surface-raised [&_th]:shadow-[inset_0_-1px_0_0_var(--color-line)]">
               <tr>
-                <th className="px-3 py-2 font-semibold first:pl-0">Employee</th>
+                <th className="px-3 py-2 font-semibold first:pl-6">Employee</th>
                 <th className="px-3 py-2 text-center font-semibold">Total</th>
                 <th className="hidden px-3 py-2 text-center font-semibold sm:table-cell">
                   In progress
@@ -70,7 +80,7 @@ function TeamWorkload({ workload, className = "" }) {
                 </th>
                 {/* Phone par patli — min-w hatne ke baad jo jagah bachti hai
                     wo naam ko milni chahiye, warna wo jaldi kat jaata hai */}
-                <th className="w-20 px-3 py-2 font-semibold last:pr-0 sm:w-28">
+                <th className="w-20 px-3 py-2 font-semibold last:pr-6 sm:w-28">
                   Progress
                 </th>
               </tr>
@@ -84,7 +94,7 @@ function TeamWorkload({ workload, className = "" }) {
 
                 return (
                   <tr key={person.id} className="transition-colors hover:bg-slate-50">
-                    <td className="px-3 py-2.5 first:pl-0">
+                    <td className="px-3 py-2.5 first:pl-6">
                       <span className="block truncate text-sm font-medium text-slate-800">
                         {person.name}
                       </span>
@@ -125,7 +135,7 @@ function TeamWorkload({ workload, className = "" }) {
                       {person.completed}
                     </td>
 
-                    <td className="px-3 py-2.5 last:pr-0">
+                    <td className="px-3 py-2.5 last:pr-6">
                       <div className="h-1.5 overflow-hidden rounded-full bg-slate-100">
                         <div
                           style={{ width: `${donePercent}%` }}
