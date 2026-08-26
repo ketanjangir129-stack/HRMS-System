@@ -162,7 +162,7 @@ function OnBoardForm() {
   };
 
   const fieldClass = (name) =>
-    `w-full rounded-xl border p-3 text-sm text-slate-900 placeholder:text-slate-400 transition-all duration-200 focus:outline-none focus:ring-2 ${errors[name]
+    `w-full rounded-xl border p-3 bg-surface text-sm text-slate-900 placeholder:text-slate-400 transition-all duration-200 focus:outline-none focus:ring-2 ${errors[name]
       ? "border-red-300 focus:border-red-400 focus:ring-red-200"
       : "border-slate-200 focus:border-blue-400 focus:ring-blue-200"
     }`;

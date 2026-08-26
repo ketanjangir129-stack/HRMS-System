@@ -13,19 +13,21 @@ import { BrowserRouter } from 'react-router-dom';
 | in user's company, and outside the router because the sidebar, the guards
 | and the pages all read the same configuration.
 |
-| Theme sits outside both: it is a device preference rather than a company
-| one, and the login screen is painted before there is a user to have it.
+| Theme is a device preference rather than a company one, so it does not need
+| a company - but it does need to know whether anybody is signed in, because
+| the toggle that controls it lives in the navbar and the navbar only exists
+| behind a login. Hence inside authentication and outside role access.
 */
 
 ReactDOM.createRoot(document.getElementById("root")).render(
-  <ThemeProvider>
-    <AuthProvider>
+  <AuthProvider>
+    <ThemeProvider>
       <RoleAccessProvider>
         <BrowserRouter>
           <App />
           <ToastContainer position="bottom-right" />
         </BrowserRouter>
       </RoleAccessProvider>
-    </AuthProvider>
-  </ThemeProvider>
+    </ThemeProvider>
+  </AuthProvider>
 );

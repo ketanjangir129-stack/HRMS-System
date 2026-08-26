@@ -20,7 +20,7 @@
 
 .page {
   padding: 1.5rem 0.75rem;
-  background: #f3f4f6;
+ background: var(--color-canvas);
 }
 
 @media (min-width: 640px) {
@@ -51,6 +51,7 @@
   transform: scale(var(--payslip-scale));
   transform-origin: top left;
   background: #fff;
+  color: #334155;
   box-shadow:
     0 10px 15px -3px rgb(0 0 0 / 0.1),
     0 4px 6px -4px rgb(0 0 0 / 0.1);

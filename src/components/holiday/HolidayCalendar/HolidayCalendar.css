@@ -170,3 +170,115 @@
     height: 26px;
   }
 }
+
+/*
+|--------------------------------------------------------------------------
+| Dark theme
+|--------------------------------------------------------------------------
+| The same treatment the attendance and leave calendars get, and for the same
+| reason: react-calendar is styled in fixed hex written for a white card, so
+| the tile digits stayed #334155 while the card underneath them went dark and
+| the dates disappeared.
+|
+| Light mode is untouched - every rule below is scoped to `.dark`, and the
+| values come from the semantic tokens in index.css.
+|
+| The three filled holiday circles are left alone: National, Festival and
+| Company are solid -500 fills with white digits, which index.css already
+| treats as strong enough for a dark page. The optional outline below is the
+| one that is not, and it is handled separately.
+|--------------------------------------------------------------------------
+*/
+
+/* Navigation */
+
+.dark .holiday-calendar .react-calendar__navigation button {
+  color: var(--color-ink);
+}
+
+.dark .holiday-calendar .react-calendar__navigation button:hover,
+.dark .holiday-calendar .react-calendar__navigation button:focus {
+  background: var(--color-surface-raised);
+}
+
+.dark .holiday-calendar .react-calendar__navigation button:disabled {
+  color: var(--color-ink-faint);
+}
+
+/* Tiles */
+
+.dark .holiday-calendar .react-calendar__tile {
+  color: var(--color-ink-muted);
+}
+
+.dark .holiday-calendar .react-calendar__tile:hover {
+  background: var(--color-surface-raised);
+}
+
+/*
+| A spill-over day is dimmer than a real one, and #cbd5e1 is what that meant
+| against white. In the dark theme #cbd5e1 IS the body text, so the step back
+| down has to be taken again.
+*/
+
+.dark
+  .holiday-calendar
+  .react-calendar__month-view__days__day--neighboringMonth {
+  color: var(--color-ink-faint);
+}
+
+/*
+| Today and the selected day, mixed from `--color-blue-500` at the strengths
+| index.css uses for a `-50` and a `-100` tint. The inset ring is what tells
+| the two apart - the washes are close by design, and in the light theme it
+| is the ring rather than the fill that says which day you clicked.
+*/
+
+.dark .holiday-calendar .react-calendar__tile--now {
+  background: color-mix(in oklab, var(--color-blue-500) 12%, transparent);
+  color: var(--color-blue-300);
+}
+
+.dark .holiday-calendar .react-calendar__tile--active,
+.dark .holiday-calendar .react-calendar__tile--active:hover {
+  background: color-mix(
+    in oklab,
+    var(--color-blue-500) 18%,
+    transparent
+  ) !important;
+  color: var(--color-blue-300);
+  box-shadow: inset 0 0 0 2px var(--color-blue-400);
+}
+
+/*
+| The optional holiday.
+|
+| Its fill is not decoration - it is the card showing through, which is what
+| makes the ring read as an outline rather than as a second circle drawn on a
+| tint. So it follows the card to `surface` rather than staying white, where
+| it would have been the one bright disc on a dark month.
+|
+| Both the digits and the ring are `currentColor`, so each hue is set once
+| and moves the two together. They are read from the light end of the scale
+| the way index.css reads every other coloured label in the dark - at -500
+| the digits inside a 30px circle are the smallest coloured text on the page
+| and the first thing to go. The neutral base is `ink-muted`, matching the
+| tile it is drawn over: an optional holiday with no type is still a date.
+*/
+
+.dark .holiday-calendar .holiday-optional abbr {
+  background: var(--color-surface) !important;
+  color: var(--color-ink-muted);
+}
+
+.dark .holiday-calendar .holiday-optional.holiday-national abbr {
+  color: var(--color-blue-400);
+}
+
+.dark .holiday-calendar .holiday-optional.holiday-festival abbr {
+  color: var(--color-amber-400);
+}
+
+.dark .holiday-calendar .holiday-optional.holiday-company abbr {
+  color: var(--color-violet-400);
+}

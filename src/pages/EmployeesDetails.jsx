@@ -263,36 +263,38 @@ function EmployeesDetails() {
         setResumeFile(null);
     };
 
-    // Resume sirf PDF, 5 MB tak — galat file turant reject
+    // Resume sirf PDF, 5 MB tak
     const MAX_RESUME_SIZE = 5 * 1024 * 1024;
+
+    // Galat file ko hataate nahi — chuni hui file rehne dete hain aur uske
+    // neeche error dikhate hain, taaki user ko dikhe usne kya chuna tha
+    const getResumeError = (file) => {
+        const isPdf =
+            file.type === "application/pdf" || /\.pdf$/i.test(file.name);
+
+        if (!isPdf) {
+            return "Only PDF file upload allowed (.pdf).";
+        }
+
+        if (file.size > MAX_RESUME_SIZE) {
+            return "Resume must be smaller than 5 MB.";
+        }
+
+        return "";
+    };
 
     const handleResumeChange = (e) => {
         const file = e.target.files?.[0];
 
         if (!file) {
             setResumeFile(null);
+            setErrors((prev) => ({ ...prev, resume: "" }));
             return;
         }
 
-        const isPdf =
-            file.type === "application/pdf" || /\.pdf$/i.test(file.name);
-
-        if (!isPdf) {
-            e.target.value = "";
-            setResumeFile(null);
-            setErrors((prev) => ({ ...prev, resume: "Resume must be a PDF file (.pdf)." }));
-            return;
-        }
-
-        if (file.size > MAX_RESUME_SIZE) {
-            e.target.value = "";
-            setResumeFile(null);
-            setErrors((prev) => ({ ...prev, resume: "Resume must be smaller than 5 MB." }));
-            return;
-        }
-
+        // Pehle file bhar jaati hai, phir validation error dikhta hai
         setResumeFile(file);
-        setErrors((prev) => ({ ...prev, resume: "" }));
+        setErrors((prev) => ({ ...prev, resume: getResumeError(file) }));
     };
 
     const handleFieldChange = (key, value) => {
@@ -322,6 +324,16 @@ function EmployeesDetails() {
 
     const saveSection = async (sectionId) => {
         const hasNewResume = sectionId === "documents" && !!resumeFile;
+
+        // Galat file ab input mein padi reh sakti hai, isliye Save par dobara
+        // check — warna non-PDF ya 5 MB se badi file upload ho jaati
+        if (hasNewResume) {
+            const resumeError = getResumeError(resumeFile);
+            if (resumeError) {
+                setErrors((prev) => ({ ...prev, resume: resumeError }));
+                return;
+            }
+        }
 
         // Nayi PDF chuni hai to purane link ki jagah uska naam validate karo
         const validationErrors = validateSection(
@@ -1046,9 +1058,10 @@ function EmployeesDetails() {
                                                         <>
                                                             {field.type === "file" ? (
                                                                 <>
+                                                                    {/* accept nahi lagaya — user koi bhi file
+                                                                        chun sake, galti PDF check batayega */}
                                                                     <input
                                                                         type="file"
-                                                                        accept="application/pdf"
                                                                         onChange={handleResumeChange}
                                                                         className={`w-full cursor-pointer rounded-xl border bg-white text-sm text-slate-600 outline-none transition file:mr-3 file:cursor-pointer file:rounded-l-xl file:border-0 file:bg-slate-50 file:px-4 file:py-2.5 file:text-sm file:font-semibold file:text-slate-700 hover:file:bg-blue-50 hover:file:text-blue-600 ${
                                                                             errors[field.key]
@@ -1056,7 +1069,13 @@ function EmployeesDetails() {
                                                                                 : "border-slate-200"
                                                                         }`}
                                                                     />
-                                                                    <p className="truncate text-xs text-slate-400">
+                                                                    <p
+                                                                        className={`truncate text-xs ${
+                                                                            resumeFile && errors[field.key]
+                                                                                ? "text-red-500"
+                                                                                : "text-slate-400"
+                                                                        }`}
+                                                                    >
                                                                         {resumeFile
                                                                             ? resumeFile.name
                                                                             : formData[field.key]

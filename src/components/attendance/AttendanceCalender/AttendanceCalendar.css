@@ -198,3 +198,112 @@
     box-shadow: 0 0 0 1.5px #ffffff, 0 0 0 3px #f59e0b;
   }
 }
+
+/*
+|--------------------------------------------------------------------------
+| Dark theme
+|--------------------------------------------------------------------------
+| react-calendar paints itself from its own stylesheet and everything above
+| answers it in fixed hex, so none of it moved when the theme did. The tile
+| digits are the half that mattered: #334155 is a dark slate written for a
+| white card, and the card underneath it is now #1e293b, so the dates were
+| there the whole time and simply could not be seen.
+|
+| Light mode is untouched - every rule below is scoped to `.dark`, and the
+| values are the semantic tokens from index.css rather than a second set of
+| hex, so the calendar follows the rest of the app if those are ever retuned.
+|
+| The status circles are deliberately absent: `present` through `holiday` are
+| solid -500 fills with white digits on them, which is exactly what index.css
+| leaves alone in the dark for being strong enough already. Same for the
+| weekday header, which is #94a3b8 - the value `ink-subtle` already holds in
+| both themes.
+|--------------------------------------------------------------------------
+*/
+
+/* Navigation */
+
+.dark .attendance-calendar .react-calendar__navigation button {
+  color: var(--color-ink);
+}
+
+.dark .attendance-calendar .react-calendar__navigation button:hover,
+.dark .attendance-calendar .react-calendar__navigation button:focus {
+  background: var(--color-surface-raised);
+}
+
+.dark .attendance-calendar .react-calendar__navigation button:disabled {
+  color: var(--color-ink-faint);
+}
+
+/* Tiles */
+
+.dark .attendance-calendar .react-calendar__tile {
+  color: var(--color-ink-muted);
+}
+
+.dark .attendance-calendar .react-calendar__tile:hover {
+  background: var(--color-surface-raised);
+}
+
+/*
+| Both of these are "this day is dimmer than a real one", and in the light
+| theme both are #cbd5e1 - a shade lighter than the body text. In the dark
+| theme #cbd5e1 IS the body text, so keeping it would have made a spill-over
+| day and a Sunday read as loud as the month itself. `ink-faint` is the step
+| back down.
+*/
+
+.dark
+  .attendance-calendar
+  .react-calendar__month-view__days__day--neighboringMonth {
+  color: var(--color-ink-faint);
+}
+
+.dark .attendance-calendar .weekly-off abbr {
+  color: var(--color-ink-faint);
+}
+
+/*
+| Today and the selected day. Mixed from `--color-blue-500` at the same
+| strengths index.css uses for a `-50` and a `-100` tint, so the two stay in
+| step with every other blue wash in the app, and the labels are read from
+| the light end of the scale the way the status text is.
+|
+| The inset ring is what separates the two - a 12% and an 18% wash are close
+| by design, and in the light theme it is the ring rather than the fill that
+| says which day you clicked.
+*/
+
+.dark .attendance-calendar .react-calendar__tile--now {
+  background: color-mix(in oklab, var(--color-blue-500) 12%, transparent);
+  color: var(--color-blue-300);
+}
+
+.dark .attendance-calendar .react-calendar__tile--active,
+.dark .attendance-calendar .react-calendar__tile--active:hover {
+  background: color-mix(
+    in oklab,
+    var(--color-blue-500) 18%,
+    transparent
+  ) !important;
+  color: var(--color-blue-300);
+  box-shadow: inset 0 0 0 2px var(--color-blue-400);
+}
+
+/*
+| The pending ring. Its inner band is the card showing through, keeping the
+| amber off whatever fill it is drawn over - so it has to be the surface it
+| sits on, not white. Left as white it was a bright halo on a dark card, and
+| the brightest thing on the tile was the gap.
+*/
+
+.dark .attendance-calendar .pending abbr {
+  box-shadow: 0 0 0 2px var(--color-surface), 0 0 0 4px #f59e0b;
+}
+
+@media (max-width: 480px) {
+  .dark .attendance-calendar .pending abbr {
+    box-shadow: 0 0 0 1.5px var(--color-surface), 0 0 0 3px #f59e0b;
+  }
+}

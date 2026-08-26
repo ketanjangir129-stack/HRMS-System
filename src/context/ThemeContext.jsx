@@ -6,6 +6,8 @@ import {
   useState,
 } from "react";
 
+import useAuth from "../hooks/useAuth";
+
 /*
 |--------------------------------------------------------------------------
 | Theme
@@ -31,6 +33,40 @@ const STORAGE_KEY = "hrms-theme";
 
 const LIGHT = "light";
 const DARK = "dark";
+
+/*
+|--------------------------------------------------------------------------
+| Signed out is always light
+|--------------------------------------------------------------------------
+| The toggle lives in the navbar, and the navbar only exists behind a login.
+| So on the register, login, change-password and public on-boarding screens
+| the theme would be applied with no way to leave it - somebody who last
+| signed out in the dark would be handed a dark login page and nothing to
+| press. Those screens are pinned to light instead.
+|
+| The preference itself is untouched by this: it stays in storage through the
+| whole signed out stretch and the dashboard comes back in the theme it was
+| left in.
+|
+| It is keyed on the session rather than on the path because two of those
+| four screens are not guarded routes, and a route list is one more thing to
+| keep in step. `companyCode` is the same key ProtectedRoute and GuestRoute
+| read, so the theme and the routing can never disagree about who is in.
+|--------------------------------------------------------------------------
+*/
+
+const SESSION_KEY = "companyCode";
+
+const hasStoredSession = () => {
+
+  try {
+    return Boolean(localStorage.getItem(SESSION_KEY));
+  } catch {
+    // Storage unavailable - nothing can be signed in from it either.
+    return false;
+  }
+
+};
 
 // Matches the rule in index.css that holds transitions off during the swap.
 const SWITCHING = "theme-switching";
@@ -106,22 +142,53 @@ const applyThemeInstantly = (theme) => {
 | Applied as this module is imported, which happens before the tree is
 | mounted in main.jsx. The stored theme is therefore on <html> for React's
 | first render instead of arriving an effect later.
+|
+| The session is read here as well, for the same reason the theme is: waiting
+| for the provider to work it out would paint one dark frame of the login
+| screen on a device that last signed out in the dark.
 */
-applyTheme(readStoredTheme());
+applyTheme(hasStoredSession() ? readStoredTheme() : LIGHT);
 
 export const ThemeContext = createContext();
 
 export const ThemeProvider = ({ children }) => {
 
+  const { currentUser, loading } = useAuth();
+
   const [theme, setThemeState] = useState(readStoredTheme);
 
   /*
-  | One place writes the class and the stored value, so the two cannot drift
-  | apart no matter which caller changed the theme.
+  | Who is signed in, answered twice over.
+  |
+  | `currentUser` is the real answer, but it arrives a round trip late -
+  | restoring a session waits on Firebase and on the company lookup. Reading
+  | it while that is still in flight would say "nobody" on every refresh, and
+  | a signed in employee would watch their dashboard start light and turn
+  | dark a moment later.
+  |
+  | So while the restore is running the stored session stands in for it. It
+  | is the same key the route guards decide on, so the frame it paints is the
+  | one the router is about to agree with, and by the time it is replaced the
+  | two say the same thing.
+  */
+  const signedIn = loading ? hasStoredSession() : Boolean(currentUser);
+
+  /*
+  | What is actually on screen. The preference is only honoured behind a
+  | login; everywhere else it is held aside rather than forgotten.
+  */
+  const appliedTheme = signedIn ? theme : LIGHT;
+
+  useEffect(() => {
+    applyThemeInstantly(appliedTheme);
+  }, [appliedTheme]);
+
+  /*
+  | Persisted separately from the class above, and keyed on the preference
+  | rather than on what is showing: signing out must not write the light it
+  | forces over the dark the user chose.
   */
   useEffect(() => {
-
-    applyThemeInstantly(theme);
 
     /*
     | Switched off, so the forced light theme is not written over whatever
@@ -146,14 +213,19 @@ export const ThemeProvider = ({ children }) => {
     setThemeState((current) => (current === DARK ? LIGHT : DARK));
   }, []);
 
+  /*
+  | Both read from what is applied, not from what is stored, so a caller and
+  | the page can never disagree - the navbar's sun and moon is the clearest
+  | case, and it is the one control that would look wrong.
+  */
   const value = useMemo(
     () => ({
-      theme,
-      isDark: theme === DARK,
+      theme: appliedTheme,
+      isDark: appliedTheme === DARK,
       setTheme,
       toggleTheme,
     }),
-    [theme, setTheme, toggleTheme]
+    [appliedTheme, setTheme, toggleTheme]
   );
 
   return (

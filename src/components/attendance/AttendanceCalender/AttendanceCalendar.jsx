@@ -32,7 +32,10 @@ const LEGEND = [
   { label: "Absent", color: "bg-red-500" },
   { label: "Leave", color: "bg-blue-500" },
   { label: "Holiday", color: "bg-teal-500" },
-  { label: "Weekly Off", color: "bg-slate-300" },
+  // Follows the tile it stands for: `slate-300` is a step below the body text
+  // in the light theme and a step above it in the dark one, so the dark swatch
+  // is moved down to `slate-500` - the same value the tile's `ink-faint` is.
+  { label: "Weekly Off", color: "bg-slate-300 dark:bg-slate-500" },
   {
     label: "Pending Approval",
     color: "bg-white ring-2 ring-amber-500",

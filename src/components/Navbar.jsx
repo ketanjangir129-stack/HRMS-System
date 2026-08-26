@@ -2,11 +2,10 @@ import {
   FaSearch,
   FaBell,
   FaCog,
-  FaTimes,
-  FaSun,
-  FaMoon
+  FaTimes
 } from "react-icons/fa";
 import { HiOutlineViewList } from "react-icons/hi";
+import { MdContrast } from "react-icons/md";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import useAuth from "../hooks/useAuth";
@@ -91,7 +90,10 @@ const Navbar = ({ search, setSearch, searchPlaceholder, onMenuClick }) => {
             title={isDark ? "Light mode" : "Dark mode"}
             className="cursor-pointer text-ink-subtle transition-colors hover:text-brand"
           >
-            {isDark ? <FaSun className="text-xl" /> : <FaMoon className="text-xl" />}
+            {/* Material Symbols `contrast` - one glyph for both directions,
+                so the state is carried by the label and the title rather than
+                by the icon swapping. */}
+            <MdContrast className="text-xl" />
           </button>
         )}
 

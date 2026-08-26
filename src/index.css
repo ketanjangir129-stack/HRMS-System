@@ -1099,3 +1099,18 @@ body {
     background-color: color-mix(in oklab, var(--color-amber-500) 12%, transparent);
   }
 }
+:root {
+  color-scheme: light;
+}
+
+.dark {
+  color-scheme: dark;
+}
+
+input:-webkit-autofill {
+  -webkit-box-shadow: 0 0 0 1000px var(--color-surface) inset;
+  -webkit-text-fill-color: var(--color-ink-muted);
+  caret-color: var(--color-ink-muted);
+  transition: background-color 9999s;  
+}
+
