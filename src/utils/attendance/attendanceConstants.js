@@ -181,16 +181,35 @@ export const REQUEST_TYPES = [
 |--------------------------------------------------------------------------
 | Roles
 |--------------------------------------------------------------------------
-| Owners and HR review requests; everyone else only manages their own.
+| Owners and HR review for the whole company. A manager reviews too, but only
+| for the departments they have been given: the role is what unlocks the
+| approve and reject buttons, and the department scope is what decides whose
+| rows they appear on.
+|
+| The two questions are deliberately kept apart. `isApprover` below answers
+| "may this role ever decide anything", which is a fact about the role and is
+| the same on every screen. Whose records they may decide is a fact about the
+| record, and is answered by `departmentScope` against the departments the
+| manager owns. Folding the second into the first would mean every caller had
+| to hold a record before it could render a button.
 */
 
 export const ROLE = {
   OWNER: "owner",
   HR: "hr",
+  MANAGER: "manager",
   EMPLOYEE: "employee",
 };
 
-export const APPROVER_ROLES = [ROLE.OWNER, ROLE.HR];
+export const APPROVER_ROLES = [ROLE.OWNER, ROLE.HR, ROLE.MANAGER];
+
+/*
+| The roles that review the whole company without being narrowed to anything.
+| A manager is an approver but is not one of these, which is what every scope
+| check below reads to decide whether it has to filter at all.
+*/
+
+export const UNSCOPED_APPROVER_ROLES = [ROLE.OWNER, ROLE.HR];
 
 /*
 |--------------------------------------------------------------------------

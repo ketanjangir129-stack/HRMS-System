@@ -9,6 +9,7 @@ import { MonthNavigator } from "../../components/attendance/common/AttendancePan
 import DepartmentReportTable from "../../components/attendance/reports/DepartmentReportTable";
 import EmployeeReportTable from "../../components/attendance/reports/EmployeeReportTable";
 import ReportTabs from "../../components/attendance/reports/ReportTabs";
+import DepartmentScopeNotice from "../../components/common/DepartmentScopeNotice";
 import SearchableSelect from "../../components/common/SearchableSelect";
 import HolidayNotice from "../../components/holiday/HolidayNotice";
 import WeeklyOffNotice from "../../components/holiday/WeeklyOffNotice";
@@ -16,6 +17,7 @@ import useAuth from "../../hooks/useAuth";
 import useDailyAttendance from "../../hooks/useDailyAttendance";
 import useEmployeeDirectory from "../../hooks/useEmployeeDirectory";
 import useHolidayDates from "../../hooks/useHolidayDates";
+import useManagerScope from "../../hooks/useManagerScope";
 import useMonthlyAttendance from "../../hooks/useMonthlyAttendance";
 import { REPORT_TYPE } from "../../utils/attendance/attendanceConstants";
 import {
@@ -47,6 +49,11 @@ import { isWeeklyOff } from "../../utils/holiday/holidayUtils";
 | Holidays are left out of every total: a day the office was closed is not a
 | working day, so it neither counts against an attendance rate nor turns into
 | an absence on the day by day report.
+|
+| For a manager the directory is narrowed to their departments before any of
+| that. All four reports and the summary above them are derived from it, so
+| one narrowing covers the whole page - including the department tab, which
+| ends up listing the departments they run and nobody else's.
 |
 | Search comes from the header search bar.
 |--------------------------------------------------------------------------
@@ -87,13 +94,45 @@ function AttendanceReports() {
   const isDaily = reportType === REPORT_TYPE.DAILY;
 
   const {
-    directory,
+    directory: fullDirectory,
     departments,
-    activeCount,
     loading: directoryLoading,
     error: directoryError,
     reload: reloadDirectory,
   } = useEmployeeDirectory(companyCode);
+
+  const {
+    filterDirectory,
+    filterRows,
+    isScoped,
+    departments: myDepartments,
+    loading: scopeLoading,
+  } = useManagerScope();
+
+  /*
+  | The one narrowing the whole page is built on. Everything below - the four
+  | reports, the roster the daily rate is measured against and the employee
+  | picker - reads this rather than the raw directory, which is what stops the
+  | tabs from disagreeing with each other about who is being reported on.
+  */
+  const directory = useMemo(
+    () => filterDirectory(fullDirectory),
+    [filterDirectory, fullDirectory]
+  );
+
+  const activeCount = useMemo(
+    () =>
+      Object.values(directory).filter((employee) => employee.isActive).length,
+    [directory]
+  );
+
+  const departmentOptions = useMemo(
+    () =>
+      isScoped
+        ? myDepartments.map((department) => department.name)
+        : departments,
+    [isScoped, myDepartments, departments]
+  );
 
   const {
     attendance: dayRecords,
@@ -160,9 +199,14 @@ function AttendanceReports() {
   |--------------------------------------------------------------------------
   */
 
+  /*
+  | Narrowed as well as joined. The join falls back to the employee id for a
+  | record it cannot resolve, so a record belonging to another department
+  | would otherwise survive the scoped directory as an unnamed row.
+  */
   const dailyRows = useMemo(
-    () => buildDailyReport(dayRecords, directory),
-    [dayRecords, directory]
+    () => filterRows(buildDailyReport(dayRecords, directory)),
+    [filterRows, dayRecords, directory]
   );
 
   const monthlyRows = useMemo(
@@ -269,6 +313,8 @@ function AttendanceReports() {
 
       <div className="mt-5 space-y-4 sm:mt-6 sm:space-y-6">
 
+        <DepartmentScopeNotice subject="reports" />
+
         <ReportTabs value={reportType} onChange={setReportType} />
 
         {/*
@@ -318,11 +364,11 @@ function AttendanceReports() {
 
             <AttendanceRecordsTable
               records={dailyRows}
-              loading={directoryLoading || dayLoading}
+              loading={directoryLoading || dayLoading || scopeLoading}
               error={directoryError || dayError}
               onRetry={reloadDirectory}
               search={search}
-              departments={departments}
+              departments={departmentOptions}
               title="Daily Report"
               subtitle="Punch in and punch out for the selected day"
               exportName={`daily-attendance-${date}`}
@@ -345,7 +391,7 @@ function AttendanceReports() {
             error={monthErrorState}
             onRetry={reloadMonthly}
             search={search}
-            departments={departments}
+            departments={departmentOptions}
             currentLabel={monthLabel}
             onMonthChange={handleMonthChange}
             disableNextMonth={isCurrentMonth}

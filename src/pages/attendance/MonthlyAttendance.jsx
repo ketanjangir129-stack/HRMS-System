@@ -4,9 +4,11 @@ import { Link, useOutletContext } from "react-router-dom";
 import AttendancePageHeader from "../../components/attendance/AttendancePageHeader";
 import AttendanceSummaryCards from "../../components/attendance/AttendanceSummaryCards";
 import MonthlyAttendanceTable from "../../components/attendance/MonthlyAttendanceTable";
+import DepartmentScopeNotice from "../../components/common/DepartmentScopeNotice";
 import useAuth from "../../hooks/useAuth";
 import useEmployeeDirectory from "../../hooks/useEmployeeDirectory";
 import useHolidayDates from "../../hooks/useHolidayDates";
+import useManagerScope from "../../hooks/useManagerScope";
 import useMonthlyAttendance from "../../hooks/useMonthlyAttendance";
 import {
   getMonthLabel,
@@ -28,6 +30,11 @@ import {
 | The whole company's month is on this page, so it is only opened for the
 | roles that are meant to see it. Everyone else has their own month on
 | `/attendance/my`.
+|
+| A manager is one of those roles and reads the same page narrowed to their
+| own departments. The narrowing is applied to the directory, which is what
+| the rows are built from, so a department nobody in it appears on the report
+| at all rather than appearing with empty totals.
 |
 | The restriction is not only a screen: the company code is withheld from
 | the three hooks below, so an employee who reaches this route never fetches
@@ -74,6 +81,13 @@ function MonthlyAttendance() {
     useMemo(() => [year], [year])
   );
 
+  const {
+    filterDirectory,
+    isScoped,
+    departments: myDepartments,
+    loading: scopeLoading,
+  } = useManagerScope();
+
   useEffect(() => {
     setSearchPlaceholder("Search employees by name, ID or department...");
 
@@ -84,11 +98,28 @@ function MonthlyAttendance() {
   }, [setSearch, setSearchPlaceholder]);
 
   const rows = useMemo(
-    () => buildMonthlyReport(directory, records, holidayDates),
-    [directory, records, holidayDates]
+    () =>
+      buildMonthlyReport(
+        filterDirectory(directory),
+        records,
+        holidayDates
+      ),
+    [filterDirectory, directory, records, holidayDates]
   );
 
   const summary = useMemo(() => getMonthlySummary(rows), [rows]);
+
+  /*
+  | The filter offers only the departments the rows can belong to. Left
+  | unnarrowed every option but the reviewer's own would empty the table.
+  */
+  const departmentOptions = useMemo(
+    () =>
+      isScoped
+        ? myDepartments.map((department) => department.name)
+        : departments,
+    [isScoped, myDepartments, departments]
+  );
 
   const currentLabel = getMonthLabel(year, month);
 
@@ -141,8 +172,8 @@ function MonthlyAttendance() {
           </h3>
 
           <p className="mt-2 max-w-sm text-sm text-slate-500">
-            Only HR and the company owner can see every employee's month. Your
-            own attendance is on My Attendance.
+            Only HR, department managers and the company owner can see other
+            employees' months. Your own attendance is on My Attendance.
           </p>
 
           <Link
@@ -172,6 +203,8 @@ function MonthlyAttendance() {
 
       <div className="mt-5 space-y-4 sm:mt-6 sm:space-y-6">
 
+        <DepartmentScopeNotice subject="attendance" />
+
         <AttendanceSummaryCards
           summary={summary}
           showPending
@@ -180,11 +213,11 @@ function MonthlyAttendance() {
 
         <MonthlyAttendanceTable
           rows={rows}
-          loading={directoryLoading || recordsLoading}
+          loading={directoryLoading || recordsLoading || scopeLoading}
           error={directoryError || recordsError}
           onRetry={handleRetry}
           search={search}
-          departments={departments}
+          departments={departmentOptions}
           currentLabel={currentLabel}
           onMonthChange={handleMonthChange}
           disableNextMonth={isCurrentMonth}

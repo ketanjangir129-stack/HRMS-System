@@ -13,6 +13,7 @@ import {
   formatLeaveDuration,
   formatLeaveRange,
   formatLeaveType,
+  getLeaveDaysBreakdown,
   isPendingLeave,
 } from "../../utils/leave/leaveUtils";
 import LeaveStatusBadge from "./common/LeaveStatusBadge";

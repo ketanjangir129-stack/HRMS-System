@@ -6,6 +6,12 @@ import {
   getDownloadURL,
 } from "firebase/storage";
 import { checkEmployeeUniqueness } from "./ValidationService";
+import { releaseManagerFromDepartments } from "./departmentService";
+import {
+  getEmployeeRole,
+  releasesDepartments,
+  validateRoleChange,
+} from "../utils/permissions/roleAssignment";
 
 // Add Employee
 export const addEmployee = async (companyCode, employee) => {
@@ -124,6 +130,89 @@ export const updateEmployeeSection = async (
   await updateEmployee(companyCode, employeeId, { personalInfo: nextData });
 
   return { success: true, data: nextData };
+};
+
+/*
+|--------------------------------------------------------------------------
+| Employee Role
+|--------------------------------------------------------------------------
+| The portal role, stored at `account.role`.
+|
+| It is written on its own rather than through `updateEmployeeSection`, for
+| two reasons. The account node also carries the username, the password and
+| the status, and a role change has no business replacing any of them - so a
+| multi-path write touches the one key, the same way the password change does.
+|
+| And a role change is not only a write. A manager who stops being one is
+| still written on the department nodes they were running, so they are
+| released in the same call. The deactivate flow on the details screen already
+| does this for the same reason; skipping it here would leave a department
+| pointing at somebody the scope no longer treats as its manager.
+|
+| The current role is read from the record rather than taken from the caller:
+| the list that offers the button may have been loaded minutes ago, and the
+| decision to release departments has to be made against what is stored.
+|--------------------------------------------------------------------------
+*/
+export const updateEmployeeRole = async (
+  companyCode,
+  employeeId,
+  nextRole,
+  actorRole
+) => {
+
+  const current = await getEmployeeById(companyCode, employeeId);
+
+  if (!current) {
+    return { success: false, message: "Employee not found." };
+  }
+
+  const currentRole = getEmployeeRole(current.account);
+
+  /*
+  | The same rule the modal ran before it offered the option, run again here
+  | so a role can never be written by a caller that went round the screen.
+  */
+  const problem = validateRoleChange({
+    actorRole,
+    nextRole,
+    currentRole,
+  });
+
+  if (problem) {
+    return { success: false, message: problem };
+  }
+
+  await updateEmployee(companyCode, employeeId, {
+    "account/role": nextRole,
+  });
+
+  if (releasesDepartments(currentRole, nextRole)) {
+
+    const released = await releaseManagerFromDepartments(
+      companyCode,
+      current.employmentInfo?.employeeId || employeeId
+    );
+
+    /*
+    | The role is already saved and is the part that matters, so a failed
+    | release is reported rather than thrown: the owner can clear the stale
+    | manager from the Departments screen, and hiding the problem would leave
+    | them with no reason to.
+    */
+    if (!released.success) {
+      return {
+        success: true,
+        role: nextRole,
+        warning:
+          "Role updated, but their departments could not be released. Please clear them from the Departments page.",
+      };
+    }
+
+  }
+
+  return { success: true, role: nextRole };
+
 };
 
 // Resume upload — PDF Storage mein jaata hai, DB mein sirf uska link save hota hai

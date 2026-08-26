@@ -88,6 +88,7 @@
 .attendance-calendar .late abbr,
 .attendance-calendar .absent abbr,
 .attendance-calendar .leave abbr,
+.attendance-calendar .half-day abbr,
 .attendance-calendar .holiday abbr {
   width: 30px;
   height: 30px;
@@ -118,6 +119,10 @@
 
 .attendance-calendar .leave abbr {
   background: #3b82f6;
+}
+
+.attendance-calendar .half-day abbr {
+  background: #a855f7;
 }
 
 /* A declared company holiday: a day nobody was expected in, so it is drawn
@@ -185,6 +190,7 @@
   .attendance-calendar .late abbr,
   .attendance-calendar .absent abbr,
   .attendance-calendar .leave abbr,
+  .attendance-calendar .half-day abbr,
   .attendance-calendar .holiday abbr,
   .attendance-calendar .pending abbr {
     width: 26px;

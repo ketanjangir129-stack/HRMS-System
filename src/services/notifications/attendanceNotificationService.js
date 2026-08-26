@@ -30,9 +30,10 @@ import {
 |
 | The approver list is shared with leave rather than duplicated. An
 | attendance correction is reviewed by exactly the people who review a leave
-| request — active HR plus the owner — so a second lookup would only be the
-| same query under a different name, and the two would drift apart the first
-| time either side changed who may approve.
+| request — active HR, the owner, and the managers of the employee's own
+| department — so a second lookup would only be the same query under a
+| different name, and the two would drift apart the first time either side
+| changed who may approve.
 |
 | Both routes point at `/attendance/requests`: employees and HR land on the
 | same page, which scopes itself to "mine" or "all" from the signed in role.
@@ -75,9 +76,14 @@ export const notifyAttendanceCorrectionApprovers = async (
   requestId
 ) => {
 
+  /*
+  | The employee is passed on so the managers of their department are told as
+  | well as HR - they are the ones the correction lands in front of.
+  */
   const approverIds =
     await getApproverIds(
-      companyCode
+      companyCode,
+      { employeeId: request?.employeeId }
     );
 
   if (!approverIds.length) {
