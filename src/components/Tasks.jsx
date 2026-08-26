@@ -172,13 +172,23 @@ function EmployeeTasks() {
   const hiddenCount = tasks.length - visible.length;
 
   return (
-    <div className="bg-surface rounded-2xl p-4 sm:p-6 shadow-md">
-      <div className="flex flex-wrap justify-between items-center gap-3 mb-4 sm:mb-6">
-        <h2 className="text-xl sm:text-2xl font-semibold text-ink">Today's Tasks</h2>
+    <div className="ui-card ui-card-body">
+      <div className="flex flex-wrap justify-between items-center gap-3 mb-5">
+        <div className="min-w-0">
+          <h2 className="ui-card-title">Today's Tasks</h2>
+          <p className="ui-card-subtitle">
+            Your scheduled actions and reminders
+          </p>
+        </div>
 
+        {/*
+          A text link rather than a filled button. It leaves the page instead
+          of acting on it, and a solid indigo control next to the panel title
+          claims to be the primary thing on the card - which it is not.
+        */}
         <button
           onClick={() => navigate("/tasks")}
-          className="cursor-pointer bg-brand text-white text-sm sm:text-base px-3 sm:px-4 py-2 rounded-lg hover:bg-brand-hover transition-colors"
+          className="shrink-0 cursor-pointer text-xs font-semibold text-brand transition-colors hover:text-brand-hover"
         >
           View All
         </button>
@@ -194,14 +204,22 @@ function EmployeeTasks() {
           <p className="text-sm text-red-600">{error}</p>
         </div>
       ) : visible.length === 0 ? (
-        <div className="flex flex-col items-center justify-center gap-3 py-10 text-center">
-          <span className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-50">
-            <CheckCircle2 className="h-6 w-6 text-emerald-500" />
+        /*
+          The dashed frame is doing work here: an empty panel and a panel
+          that is still loading look identical without it. A drawn boundary
+          around the message says the card has finished and this is the
+          answer, rather than leaving a blank half-card on the dashboard.
+        */
+        <div className="flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-line bg-surface-muted/50 px-4 py-10 text-center">
+          <span className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100">
+            <CheckCircle2 className="h-6 w-6 text-emerald-600" />
           </span>
 
           <div>
-            <p className="font-medium text-ink-muted">You're all caught up</p>
-            <p className="mt-1 text-sm text-ink-faint">
+            <p className="text-base font-semibold text-ink">
+              You're all caught up!
+            </p>
+            <p className="mt-1 max-w-xs text-xs text-ink-subtle">
               Nothing due in the next {DUE_WINDOW_DAYS} days.
             </p>
           </div>
@@ -209,7 +227,7 @@ function EmployeeTasks() {
           {canCreateTask && (
             <button
               onClick={() => navigate("/tasks")}
-              className="mt-1 cursor-pointer text-sm font-medium text-brand transition-colors hover:underline"
+              className="ui-btn ui-btn-secondary mt-1 px-4 py-2 text-xs"
             >
               Create a task
             </button>
@@ -220,7 +238,7 @@ function EmployeeTasks() {
           {visible.map((task) => (
             <div
               key={task.id}
-              className="flex items-start gap-3 sm:gap-4 py-3 sm:py-4 border-b border-line last:border-b-0"
+              className="flex items-start gap-3 sm:gap-4 py-3.5 border-b border-line-subtle last:border-b-0"
             >
               {canCompleteTask(task) && (
                 <input
@@ -233,8 +251,8 @@ function EmployeeTasks() {
               )}
 
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm sm:text-base text-ink-muted">{task.title}</p>
-                <p className="mt-0.5 text-xs text-ink-faint">
+                <p className="truncate text-sm font-medium text-ink">{task.title}</p>
+                <p className="mt-0.5 text-xs text-ink-subtle">
                   {canViewAll ? `${assigneeName(task, employees)} · ` : ""}
                   {dueLabel(task.dueDate, today)}
                 </p>

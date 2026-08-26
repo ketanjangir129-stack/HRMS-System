@@ -30,7 +30,12 @@ const Navbar = ({ search, setSearch, searchPlaceholder, onMenuClick }) => {
   const handleProfileClick = () => setIsProfileOpen(true);
 
   return (
-    <div className="h-[70px] shrink-0 bg-surface flex justify-between items-center gap-3 sm:gap-4 px-3 sm:px-8 border-b border-line">
+    /*
+      Sticky rather than fixed, and inside the scrolling column - see
+      DashboardLayout. `z-30` puts it over the page passing underneath but
+      under the sidebar drawer and its backdrop, which are 50 and 40.
+    */
+    <div className="ui-appbar sticky top-0 z-30 h-16 shrink-0 flex justify-between items-center gap-3 sm:gap-4 px-3 sm:px-6">
 
       {/* List button - opens the sidebar drawer.
           Only below `lg`, where the sidebar is off screen, and to the left of
@@ -39,42 +44,50 @@ const Navbar = ({ search, setSearch, searchPlaceholder, onMenuClick }) => {
         <button
           type="button"
           onClick={onMenuClick}
-          className="flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-xl bg-surface-muted text-ink-muted transition-colors hover:bg-surface-raised hover:text-ink focus:outline-none focus:ring-2 focus:ring-blue-500 lg:hidden"
+          className="ui-icon-btn shrink-0 lg:hidden"
           aria-label="Open menu"
           title="Menu"
         >
-          <HiOutlineViewList size={24} />
+          <HiOutlineViewList size={22} />
         </button>
       )}
 
       {/* Search Box */}
-      {/* Grows to 700px but is allowed to shrink, so a narrow window keeps
-          the search usable instead of pushing the actions off screen. */}
-      <div className="w-full max-w-[700px] min-w-0 h-11 sm:h-12 flex items-center px-3 sm:px-5 border border-line rounded-2xl bg-surface">
+      {/*
+        A filled pill rather than an outlined box. On a bar that is itself
+        translucent, a hairline border reads as a second edge under the one
+        below the bar; a soft fill separates the field from the chrome
+        without drawing another line across the top of the app.
 
-        <FaSearch className="shrink-0 text-ink-faint text-base sm:text-lg" />
+        Grows to 480px but is allowed to shrink, so a narrow window keeps
+        the search usable instead of pushing the actions off screen.
+      */}
+      <div className="group w-full max-w-120 min-w-0 h-10 flex items-center gap-2.5 px-3.5 rounded-xl bg-surface-muted border border-transparent transition-all focus-within:border-brand focus-within:bg-surface focus-within:ring-3 focus-within:ring-brand-ring">
+
+        <FaSearch className="shrink-0 text-ink-faint text-sm" />
 
         <input
           type="text"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder={searchPlaceholder}
-          className="w-full min-w-0 ml-2 sm:ml-3 outline-none border-none bg-transparent text-sm sm:text-[15px] placeholder:text-ink-faint"
+          className="w-full min-w-0 outline-none border-none bg-transparent text-sm text-ink placeholder:text-ink-faint"
         />
         {search && (
           <button
             type="button"
             onClick={() => setSearch("")}
-            className="text-ink-faint hover:text-ink-muted transition cursor-pointer"
+            aria-label="Clear search"
+            className="shrink-0 text-ink-faint hover:text-ink-muted transition cursor-pointer"
           >
-            <FaTimes size={20} />
+            <FaTimes size={14} />
           </button>
         )}
 
       </div>
 
       {/* Right Section */}
-      <div className="flex shrink-0 items-center gap-4 sm:gap-4">
+      <div className="flex shrink-0 items-center gap-1 sm:gap-1.5">
 
 
         {/* Theme - light or dark, remembered on this device. Offered to every
@@ -89,9 +102,9 @@ const Navbar = ({ search, setSearch, searchPlaceholder, onMenuClick }) => {
             onClick={toggleTheme}
             aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
             title={isDark ? "Light mode" : "Dark mode"}
-            className="cursor-pointer text-ink-subtle transition-colors hover:text-brand"
+            className="ui-icon-btn"
           >
-            {isDark ? <FaSun className="text-xl" /> : <FaMoon className="text-xl" />}
+            {isDark ? <FaSun className="text-lg" /> : <FaMoon className="text-lg" />}
           </button>
         )}
 
@@ -114,20 +127,30 @@ const Navbar = ({ search, setSearch, searchPlaceholder, onMenuClick }) => {
             onClick={() => navigate("/settings")}
             aria-label="Settings"
             title="Settings"
-            className="hidden sm:block cursor-pointer text-ink-subtle transition-colors hover:text-blue-600"
+            className="ui-icon-btn hidden sm:inline-flex"
           >
-            <FaCog className="text-xl" />
+            <FaCog className="text-lg" />
           </button>
         )}
+
+        {/* A hairline between the tools and the person they belong to. */}
+        <span aria-hidden="true" className="mx-1 hidden h-6 w-px bg-line sm:block" />
+
         {/* Profile */}
-        <div className="flex items-center gap-3 cursor-pointer" onClick={handleProfileClick}>
+        <button
+          type="button"
+          onClick={handleProfileClick}
+          aria-label="Open profile"
+          title="Profile"
+          className="flex shrink-0 cursor-pointer items-center rounded-full transition-shadow focus:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:ring-offset-surface"
+        >
 
           <div
-            className="w-9 h-9 sm:w-11 sm:h-11 text-sm sm:text-base rounded-full bg-emerald-500 text-white font-bold flex items-center justify-center">
+            className="w-9 h-9 text-sm rounded-full bg-emerald-600 text-white font-semibold flex items-center justify-center">
             {getInitials(currentUser)}
           </div>
 
-        </div>
+        </button>
       </div>
       <ProfileDrawer isOpen={isProfileOpen} onClose={() => setIsProfileOpen(false)}
       />

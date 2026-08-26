@@ -20,7 +20,8 @@
 
 .page {
   padding: 1.5rem 0.75rem;
-  background: #f3f4f6;
+  /* The canvas token, so the sheet sits on the same grey as every other page. */
+  background: var(--color-canvas, #f8fafc);
 }
 
 @media (min-width: 640px) {
@@ -75,31 +76,31 @@
   padding: 0.625rem 1rem;
   border: none;
   border-radius: 0.75rem;
-  background: #2563eb;
+  background: var(--color-brand, #4f46e5);
   color: #fff;
   font-size: 0.875rem;
   line-height: 1.25rem;
   font-weight: 600;
   cursor: pointer;
   box-shadow:
-    0 4px 6px -1px rgb(37 99 235 / 0.2),
-    0 2px 4px -2px rgb(37 99 235 / 0.2);
+    0 4px 6px -1px rgb(79 70 229 / 0.2),
+    0 2px 4px -2px rgb(79 70 229 / 0.2);
   transition: all 200ms;
 }
 
 .downloadButton:hover {
-  background: #1d4ed8;
+  background: var(--color-brand-hover, #4338ca);
   transform: translateY(-0.125rem);
   box-shadow:
-    0 10px 15px -3px rgb(37 99 235 / 0.3),
-    0 4px 6px -4px rgb(37 99 235 / 0.3);
+    0 10px 15px -3px rgb(79 70 229 / 0.3),
+    0 4px 6px -4px rgb(79 70 229 / 0.3);
 }
 
 .downloadButton:focus-visible {
   outline: none;
   box-shadow:
     0 0 0 2px #fff,
-    0 0 0 4px #60a5fa;
+    0 0 0 4px #818cf8;
 }
 
 .downloadButton:active {
