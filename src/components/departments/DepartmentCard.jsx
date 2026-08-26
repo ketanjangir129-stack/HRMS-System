@@ -2,8 +2,9 @@ import { useState } from "react";
 import DesignationItem from "./DesignationItem";
 import ConfirmDeleteModal from "../common/ConfirmDeleteModal";
 import {deleteDepartment,} from "../../services/departmentService";
-import {FiChevronUp,FiChevronDown,FiEdit2,FiTrash2,FiPlus,FiBriefcase,} from "react-icons/fi";
+import {FiChevronUp,FiChevronDown,FiEdit2,FiTrash2,FiPlus,FiBriefcase,FiUserCheck,FiUserPlus,} from "react-icons/fi";
 import { toast } from "react-toastify";
+import { getDepartmentManager } from "../../utils/permissions/departmentScope";
 
 function DepartmentCard({
     companyCode,
@@ -12,6 +13,7 @@ function DepartmentCard({
     onEditDepartment,
     onAddDesignation,
     onEditDesignation,
+    onAssignManager,
     expandedDepartment,
     toggleDepartment
 }) {
@@ -37,6 +39,14 @@ function DepartmentCard({
     ).length;
 
     const isExpanded = expandedDepartment === departmentId;
+
+    /*
+        Who runs this department, or null. It sits beside the designation count
+        rather than inside the expanded panel: a department with nobody running
+        it has nobody approving its attendance or its leave, which is worth
+        seeing without opening the card.
+    */
+    const manager = getDepartmentManager(department);
 
     return (
         <div className="group rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition-all duration-300 hover:border-slate-300 hover:shadow-md sm:p-5">
@@ -70,11 +80,39 @@ function DepartmentCard({
                             </span>
                         </button>
 
-                        <span className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600">
-                            <FiBriefcase className="text-[13px]" />
-                            {designationCount}{" "}
-                            Designation{designationCount === 1 ? "" : "s"}
-                        </span>
+                        {/* Wrapping, so the manager pill drops under the
+                            designation count on a narrow card instead of
+                            squeezing it. */}
+                        <div className="mt-2 flex flex-wrap items-center gap-2">
+
+                            <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600">
+                                <FiBriefcase className="text-[13px]" />
+                                {designationCount}{" "}
+                                Designation{designationCount === 1 ? "" : "s"}
+                            </span>
+
+                            {manager ? (
+
+                                <span
+                                    title={`Managed by ${manager.name || manager.employeeId}`}
+                                    className="inline-flex max-w-full items-center gap-1.5 rounded-full bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700 ring-1 ring-blue-200"
+                                >
+                                    <FiUserCheck className="shrink-0 text-[13px]" />
+                                    <span className="truncate">
+                                        {manager.name || manager.employeeId}
+                                    </span>
+                                </span>
+
+                            ) : (
+
+                                <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-700 ring-1 ring-amber-200">
+                                    <FiUserCheck className="text-[13px]" />
+                                    No manager
+                                </span>
+
+                            )}
+
+                        </div>
 
                     </div>
 
@@ -96,6 +134,23 @@ function DepartmentCard({
                     >
                         <FiEdit2 className="text-[15px]" />
                         Edit
+                    </button>
+
+                    {/* Between Edit and Delete: appointing a manager is a
+                        change to the department, not a destructive action,
+                        so it belongs on the safe side of the row. */}
+                    <button
+                        onClick={() =>
+                            onAssignManager(
+                                departmentId,
+                                department
+                            )
+                        }
+                        title={manager ? "Change manager" : "Assign manager"}
+                        className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-600 transition-all duration-200 hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-300 cursor-pointer sm:flex-none"
+                    >
+                        <FiUserPlus className="text-[15px]" />
+                        {manager ? "Change" : "Assign"}
                     </button>
 
                     <button

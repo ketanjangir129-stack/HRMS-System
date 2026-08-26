@@ -507,6 +507,10 @@ function OnBoardForm() {
                   Employee
                 </option>
 
+                <option value="manager">
+                  Manager
+                </option>
+
                 <option value="hr">
                   HR
                 </option>

@@ -20,10 +20,15 @@ import { isWeeklyOff } from "../../../utils/holiday/holidayUtils";
 */
 
 /*
-| The six things a day can be, and below them the one thing a day can be
-| waiting on. Pending is given the whole of the last row rather than a seventh
-| cell: it is a mark drawn over a status instead of a status of its own, and
-| six is what divides evenly into the columns above it.
+| The seven things a day can be, and after them the one thing a day can be
+| waiting on. Pending is last because it is a mark drawn over a status rather
+| than a status of its own.
+|
+| Seven leaves an odd cell at two columns and two spare at three, so Pending
+| takes exactly the room that is left at each: one cell where the seven wrap
+| odd, two where they wrap short. Every breakpoint fills its last row, and the
+| order matches `STATUS_DOTS` so the colours read the same here as everywhere
+| else a status is shown.
 */
 
 const LEGEND = [
@@ -31,6 +36,7 @@ const LEGEND = [
   { label: "Late", color: "bg-amber-500" },
   { label: "Absent", color: "bg-red-500" },
   { label: "Leave", color: "bg-blue-500" },
+  { label: "Half Day", color: "bg-purple-500" },
   { label: "Holiday", color: "bg-teal-500" },
   // Follows the tile it stands for: `slate-300` is a step below the body text
   // in the light theme and a step above it in the dark one, so the dark swatch
@@ -39,7 +45,7 @@ const LEGEND = [
   {
     label: "Pending Approval",
     color: "bg-white ring-2 ring-amber-500",
-    span: "col-span-2 sm:col-span-3 xl:col-span-2",
+    span: "sm:col-span-2 xl:col-span-1",
   },
 ];
 

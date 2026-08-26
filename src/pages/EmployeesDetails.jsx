@@ -3,14 +3,27 @@ import { useNavigate, useParams } from "react-router-dom";
 import {
   getEmployeeById,
   updateEmployee,
+  updateEmployeeRole,
   updateEmployeeSection,
   uploadResume,
 } from "../services/EmployeeService";
 // import { getSalary } from "../services/SalaryService";
-import { getDepartments } from "../services/departmentService";
+import {
+  getDepartments,
+  releaseManagerFromDepartments,
+} from "../services/departmentService";
 import { validateField } from "../utils/validation/validateField";
+import { ROLE } from "../utils/attendance/attendanceConstants";
+import { ROLE_LABELS } from "../utils/permissions/permissionConstants";
+import {
+  canEditEmployeeRole,
+  getAssignableRoles,
+} from "../utils/permissions/roleAssignment";
 import { rules } from "../utils/validation/rules";
+import useRoleAccess from "../hooks/useRoleAccess";
+import useManagerScope from "../hooks/useManagerScope";
 import Loader from "../components/common/Loader";
+import EditRoleModal from "../components/employees/EditRoleModal";
 import {
   AlertTriangle,
   ArrowLeft,
@@ -40,10 +53,28 @@ import {
   Power,
   ShieldCheck,
   Smartphone,
+  UserCog,
   UserRound,
   Users,
   X,
 } from "lucide-react";
+
+/*
+|--------------------------------------------------------------------------
+| Role Badge
+|--------------------------------------------------------------------------
+| The portal role as a pill on the Account card. HR and Manager are tinted
+| because they carry authority somebody reading this card is looking for;
+| Employee is the neutral majority. Owner is here for completeness only - it
+| is never stored on an employee record.
+*/
+
+const ROLE_BADGES = {
+  [ROLE.OWNER]: "bg-violet-50 text-violet-700",
+  [ROLE.HR]: "bg-indigo-50 text-indigo-700",
+  [ROLE.MANAGER]: "bg-amber-50 text-amber-700",
+  [ROLE.EMPLOYEE]: "bg-slate-100 text-slate-600",
+};
 
 function EmployeesDetails() {
     const companyCode = localStorage.getItem("companyCode");
@@ -58,6 +89,26 @@ function EmployeesDetails() {
 
     // Activate / Deactivate ke waqt button disable rakhne ke liye
     const [statusUpdating, setStatusUpdating] = useState(false);
+
+    /*
+    |----------------------------------------------------------------------
+    | Role Editing
+    |----------------------------------------------------------------------
+    | Two separate questions, the same way the rest of the app asks them.
+    |
+    | `employees.editRole` says whether the signed in role has the right at
+    | all, and is the owner's to withhold from Settings like any other. The
+    | department scope then says whose record they may use it on: a manager is
+    | narrowed to the employees of the departments they run, and to the roles
+    | they could hand out - which `roleAssignment` answers, not this page.
+    */
+    const { canAccessSection } = useRoleAccess();
+
+    const { scope, loading: scopeLoading } = useManagerScope();
+
+    const [roleModalOpen, setRoleModalOpen] = useState(false);
+    const [roleSaving, setRoleSaving] = useState(false);
+    const [roleError, setRoleError] = useState("");
 
     // Add Employee jaisa hi source
     const [departments, setDepartments] = useState([]);
@@ -231,6 +282,12 @@ function EmployeesDetails() {
             account: {
                 ...data.account,
                 status: data.account?.status || data.status || "Active",
+                /*
+                | A record saved before roles existed carries none. It is read
+                | as an employee rather than left blank, so the card shows
+                | what the portal actually treats them as.
+                */
+                role: data.account?.role || ROLE.EMPLOYEE,
             },
         };
  
@@ -404,6 +461,22 @@ function EmployeesDetails() {
             const nextAccount = { ...employee.account, status: nextStatus };
 
             await updateEmployee(companyCode, id, { account: nextAccount });
+
+            // Ek deactivate hua manager ab bhi department node par likha rehta
+            // hai. Us department ka koi approver nahi bachta, par screen par
+            // wo "managed" hi dikhta hai — isliye deactivate ke saath uske
+            // departments chhod diye jaate hain aur owner unhe dobara assign
+            // kar sakta hai.
+            if (
+                nextStatus === "Inactive" &&
+                employee.account?.role === ROLE.MANAGER
+            ) {
+                await releaseManagerFromDepartments(
+                    companyCode,
+                    employee.employmentInfo?.employeeId || id
+                );
+            }
+
             setEmployee((prev) => ({ ...prev, account: nextAccount }));
         } catch (error) {
             console.error("Failed to update status:", error);
@@ -411,6 +484,60 @@ function EmployeesDetails() {
         } finally {
             setStatusUpdating(false);
         }
+    };
+
+    /*
+    | The role change itself. Like the status toggle above it, this is not part
+    | of a normal section edit: it decides what the portal lets somebody do
+    | rather than what their record says, so it has its own dialog and its own
+    | write, and the account node's username, password and status are left
+    | exactly where they were.
+    |
+    | The service releases the departments of a demoted manager and re-checks
+    | the rules before it writes, so a refusal is reported here rather than
+    | assumed away.
+    */
+    const saveRole = async (nextRole) => {
+
+        setRoleSaving(true);
+        setRoleError("");
+
+        try {
+
+            const result = await updateEmployeeRole(
+                companyCode,
+                id,
+                nextRole,
+                scope.role
+            );
+
+            // The dialog stays open on a refusal, so the reason is read beside
+            // the choice that caused it rather than after it has been lost.
+            if (!result.success) {
+                setRoleError(result.message || "Failed to update the role.");
+                return;
+            }
+
+            setEmployee((prev) => ({
+                ...prev,
+                account: { ...prev.account, role: nextRole },
+            }));
+
+            setRoleModalOpen(false);
+
+            // Saved, but their old departments still point at them. The banner
+            // is the only place that would otherwise say so.
+            if (result.warning) {
+                setActionError(result.warning);
+            }
+
+        } catch (error) {
+            console.error("Failed to update role:", error);
+            setRoleError("Failed to update the role. Please try again.");
+        } finally {
+            setRoleSaving(false);
+        }
+
     };
 
     // Load fail hua ya employee mila nahi → error + Retry (infinite spinner se bachne ke liye)
@@ -473,7 +600,26 @@ function EmployeesDetails() {
  
     const status = employee.account?.status || "Unknown";
     const isActive = status.toLowerCase() === "active";
- 
+
+    /*
+    | The roles this user may hand out, and whether this particular record is
+    | one of theirs to change. The scope has to have finished loading first:
+    | a manager's departments arrive a moment after the page does, and offering
+    | the pencil before then would put it on a record they may not touch.
+    */
+    const assignableRoles = canAccessSection("employees.editRole")
+        ? getAssignableRoles(scope.role)
+        : [];
+
+    const canEditRole =
+        !scopeLoading &&
+        assignableRoles.length > 0 &&
+        canEditEmployeeRole(scope, {
+            employeeId: employee.employmentInfo?.employeeId || id,
+            department: employee.employmentInfo?.department,
+            role: employee.account?.role,
+        });
+
     // Each card: section = key inside employee, fields carry the editable key.
     // readOnly fields are shown but never turned into inputs.
     const sections = [
@@ -538,6 +684,28 @@ function EmployeesDetails() {
                 { key: "username", label: "Username", icon: AtSign },
                 { key: "password", label: "Password", icon: KeyRound, masked: true },
                 { key: "status", label: "Status", icon: ShieldCheck, pill: true },
+                /*
+                | The one thing on this card that is not a credential. The
+                | username and the password are what somebody signs in with and
+                | stay view only; the role is what the portal lets them do once
+                | they are in, and is changed from the pencil on this row - the
+                | same slot the masked fields put their reveal button in.
+                */
+                {
+                    key: "role",
+                    label: "Role",
+                    icon: UserCog,
+                    type: "role",
+                    action: canEditRole
+                        ? {
+                            label: "Change role",
+                            onClick: () => {
+                                setRoleError("");
+                                setRoleModalOpen(true);
+                            },
+                        }
+                        : null,
+                },
             ],
         },
         {
@@ -838,6 +1006,30 @@ function EmployeesDetails() {
                     </div>
 
                 )}
+
+                {/*
+                | Keyed on the stored role, so once a change is saved the
+                | dialog remounts and reopens on what they are now rather than
+                | on the selection it was first mounted with.
+                */}
+                <EditRoleModal
+                    key={employee.account?.role}
+                    open={roleModalOpen}
+                    employee={{
+                        name: employee.personalInfo?.name,
+                        employeeId: employee.employmentInfo?.employeeId || id,
+                        role: employee.account?.role,
+                    }}
+                    actorRole={scope.role}
+                    roles={assignableRoles}
+                    saving={roleSaving}
+                    error={roleError}
+                    onClose={() => {
+                        setRoleModalOpen(false);
+                        setRoleError("");
+                    }}
+                    onSave={saveRole}
+                />
 
         </div>
     );
@@ -1153,6 +1345,18 @@ function EmployeesDetails() {
                                                                         </a>
                                                                     ) : isHidden ? (
                                                                         maskValue(value)
+                                                                    ) : field.type === "role" ? (
+                                                                        <span
+                                                                            className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${
+                                                                                ROLE_BADGES[
+                                                                                    String(value).toLowerCase()
+                                                                                ] || ROLE_BADGES[ROLE.EMPLOYEE]
+                                                                            }`}
+                                                                        >
+                                                                            {ROLE_LABELS[
+                                                                                String(value).toLowerCase()
+                                                                            ] || value}
+                                                                        </span>
                                                                     ) : field.pill ? (
                                                                         <span
                                                                             className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${
@@ -1183,6 +1387,22 @@ function EmployeesDetails() {
                                                                     ) : (
                                                                         <EyeOff className="h-4 w-4" />
                                                                     )}
+                                                                </button>
+                                                            )}
+                                                            {/*
+                                                            | A field on a view only card that can still be
+                                                            | acted on, in the same slot the reveal button
+                                                            | uses. Only the Role field carries one, and only
+                                                            | for somebody entitled to change it.
+                                                            */}
+                                                            {field.action && (
+                                                                <button
+                                                                    onClick={field.action.onClick}
+                                                                    title={field.action.label}
+                                                                    aria-label={field.action.label}
+                                                                    className="flex h-7 w-7 shrink-0 cursor-pointer items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-blue-50 hover:text-blue-600"
+                                                                >
+                                                                    <Pencil className="h-3.5 w-3.5" />
                                                                 </button>
                                                             )}
                                                         </div>

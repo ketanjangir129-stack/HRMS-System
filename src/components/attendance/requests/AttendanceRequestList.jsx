@@ -34,6 +34,11 @@ import EmployeeCell from "../common/EmployeeCell";
 | and pagination are handled here; what each row may do is decided by the
 | request permission helpers, so an employee never sees review actions and a
 | decided request can no longer be edited.
+|
+| `reviewScope` is the department scope of the signed in user, handed straight
+| to those same helpers. It is null for everybody who is not narrowed, which
+| is why nothing in here branches on a role: the helper answers, and a role
+| that reviews the whole company answers the same with a scope as without one.
 |--------------------------------------------------------------------------
 */
 
@@ -97,6 +102,14 @@ function AttendanceRequestList({
   scope = "all",
   onScopeChange,
   canReview = false,
+  reviewScope = null,
+  /*
+  | "All Requests" is a promise this screen cannot keep for a manager, whose
+  | list is their departments and not the company. The caller renames the tab
+  | rather than the tab guessing from a role it would otherwise have to be
+  | told about.
+  */
+  allScopeLabel = "All Requests",
 }) {
 
   const [statusFilter, setStatusFilter] = useState("");
@@ -136,7 +149,7 @@ function AttendanceRequestList({
 
     const canModify = canModifyRequest(request, currentUser);
 
-    const canDecide = canReviewRequest(request, currentUser);
+    const canDecide = canReviewRequest(request, currentUser, reviewScope);
 
     return (
       <>
@@ -294,7 +307,7 @@ function AttendanceRequestList({
       },
     ],
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [currentUser, onApprove, onDelete, onEdit, onReject, onView]
+    [currentUser, reviewScope, onApprove, onDelete, onEdit, onReject, onView]
   );
 
   /*
@@ -313,7 +326,7 @@ function AttendanceRequestList({
 
     const canModify = canModifyRequest(request, currentUser);
 
-    const canDecide = canReviewRequest(request, currentUser);
+    const canDecide = canReviewRequest(request, currentUser, reviewScope);
 
     return (
       <div className="space-y-3">
@@ -488,7 +501,7 @@ function AttendanceRequestList({
               <div className="inline-flex w-full rounded-xl border border-slate-200 bg-white p-1 sm:w-auto">
 
                 {[
-                  { value: "all", label: "All Requests" },
+                  { value: "all", label: allScopeLabel },
                   { value: "mine", label: "My Requests" },
                 ].map((tab) => (
 

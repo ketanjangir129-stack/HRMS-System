@@ -1,4 +1,4 @@
-import { FiUserCheck, FiUsers } from "react-icons/fi";
+import { FiBriefcase, FiUserCheck, FiUsers } from "react-icons/fi";
 
 import {
   MANAGED_ROLES,
@@ -10,22 +10,28 @@ import {
 |--------------------------------------------------------------------------
 | Role Tabs
 |--------------------------------------------------------------------------
-| The two roles that can be configured.
+| The roles that can be configured.
 |
 | Owner is not one of them and is never rendered here. It is stated once, as a
 | notice above the tabs, rather than shown as a disabled tab that invites a
 | click: there is nothing behind it to open.
+|
+| The tabs are read off `MANAGED_ROLES`, so a role added to the registry
+| appears here without an edit. The grid goes two across on a tablet and three
+| on a desktop rather than one row of however many roles exist: a tab has to
+| stay wide enough for its description to be readable.
 |--------------------------------------------------------------------------
 */
 
 const ROLE_ICONS = {
   hr: FiUserCheck,
+  manager: FiBriefcase,
   employee: FiUsers,
 };
 
 function RoleTabs({ activeRole, onChange, dirty = false }) {
   return (
-    <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 sm:gap-3">
+    <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 sm:gap-3 lg:grid-cols-3">
 
       {MANAGED_ROLES.map((role) => {
 

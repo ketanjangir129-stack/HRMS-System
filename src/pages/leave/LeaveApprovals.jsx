@@ -3,6 +3,7 @@ import { FiCheck, FiCheckSquare, FiEye, FiLock, FiTrash2, FiX } from "react-icon
 import { useOutletContext } from "react-router-dom";
 import { toast } from "react-toastify";
 import ConfirmDeleteModal from "../../components/common/ConfirmDeleteModal";
+import DepartmentScopeNotice from "../../components/common/DepartmentScopeNotice";
 import LeaveApprovalSummary from "../../components/leave/LeaveApprovalSummary";
 import LeaveHistoryTable from "../../components/leave/LeaveHistoryTable";
 import LeavePageHeader from "../../components/leave/LeavePageHeader";
@@ -11,6 +12,7 @@ import RejectLeaveModal from "../../components/leave/RejectLeaveModal";
 import useAuth from "../../hooks/useAuth";
 import useEmployeeDirectory from "../../hooks/useEmployeeDirectory";
 import useLeaveRequests from "../../hooks/useLeaveRequests";
+import useManagerScope from "../../hooks/useManagerScope";
 import { isApprover } from "../../utils/attendance/attendanceRequestUtils";
 import { attachEmployeeDetails } from "../../utils/attendance/attendanceUtils";
 import {
@@ -31,6 +33,10 @@ import {
 | the attendance sheet, so the balance on their dashboard moves and the days
 | stop counting as absences the moment the decision is made. Both happen in
 | the service, and this page only reports the outcome.
+|
+| A manager sees the same queue narrowed to the departments they run, and
+| their own request stays on it with the decision withheld: leave is the one
+| approval nobody should be able to grant themselves, so it falls to HR.
 |
 | Requests store the employee id only, so they are joined with the employee
 | directory here before they are listed or searched.
@@ -91,6 +97,16 @@ function LeaveApprovals() {
     loading: directoryLoading,
   } = useEmployeeDirectory(companyCode);
 
+  /*
+  | Both pass everything through for an owner and for HR, so the queue below
+  | is the queue it has always been for them.
+  */
+  const {
+    canReview: canReviewRequest,
+    filterRows,
+    loading: scopeLoading,
+  } = useManagerScope();
+
   useEffect(() => {
 
     setSearchPlaceholder("Search leave requests...");
@@ -102,13 +118,17 @@ function LeaveApprovals() {
 
   }, [setSearch, setSearchPlaceholder]);
 
+  /*
+  | Narrowed before the year filter and before the summary, so the cards, the
+  | table and the "n awaiting your review" line are all counting the same set.
+  */
   const yearRequests = useMemo(
     () =>
       filterLeaveRequestsByYear(
-        attachEmployeeDetails(requests, directory),
+        filterRows(attachEmployeeDetails(requests, directory)),
         year
       ),
-    [requests, directory, year]
+    [filterRows, requests, directory, year]
   );
 
   const summary = useMemo(
@@ -147,7 +167,25 @@ function LeaveApprovals() {
   |--------------------------------------------------------------------------
   */
 
+  /*
+  | Each of the three actions re-asks the same question the buttons were drawn
+  | from. The buttons are already withheld, so this is defence and not the
+  | rule - but a decision reached through a stale render is still a decision
+  | that gets written, and leave is the one that moves a balance.
+  */
+  const refuseOutOfScope = (request) => {
+
+    if (canReviewRequest(request)) return false;
+
+    toast.error("This employee is not in a department you manage.");
+
+    return true;
+
+  };
+
   const handleApprove = async (request) => {
+
+    if (refuseOutOfScope(request)) return;
 
     setApproving(true);
 
@@ -179,6 +217,11 @@ function LeaveApprovals() {
   const handleReject = async (remarks) => {
 
     if (!rejectRequest) return;
+
+    if (refuseOutOfScope(rejectRequest)) {
+      setRejectRequest(null);
+      return;
+    }
 
     setRejecting(true);
 
@@ -215,6 +258,11 @@ function LeaveApprovals() {
   const handleDelete = async () => {
 
     if (!deleteRequest) return;
+
+    if (refuseOutOfScope(deleteRequest)) {
+      setDeleteRequest(null);
+      return;
+    }
 
     try {
 
@@ -268,8 +316,8 @@ function LeaveApprovals() {
           </h3>
 
           <p className="mt-2 max-w-sm text-sm text-slate-500">
-            Only HR and the company owner can review leave requests. Your own
-            requests are on the leave dashboard.
+            Only HR, department managers and the company owner can review
+            leave requests. Your own requests are on the leave dashboard.
           </p>
 
         </div>
@@ -304,14 +352,16 @@ function LeaveApprovals() {
         }
       />
 
+      <DepartmentScopeNotice subject="leave requests" />
+
       <LeaveApprovalSummary
         summary={summary}
-        loading={loading || directoryLoading}
+        loading={loading || directoryLoading || scopeLoading}
       />
 
       <LeaveHistoryTable
         requests={yearRequests}
-        loading={loading || directoryLoading}
+        loading={loading || directoryLoading || scopeLoading}
         error={error}
         onRetry={reload}
         title="Leave Requests"
@@ -339,7 +389,12 @@ function LeaveApprovals() {
               <FiEye size={15} />
             </button>
 
-            {isPendingLeave(request) && (
+            {/*
+            | The decision, only on the rows this reviewer may decide. A
+            | manager's own request keeps the eye and loses the tick, which is
+            | the whole point: they can watch it, and HR grants it.
+            */}
+            {isPendingLeave(request) && canReviewRequest(request) && (
 
               <>
 
@@ -368,15 +423,22 @@ function LeaveApprovals() {
 
             )}
 
-            <button
-              type="button"
-              onClick={() => setDeleteRequest(request)}
-              aria-label="Delete request"
-              title="Delete request"
-              className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition-all hover:border-red-500 hover:bg-red-50 hover:text-red-600"
-            >
-              <FiTrash2 size={15} />
-            </button>
+            {/*
+            | Deleting releases an approved request's days back to the
+            | employee, so it is the same authority as approving it and is
+            | offered on the same rows.
+            */}
+            {canReviewRequest(request) && (
+              <button
+                type="button"
+                onClick={() => setDeleteRequest(request)}
+                aria-label="Delete request"
+                title="Delete request"
+                className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition-all hover:border-red-500 hover:bg-red-50 hover:text-red-600"
+              >
+                <FiTrash2 size={15} />
+              </button>
+            )}
 
           </div>
 
@@ -386,7 +448,7 @@ function LeaveApprovals() {
       <LeaveRequestDetailModal
         open={Boolean(activeDetail)}
         request={activeDetail}
-        canReview={canReview}
+        canReview={canReviewRequest(activeDetail)}
         onClose={() => setDetailRequest(null)}
         onApprove={handleApprove}
         onReject={(request) => {

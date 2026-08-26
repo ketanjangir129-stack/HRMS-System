@@ -8,6 +8,7 @@ import {
   toTimestamp,
 } from "./attendanceDate";
 import { searchRows } from "./attendanceTable";
+import { canReviewRow } from "../permissions/departmentScope";
 
 /*
 |--------------------------------------------------------------------------
@@ -66,8 +67,21 @@ export const canModifyRequest = (request, currentUser) =>
   isPending(request) &&
   request?.employeeId === getCurrentEmployeeId(currentUser);
 
-export const canReviewRequest = (request, currentUser) =>
-  isPending(request) && isApprover(currentUser);
+/*
+| A department scope narrows this further and is optional, so the two callers
+| that have one - the request list and the detail modal - pass it and nothing
+| that does not have one has to be changed.
+|
+| Given a scope, the request must also belong to a department the reviewer
+| runs and must not be their own. Omitting it, or passing the scope of a role
+| that is never narrowed, leaves the answer exactly as it was: pending, and
+| the reviewer is an approver.
+*/
+
+export const canReviewRequest = (request, currentUser, scope = null) =>
+  isPending(request) &&
+  isApprover(currentUser) &&
+  (!scope || canReviewRow(scope, request));
 
 /*
 | A request can only be applied to an attendance record if it actually asks

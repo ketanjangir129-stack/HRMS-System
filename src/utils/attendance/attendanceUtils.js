@@ -661,6 +661,21 @@ export const getAttendanceActivities = (attendance = []) => {
 | no longer say whether it was a present day or a late one.
 */
 
+/*
+| A status turned into the single class name the tile is drawn with. The
+| spaces have to go: "Half Day" lower cased is two words, and the DOM reads
+| two words in a class attribute as two classes - `half` and `day` - neither
+| of which is styled, so the day renders as a blank tile. Hyphenating it also
+| lines a stored status up with `weekly-off`, which the calendar already
+| derives for a day that has no record.
+*/
+
+const toTileClass = (status) =>
+    String(status)
+        .trim()
+        .toLowerCase()
+        .replace(/\s+/g, "-");
+
 export const getAttendanceCalendar = (
     history = [],
     holidayDates = []
@@ -680,7 +695,7 @@ export const getAttendanceCalendar = (
 
         if (!record?.date || !record?.status) return;
 
-        const status = String(record.status).toLowerCase();
+        const status = toTileClass(record.status);
 
         calendar[record.date] = isPendingApproval(record)
             ? `${status} pending`
