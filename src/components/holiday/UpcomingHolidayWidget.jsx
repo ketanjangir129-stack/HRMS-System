@@ -145,27 +145,31 @@ function UpcomingHolidayWidget() {
 
   return (
 
-    <div className="flex flex-col overflow-hidden rounded-2xl bg-white shadow-md">
+    <div className="ui-card flex flex-col overflow-hidden">
 
       {/* Header */}
 
-      <div className="flex items-center justify-between gap-4 px-6 pb-4 pt-6">
+      <div className="flex items-center justify-between gap-4 px-5 pb-4 pt-5 sm:px-6 sm:pt-6">
 
-        <h2 className="text-2xl font-semibold text-gray-800">
-          Upcoming Holidays
-        </h2>
+        <div className="min-w-0">
+
+          <h2 className="ui-card-title">Upcoming Holidays</h2>
+
+          <p className="ui-card-subtitle">The days the office is closed</p>
+
+        </div>
 
         {canOpenCalendar && (
 
           <button
             type="button"
             onClick={() => navigate("/holidays")}
-            className="group flex shrink-0 cursor-pointer items-center gap-2 text-sm font-semibold text-blue-600 transition hover:text-blue-700"
+            className="group flex shrink-0 cursor-pointer items-center gap-1.5 text-xs font-semibold text-blue-600 transition hover:text-blue-700"
           >
             View Calendar
             <FiArrowRight
               className="transition-transform group-hover:translate-x-0.5"
-              size={16}
+              size={14}
             />
           </button>
 
@@ -267,7 +271,7 @@ function UpcomingHolidayWidget() {
           | there is more to scroll to.
           */}
 
-          <div className="max-h-76 space-y-2 overflow-y-auto px-4 pb-2 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-slate-200 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar]:w-1.5 hover:[&::-webkit-scrollbar-thumb]:bg-slate-300">
+          <div className="ui-scroll max-h-76 space-y-2 overflow-y-auto px-4 pb-2 sm:px-5">
 
             {holidays.map((holiday) => {
 
@@ -279,26 +283,53 @@ function UpcomingHolidayWidget() {
 
               return (
 
+                /*
+                | The next one is the answer to the question the card is
+                | actually asked - "when is the next day off" - so it is
+                | drawn as a filled brand panel and the rest of the list
+                | recedes to quiet rows behind it. A tint alone was not
+                | enough separation once the whole app went indigo.
+                */
                 <div
                   key={holiday.holidayId}
-                  className={`flex items-center gap-4 rounded-xl px-3 py-3 transition-colors ${
+                  className={`relative flex items-center gap-3 overflow-hidden rounded-xl px-3 py-3 transition-colors sm:gap-4 ${
                     isNext
-                      ? "bg-blue-50"
+                      ? "bg-linear-to-br from-blue-500 to-blue-600 text-white shadow-md"
                       : "bg-slate-50 hover:bg-slate-100"
                   }`}
                 >
 
+                  {/* An oversized ghost of the type glyph, bled off the
+                      corner. Decoration only, so it is hidden from the
+                      reader rather than announced twice. */}
+                  {isNext && (
+                    <Icon
+                      aria-hidden="true"
+                      className="pointer-events-none absolute -bottom-6 -right-5 h-28 w-28 opacity-10"
+                    />
+                  )}
+
                   {/* Date */}
 
-                  <div className="flex h-12 w-12 shrink-0 flex-col items-center justify-center rounded-xl bg-white shadow-sm">
+                  <div
+                    className={`relative flex h-12 w-12 shrink-0 flex-col items-center justify-center rounded-xl ${
+                      isNext
+                        ? "border border-white/20 bg-white/10 backdrop-blur-md"
+                        : "bg-white shadow-sm"
+                    }`}
+                  >
 
-                    <span className="text-base font-bold leading-none text-slate-900">
+                    <span
+                      className={`text-base font-bold leading-none ${
+                        isNext ? "text-white" : "text-slate-900"
+                      }`}
+                    >
                       {String(holiday.date).slice(8, 10)}
                     </span>
 
                     <span
                       className={`mt-1 text-[10px] font-bold uppercase leading-none tracking-wide ${
-                        isNext ? tone.month : "text-slate-500"
+                        isNext ? "text-blue-100" : "text-slate-500"
                       }`}
                     >
                       {formatHolidayDate(holiday.date).slice(3, 6)}
@@ -306,23 +337,36 @@ function UpcomingHolidayWidget() {
 
                   </div>
 
-                  {/* Type */}
+                  {/* Type - the tinted tile only reads on a white row, so on
+                      the filled one the glyph carries the type by itself. */}
 
                   <div
-                    className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${tone.tile}`}
+                    className={`relative flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${
+                      isNext
+                        ? "border border-white/20 bg-white/10 text-white"
+                        : tone.tile
+                    }`}
                   >
                     <Icon size={20} />
                   </div>
 
                   {/* Name */}
 
-                  <div className="min-w-0 flex-1">
+                  <div className="relative min-w-0 flex-1">
 
-                    <p className="truncate text-[15px] font-bold text-slate-900">
+                    <p
+                      className={`truncate text-[15px] font-bold ${
+                        isNext ? "text-white" : "text-slate-900"
+                      }`}
+                    >
                       {holiday.name}
                     </p>
 
-                    <p className="mt-0.5 truncate text-sm text-slate-400">
+                    <p
+                      className={`mt-0.5 truncate text-xs ${
+                        isNext ? "text-blue-100" : "text-slate-400"
+                      }`}
+                    >
                       {holidayLabel(holiday)}
                     </p>
 
@@ -331,9 +375,9 @@ function UpcomingHolidayWidget() {
                   {/* Countdown */}
 
                   <span
-                    className={`shrink-0 whitespace-nowrap rounded-full px-3.5 py-1.5 text-xs font-semibold ${
+                    className={`relative shrink-0 whitespace-nowrap rounded-full px-3 py-1 text-[11px] font-semibold ${
                       isNext
-                        ? "bg-blue-100 text-blue-700"
+                        ? "bg-black/15 text-white"
                         : "bg-slate-100 text-slate-600"
                     }`}
                   >
@@ -350,9 +394,9 @@ function UpcomingHolidayWidget() {
 
           {/* Footer */}
 
-          <div className="flex items-center gap-2 border-t border-slate-100 px-6 py-3.5 text-sm text-slate-500">
+          <div className="mt-2 flex items-center gap-2 border-t border-slate-100 px-5 py-3.5 text-xs font-medium text-slate-500 sm:px-6">
 
-            <FiCalendar size={16} className="shrink-0" />
+            <FiCalendar size={14} className="shrink-0" />
 
             {holidays.length} upcoming{" "}
             {holidays.length === 1 ? "holiday" : "holidays"}

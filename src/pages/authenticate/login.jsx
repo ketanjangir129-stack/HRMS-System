@@ -99,7 +99,7 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-100 p-4 sm:p-6">
+    <div className="min-h-screen flex items-center justify-center bg-canvas p-4 sm:p-6">
 
       <div className="w-full max-w-4xl bg-white rounded-3xl shadow-xl border border-slate-200 overflow-hidden grid grid-cols-1 md:grid-cols-2">
 
