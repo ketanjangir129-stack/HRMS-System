@@ -59,7 +59,7 @@ function RecentLeaveRequests({
           : "Your latest leave applications"
       }
       action={
-        <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-600">
+        <span className="ui-badge bg-blue-50 text-blue-700">
           {requests.length} Total
         </span>
       }
@@ -84,13 +84,13 @@ function RecentLeaveRequests({
 
       {!loading && !error && visible.length > 0 && (
 
-        <div className="divide-y divide-slate-100">
+        <div className="divide-y divide-line-subtle">
 
           {visible.map((request) => (
 
             <div
               key={request.requestId}
-              className="flex flex-col gap-3 px-4 py-4 transition-colors hover:bg-slate-50 sm:flex-row sm:items-center sm:justify-between sm:px-6"
+              className="flex flex-col gap-3 px-4 py-4 transition-colors hover:bg-surface-muted sm:flex-row sm:items-center sm:justify-between sm:px-6"
             >
 
               <div className="flex min-w-0 items-start gap-3">
@@ -101,16 +101,16 @@ function RecentLeaveRequests({
 
                 <div className="min-w-0">
 
-                  <p className="truncate text-sm font-semibold text-slate-800">
+                  <p className="truncate text-sm font-semibold text-ink-muted">
                     {formatLeaveRange(request)}
                   </p>
 
-                  <p className="mt-0.5 truncate text-xs text-slate-500">
+                  <p className="mt-0.5 truncate text-xs text-ink-subtle">
                     {formatLeaveType(request)} ·{" "}
                     {formatLeaveDuration(request.days)}
                   </p>
 
-                  <p className="mt-1 flex items-center gap-1 text-xs text-slate-400">
+                  <p className="mt-1 flex items-center gap-1 text-xs text-ink-faint">
                     <FiClock size={11} />
                     Applied {formatDateTime(request.requestedAt)}
                   </p>
@@ -130,7 +130,7 @@ function RecentLeaveRequests({
                     onClick={() => onView(request)}
                     aria-label="View request"
                     title="View request"
-                    className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition-all hover:border-blue-500 hover:bg-blue-50 hover:text-blue-600 sm:h-8 sm:w-8"
+                    className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg border border-line text-ink-subtle transition-all hover:border-blue-500 hover:bg-blue-50 hover:text-blue-600 sm:h-8 sm:w-8"
                   >
                     <FiEye size={14} />
                   </button>
@@ -142,7 +142,7 @@ function RecentLeaveRequests({
                     onClick={() => onDelete(request)}
                     aria-label="Withdraw request"
                     title="Withdraw request"
-                    className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition-all hover:border-red-500 hover:bg-red-50 hover:text-red-600 sm:h-8 sm:w-8"
+                    className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg border border-line text-ink-subtle transition-all hover:border-red-500 hover:bg-red-50 hover:text-red-600 sm:h-8 sm:w-8"
                   >
                     <FiTrash2 size={14} />
                   </button>

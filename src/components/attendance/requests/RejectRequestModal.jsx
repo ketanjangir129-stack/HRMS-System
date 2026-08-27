@@ -51,10 +51,10 @@ function RejectForm({
     */
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-900/50 backdrop-blur-sm sm:items-center sm:p-4">
 
-      <div className="flex max-h-[92dvh] w-full max-w-md flex-col overflow-hidden rounded-t-2xl bg-white shadow-2xl sm:max-h-[90dvh] sm:rounded-2xl">
+      <div className="flex max-h-[92dvh] w-full max-w-md flex-col overflow-hidden rounded-t-2xl bg-surface shadow-2xl sm:max-h-[90dvh] sm:rounded-2xl">
 
         {/* Header */}
-        <div className="flex shrink-0 items-center justify-between gap-4 border-b border-slate-200 px-4 py-4 sm:px-6 sm:py-5">
+        <div className="flex shrink-0 items-center justify-between gap-4 border-b border-line px-4 py-4 sm:px-6 sm:py-5">
 
           <div className="flex min-w-0 items-center gap-3">
 
@@ -63,10 +63,10 @@ function RejectForm({
             </div>
 
             <div className="min-w-0">
-              <h2 className="text-lg font-semibold text-slate-900">
+              <h2 className="ui-card-title">
                 {title}
               </h2>
-              <p className="truncate text-sm text-slate-500">
+              <p className="truncate text-sm text-ink-subtle">
                 {employeeName
                   ? `${employeeName}'s ${subject}`
                   : subject.charAt(0).toUpperCase() + subject.slice(1)}
@@ -80,7 +80,7 @@ function RejectForm({
             onClick={onClose}
             disabled={loading}
             aria-label="Close"
-            className="cursor-pointer rounded-lg p-2 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
+            className="ui-icon-btn disabled:cursor-not-allowed disabled:opacity-50"
           >
             <FiX size={20} />
           </button>
@@ -90,7 +90,7 @@ function RejectForm({
         {/* Body */}
         <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6">
 
-          <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">
+          <label className="ui-eyebrow mb-1.5 block">
             Remarks <span className="text-red-500">*</span>
           </label>
 
@@ -100,7 +100,11 @@ function RejectForm({
             onChange={(event) => setRemarks(event.target.value)}
             onBlur={() => setTouched(true)}
             placeholder={placeholder}
-            className="w-full resize-none rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-800 outline-none transition-all placeholder:text-slate-400 focus:border-red-500 focus:bg-white focus:ring-2 focus:ring-red-100"
+            /*
+            | Not `.ui-field`: the kit focuses to the brand hue, and this box
+            | is the one that files a rejection - the red stays.
+            */
+            className="w-full resize-none rounded-xl border border-line bg-surface-muted px-4 py-3 text-sm text-ink outline-none transition-all placeholder:text-ink-faint focus:border-red-500 focus:bg-surface focus:ring-2 focus:ring-red-100"
           />
 
           {touched && isEmpty && (
@@ -113,13 +117,13 @@ function RejectForm({
         </div>
 
         {/* Footer */}
-        <div className="flex shrink-0 flex-col-reverse gap-3 border-t border-slate-200 px-4 py-4 sm:flex-row sm:justify-end sm:px-6 sm:py-5">
+        <div className="flex shrink-0 flex-col-reverse gap-3 border-t border-line px-4 py-4 sm:flex-row sm:justify-end sm:px-6 sm:py-5">
 
           <button
             type="button"
             onClick={onClose}
             disabled={loading}
-            className="cursor-pointer rounded-xl border border-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+            className="ui-btn ui-btn-secondary font-semibold"
           >
             Cancel
           </button>
@@ -128,7 +132,7 @@ function RejectForm({
             type="button"
             onClick={handleReject}
             disabled={loading}
-            className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-xl bg-red-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-red-600/20 transition-all duration-200 hover:-translate-y-0.5 hover:bg-red-700 hover:shadow-lg hover:shadow-red-600/30 focus:outline-none focus:ring-2 focus:ring-red-400 focus:ring-offset-2 active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-60"
+            className="ui-btn bg-red-600 font-semibold text-white shadow-sm hover:bg-red-700"
           >
             {loading && <FiLoader className="animate-spin" />}
             {loading ? loadingLabel : confirmLabel}

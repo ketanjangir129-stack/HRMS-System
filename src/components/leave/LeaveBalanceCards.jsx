@@ -33,7 +33,7 @@ function LeaveBalanceCards({
 
           <div
             key={index}
-            className="h-32 animate-pulse rounded-2xl border border-slate-200 bg-white sm:h-40"
+            className="ui-card h-32 animate-pulse sm:h-40"
           />
 
         ))}
@@ -48,9 +48,9 @@ function LeaveBalanceCards({
 
     return (
 
-      <div className="rounded-2xl border border-slate-200 bg-white p-6 text-center sm:p-10">
+      <div className="ui-card p-6 text-center sm:p-10">
 
-        <h3 className="font-semibold text-slate-700">
+        <h3 className="font-semibold text-ink-muted">
           Leave balance not found
         </h3>
 
@@ -130,7 +130,7 @@ function LeaveBalanceCards({
 
         <div
           key={card.title}
-          className="group relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg sm:p-6"
+          className="ui-card ui-card-interactive group relative overflow-hidden p-4 sm:p-6"
         >
 
           <span
@@ -141,18 +141,18 @@ function LeaveBalanceCards({
 
             <div className="min-w-0">
 
-              <p className="truncate text-xs font-medium text-slate-500 sm:text-sm">
+              <p className="truncate text-xs font-medium text-ink-subtle sm:text-sm">
                 {card.title}
               </p>
 
-              <h2 className="mt-1 text-2xl font-bold text-slate-900 sm:mt-2 sm:text-4xl">
+              <h2 className="mt-1 text-2xl font-bold text-ink sm:mt-2 sm:text-4xl">
                 {card.value}
               </h2>
 
             </div>
 
             <div
-              className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl text-lg sm:h-12 sm:w-12 sm:text-xl ${card.iconBg} ${card.iconColor}`}
+              className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl text-lg transition group-hover:scale-110 sm:h-12 sm:w-12 sm:text-xl ${card.iconBg} ${card.iconColor}`}
             >
               {card.icon}
             </div>
@@ -164,7 +164,7 @@ function LeaveBalanceCards({
           | wrap at half width rather than truncated: which part of the balance
           | is already spoken for is the point of the line.
           */}
-          <p className="mt-4 text-[11px] leading-relaxed text-slate-500 sm:mt-6 sm:text-sm">
+          <p className="mt-4 text-[11px] leading-relaxed text-ink-subtle sm:mt-6 sm:text-sm">
             {card.subtitle}
           </p>
 

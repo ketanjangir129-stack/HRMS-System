@@ -1,16 +1,28 @@
-import { MdDashboard, MdOutlineBeachAccess, MdOutlineCelebration, MdOutlinePolicy } from "react-icons/md";
-import { MdChevronLeft, MdChevronRight, MdClose } from "react-icons/md";
-import { FaBuilding, FaTasks } from "react-icons/fa";
-import { BsFillPersonLinesFill,BsCalendarCheck } from "react-icons/bs";
-import { PiPersonSimpleSnowboardLight } from "react-icons/pi";
-import { GiTakeMyMoney } from "react-icons/gi";
-import { FiSettings } from "react-icons/fi";
+import {
+  Building2,
+  CalendarCheck,
+  ChevronLeft,
+  ChevronRight,
+  LayoutDashboard,
+  ListChecks,
+  PartyPopper,
+  ReceiptIndianRupee,
+  Settings,
+  TreePalm,
+  UserRoundPlus,
+  Users,
+  Wallet,
+  X,
+  ShieldUser,
+} from "lucide-react";
 import { NavLink } from "react-router-dom";
-import {BadgeIndianRupee} from "lucide-react"
 import { useMemo } from "react";
 import useRoleAccess from "../hooks/useRoleAccess";
 
 /*
+|--------------------------------------------------------------------------
+| Menu
+|--------------------------------------------------------------------------
 | Every item carries the permission it is offered under, so the menu is
 | filtered against the company's Roles & Access configuration rather than
 | styled away: a link the role cannot open is not in the list at all.
@@ -18,90 +30,123 @@ import useRoleAccess from "../hooks/useRoleAccess";
 | `ownerOnly` is the one exception that is not configurable - Settings is
 | where the permissions themselves are edited, so it can only ever belong to
 | the owner.
+|
+| The links are grouped rather than run together as one column of eleven.
+| Past about six, a flat list stops being scanned and starts being read, and
+| the four headings below are the questions somebody actually arrives with -
+| who works here, what are they doing, what are they paid, how is this set
+| up. Dashboard needs no heading: it is the first thing in the list and the
+| top of a sidebar is already understood to be the landing page.
+|
+| The order is exactly the order the menu has always been in. Grouping draws
+| lines between the items, it does not move any of them.
+|
+| One icon family, from `lucide-react`. The set used to be assembled from six
+| libraries with six different stroke weights and fill styles, which is the
+| kind of thing nobody names but everybody sees: a solid glyph beside an
+| outlined one reads as the two meaning different kinds of thing.
+|--------------------------------------------------------------------------
 */
 
-const menuItems = [
+const menuGroups = [
   {
-    label: "Dashboard",
-    path: "/dashboard",
-    icon: MdDashboard,
-    permission: "dashboard",
-  },
-  {
-    label: "Departments",
-    path: "/departments",
-    icon: FaBuilding,
-    permission: "departments",
-  },
-
-  {
-    label: "Employees",
-    path: "/employees",
-    icon: BsFillPersonLinesFill,
-    permission: "employees",
-  },
-
-  {
-    label: "On-boarding",
-    path: "/OnboardDashboard",
-    icon: PiPersonSimpleSnowboardLight,
-    permission: "onboarding",
+    label: "",
+    items: [
+      {
+        label: "Dashboard",
+        path: "/dashboard",
+        icon: LayoutDashboard,
+        permission: "dashboard",
+      },
+    ],
   },
   {
-    label: "Attendance",
-    path: "/attendance",
-    icon: BsCalendarCheck,
-    permission: "attendance",
+    label: "People",
+    items: [
+      {
+        label: "Departments",
+        path: "/departments",
+        icon: Building2,
+        permission: "departments",
+      },
+      {
+        label: "Employees",
+        path: "/employees",
+        icon: Users,
+        permission: "employees",
+      },
+      {
+        label: "On-boarding",
+        path: "/OnboardDashboard",
+        icon: UserRoundPlus,
+        permission: "onboarding",
+      },
+    ],
   },
   {
-    label: "Leave",
-    path: "/leave",
-    icon: MdOutlineBeachAccess,
-    permission: "leave",
+    label: "Workforce",
+    items: [
+      {
+        label: "Attendance",
+        path: "/attendance",
+        icon: CalendarCheck,
+        permission: "attendance",
+      },
+      {
+        label: "Leave",
+        path: "/leave",
+        icon: TreePalm,
+        permission: "leave",
+      },
+      {
+        label: "Holidays",
+        path: "/holidays",
+        icon: PartyPopper,
+        permission: "holidays",
+      },
+      {
+        label: "Tasks",
+        path: "/tasks",
+        icon: ListChecks,
+        permission: "tasks",
+      },
+      {
+        label: "HR Policy",
+        path: "/hr-policy",
+        icon: ShieldUser ,
+        permission: "tasks",
+      },
+    ],
   },
   {
-    label: "Holidays",
-    path: "/holidays",
-    icon: MdOutlineCelebration,
-    permission: "holidays",
-  },
-   {
-    label: "Tasks",
-    path: "/tasks",
-    icon: FaTasks,
-    permission: "tasks",
-  },
-  {
-    label: "Salary",
-    path: "/salarydashboard",
-    icon: GiTakeMyMoney,
-    permission: "salary",
-  },
-   {
-    label: "Payroll",
-    path: "/payrolldashboard",
-    icon: BadgeIndianRupee ,
-    permission: "payroll",
+    label: "Finance",
+    items: [
+      {
+        label: "Salary",
+        path: "/salarydashboard",
+        icon: Wallet,
+        permission: "salary",
+      },
+      {
+        label: "Payroll",
+        path: "/payrolldashboard",
+        icon: ReceiptIndianRupee,
+        permission: "payroll",
+      },
+    ],
   },
   {
-    label: "HR Policy",
-    path: "/hr-policy",
-    icon: MdOutlinePolicy,
-    permission: "hrPolicy",
-  },
-  {
-    label: "Settings",
-    path: "/settings",
-    icon: FiSettings,
-    ownerOnly: true,
+    label: "System",
+    items: [
+      {
+        label: "Settings",
+        path: "/settings",
+        icon: Settings,
+        ownerOnly: true,
+      },
+    ],
   },
 ];
-
-/*
-| Stand-ins for the links while the configuration is read. Rendering the full
-| menu first would show links that are about to disappear, and rendering
-| nothing would make the sidebar collapse and jump.
-*/
 
 /*
 | The collapsed look belongs to the desktop rail only - below `lg` the
@@ -110,33 +155,62 @@ const menuItems = [
 | mobile default.
 */
 
+const ROW = "flex h-10 items-center gap-3 rounded-xl px-3";
+
+const ROW_COLLAPSED = "lg:justify-center lg:gap-0 lg:px-0";
+
+/*
+| Stand-ins for the links while the configuration is read. Rendering the full
+| menu first would show links that are about to disappear, and rendering
+| nothing would make the sidebar collapse and jump.
+|
+| It stands in for the grouped menu rather than a flat one, so the headings do
+| not drop in after the rows and shift everything down a line.
+*/
+
 function SidebarSkeleton({ isCollapsed }) {
   return (
-    <ul className="space-y-2">
+    <div className="space-y-6">
 
-      {Array.from({ length: 8 }).map((_, index) => (
+      {[1, 3, 4].map((count, groupIndex) => (
 
-        <li key={index}>
-          <div
-            className={`flex h-[52px] items-center gap-4 rounded-xl bg-surface-muted px-[18px] ${
-              isCollapsed ? "lg:justify-center lg:gap-0 lg:px-2" : ""
-            }`}
-          >
+        <div key={groupIndex}>
 
-            <span className="h-5 w-5 shrink-0 animate-pulse rounded-md bg-surface-raised" />
-
-            <span
-              className={`h-4 w-28 animate-pulse rounded-md bg-surface-raised ${
+          {groupIndex > 0 && (
+            <div
+              className={`mx-3 mb-3 h-2.5 w-16 animate-pulse rounded bg-surface-raised ${
                 isCollapsed ? "lg:hidden" : ""
               }`}
             />
+          )}
 
-          </div>
-        </li>
+          <ul className="space-y-1">
+
+            {Array.from({ length: count }).map((_, index) => (
+
+              <li key={index}>
+                <div className={`${ROW} ${isCollapsed ? ROW_COLLAPSED : ""}`}>
+
+                  <span className="h-[18px] w-[18px] shrink-0 animate-pulse rounded bg-surface-raised" />
+
+                  <span
+                    className={`h-3 w-24 animate-pulse rounded bg-surface-raised ${
+                      isCollapsed ? "lg:hidden" : ""
+                    }`}
+                  />
+
+                </div>
+              </li>
+
+            ))}
+
+          </ul>
+
+        </div>
 
       ))}
 
-    </ul>
+    </div>
   );
 }
 
@@ -144,11 +218,21 @@ function Sidebar({ isCollapsed, onToggle, isMobileOpen = false, onMobileClose })
 
   const { canAccessPage, isOwner, loading } = useRoleAccess();
 
-  const visibleItems = useMemo(
+  /*
+  | The permission filter is applied inside each group, and a group left with
+  | nothing is dropped along with its heading. Otherwise a role without the
+  | money screens would get a "Finance" label standing over empty space.
+  */
+  const visibleGroups = useMemo(
     () =>
-      menuItems.filter((item) =>
-        item.ownerOnly ? isOwner : canAccessPage(item.permission)
-      ),
+      menuGroups
+        .map((group) => ({
+          ...group,
+          items: group.items.filter((item) =>
+            item.ownerOnly ? isOwner : canAccessPage(item.permission)
+          ),
+        }))
+        .filter((group) => group.items.length > 0),
     [canAccessPage, isOwner]
   );
 
@@ -165,42 +249,56 @@ function Sidebar({ isCollapsed, onToggle, isMobileOpen = false, onMobileClose })
       className={`fixed inset-y-0 left-0 z-50 flex h-dvh w-[280px] flex-col border-r border-line bg-surface transition-[transform,width] duration-300 ease-in-out
         lg:static lg:translate-x-0
         ${isMobileOpen ? "translate-x-0" : "-translate-x-full"}
-        ${isCollapsed ? "lg:w-[88px]" : "lg:w-[280px]"}`}
+        ${isCollapsed ? "lg:w-[80px]" : "lg:w-[260px]"}`}
     >
 
-      {/* Logo */}
-      <div className={`h-[95px] shrink-0 border-b border-line flex items-center justify-between px-6 ${isCollapsed ? "lg:justify-center lg:px-3" : ""}`}>
+      {/*
+        Logo. The same 70px as the navbar beside it, so the rule under this
+        block and the rule under the navbar are one unbroken line across the
+        top of the app rather than two that miss each other by 25px.
+      */}
+      <div
+        className={`flex h-16 shrink-0 items-center justify-between gap-3 border-b border-line-subtle px-5 ${
+          isCollapsed ? "lg:justify-center lg:px-0" : ""
+        }`}
+      >
 
-          <div className="flex items-center gap-3 overflow-hidden">
+        <div className="flex min-w-0 items-center gap-3">
 
-              <div className="h-12 w-12 rounded-2xl bg-blue-600 flex items-center justify-center shadow-sm">
-                  <span className="text-white text-xl font-bold">
-                      H
-                  </span>
-              </div>
+          {/* The mark carries a tinted shadow in its own hue rather than a
+              grey one, which is what lifts it off the white rail. */}
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-brand text-lg font-bold text-white shadow-md shadow-brand/25">
+            H
+          </div>
 
-              <div className={`whitespace-nowrap transition-opacity duration-200 ${isCollapsed ? "lg:hidden" : "block"}`}>
-                  <h2 className="text-lg font-bold text-ink leading-none">
-                      HRMS
-                  </h2>
+          <div
+            className={`min-w-0 whitespace-nowrap ${
+              isCollapsed ? "lg:hidden" : ""
+            }`}
+          >
 
-                  <p className="text-xs text-ink-subtle mt-1">
-                      Workforce Management
-                  </p>
-              </div>
+            <h2 className="truncate text-[15px] font-bold leading-none text-ink">
+              HRMS
+            </h2>
+
+            <p className="mt-1 truncate text-[11px] font-medium leading-none text-ink-faint">
+              Workforce Management
+            </p>
 
           </div>
 
-          {/* The drawer has no visible edge to click past on a phone, so it
-              carries its own close button. */}
-          <button
-            type="button"
-            onClick={onMobileClose}
-            className="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-xl text-ink-subtle transition-colors hover:bg-surface-muted hover:text-ink lg:hidden"
-            aria-label="Close menu"
-          >
-            <MdClose size={22} />
-          </button>
+        </div>
+
+        {/* The drawer has no visible edge to click past on a phone, so it
+            carries its own close button. */}
+        <button
+          type="button"
+          onClick={onMobileClose}
+          className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-xl text-ink-subtle transition-colors hover:bg-surface-muted hover:text-ink lg:hidden"
+          aria-label="Close menu"
+        >
+          <X size={20} />
+        </button>
 
       </div>
 
@@ -214,7 +312,10 @@ function Sidebar({ isCollapsed, onToggle, isMobileOpen = false, onMobileClose })
         without it the nav would push the collapse button off screen instead
         of scrolling.
       */}
-      <nav className={`flex-1 min-h-0 overflow-y-auto hide-scrollbar p-5 ${isCollapsed ? "lg:p-3 lg:pt-5" : ""}`}>
+      <nav
+        aria-label="Main"
+        className="hide-scrollbar min-h-0 flex-1 overflow-y-auto px-3 py-4"
+      >
 
         {loading ? (
 
@@ -222,56 +323,155 @@ function Sidebar({ isCollapsed, onToggle, isMobileOpen = false, onMobileClose })
 
         ) : (
 
-          <ul className="space-y-2">
+          <div className="space-y-6">
 
-            {visibleItems.map((item) => {
-              const Icon = item.icon;
+            {visibleGroups.map((group) => (
 
-              return (
-                <li key={item.path}>
-                  {/* Tapping a link on a phone means the drawer has done its
-                      job - it closes with the navigation. */}
-                  <NavLink
-                    to={item.path}
-                    onClick={onMobileClose}
-                    className={({ isActive }) =>
-                      `flex items-center h-[52px] rounded-xl transition-[gap,padding] duration-200 font-semibold gap-4 px-[18px]
-                        ${isCollapsed ? "lg:justify-center lg:gap-0 lg:px-2" : ""}
-                        ${isActive ? "bg-surface-muted text-ink "
-                        : "text-ink-muted hover:bg-surface-muted hover:text-ink"
-                    }`}
-                    title={isCollapsed ? item.label : undefined}
-                  >
-                    <Icon className="text-lg flex-shrink-0" size={20} />
-                    <span className={`whitespace-nowrap ${isCollapsed ? "lg:hidden" : ""}`}>
-                      {item.label}
-                    </span>
-                  </NavLink>
-                </li>
-              );
-            })}
+              <div key={group.label || "primary"}>
 
-          </ul>
+                {/*
+                | The heading, and what stands in for it on the rail. A
+                | collapsed sidebar has no room for a word, but the grouping
+                | still has to survive - so the label becomes a hairline. Both
+                | are `lg:` gated, because below that the sidebar is always the
+                | full drawer and always wants the word.
+                */}
+                {group.label && (
+                  <>
+
+                    <p
+                      className={`ui-eyebrow px-3 pb-2 ${
+                        isCollapsed ? "lg:hidden" : ""
+                      }`}
+                    >
+                      {group.label}
+                    </p>
+
+                    {isCollapsed && (
+                      <div
+                        aria-hidden="true"
+                        className="mx-3 mb-3 hidden h-px bg-line lg:block"
+                      />
+                    )}
+
+                  </>
+                )}
+
+                <ul className="space-y-1">
+
+                  {group.items.map((item) => {
+                    const Icon = item.icon;
+
+                    return (
+                      <li key={item.path}>
+
+                        {/* Tapping a link on a phone means the drawer has done
+                            its job - it closes with the navigation. */}
+                        <NavLink
+                          to={item.path}
+                          onClick={onMobileClose}
+                          title={isCollapsed ? item.label : undefined}
+                          className={({ isActive }) =>
+                            `group/nav ${ROW} text-sm transition-[gap,padding,background-color,color] duration-200
+                              ${isCollapsed ? ROW_COLLAPSED : ""}
+                              ${
+                                /*
+                                | `brand` is indigo #4f46e5 in the light theme
+                                | and #6366f1 in the dark one, and the dark
+                                | value on a dark surface is about 3.9:1 -
+                                | under AA for a 14px label. The dark theme
+                                | takes `brand-hover` instead, which is the
+                                | lighter end of the same indigo and clears it.
+                                */
+                                isActive
+                                  ? "bg-brand/10 font-semibold text-brand dark:text-brand-hover"
+                                  : "font-medium text-ink-muted hover:bg-surface-muted hover:text-ink"
+                              }`
+                          }
+                        >
+
+                          {/*
+                          | The render prop rather than a plain child, so the
+                          | icon can answer the active state too. A tinted row
+                          | with a grey icon still in it looks like a row that
+                          | is half selected.
+                          */}
+                          {({ isActive }) => (
+                            <>
+
+                              <Icon
+                                size={18}
+                                strokeWidth={isActive ? 2.25 : 1.75}
+                                className={`shrink-0 transition-colors ${
+                                  isActive
+                                    ? "text-brand dark:text-brand-hover"
+                                    : "text-ink-subtle group-hover/nav:text-ink"
+                                }`}
+                              />
+
+                              <span
+                                className={`truncate whitespace-nowrap ${
+                                  isCollapsed ? "lg:hidden" : ""
+                                }`}
+                              >
+                                {item.label}
+                              </span>
+
+                            </>
+                          )}
+
+                        </NavLink>
+
+                      </li>
+                    );
+                  })}
+
+                </ul>
+
+              </div>
+
+            ))}
+
+          </div>
 
         )}
 
       </nav>
 
-      {/* Collapsing is a desktop affordance - the drawer is either open or
-          gone, so there is no half state to offer on a phone. */}
-      <div className={`hidden shrink-0 border-t border-line p-4 lg:block ${isCollapsed ? "lg:flex lg:justify-center" : ""}`}>
+      {/*
+        Collapsing is a desktop affordance - the drawer is either open or gone,
+        so there is no half state to offer on a phone.
+
+        No rule above it. The control is a quiet one and a full width line only
+        to carry a single small button made the rail look like it ended twice;
+        whitespace separates it from the menu on its own. It picks up the same
+        padding the nav uses, so the chevron lines up with the edge of the
+        links above it.
+
+        The chevron carries the meaning without a label - which way it points
+        is the whole message. The words stay on the tooltip and on
+        `aria-label`, so a hover and a screen reader still get them.
+      */}
+      <div
+        className={`hidden shrink-0 px-3 pb-4 lg:flex lg:justify-end ${
+          isCollapsed ? "lg:justify-center" : ""
+        }`}
+      >
+
         <button
           type="button"
           onClick={onToggle}
-          className={`flex h-11 cursor-pointer items-center rounded-xl text-ink-subtle transition-colors hover:bg-surface-muted hover:text-ink focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-            isCollapsed ? "w-11 justify-center" : "w-full justify-between px-4"
-          }`}
+          /*
+          | `focus-visible` rather than `focus`, so the ring answers the
+          | keyboard and does not sit there after a mouse click.
+          */
+          className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-xl text-ink-subtle transition-all duration-200 hover:bg-surface-muted hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:ring-offset-surface active:scale-95"
           aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
           title={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
         >
-          {!isCollapsed && <span className="text-sm font-semibold">Collapse sidebar</span>}
-          {isCollapsed ? <MdChevronRight size={22} /> : <MdChevronLeft size={22} />}
+          {isCollapsed ? <ChevronRight size={20} /> : <ChevronLeft size={20} />}
         </button>
+
       </div>
 
     </aside>

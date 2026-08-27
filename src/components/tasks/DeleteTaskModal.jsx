@@ -41,22 +41,19 @@ function DeleteTaskModal({ open, task, deleting, onConfirm, onClose }) {
     >
       <div
         onMouseDown={(event) => event.stopPropagation()}
-        className="w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-2xl"
+        className="w-full max-w-md overflow-hidden rounded-2xl bg-surface shadow-2xl"
       >
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-slate-200 px-6 py-5">
+        <div className="flex items-center justify-between border-b border-line px-6 py-5">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-red-50 text-red-600">
+            <div className="ui-tile ui-tile-sm bg-red-50 text-red-600">
               <Trash2 size={20} />
             </div>
             <div>
-              <h2
-                id="delete-task-title"
-                className="text-lg font-semibold text-slate-900"
-              >
+              <h2 id="delete-task-title" className="ui-card-title">
                 Delete task
               </h2>
-              <p className="text-sm text-slate-500">
+              <p className="text-sm text-ink-subtle">
                 This action cannot be undone.
               </p>
             </div>
@@ -67,7 +64,7 @@ function DeleteTaskModal({ open, task, deleting, onConfirm, onClose }) {
             onClick={onClose}
             disabled={deleting}
             aria-label="Close"
-            className="cursor-pointer rounded-lg p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 disabled:cursor-not-allowed"
+            className="ui-icon-btn disabled:cursor-not-allowed disabled:opacity-50"
           >
             <X size={20} />
           </button>
@@ -79,8 +76,8 @@ function DeleteTaskModal({ open, task, deleting, onConfirm, onClose }) {
             Header already keh chuka hai ki ye wapas nahi hoga, isliye yahan
             wo baat dobara nahi — bas kaunsa task ja raha hai aur kiske liye.
           */}
-          <p className="text-sm text-slate-600">
-            <span className="font-semibold text-slate-800">
+          <p className="text-sm text-ink-muted">
+            <span className="font-semibold text-ink">
               {task?.title || "This task"}
             </span>{" "}
             will be removed for everyone.
@@ -88,21 +85,23 @@ function DeleteTaskModal({ open, task, deleting, onConfirm, onClose }) {
         </div>
 
         {/* Footer */}
-        <div className="flex justify-end gap-3 border-t border-slate-200 px-6 py-5">
+        <div className="flex justify-end gap-3 border-t border-line px-6 py-5">
           <button
             type="button"
             onClick={onClose}
             disabled={deleting}
-            className="cursor-pointer rounded-xl border border-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+            className="ui-btn ui-btn-secondary"
           >
             Cancel
           </button>
 
+          {/* Destructive — kit ka shape, par fill red, kyunki ye brand ka
+              kaam nahi hai */}
           <button
             type="button"
             onClick={onConfirm}
             disabled={deleting}
-            className="inline-flex cursor-pointer items-center gap-2 rounded-xl bg-red-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-red-600/20 transition-all duration-200 hover:-translate-y-0.5 hover:bg-red-700 hover:shadow-lg hover:shadow-red-600/30 disabled:cursor-not-allowed disabled:opacity-60"
+            className="ui-btn bg-red-600 text-white shadow-sm hover:bg-red-700"
           >
             {deleting && <Loader2 size={16} className="animate-spin" />}
             {deleting ? "Deleting..." : "Delete task"}

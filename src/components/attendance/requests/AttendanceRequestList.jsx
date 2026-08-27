@@ -79,7 +79,7 @@ function RowAction({ tone, title, onClick, icon, size = "sm" }) {
       onClick={onClick}
       title={title}
       aria-label={title}
-      className={`inline-flex shrink-0 cursor-pointer items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition-all ${size === "lg" ? "h-11 w-11" : "h-9 w-9"} ${ACTION_STYLES[tone]}`}
+      className={`inline-flex shrink-0 cursor-pointer items-center justify-center rounded-lg border border-line text-ink-subtle transition-all ${size === "lg" ? "h-11 w-11" : "h-9 w-9"} ${ACTION_STYLES[tone]}`}
     >
       {icon}
     </button>
@@ -230,7 +230,7 @@ function AttendanceRequestList({
             | hidden at exactly the breakpoint where its own column appears,
             | so a value is never shown twice and never missing in between.
             */}
-            <p className="mt-1.5 truncate text-xs text-slate-500 xl:hidden">
+            <p className="mt-1.5 truncate text-xs text-ink-subtle xl:hidden">
 
               <span className="lg:hidden">
                 {getRequestTypeLabel(request.type)}
@@ -251,7 +251,7 @@ function AttendanceRequestList({
         sortable: true,
         ...hideBelow("lg"),
         render: (request) => (
-          <span className="inline-flex whitespace-nowrap rounded-lg bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
+          <span className="inline-flex whitespace-nowrap rounded-lg bg-surface-muted px-3 py-1 text-xs font-semibold text-ink-muted">
             {getRequestTypeLabel(request.type)}
           </span>
         ),
@@ -268,16 +268,16 @@ function AttendanceRequestList({
         label: "Requested Times",
         ...hideBelow("xl"),
         render: (request) => (
-          <div className="flex flex-col gap-0.5 whitespace-nowrap text-slate-600">
+          <div className="flex flex-col gap-0.5 whitespace-nowrap text-ink-muted">
             <span>
               In:{" "}
-              <span className="font-semibold text-slate-800">
+              <span className="font-semibold text-ink-muted">
                 {formatTime(request.requestedPunchIn)}
               </span>
             </span>
             <span>
               Out:{" "}
-              <span className="font-semibold text-slate-800">
+              <span className="font-semibold text-ink-muted">
                 {formatTime(request.requestedPunchOut)}
               </span>
             </span>
@@ -354,28 +354,28 @@ function AttendanceRequestList({
 
         </div>
 
-        <div className="space-y-1.5 rounded-xl bg-slate-50 px-3 py-2.5">
+        <div className="space-y-1.5 rounded-xl bg-surface-muted px-3 py-2.5">
 
           <div className="flex flex-wrap items-center gap-2">
 
-            <span className="inline-flex whitespace-nowrap rounded-lg bg-white px-2.5 py-1 text-xs font-semibold text-slate-700 ring-1 ring-slate-200">
+            <span className="inline-flex whitespace-nowrap rounded-lg bg-surface px-2.5 py-1 text-xs font-semibold text-ink-muted ring-1 ring-line">
               {getRequestTypeLabel(request.type)}
             </span>
 
-            <span className="text-xs font-medium text-slate-600">
+            <span className="text-xs font-medium text-ink-muted">
               {formatDate(request.date)}
             </span>
 
           </div>
 
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-ink-subtle">
             In{" "}
-            <span className="font-semibold text-slate-800">
+            <span className="font-semibold text-ink-muted">
               {formatTime(request.requestedPunchIn)}
             </span>
             {" · "}
             Out{" "}
-            <span className="font-semibold text-slate-800">
+            <span className="font-semibold text-ink-muted">
               {formatTime(request.requestedPunchOut)}
             </span>
           </p>
@@ -429,7 +429,7 @@ function AttendanceRequestList({
             <button
               type="button"
               onClick={() => onView(request)}
-              className="inline-flex h-11 flex-1 cursor-pointer items-center justify-center gap-2 rounded-xl border border-slate-200 text-sm font-semibold text-slate-700 transition-all hover:border-blue-500 hover:bg-blue-50 hover:text-blue-600"
+              className="inline-flex h-11 flex-1 cursor-pointer items-center justify-center gap-2 rounded-xl border border-line text-sm font-semibold text-ink-muted transition-all hover:border-blue-500 hover:bg-blue-50 hover:text-blue-600"
             >
               <FiEye size={16} />
               View Details
@@ -468,7 +468,7 @@ function AttendanceRequestList({
     <button
       type="button"
       onClick={onCreate}
-      className="inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-blue-600/20 transition-all duration-200 hover:-translate-y-0.5 hover:bg-blue-700 hover:shadow-lg hover:shadow-blue-600/30 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 active:translate-y-0 sm:w-auto"
+      className="ui-btn ui-btn-primary w-full font-semibold sm:w-auto"
     >
       <FiPlus size={18} />
       New Request
@@ -498,7 +498,7 @@ function AttendanceRequestList({
             {canReview && onScopeChange && (
               /* Fills its line on a phone, so both halves are a comfortable
                  tap target rather than two small pills in a corner. */
-              <div className="inline-flex w-full rounded-xl border border-slate-200 bg-white p-1 sm:w-auto">
+              <div className="inline-flex w-full rounded-xl border border-line bg-surface p-1 sm:w-auto">
 
                 {[
                   { value: "all", label: allScopeLabel },
@@ -511,8 +511,8 @@ function AttendanceRequestList({
                     onClick={() => onScopeChange(tab.value)}
                     className={`flex-1 cursor-pointer whitespace-nowrap rounded-lg px-3 py-1.5 text-sm font-semibold transition-colors sm:flex-none ${
                       scope === tab.value
-                        ? "bg-blue-600 text-white"
-                        : "text-slate-600 hover:bg-slate-50"
+                        ? "bg-brand text-white"
+                        : "text-ink-muted hover:bg-surface-muted"
                     }`}
                   >
                     {tab.label}
@@ -526,10 +526,10 @@ function AttendanceRequestList({
             <button
               type="button"
               onClick={() => setShowFilters((previous) => !previous)}
-              className={`inline-flex cursor-pointer items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-semibold transition-colors ${
+              className={`ui-btn font-semibold ${
                 showFilters
-                  ? "border-blue-200 bg-blue-50 text-blue-700"
-                  : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+                  ? "border border-blue-200 bg-blue-50 text-blue-700"
+                  : "ui-btn-secondary"
               }`}
             >
               <FiFilter />
@@ -543,7 +543,7 @@ function AttendanceRequestList({
               <button
                 type="button"
                 onClick={resetFilters}
-                className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-50"
+                className="ui-btn ui-btn-secondary font-semibold"
               >
                 <FiX />
                 Clear
@@ -559,7 +559,7 @@ function AttendanceRequestList({
                 value={statusFilter}
                 onChange={(event) => setStatusFilter(event.target.value)}
                 aria-label="Filter by status"
-                className="w-full cursor-pointer rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-700 outline-none transition-all focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                className="ui-field cursor-pointer font-medium"
               >
                 <option value="">All Statuses</option>
                 {Object.values(REQUEST_STATUS).map((status) => (
@@ -573,7 +573,7 @@ function AttendanceRequestList({
                 value={typeFilter}
                 onChange={(event) => setTypeFilter(event.target.value)}
                 aria-label="Filter by type"
-                className="w-full cursor-pointer rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-700 outline-none transition-all focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                className="ui-field cursor-pointer font-medium"
               >
                 <option value="">All Types</option>
                 {REQUEST_TYPES.map((type) => (
@@ -624,7 +624,7 @@ function AttendanceRequestList({
               <button
                 type="button"
                 onClick={resetFilters}
-                className="cursor-pointer rounded-xl border border-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50"
+                className="ui-btn ui-btn-secondary font-semibold"
               >
                 Clear Filters
               </button>

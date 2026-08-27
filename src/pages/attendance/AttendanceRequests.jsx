@@ -308,7 +308,7 @@ function AttendanceRequests() {
         icon={<FiFileText />}
       />
 
-      <div className="mt-5 space-y-4 sm:mt-6 sm:space-y-6">
+      <div className="mt-6 space-y-4 sm:mt-8 sm:space-y-6">
 
         <DepartmentScopeNotice subject="requests" />
 

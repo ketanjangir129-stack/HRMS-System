@@ -91,9 +91,9 @@ function AttendanceSummaryCards({
           percentage: summary.pendingPercentage || 0,
           subtitle: caption.pending,
           icon: <FiPauseCircle />,
-          iconBg: "bg-slate-100",
-          iconColor: "text-slate-600",
-          bar: "bg-slate-400",
+          iconBg: "bg-surface-muted",
+          iconColor: "text-ink-muted",
+          bar: "bg-ink-faint",
           /*
           | Fifth of five in a two column grid, so it would otherwise sit on a
           | row of its own with an empty half beside it. Run full width until
@@ -105,26 +105,34 @@ function AttendanceSummaryCards({
       : []),
   ];
 
+  /*
+  | No `h-full` on the grid.
+  |
+  | These sat in a row beside the punch card, which is several times taller
+  | than a stat card and is what decides the height of that row. Asking the
+  | grid to fill the height handed each card two hundred and fifty pixels to
+  | put four short lines in, and no amount of centring rescues a card that is
+  | twice the height of its contents - it only moves the hole from the bottom
+  | to both ends.
+  |
+  | Sized to their contents instead, and the caller places the block in
+  | whatever room the row has.
+  */
+
   return (
-    <div className={`grid h-full gap-3 sm:gap-6 ${gridClassName}`}>
+    <div className={`grid gap-3 sm:gap-6 ${gridClassName}`}>
 
       {cards.map((card) => (
 
         <div
           key={card.title}
           /*
-          | A centred column. These sit in a stretching grid beside a panel
-          | whose height is decided by its own contents, so a card is regularly
-          | given more room than its two lines need.
-          |
-          | Centring is what makes that extra room disappear: the figure and
-          | its bar stay together as one block with the slack split evenly
-          | above and below, which reads as padding. Left at the top it pools
-          | underneath as a hole, and pinned top and bottom it becomes a gap
-          | through the middle - both of which look like the card is broken
-          | rather than roomy.
+          | Still a centred column: the rows of the grid equalise, so a card
+          | whose caption wraps onto a second line makes its neighbour taller
+          | than its own contents. Centring splits that slack evenly rather
+          | than pooling it under the bar.
           */
-          className={`group relative flex flex-col justify-center overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg ${
+          className={`ui-card ui-card-interactive group relative flex flex-col justify-center overflow-hidden ${
             compact
               ? "min-h-32 p-3 sm:min-h-36.25 sm:p-4"
               : "p-4 sm:p-6"
@@ -143,12 +151,12 @@ function AttendanceSummaryCards({
 
             <div className="min-w-0">
 
-              <p className="truncate text-xs font-medium text-slate-500 sm:text-sm">
+              <p className="truncate text-xs font-medium text-ink-subtle sm:text-sm">
                 {card.title}
               </p>
 
               <h2
-                className={`mt-1 font-bold text-slate-900 sm:mt-2 ${
+                className={`mt-1 font-bold text-ink sm:mt-2 ${
                   compact
                     ? "text-2xl sm:text-3xl"
                     : "text-3xl sm:text-4xl"
@@ -171,7 +179,7 @@ function AttendanceSummaryCards({
 
           <div className={compact ? "mt-3" : "mt-4 sm:mt-6"}>
 
-            <div className="mb-2 flex items-center justify-between gap-2 text-[11px] font-medium text-slate-500 sm:text-xs">
+            <div className="mb-2 flex items-center justify-between gap-2 text-[11px] font-medium text-ink-subtle sm:text-xs">
 
               <span className="truncate">{card.subtitle}</span>
 
@@ -179,7 +187,7 @@ function AttendanceSummaryCards({
 
             </div>
 
-            <div className="h-2 overflow-hidden rounded-full bg-slate-100">
+            <div className="h-2 overflow-hidden rounded-full bg-surface-muted">
 
               <div
                 className={`h-full rounded-full transition-all duration-500 ${card.bar}`}

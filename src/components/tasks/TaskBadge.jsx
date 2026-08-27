@@ -23,7 +23,7 @@ import {
 
 function TaskBadge({ value, variant = "status", withCaret = false }) {
   if (!value) {
-    return <span className="text-sm text-slate-400">--</span>;
+    return <span className="text-sm text-ink-faint">--</span>;
   }
 
   const styles = variant === "priority" ? PRIORITY_STYLES : STATUS_STYLES;
@@ -35,7 +35,8 @@ function TaskBadge({ value, variant = "status", withCaret = false }) {
       className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full py-1 pl-3 text-xs font-semibold ${
         withCaret ? "pr-2" : "pr-3"
       } ${
-        styles[value] || "bg-slate-50 text-slate-600 ring-1 ring-inset ring-slate-200"
+        styles[value] ||
+        "bg-surface-muted text-ink-muted ring-1 ring-inset ring-line"
       }`}
     >
       <span

@@ -15,6 +15,18 @@ import { formatCurrency } from "../../utils/salary/formatCurrency";
 |--------------------------------------------------------------------------
 */
 
+/*
+| Two across on a phone rather than stacked, the same as the holiday cards:
+| four full width cards are most of a screen of scrolling before the run card
+| below them starts, and a headcount is a short enough number to read at half
+| the width.
+|
+| Shared by the skeleton so the loading state occupies the same shape the
+| loaded cards will, and the page does not jump when the counts arrive.
+*/
+const GRID_CLASS =
+  "grid grid-cols-2 gap-3 sm:gap-6 xl:grid-cols-4";
+
 function PayrollStatsCards({
   totalEmployees = 0,
   generatedCount = 0,
@@ -27,13 +39,13 @@ function PayrollStatsCards({
 
     return (
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 xl:grid-cols-4">
+      <div className={GRID_CLASS}>
 
         {Array.from({ length: 4 }).map((_, index) => (
 
           <div
             key={index}
-            className="h-32 animate-pulse rounded-2xl border border-slate-200 bg-white sm:h-40"
+            className="ui-card h-32 animate-pulse sm:h-40"
           />
 
         ))}
@@ -104,27 +116,29 @@ function PayrollStatsCards({
 
   return (
 
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 xl:grid-cols-4">
+    <div className={GRID_CLASS}>
 
       {cards.map((card) => (
 
         <div
           key={card.title}
-          className="group relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg sm:p-6"
+          className="ui-card ui-card-interactive group relative overflow-hidden p-4 sm:p-6"
         >
 
-          <span className={`absolute left-0 top-0 h-1 w-full ${card.color}`} />
+          <span
+            className={`absolute left-0 top-0 h-1 w-full ${card.color}`}
+          />
 
-          <div className="flex items-start justify-between gap-3">
+          <div className="flex items-start justify-between gap-2">
 
             <div className="min-w-0">
 
-              <p className="truncate text-sm font-medium text-slate-500">
+              <p className="truncate text-xs font-medium text-ink-subtle sm:text-sm">
                 {card.title}
               </p>
 
               <h2
-                className={`mt-1.5 truncate font-bold text-slate-900 sm:mt-2 ${card.valueClass || "text-3xl sm:text-4xl"}`}
+                className={`mt-1 truncate font-bold text-ink sm:mt-2 ${card.valueClass || "text-2xl sm:text-4xl"}`}
               >
                 {card.value}
               </h2>
@@ -132,14 +146,19 @@ function PayrollStatsCards({
             </div>
 
             <div
-              className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl text-lg sm:h-12 sm:w-12 sm:text-xl ${card.iconBg} ${card.iconColor}`}
+              className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl text-lg transition group-hover:scale-110 sm:h-12 sm:w-12 sm:text-xl ${card.iconBg} ${card.iconColor}`}
             >
               {card.icon}
             </div>
 
           </div>
 
-          <p className="mt-4 text-xs text-slate-500 sm:mt-6 sm:text-sm">
+          {/*
+          | Left to wrap at half width rather than truncated: the generated
+          | and payout captions each carry a figure, and how much of the month
+          | is done is the point of the line.
+          */}
+          <p className="mt-4 text-[11px] leading-relaxed text-ink-subtle sm:mt-6 sm:text-sm">
             {card.subtitle}
           </p>
 

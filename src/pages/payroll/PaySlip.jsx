@@ -513,7 +513,9 @@ const PaySlip = () => {
   };
 
   if (loading) {
-    return <div className="p-4 text-sm sm:p-8 sm:text-base">Loading Payslip...</div>;
+    return (
+      <div className="p-8 text-sm text-ink-subtle">Loading Payslip...</div>
+    );
   }
 
   if (error || !payroll) {
@@ -534,12 +536,12 @@ const PaySlip = () => {
       : fallbackPath || "/dashboard";
 
     return (
-      <div className="space-y-4 p-4 sm:p-8">
+      <div className="mx-auto max-w-[1600px] space-y-4 p-4 sm:p-8">
         <div
-          className={`rounded-lg px-4 py-3 text-sm sm:text-base ${
+          className={`rounded-xl border p-3 text-xs sm:p-4 sm:text-sm ${
             isWaiting
-              ? "bg-amber-50 text-amber-700 ring-1 ring-amber-200"
-              : "bg-red-100 text-red-700"
+              ? "border-amber-200 bg-amber-50 text-amber-700"
+              : "border-red-200 bg-red-50 text-red-600"
           }`}
         >
           {error ||
@@ -550,7 +552,7 @@ const PaySlip = () => {
         <button
           type="button"
           onClick={() => navigate(backPath)}
-          className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 sm:w-auto sm:text-base"
+          className="ui-btn ui-btn-primary font-semibold"
         >
           <FiArrowLeft />
           {backPath === "/payrolldashboard" ? "Back to Payroll" : "Go Back"}
@@ -582,7 +584,7 @@ const PaySlip = () => {
           <button
             type="button"
             onClick={() => navigate("/payrolldashboard")}
-            className={`${styles.downloadButton} ${styles.backButton}`}
+            className={`ui-btn ui-btn-secondary font-semibold ${styles.back}`}
           >
             <FiArrowLeft className="shrink-0" />
             Back
@@ -591,12 +593,15 @@ const PaySlip = () => {
           {/*
           | Only the months that were generated are offered, so choosing one
           | can never land on a payslip that does not exist.
+          |
+          | Not `.ui-field`: the kit's field fills its line, and this control
+          | is a toolbar item that sits at its own width beside the buttons.
           */}
           <select
             value={selectedMonth}
             onChange={(event) => setSelectedMonth(event.target.value)}
             aria-label="Payslip month"
-            className={styles.monthSelect}
+            className="cursor-pointer rounded-xl border border-line bg-surface px-3 py-2.5 text-sm font-semibold text-ink-muted outline-none transition-all focus:border-brand focus:ring-2 focus:ring-brand-ring"
           >
             {payrolls.map((item) => (
               <option key={item.payrollMonth} value={item.payrollMonth}>
@@ -608,7 +613,7 @@ const PaySlip = () => {
           <button
             type="button"
             onClick={handleDownload}
-            className={styles.downloadButton}
+            className="ui-btn ui-btn-primary font-semibold"
           >
             <FiDownload className="shrink-0" />
             {/*

@@ -48,7 +48,7 @@ function AttendanceRecentActivity({
         return {
           icon: <FiLogIn />,
           color:
-            "bg-slate-50 text-slate-600 ring-slate-100",
+            "bg-surface-muted text-ink-muted ring-line-subtle",
         };
 
     }
@@ -58,7 +58,7 @@ function AttendanceRecentActivity({
 
   return (
 
-    <div className="flex h-full flex-col rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
+    <div className="ui-card ui-card-body flex h-full flex-col">
 
       {/* Header */}
 
@@ -66,17 +66,17 @@ function AttendanceRecentActivity({
 
         <div className="min-w-0">
 
-          <h2 className="text-base font-semibold text-slate-900 sm:text-lg">
+          <h2 className="ui-card-title">
             Recent Activities
           </h2>
 
-          <p className="mt-1 text-xs text-slate-500 sm:text-sm">
+          <p className="ui-card-subtitle">
             Latest attendance updates
           </p>
 
         </div>
 
-        <span className="shrink-0 whitespace-nowrap rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-600">
+        <span className="ui-badge shrink-0 bg-blue-50 text-blue-700">
           {latestActivities.length} Events
         </span>
 
@@ -92,11 +92,11 @@ function AttendanceRecentActivity({
 
             <div key={item} className="flex items-center gap-4">
 
-              <div className="h-10 w-10 shrink-0 animate-pulse rounded-xl bg-slate-200" />
+              <div className="h-10 w-10 shrink-0 animate-pulse rounded-xl bg-surface-raised" />
 
               <div className="flex-1 space-y-2">
-                <div className="h-3 w-32 animate-pulse rounded-md bg-slate-200" />
-                <div className="h-3 w-20 animate-pulse rounded-md bg-slate-100" />
+                <div className="h-3 w-32 animate-pulse rounded-md bg-surface-raised" />
+                <div className="h-3 w-20 animate-pulse rounded-md bg-surface-muted" />
               </div>
 
             </div>
@@ -116,15 +116,15 @@ function AttendanceRecentActivity({
           <div className="text-center">
 
             <FiClock
-              className="mx-auto mb-3 text-slate-300"
+              className="mx-auto mb-3 text-ink-faint"
               size={34}
             />
 
-            <p className="font-medium text-slate-500">
+            <p className="font-medium text-ink-subtle">
               No activity found
             </p>
 
-            <p className="mt-1 text-sm text-slate-400">
+            <p className="mt-1 text-sm text-ink-faint">
               Attendance activities will appear here.
             </p>
 
@@ -154,31 +154,31 @@ function AttendanceRecentActivity({
 
                 {index !== latestActivities.length - 1 && (
 
-                  <span className="absolute bottom-0 left-5 top-11 w-px bg-slate-200" />
+                  <span className="absolute bottom-0 left-5 top-11 w-px bg-line" />
 
                 )}
 
                 <div
-                  className={`relative z-10 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-base ring-4 ring-white ${activity.color}`}
+                  className={`relative z-10 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-base ring-4 ring-surface ${activity.color}`}
                 >
 
                   {activity.icon}
 
                 </div>
 
-                <div className="min-w-0 flex-1 rounded-xl px-3 py-1 transition-colors group-hover:bg-slate-50">
+                <div className="min-w-0 flex-1 rounded-xl px-3 py-1 transition-colors group-hover:bg-surface-muted">
 
                   <div className="flex items-start justify-between gap-3">
 
                     <div className="min-w-0">
 
-                      <p className="truncate text-sm font-semibold text-slate-800">
+                      <p className="truncate text-sm font-semibold text-ink-muted">
 
                         {item.employee}
 
                       </p>
 
-                      <p className="truncate text-sm text-slate-500">
+                      <p className="truncate text-sm text-ink-subtle">
 
                         {item.title}
 
@@ -186,7 +186,7 @@ function AttendanceRecentActivity({
 
                     </div>
 
-                    <span className="whitespace-nowrap text-xs text-slate-400">
+                    <span className="whitespace-nowrap text-xs text-ink-faint">
 
                       {formatTime(item.time)}
 
@@ -194,7 +194,7 @@ function AttendanceRecentActivity({
 
                   </div>
 
-                  <p className="mt-1 line-clamp-2 text-xs text-slate-400">
+                  <p className="mt-1 line-clamp-2 text-xs text-ink-faint">
 
                     {item.description}
 

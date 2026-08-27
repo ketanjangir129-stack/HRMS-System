@@ -20,18 +20,16 @@ function AttendanceQuickActions({ className = "", gridClassName = "" }) {
   if (actions.length === 0) return null;
 
   return (
-    <div
-      className={`h-full rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6 ${className}`}
-    >
+    <div className={`ui-card ui-card-body h-full ${className}`}>
 
       {/* Header */}
-      <div className="mb-4">
+      <div className="mb-5">
 
-        <h2 className="text-base font-semibold text-slate-900 sm:text-lg">
+        <h2 className="ui-card-title">
           Quick Actions
         </h2>
 
-        <p className="mt-1 text-xs text-slate-500 sm:text-sm">
+        <p className="ui-card-subtitle">
           Manage attendance modules
         </p>
 
@@ -60,7 +58,7 @@ function AttendanceQuickActions({ className = "", gridClassName = "" }) {
             key={action.title}
             type="button"
             onClick={() => navigate(action.path)}
-            className="group flex min-h-19 w-full cursor-pointer items-center justify-between gap-3 rounded-xl border border-slate-100 p-3 text-left transition-all duration-200 hover:border-slate-200 hover:bg-slate-50 sm:border-transparent"
+            className="group flex min-h-19 w-full cursor-pointer items-center justify-between gap-3 rounded-xl border border-line-subtle bg-surface-muted/50 p-3 text-left transition-all duration-200 hover:border-line hover:bg-surface-muted"
           >
 
             <div className="flex min-w-0 items-center gap-3">
@@ -73,11 +71,11 @@ function AttendanceQuickActions({ className = "", gridClassName = "" }) {
 
               <div className="min-w-0">
 
-                <p className="text-sm font-semibold text-slate-800 transition-colors group-hover:text-blue-600">
+                <p className="text-sm font-semibold text-ink-muted transition-colors group-hover:text-brand">
                   {action.title}
                 </p>
 
-                <p className="text-xs text-slate-500">
+                <p className="text-xs text-ink-subtle">
                   {action.description}
                 </p>
 
@@ -85,7 +83,7 @@ function AttendanceQuickActions({ className = "", gridClassName = "" }) {
 
             </div>
 
-            <FiChevronRight className="shrink-0 text-slate-300 transition-all duration-200 group-hover:translate-x-1 group-hover:text-blue-600" />
+            <FiChevronRight className="shrink-0 text-ink-faint transition-all duration-200 group-hover:translate-x-1 group-hover:text-brand" />
 
           </button>
 

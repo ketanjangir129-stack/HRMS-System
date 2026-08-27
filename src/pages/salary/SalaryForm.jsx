@@ -431,14 +431,15 @@ function SalaryForm() {
                     title="Salary Structure"
                     subtitle="Employee not found"
                     icon={<TbMoneybagEdit />}
-                    backTo="/salarydashboard"
+                    backTo="/salarydashboard/salary"
+                    backLabel="Salaries"
                 />
 
-                <div className="rounded-2xl border border-slate-200 bg-white p-10 text-center shadow-sm">
+                <div className="ui-card p-10 text-center">
 
-                    <p className="text-slate-500">
+                    <p className="text-sm text-ink-subtle">
                         We couldn't find an employee with the ID{" "}
-                        <span className="font-semibold text-slate-700">
+                        <span className="font-semibold text-ink">
                             {employeeId}
                         </span>.
                     </p>
@@ -469,6 +470,10 @@ function SalaryForm() {
         },
     ];
 
+    /*
+    | The figure is set in ink and the hue is carried by the tile and the bar
+    | above it, the way the dashboard's stat cards are drawn.
+    */
     const summaryCards = [
         {
             title: "Gross Salary",
@@ -477,7 +482,6 @@ function SalaryForm() {
             icon: <FiTrendingUp />,
             iconBg: "bg-emerald-50",
             iconColor: "text-emerald-600",
-            valueColor: "text-emerald-600",
             bar: "bg-emerald-500",
         },
         {
@@ -487,7 +491,6 @@ function SalaryForm() {
             icon: <FiTrendingDown />,
             iconBg: "bg-red-50",
             iconColor: "text-red-600",
-            valueColor: "text-red-600",
             bar: "bg-red-500",
         },
         {
@@ -497,7 +500,6 @@ function SalaryForm() {
             icon: <TbMoneybagEdit />,
             iconBg: "bg-blue-50",
             iconColor: "text-blue-600",
-            valueColor: "text-blue-600",
             bar: "bg-blue-500",
         },
     ];
@@ -539,11 +541,7 @@ function SalaryForm() {
 
         <div key={field.name}>
 
-            <label
-                htmlFor={field.name}
-                className="mb-2 flex items-center gap-1.5 text-sm font-medium text-slate-700"
-            >
-
+            <label htmlFor={field.name} className="ui-label">
                 {field.label}
 
                 {readOnly && (
@@ -558,7 +556,7 @@ function SalaryForm() {
 
             <div className="relative">
 
-                <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm font-medium text-slate-400">
+                <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm font-medium text-ink-faint">
                     ₹
                 </span>
 
@@ -577,11 +575,12 @@ function SalaryForm() {
                     onChange={onChange}
                     readOnly={readOnly}
                     placeholder="0"
-                    className={`w-full rounded-xl border border-slate-200 py-2.5 pl-8 pr-4 text-sm text-slate-900 shadow-sm outline-none transition-all placeholder:text-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 ${
-                        readOnly
-                            ? "cursor-default bg-slate-50 font-medium text-slate-600"
-                            : "bg-white hover:border-slate-300"
-                    }`}
+                    /*
+                    | `pl-8` after the kit class, not instead of it: the utility
+                    | is emitted later in the cascade, so it only moves the text
+                    | clear of the ₹ and leaves the rest of the field alone.
+                    */
+                    className="ui-field pl-8"
                 />
 
             </div>
@@ -607,12 +606,11 @@ function SalaryForm() {
                         : "Set up the salary structure for this employee"
                 }
                 icon={<TbMoneybagEdit />}
-                backTo="/salarydashboard"
-                /* The pill is small enough to sit beside the title on a phone. */
-                inlineAction
+                backTo="/salarydashboard/salary"
+                backLabel="Salaries"
                 action={
                     <span
-                        className={`inline-flex w-fit items-center whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-medium sm:px-3 sm:text-sm ${
+                        className={`ui-badge ${
                             isEditMode
                                 ? "bg-amber-50 text-amber-700"
                                 : "bg-emerald-50 text-emerald-700"
@@ -624,13 +622,13 @@ function SalaryForm() {
             />
 
             {/* Employee Information */}
-            <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+            <div className="ui-card ui-card-body">
 
                 <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
 
                     <div className="flex items-center gap-4">
 
-                        <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-blue-50 text-xl font-bold text-blue-600">
+                        <div className="ui-tile h-14 w-14 bg-blue-50 text-xl font-bold text-blue-600">
                             {(employee.personalInfo?.name || "?")
                                 .charAt(0)
                                 .toUpperCase()}
@@ -638,11 +636,11 @@ function SalaryForm() {
 
                         <div>
 
-                            <h2 className="text-lg font-semibold text-slate-900">
+                            <h2 className="ui-card-title">
                                 {employee.personalInfo?.name || "—"}
                             </h2>
 
-                            <p className="mt-1 text-sm text-slate-500">
+                            <p className="ui-card-subtitle">
                                 Employee information
                             </p>
 
@@ -656,11 +654,11 @@ function SalaryForm() {
 
                             <div key={detail.label}>
 
-                                <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
+                                <p className="ui-eyebrow">
                                     {detail.label}
                                 </p>
 
-                                <p className="mt-1 text-sm font-semibold text-slate-800">
+                                <p className="mt-1 text-sm font-semibold text-ink">
                                     {detail.value}
                                 </p>
 
@@ -675,23 +673,23 @@ function SalaryForm() {
             </div>
 
             {/* Earnings & Deductions */}
-            <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+            <div className="grid grid-cols-1 gap-4 sm:gap-6 xl:grid-cols-2">
 
-                <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+                <div className="ui-card ui-card-body">
 
                     <div className="mb-5 flex items-center gap-3">
 
-                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
+                        <div className="ui-tile ui-tile-sm bg-emerald-50 text-emerald-600">
                             <FiTrendingUp size={20} />
                         </div>
 
                         <div>
 
-                            <h2 className="text-lg font-semibold text-slate-900">
+                            <h2 className="ui-card-title">
                                 Earnings
                             </h2>
 
-                            <p className="text-sm text-slate-500">
+                            <p className="ui-card-subtitle">
                                 Salary components added to the gross pay
                             </p>
 
@@ -725,21 +723,21 @@ function SalaryForm() {
 
                 </div>
 
-                <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+                <div className="ui-card ui-card-body">
 
                     <div className="mb-5 flex items-center gap-3">
 
-                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-red-50 text-red-600">
+                        <div className="ui-tile ui-tile-sm bg-red-50 text-red-600">
                             <FiTrendingDown size={20} />
                         </div>
 
                         <div>
 
-                            <h2 className="text-lg font-semibold text-slate-900">
+                            <h2 className="ui-card-title">
                                 Deductions
                             </h2>
 
-                            <p className="text-sm text-slate-500">
+                            <p className="ui-card-subtitle">
                                 Amounts subtracted from the gross pay
                             </p>
 
@@ -822,19 +820,19 @@ function SalaryForm() {
             </div>
 
             {/* Salary Summary */}
-            <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+            <div className="ui-card ui-card-body">
 
-                <h2 className="mb-5 text-lg font-semibold text-slate-900">
+                <h2 className="ui-card-title mb-5">
                     Salary Summary
                 </h2>
 
-                <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+                <div className="grid grid-cols-1 gap-4 sm:gap-6 md:grid-cols-3">
 
                     {summaryCards.map((card) => (
 
                         <div
                             key={card.title}
-                            className="group relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg"
+                            className="ui-card ui-card-interactive group relative overflow-hidden p-4 sm:p-6"
                         >
 
                             <span
@@ -843,26 +841,24 @@ function SalaryForm() {
 
                             <div className="flex items-start justify-between gap-3">
 
-                                <div>
+                                <div className="min-w-0">
 
-                                    <p className="text-sm font-medium text-slate-500">
+                                    <p className="truncate text-xs font-medium text-ink-subtle sm:text-sm">
                                         {card.title}
                                     </p>
 
-                                    <h3
-                                        className={`mt-2 text-2xl font-bold ${card.valueColor}`}
-                                    >
+                                    <h3 className="mt-1 text-2xl font-bold text-ink sm:mt-2 sm:text-3xl">
                                         {formatCurrency(card.value)}
                                     </h3>
 
-                                    <p className="mt-2 text-xs font-medium text-slate-400">
+                                    <p className="mt-2 text-[11px] font-medium text-ink-subtle sm:text-xs">
                                         {card.subtitle}
                                     </p>
 
                                 </div>
 
                                 <div
-                                    className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-xl transition group-hover:scale-110 ${card.iconBg} ${card.iconColor}`}
+                                    className={`ui-tile h-10 w-10 text-lg transition group-hover:scale-110 sm:h-12 sm:w-12 sm:text-xl ${card.iconBg} ${card.iconColor}`}
                                 >
                                     {card.icon}
                                 </div>
@@ -878,9 +874,9 @@ function SalaryForm() {
             </div>
 
             {/* Actions */}
-            <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white px-5 py-4 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:px-6">
+            <div className="ui-card flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
 
-                <p className="text-sm text-slate-500">
+                <p className="text-sm text-ink-subtle">
                     {isEditMode
                         ? "The current structure is saved to salary history before it is replaced."
                         : "Review the amounts before assigning the salary."}
@@ -889,15 +885,15 @@ function SalaryForm() {
                 <div className="flex items-center gap-3">
 
                     <button
-                        onClick={() => navigate("/salarydashboard")}
-                        className="inline-flex cursor-pointer items-center justify-center rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-600 shadow-sm transition-all duration-200 hover:border-slate-300 hover:bg-slate-50"
+                        onClick={() => navigate("/salarydashboard/salary")}
+                        className="ui-btn ui-btn-secondary font-semibold"
                     >
                         Cancel
                     </button>
 
                     <button
                         onClick={handleSubmit}
-                        className="group inline-flex cursor-pointer items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-blue-600/20 transition-all duration-200 hover:-translate-y-0.5 hover:bg-blue-700 hover:shadow-lg hover:shadow-blue-600/30 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 active:translate-y-0"
+                        className="ui-btn ui-btn-primary group font-semibold"
                     >
 
                         <FiCheck

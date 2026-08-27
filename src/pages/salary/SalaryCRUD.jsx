@@ -1,71 +1,61 @@
 import { useState, useEffect, useMemo } from "react";
-import {
-    useNavigate,
-    useOutletContext,
-    useSearchParams,
-} from "react-router-dom";
+import { useNavigate, useOutletContext } from "react-router-dom";
 import { BsClockHistory } from "react-icons/bs";
-import { TbMoneybagEdit, TbReportMoney } from "react-icons/tb";
-import { FiLock } from "react-icons/fi";
+import { TbMoneybagEdit } from "react-icons/tb";
+import { FiPlus, FiUsers, FiCheckCircle, FiAlertCircle } from "react-icons/fi";
 import { toast } from "react-toastify";
-import * as salaryService from "../../services/SalaryService";
+import { getEmployeeWithSalaryStatus, getAllSalary } from "../../services/SalaryService";
+import { filterData } from "../../utils/search/filterData";
 import { exportSalariesToExcel } from "../../utils/salary/exportSalaries";
+import {
+    AttendancePanel,
+    ExportButton,
+    FilterSelect,
+} from "../../components/attendance/common/AttendancePanel";
+import DataTable from "../../components/attendance/common/DataTable";
+import EmployeeCell from "../../components/attendance/common/EmployeeCell";
 import SalaryPageHeader from "../../components/salary/SalaryPageHeader";
-import SalaryRegisterTable from "../../components/salary/SalaryRegisterTable";
-import SalaryRevisionsPanel from "../../components/salary/SalaryRevisionsPanel";
-import SalaryStatsCards from "../../components/salary/SalaryStatsCards";
-import SalaryTabs from "../../components/salary/SalaryTabs";
 import useRoleAccess from "../../hooks/useRoleAccess";
 
 /*
 |--------------------------------------------------------------------------
-| Salary
+| Create & Update Salaries
 |--------------------------------------------------------------------------
-| The whole salary module on one screen, reached from the sidebar and the
-| dashboard's quick links.
+| Every employee on the register with the state of their salary structure,
+| and the action that either assigns one or opens it for a revision.
 |
-| It used to be a landing page of two cards that led to two more pages. The
-| cards said nothing the pages did not say better, so the landing page is
-| gone and its two destinations are tabs here instead: the register that
-| structures are created and revised on, and the history of every revision
-| that has been made.
+| The panel, the table and the toolbar controls are the shared ones used by
+| the attendance and payroll modules, so filtering stays here while sorting,
+| pagination and the loading / empty states live in `DataTable`.
 |
-| That pairing is the point of the merge — a revision is read and then made
-| from the same screen, rather than through a menu and back.
-|
-| This file is the container only. It owns which tab is showing, the register
-| itself and the permissions that decide what may be offered; the summary,
-| the tab bar, the table and the revision history are components under
-| `components/salary`.
-|
-| The two sections keep the permissions they were mounted behind as routes:
-| `salary.manage` and `salary.revisions` now gate a tab rather than an
-| address, so a role that was only ever given one of them still sees only
-| that one.
+| Columns are prioritised rather than all forced onto a phone: the employee,
+| the status and the action stay on every screen, and the department and the
+| designation drop out as the viewport narrows. Both are repeated inside the
+| employee cell, so nothing is lost on a small screen.
 |--------------------------------------------------------------------------
 */
 
-const TAB = {
-    REGISTER: "register",
-    REVISIONS: "revisions",
+const HIDDEN_UNTIL = {
+    md: "hidden md:table-cell",
+    lg: "hidden lg:table-cell",
 };
 
-function SalaryCRUD() {
+const STATUS_FILTERS = [
+    { value: "assigned", label: "Assigned" },
+    { value: "pending", label: "Not Assigned" },
+];
 
+function SalaryCRUD() {
     const companyCode = localStorage.getItem("companyCode");
 
     const navigate = useNavigate();
 
     const { canAccessSection } = useRoleAccess();
 
-    const { search, setSearch, setSearchPlaceholder } = useOutletContext();
-
     /*
-    | Each action opens a guarded route, so none of them is offered without
-    | the permission that lets it open.
+    | Each action opens a guarded route, so none of them is offered without the
+    | permission that lets it open.
     */
-    const canManage = canAccessSection("salary.manage");
-    const canViewRevisions = canAccessSection("salary.revisions");
     const canCreate = canAccessSection("salary.create");
     const canUpdate = canAccessSection("salary.update");
     const canViewHistory = canAccessSection("salary.history");
@@ -76,155 +66,100 @@ function SalaryCRUD() {
     */
     const canExport = canUpdate || canViewHistory;
 
-    const tabs = useMemo(
-        () =>
-            [
-                {
-                    key: TAB.REGISTER,
-                    label: "Create & Update",
-                    description:
-                        "Assign a new salary structure or revise an existing one",
-                    icon: <TbMoneybagEdit />,
-                    allowed: canManage,
-                },
-                {
-                    key: TAB.REVISIONS,
-                    label: "Revision History",
-                    description: "Every revision made to a salary structure",
-                    icon: <BsClockHistory />,
-                    allowed: canViewRevisions,
-                },
-            ].filter((tab) => tab.allowed),
-        [canManage, canViewRevisions]
+    const [employees, setEmployees] = useState([]);
+
+    const [loading, setLoading] = useState(true);
+    const [exporting, setExporting] = useState(false);
+
+    const { search, setSearch, setSearchPlaceholder } = useOutletContext();
+
+    const [departmentFilter, setDepartmentFilter] = useState("");
+    const [statusFilter, setStatusFilter] = useState("");
+
+    const loadEmployees = async () => {
+        setLoading(true);
+        try {
+            const data =
+                await getEmployeeWithSalaryStatus(companyCode);
+            setEmployees(data);
+        }
+        catch (error) {
+            console.error(error);
+        }
+
+        finally {
+            setLoading(false);
+        }
+    };
+    useEffect(() => {
+        loadEmployees();
+    }, []);
+
+    const departments = useMemo(
+        () => [
+            ...new Set(
+                employees
+                    .map((employee) => employee.department)
+                    .filter(Boolean)
+            ),
+        ],
+        [employees]
     );
 
     /*
-    | The tab lives in the address so a revision can be linked to and the back
-    | button steps between the two rather than off the screen. A tab this role
-    | cannot open — or a value nobody recognises — falls back to the first one
-    | it can.
+    | What the table shows is also what the export carries, so the filtered
+    | list is derived from the register rather than kept in its own state -
+    | the two cannot fall out of step that way.
     */
-    const [searchParams, setSearchParams] = useSearchParams();
+    const filteredEmployees = useMemo(() => {
 
-    const requestedTab = searchParams.get("tab");
-
-    const activeTab = tabs.some((tab) => tab.key === requestedTab)
-        ? requestedTab
-        : tabs[0]?.key || "";
-
-    const openTab = (key) => {
-        setSearchParams(key === tabs[0]?.key ? {} : { tab: key }, {
-            replace: true,
-        });
-    };
-
-    const [employees, setEmployees] = useState([]);
-    const [loading, setLoading] = useState(canManage);
-    const [exporting, setExporting] = useState(false);
-
-    /*
-    | The register belongs to the first tab, so it is only read for a role
-    | that has it. A revisions-only role loads the revisions and nothing else.
-    */
-    useEffect(() => {
-
-        let cancelled = false;
-
-        const load = async () => {
-
-            if (!canManage) {
-                setEmployees([]);
-                setLoading(false);
-                return;
-            }
-
-            setLoading(true);
-
-            try {
-
-                const data = await salaryService.getEmployeeWithSalaryStatus(companyCode);
-
-                if (!cancelled) {
-                    setEmployees(data);
-                }
-
-            }
-
-            catch (error) {
-
-                console.error(error);
-
-                if (!cancelled) {
-                    setEmployees([]);
-                    toast.error("Could not load the salary register.");
-                }
-
-            }
-
-            finally {
-
-                if (!cancelled) {
-                    setLoading(false);
-                }
-
-            }
-
-        };
-
-        load();
-
-        return () => {
-            cancelled = true;
-        };
-
-    }, [companyCode, canManage]);
-
-    // The navbar search is shared, so it says what the tab under it searches.
-    useEffect(() => {
-
-        setSearchPlaceholder(
-            activeTab === TAB.REVISIONS
-                ? "Search revisions..."
-                : "Search employee..."
+        const searched = filterData(
+            employees,
+            search,
+            [
+                "employeeId",
+                "name",
+                "department",
+                "designation",
+            ]
         );
 
-    }, [activeTab, setSearchPlaceholder]);
+        return searched.filter((employee) => {
 
-    /*
-    | A term typed for one tab means nothing to the other, and the box itself
-    | belongs to the layout, so it is cleared on the way out as well as on the
-    | way between the two.
-    */
-    useEffect(() => {
-        setSearch("");
-    }, [activeTab, setSearch]);
+            const matchesDepartment =
+                !departmentFilter ||
+                employee.department === departmentFilter;
 
-    useEffect(() => {
+            const matchesStatus =
+                !statusFilter ||
+                (statusFilter === "assigned"
+                    ? employee.salaryAssigned
+                    : !employee.salaryAssigned);
 
-        return () => {
-            setSearch("");
-            setSearchPlaceholder("Search...");
-        };
+            return matchesDepartment && matchesStatus;
 
-    }, [setSearch, setSearchPlaceholder]);
+        });
 
-    const assignedCount = employees.filter(
-        (employee) => employee.salaryAssigned
-    ).length;
+    }, [
+        employees,
+        search,
+        departmentFilter,
+        statusFilter,
+    ]);
 
     /*
     | The table only holds who an employee is, so the structures behind the
     | rows are fetched at export time and matched to whatever the filters
     | have left on screen.
     */
-    const handleExport = async (rows) => {
+    const handleExport = async () => {
 
         if (!canExport) {
             toast.error("You are not allowed to export salaries.");
             return;
         }
 
-        if (!rows.length) {
+        if (!filteredEmployees.length) {
             toast.info("There is nothing to export.");
             return;
         }
@@ -233,138 +168,411 @@ function SalaryCRUD() {
 
         try {
 
-            const salaries = await salaryService.getAllSalary(companyCode);
+            const salaries = await getAllSalary(companyCode);
 
-            exportSalariesToExcel(rows, salaries);
+            exportSalariesToExcel(
+                filteredEmployees,
+                salaries
+            );
 
             toast.success("Salary details exported.");
 
         }
-
         catch (error) {
             console.error(error);
             toast.error("Could not export salary details.");
         }
-
         finally {
             setExporting(false);
         }
 
     };
 
-    const openEmployeeHistory = (employeeId) =>
-        navigate(`/salarydashboard/salary/history/${employeeId}`);
+    useEffect(() => {
+        return () => {
+            setSearch("");
+        };
+    }, []);
+
+    useEffect(() => {
+        setSearchPlaceholder("Search employee...");
+        return () => {
+            setSearchPlaceholder("Search...");
+        };
+
+    }, []);
+
+    const assignedCount = employees.filter(
+        (employee) => employee.salaryAssigned
+    ).length;
+
+    /*
+    | Counts are read from the whole register rather than the filtered list, so
+    | they stay a summary of the company instead of restating the table.
+    |
+    | The number itself is set in ink and the hue is carried by the tile and the
+    | bar above it, which is how the dashboard's stat cards read: three coloured
+    | figures side by side compete, one ink figure with a coloured marker does
+    | not.
+    */
+    const stats = [
+        {
+            title: "Total Employees",
+            value: employees.length,
+            subtitle: "On the register",
+            icon: <FiUsers />,
+            iconBg: "bg-blue-50",
+            iconColor: "text-blue-600",
+            bar: "bg-blue-500",
+        },
+        {
+            title: "Salary Assigned",
+            value: assignedCount,
+            subtitle: "Structure in place",
+            icon: <FiCheckCircle />,
+            iconBg: "bg-emerald-50",
+            iconColor: "text-emerald-600",
+            bar: "bg-emerald-500",
+        },
+        {
+            title: "Not Assigned",
+            value: employees.length - assignedCount,
+            subtitle: "Awaiting a structure",
+            icon: <FiAlertCircle />,
+            iconBg: "bg-amber-50",
+            iconColor: "text-amber-600",
+            bar: "bg-amber-500",
+        },
+    ];
+
+    /*
+    | Written out in full rather than built from a breakpoint variable:
+    | Tailwind generates its CSS by scanning the source for literal class
+    | names, so an interpolated `${bp}:table-cell` would never be emitted.
+    */
+    const hideBelow = (breakpoint) => ({
+        headerClassName: HIDDEN_UNTIL[breakpoint],
+        className: HIDDEN_UNTIL[breakpoint],
+    });
+
+    const columns = [
+
+        {
+            key: "name",
+            label: "Employee",
+            sortable: true,
+            render: (row) => (
+
+                <div className="min-w-0">
+
+                    <EmployeeCell
+                        name={row.name}
+                        employeeId={row.employeeId}
+                    />
+
+                    {/*
+                    | The columns hidden at this width, folded in here. Each span
+                    | is hidden at exactly the breakpoint where its own column
+                    | appears, so a value is never shown twice and never missing
+                    | in between.
+                    */}
+                    <p className="mt-1 truncate pl-14 text-xs text-ink-subtle lg:hidden">
+
+                        <span className="md:hidden">
+                            {row.department || "--"}
+                            {row.designation ? " · " : ""}
+                        </span>
+
+                        {row.designation || ""}
+
+                    </p>
+
+                </div>
+
+            ),
+        },
+
+        {
+            key: "department",
+            label: "Department",
+            sortable: true,
+            ...hideBelow("md"),
+            render: (row) => (
+                <span className="text-sm text-ink-muted">
+                    {row.department || "--"}
+                </span>
+            ),
+        },
+
+        {
+            key: "designation",
+            label: "Designation",
+            ...hideBelow("lg"),
+            render: (row) => (
+                <span className="text-sm text-ink-muted">
+                    {row.designation || "--"}
+                </span>
+            ),
+        },
+
+        {
+            key: "salaryAssigned",
+            label: "Status",
+            sortable: true,
+            align: "center",
+            render: (row) => (
+
+                <span
+                    className={`ui-badge ${row.salaryAssigned
+                        ? "bg-emerald-50 text-emerald-700"
+                        : "bg-amber-50 text-amber-700"
+                        }`}
+                >
+
+                    <span
+                        className={`h-1.5 w-1.5 rounded-full ${row.salaryAssigned ? "bg-emerald-500" : "bg-amber-500"
+                            }`}
+                    />
+
+                    {row.salaryAssigned ? "Assigned" : "Not Assigned"}
+
+                </span>
+
+            ),
+        },
+
+        {
+            key: "actions",
+            label: "Action",
+            align: "right",
+            className: "whitespace-nowrap",
+            render: (row) => {
+
+                if (!row.salaryAssigned) {
+
+                    if (!canCreate) {
+                        return <span className="text-sm text-ink-faint">--</span>;
+                    }
+
+                    return (
+
+                        <button
+                            type="button"
+                            onClick={() =>
+                                navigate(
+                                    `/salarydashboard/salary/create/${row.employeeId}`
+                                )
+                            }
+                            title="Assign salary to this employee"
+                            className="ui-btn ui-btn-primary px-4 py-2 font-semibold"
+                        >
+
+                            <FiPlus size={14} />
+
+                            Assign Salary
+
+                        </button>
+
+                    );
+
+                }
+
+                /*
+                | A row whose both actions were withheld would otherwise render
+                | an empty cell with no explanation.
+                */
+                if (!canUpdate && !canViewHistory) {
+                    return <span className="text-sm text-ink-faint">--</span>;
+                }
+
+                return (
+
+                    <div className="flex items-center justify-end gap-2">
+
+                        {canUpdate && (
+
+                            <button
+                                type="button"
+                                onClick={() =>
+                                    navigate(
+                                        `/salarydashboard/salary/edit/${row.employeeId}`
+                                    )
+                                }
+                                title="Edit employee salary"
+                                className="inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-xl border border-line text-ink-subtle transition-all hover:border-brand hover:bg-blue-50 hover:text-brand"
+                            >
+                                <TbMoneybagEdit size={18} />
+                            </button>
+
+                        )}
+
+                        {canViewHistory && (
+
+                            <button
+                                type="button"
+                                onClick={() =>
+                                    navigate(
+                                        `/salarydashboard/salary/history/${row.employeeId}`
+                                    )
+                                }
+                                title="Check salary history"
+                                className="inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-xl border border-line text-ink-subtle transition-all hover:border-brand hover:bg-blue-50 hover:text-brand"
+                            >
+                                <BsClockHistory size={16} />
+                            </button>
+
+                        )}
+
+                    </div>
+
+                );
+
+            },
+        },
+
+    ];
 
     return (
 
-        <div className="mx-auto max-w-[1600px] space-y-4 p-0 sm:space-y-6 sm:p-2">
+        <div className="mx-auto max-w-[1600px] space-y-6 p-1 sm:p-2">
 
             <SalaryPageHeader
-                title="Salary Management"
-                subtitle="Assign a salary structure, revise it, and review every change."
-                icon={<TbReportMoney />}
-                /* Top-level page, so the heading sits in a card like the
-                   payroll and task screens rather than bare on the grey. */
-                card
+                title="Create & Update Salaries"
+                subtitle="Assign a new salary structure or revise an existing one."
+                icon={<TbMoneybagEdit />}
+                backTo="/salarydashboard"
                 action={
-                    activeTab === TAB.REGISTER &&
-                    !loading &&
-                    employees.length > 0 && (
-                        <span className="inline-flex w-fit items-center gap-2 rounded-full bg-blue-50 px-3 py-1 text-sm font-medium text-blue-700">
+                    !loading && (
+                        <span className="ui-badge bg-blue-50 text-blue-700">
                             {assignedCount} of {employees.length} assigned
                         </span>
                     )
                 }
             />
 
-            <SalaryTabs
-                tabs={tabs}
-                activeTab={activeTab}
-                onChange={openTab}
-            />
+            {/* Summary */}
+            <div className="grid grid-cols-1 gap-4 sm:gap-6 md:grid-cols-3">
 
-            {/*
-            | A role with the salary page but neither section on it. The page
-            | is still reachable, so it says why it is empty instead of
-            | rendering nothing at all.
-            */}
-            {tabs.length === 0 && (
+                {stats.map((stat) => (
 
-                <div className="flex flex-col items-center justify-center rounded-2xl border border-slate-200 bg-white px-6 py-16 text-center shadow-sm">
+                    <div
+                        key={stat.title}
+                        className="ui-card ui-card-interactive group relative overflow-hidden p-4 sm:p-6"
+                    >
 
-                    <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100 text-slate-400">
-                        <FiLock size={24} />
+                        <span
+                            className={`absolute left-0 top-0 h-1 w-full ${stat.bar}`}
+                        />
+
+                        <div className="flex items-start justify-between gap-3">
+
+                            <div className="min-w-0">
+
+                                <p className="truncate text-xs font-medium text-ink-subtle sm:text-sm">
+                                    {stat.title}
+                                </p>
+
+                                <h3 className="mt-1 text-3xl font-bold text-ink sm:mt-2 sm:text-4xl">
+                                    {loading ? "--" : stat.value}
+                                </h3>
+
+                                <p className="mt-2 text-[11px] font-medium text-ink-subtle sm:text-xs">
+                                    {stat.subtitle}
+                                </p>
+
+                            </div>
+
+                            <div
+                                className={`ui-tile h-10 w-10 text-lg transition group-hover:scale-110 sm:h-12 sm:w-12 sm:text-xl ${stat.iconBg} ${stat.iconColor}`}
+                            >
+                                {stat.icon}
+                            </div>
+
+                        </div>
+
                     </div>
 
-                    <h2 className="mt-4 text-lg font-semibold text-slate-900">
-                        Nothing to show here yet
-                    </h2>
+                ))}
 
-                    <p className="mt-1 max-w-md text-sm text-slate-500">
-                        Your role does not include the salary register or the
-                        revision history. Contact the account owner if you need
-                        either of them enabled.
-                    </p>
+            </div>
 
-                </div>
+            {/* Employees */}
+            <AttendancePanel
+                title="Employee Salaries"
+                subtitle="Create new entries or update existing ones here."
+                toolbar={
+                    <>
 
-            )}
+                        <div className="w-full sm:w-52 lg:w-auto">
 
-            {activeTab === TAB.REGISTER && (
+                            <FilterSelect
+                                value={departmentFilter}
+                                onChange={setDepartmentFilter}
+                                options={departments}
+                                placeholder="All Departments"
+                                ariaLabel="Filter by department"
+                            />
 
-                <>
+                        </div>
 
-                    <SalaryStatsCards
-                        totalEmployees={employees.length}
-                        assignedCount={assignedCount}
-                        loading={loading}
-                    />
+                        <div className="w-full sm:w-52 lg:w-auto">
 
-                    <SalaryRegisterTable
-                        employees={employees}
-                        loading={loading}
-                        search={search}
-                        canCreate={canCreate}
-                        canUpdate={canUpdate}
-                        canViewHistory={canViewHistory}
-                        canExport={canExport}
-                        exporting={exporting}
-                        onExport={handleExport}
-                        onAssign={(employeeId) =>
-                            navigate(
-                                `/salarydashboard/salary/create/${employeeId}`
-                            )
-                        }
-                        onEdit={(employeeId) =>
-                            navigate(
-                                `/salarydashboard/salary/edit/${employeeId}`
-                            )
-                        }
-                        onViewHistory={openEmployeeHistory}
-                    />
+                            <FilterSelect
+                                value={statusFilter}
+                                onChange={setStatusFilter}
+                                options={STATUS_FILTERS}
+                                placeholder="All Status"
+                                ariaLabel="Filter by salary status"
+                            />
 
-                </>
+                        </div>
 
-            )}
+                        {canExport && (
+                            <ExportButton
+                                onClick={handleExport}
+                                disabled={exporting}
+                                label={exporting ? "Exporting..." : "Export Salary"}
+                            />
+                        )}
 
-            {activeTab === TAB.REVISIONS && (
+                    </>
+                }
+            >
 
-                <SalaryRevisionsPanel
-                    search={search}
-                    onViewEmployeeHistory={
-                        canViewHistory ? openEmployeeHistory : undefined
-                    }
-                    onGoToRegister={
-                        canManage ? () => openTab(TAB.REGISTER) : undefined
-                    }
+                <DataTable
+                    columns={columns}
+                    rows={filteredEmployees}
+                    rowKey={(row) => row.employeeId}
+                    loading={loading}
+                    skeleton
+                    defaultSortBy="name"
+                    defaultSortOrder="asc"
+                    resetKey={`${search}|${departmentFilter}|${statusFilter}`}
+                    paginationLabel="employees"
+                    /*
+                    | Grows with the columns that appear at each breakpoint, so a
+                    | phone scrolls a compact three column table instead of a
+                    | 900px one.
+                    */
+                    minWidthClass="min-w-[520px] md:min-w-[680px] lg:min-w-[880px]"
+                    loadingMessage="Loading employees..."
+                    empty={{
+                        icon: <TbMoneybagEdit size={28} />,
+                        title:
+                            employees.length === 0
+                                ? "No Employees Found"
+                                : "No Matching Employees",
+                        message:
+                            employees.length === 0
+                                ? "Employees added to the company will appear here."
+                                : "No one on the register matches this search or filter.",
+                    }}
                 />
 
-            )}
+            </AttendancePanel>
 
         </div>
-
     );
-
 }
 
 export default SalaryCRUD;

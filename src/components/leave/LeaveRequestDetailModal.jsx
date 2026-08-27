@@ -32,19 +32,19 @@ import LeaveStatusBadge from "./common/LeaveStatusBadge";
 function DetailRow({ icon, label, value }) {
 
   return (
-    <div className="flex items-start gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3 sm:p-4">
+    <div className="flex items-start gap-3 rounded-xl border border-line bg-surface-muted p-3 sm:p-4">
 
-      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white text-slate-500 shadow-sm">
+      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-surface text-ink-subtle shadow-sm">
         {icon}
       </div>
 
       <div className="min-w-0">
 
-        <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500 sm:text-xs">
+        <p className="ui-eyebrow">
           {label}
         </p>
 
-        <p className="mt-1 break-words text-sm font-semibold text-slate-800">
+        <p className="mt-1 wrap-break-word text-sm font-semibold text-ink-muted">
           {value || "--"}
         </p>
 
@@ -97,11 +97,11 @@ function LeaveRequestDetailModal({
     */
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-900/50 backdrop-blur-sm sm:items-center sm:p-4">
 
-      <div className="flex max-h-[92dvh] w-full max-w-2xl flex-col overflow-hidden rounded-t-2xl bg-white shadow-2xl sm:max-h-[90dvh] sm:rounded-2xl">
+      <div className="flex max-h-[92dvh] w-full max-w-2xl flex-col overflow-hidden rounded-t-2xl bg-surface shadow-2xl sm:max-h-[90dvh] sm:rounded-2xl">
 
         {/* Header */}
 
-        <div className="flex shrink-0 items-center justify-between gap-3 border-b border-slate-200 px-4 py-4 sm:gap-4 sm:px-6 sm:py-5">
+        <div className="flex shrink-0 items-center justify-between gap-3 border-b border-line px-4 py-4 sm:gap-4 sm:px-6 sm:py-5">
 
           <div className="flex min-w-0 items-center gap-3">
 
@@ -111,11 +111,11 @@ function LeaveRequestDetailModal({
 
             <div className="min-w-0">
 
-              <h2 className="text-base font-bold text-slate-900 sm:text-lg">
+              <h2 className="ui-card-title">
                 Leave Request
               </h2>
 
-              <p className="truncate text-xs text-slate-500 sm:text-sm">
+              <p className="truncate text-xs text-ink-subtle sm:text-sm">
                 {/* {request.requestId} */}
               </p>
 
@@ -136,7 +136,7 @@ function LeaveRequestDetailModal({
               onClick={onClose}
               disabled={approving}
               aria-label="Close"
-              className="cursor-pointer rounded-lg p-2 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
+              className="ui-icon-btn disabled:cursor-not-allowed disabled:opacity-50"
             >
               <FiX size={20} />
             </button>
@@ -185,13 +185,13 @@ function LeaveRequestDetailModal({
 
           </div>
 
-          <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 sm:p-4">
+          <div className="rounded-xl border border-line bg-surface-muted p-3 sm:p-4">
 
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500 sm:text-xs">
+            <p className="ui-eyebrow">
               Reason
             </p>
 
-            <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-slate-700">
+            <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-ink-muted">
               {request.reason || "--"}
             </p>
 
@@ -221,7 +221,7 @@ function LeaveRequestDetailModal({
 
             <div className="rounded-xl border border-red-100 bg-red-50 p-3 sm:p-4">
 
-              <p className="text-[11px] font-semibold uppercase tracking-wide text-red-500 sm:text-xs">
+              <p className="ui-eyebrow text-red-500">
                 Reviewer Remarks
               </p>
 
@@ -237,13 +237,13 @@ function LeaveRequestDetailModal({
 
         {/* Footer */}
 
-        <div className="flex shrink-0 flex-col-reverse gap-2 border-t border-slate-200 px-4 py-4 sm:flex-row sm:justify-end sm:gap-3 sm:px-6 sm:py-5">
+        <div className="flex shrink-0 flex-col-reverse gap-2 border-t border-line px-4 py-4 sm:flex-row sm:justify-end sm:gap-3 sm:px-6 sm:py-5">
 
           <button
             type="button"
             onClick={onClose}
             disabled={approving}
-            className="cursor-pointer rounded-xl border border-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+            className="ui-btn ui-btn-secondary font-semibold"
           >
             Close
           </button>
@@ -256,7 +256,7 @@ function LeaveRequestDetailModal({
                 type="button"
                 onClick={() => onReject(request)}
                 disabled={approving}
-                className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-red-200 px-5 py-2.5 text-sm font-semibold text-red-600 transition-colors hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+                className="ui-btn border border-red-200 font-semibold text-red-600 hover:bg-red-50"
               >
                 <FiX />
                 Reject
@@ -266,7 +266,7 @@ function LeaveRequestDetailModal({
                 type="button"
                 onClick={() => onApprove(request)}
                 disabled={approving}
-                className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-emerald-600/20 transition-all duration-200 hover:-translate-y-0.5 hover:bg-emerald-700 hover:shadow-lg hover:shadow-emerald-600/30 focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:ring-offset-2 active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0"
+                className="ui-btn bg-emerald-600 font-semibold text-white shadow-sm hover:bg-emerald-700"
               >
                 {approving ? <FiLoader className="animate-spin" /> : <FiCheck />}
                 {approving ? "Approving..." : "Approve"}

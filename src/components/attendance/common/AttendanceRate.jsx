@@ -29,7 +29,7 @@ function AttendanceRate({ value = 0, barClassName = "w-24" }) {
     <div className="flex items-center gap-3">
 
       <div
-        className={`h-2 overflow-hidden rounded-full bg-slate-100 ${barClassName}`}
+        className={`h-2 overflow-hidden rounded-full bg-surface-muted ${barClassName}`}
       >
         <div
           className={`h-full rounded-full transition-all duration-500 ${getRateColor(value)}`}
@@ -37,7 +37,7 @@ function AttendanceRate({ value = 0, barClassName = "w-24" }) {
         />
       </div>
 
-      <span className="text-sm font-semibold text-slate-700">
+      <span className="text-sm font-semibold text-ink-muted">
         {value}%
       </span>
 

@@ -1,5 +1,4 @@
-import { FiPlayCircle, FiRefreshCw } from "react-icons/fi";
-import { TbReportMoney } from "react-icons/tb";
+import { FiCalendar, FiPlayCircle, FiRefreshCw } from "react-icons/fi";
 import { formatPayrollMonth } from "../../utils/Payroll/payrollDate";
 
 /*
@@ -8,6 +7,14 @@ import { formatPayrollMonth } from "../../utils/Payroll/payrollDate";
 |--------------------------------------------------------------------------
 | The dashboard toolbar: the month every panel below is read for, a refresh,
 | and the run that generates the whole month.
+|
+| Written in the same anatomy the main Dashboard uses: a small brand coloured
+| eyebrow carrying the date, the page name at heading size under it, then the
+| one line that says what the page is for.
+|
+| No card and no filled icon tile. The Dashboard sets its heading directly on
+| the page canvas, and a white strip around this one made the first thing on
+| the page read as a panel of its own rather than as the page's title.
 |
 | Payroll is filed per month, so the month picker drives the entire page in
 | the same way the year selector drives the holiday dashboard.
@@ -64,52 +71,84 @@ function PayrollHeader({
           ? "Every employee has already been generated."
           : "";
 
+  /*
+  | "Monday, 11 August 2026" is too long for a phone once it shares the line
+  | with the heading, so the weekday and the full month are dropped below
+  | `sm` and the date reads "11 Aug 2026" instead.
+  */
+  const formatToday = (options) =>
+    new Date().toLocaleDateString("en-US", options);
+
+  const todayLong = formatToday({
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+
+  const todayShort = formatToday({
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+
   return (
 
-    <div className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:gap-5 sm:p-6 lg:flex-row lg:items-center lg:justify-between">
+    <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
 
-      <div className="flex min-w-0 items-center gap-3 sm:gap-4">
+      <div className="min-w-0">
 
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-blue-600 text-lg text-white shadow-sm shadow-blue-600/20 sm:h-12 sm:w-12 sm:text-xl">
-          <TbReportMoney />
-        </div>
+        <div className="mb-1.5 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-brand">
 
-        <div className="min-w-0">
+          <FiCalendar className="shrink-0" size={14} />
 
-          <h1 className="text-lg font-bold tracking-tight text-slate-900 sm:text-2xl">
-            Payroll Dashboard
-          </h1>
-
-          <p className="mt-0.5 text-xs text-slate-500 sm:mt-1 sm:text-sm">
-            {totalEmployees > 0
-              ? `${totalEmployees - pendingCount} of ${totalEmployees} generated for ${formatPayrollMonth(payrollMonth)}.`
-              : "Generate and review the monthly payroll run."}
-          </p>
+          <span className="truncate">
+            <span className="hidden sm:inline">{todayLong}</span>
+            <span className="sm:hidden">{todayShort}</span>
+          </span>
 
         </div>
+
+        <h1 className="text-2xl font-bold text-ink wrap-break-word sm:text-3xl">
+          Payroll Dashboard
+        </h1>
+
+        <p className="mt-1 text-sm text-ink-subtle">
+          {totalEmployees > 0
+            ? `${totalEmployees - pendingCount} of ${totalEmployees} generated for ${formatPayrollMonth(payrollMonth)}.`
+            : "Generate and review the monthly payroll run."}
+        </p>
 
       </div>
 
       {/*
-      | On a phone the month takes a line of its own and the two buttons split
-      | the one under it — three controls on one line is what pushed the run
-      | button off the card at that width.
+      | On a phone the controls are a two column grid rather than a wrapped
+      | row: the month and the refresh share a line, and the run takes a line
+      | of its own, so "Generate Payroll" is a full width target instead of
+      | whatever width happens to be left over at the end of a wrap.
+      |
+      | `col-span-2` is a grid property, so it is simply ignored once the
+      | container becomes the inline flex row from `sm` up.
       */}
-      <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+      <div className="grid shrink-0 grid-cols-2 gap-2.5 sm:flex sm:flex-wrap sm:items-center sm:gap-3">
 
         <input
           type="month"
           value={payrollMonth}
           onChange={(event) => setPayrollMonth(event.target.value)}
           aria-label="Payroll month"
-          className="w-full cursor-pointer rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 outline-none transition-all focus:border-blue-500 focus:ring-2 focus:ring-blue-100 sm:w-auto"
+          /*
+          | Not `.ui-field`: the kit's field fills its line, and this control
+          | is a toolbar item that shrinks to its own width from `sm` up.
+          */
+          className="w-full cursor-pointer rounded-xl border border-line bg-surface px-3 py-2.5 text-sm font-semibold text-ink-muted outline-none transition-all focus:border-brand focus:ring-2 focus:ring-brand-ring sm:w-auto sm:px-4"
         />
 
         <button
           type="button"
           onClick={onRefresh}
           disabled={busy}
-          className="inline-flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 transition-all hover:border-blue-500 hover:bg-blue-50 hover:text-blue-600 disabled:cursor-not-allowed disabled:opacity-60 sm:flex-none"
+          className="ui-btn ui-btn-secondary w-full font-semibold sm:w-auto"
         >
 
           <FiRefreshCw className={loading ? "animate-spin" : ""} />
@@ -123,7 +162,7 @@ function PayrollHeader({
           onClick={onGenerateAll}
           disabled={runDisabled}
           title={runHint}
-          className="inline-flex flex-1 cursor-pointer items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-md shadow-blue-600/20 transition-all duration-200 hover:-translate-y-0.5 hover:bg-blue-700 hover:shadow-lg hover:shadow-blue-600/30 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:shadow-md sm:flex-none sm:px-5"
+          className="ui-btn ui-btn-primary col-span-2 w-full font-semibold sm:w-auto"
         >
 
           <FiPlayCircle className={`shrink-0 ${generatingAll ? "animate-spin" : ""}`} />

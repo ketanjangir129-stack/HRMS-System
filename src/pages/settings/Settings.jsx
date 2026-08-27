@@ -36,13 +36,21 @@ function Settings() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-[1600px] space-y-4 p-0 sm:space-y-6 sm:p-2">
+    <div className="flex-1 min-h-full">
 
       <SettingsHeader companyName={company?.companyName} />
 
-      <RoleAccessPanel />
+      {/*
+        The panels stack full width on the same rhythm the dashboard grid uses
+        between its cards, so the two pages breathe the same way.
+      */}
+      <div className="grid grid-cols-1 gap-4 sm:gap-6">
 
-      <OfficeLocationPanel />
+        <RoleAccessPanel />
+
+        <OfficeLocationPanel />
+
+      </div>
 
     </div>
   );

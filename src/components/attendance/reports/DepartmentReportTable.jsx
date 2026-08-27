@@ -87,7 +87,7 @@ function DepartmentReportTable({
 
             <div className="min-w-0">
 
-              <p className="truncate font-semibold text-slate-800">
+              <p className="truncate font-semibold text-ink-muted">
                 {row.department}
               </p>
 
@@ -96,7 +96,7 @@ function DepartmentReportTable({
               | hidden at exactly the breakpoint where its own column appears,
               | so a value is never shown twice and never missing in between.
               */}
-              <p className="mt-0.5 truncate text-xs font-normal text-slate-500 xl:hidden">
+              <p className="mt-0.5 truncate text-xs font-normal text-ink-subtle xl:hidden">
 
                 <span className="lg:hidden">
                   {row.employees} employees ·{" "}
@@ -202,11 +202,11 @@ function DepartmentReportTable({
 
         <div className="min-w-0">
 
-          <p className="truncate font-semibold text-slate-800">
+          <p className="truncate font-semibold text-ink-muted">
             {row.department}
           </p>
 
-          <p className="truncate text-xs text-slate-500">
+          <p className="truncate text-xs text-ink-subtle">
             {row.employees} employees
           </p>
 
@@ -225,13 +225,13 @@ function DepartmentReportTable({
       | one ends where the card does. A rule above them separates the month's
       | make up from the name without drawing a box around either.
       */}
-      <div className="grid grid-cols-4 gap-2 border-t border-slate-100 pt-3">
+      <div className="grid grid-cols-4 gap-2 border-t border-line-subtle pt-3">
 
         {COUNTS.map((count) => (
 
           <div key={count.key} className="min-w-0">
 
-            <p className="truncate text-[10px] font-medium uppercase tracking-wide text-slate-400">
+            <p className="truncate text-[10px] font-medium uppercase tracking-wide text-ink-faint">
               {count.label}
             </p>
 
@@ -246,7 +246,7 @@ function DepartmentReportTable({
       </div>
 
       {/* Pushed to opposite edges rather than trailing off mid line. */}
-      <div className="flex items-center justify-between gap-3 text-xs text-slate-400">
+      <div className="flex items-center justify-between gap-3 text-xs text-ink-faint">
 
         <span className="truncate">{row.workingDays} marked days</span>
 

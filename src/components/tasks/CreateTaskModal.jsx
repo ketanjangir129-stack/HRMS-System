@@ -38,7 +38,7 @@ const DESCRIPTION_WARN_AT = 50;
 
 function Field({ label, error, children }) {
   return (
-    <label className="block text-sm font-semibold text-slate-700">
+    <label className="block text-sm font-semibold text-ink-muted">
       <span className="mb-1.5 block">{label}</span>
       {children}
       {error && (
@@ -120,23 +120,20 @@ function CreateTaskModal({
       {/* Andar click karne par modal band na ho */}
       <div
         onMouseDown={(event) => event.stopPropagation()}
-        className="flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl bg-white shadow-2xl"
+        className="flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl bg-surface shadow-2xl"
       >
         {/* Header */}
-        <div className="flex items-start justify-between border-b border-slate-200 px-6 py-5">
+        <div className="flex items-start justify-between border-b border-line px-6 py-5">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+            <div className="ui-tile ui-tile-sm bg-brand-ring text-brand">
               {isEdit ? <Pencil size={19} /> : <Plus size={20} />}
             </div>
 
             <div>
-              <h2
-                id="create-task-title"
-                className="text-lg font-semibold text-slate-900"
-              >
+              <h2 id="create-task-title" className="ui-card-title">
                 {isEdit ? "Edit task" : "Create task"}
               </h2>
-              <p className="text-sm text-slate-500">
+              <p className="text-sm text-ink-subtle">
                 {isEdit
                   ? "Update the details and save your changes."
                   : selfAssign
@@ -151,14 +148,14 @@ function CreateTaskModal({
             onClick={onClose}
             disabled={saving}
             aria-label="Close"
-            className="cursor-pointer rounded-lg p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600 disabled:cursor-not-allowed disabled:opacity-50"
+            className="ui-icon-btn disabled:cursor-not-allowed disabled:opacity-50"
           >
             <X size={19} />
           </button>
         </div>
 
         {/* Body — lamba form ho to sirf yahi scroll hota hai */}
-        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-6 py-5">
+        <div className="ui-scroll min-h-0 flex-1 space-y-4 overflow-y-auto px-6 py-5">
           <Field label="Task title" error={errors.title}>
             <input
               // Modal khulte hi cursor yahan — form bharna tez ho jaata hai
@@ -182,7 +179,7 @@ function CreateTaskModal({
               className={`mt-1 block text-right text-xs font-normal ${
                 remaining <= DESCRIPTION_WARN_AT
                   ? "text-amber-600"
-                  : "text-slate-400"
+                  : "text-ink-faint"
               }`}
             >
               {formData.description.length}/{DESCRIPTION_LIMIT}
@@ -252,12 +249,12 @@ function CreateTaskModal({
         </div>
 
         {/* Footer */}
-        <div className="flex justify-end gap-3 border-t border-slate-200 px-6 py-4">
+        <div className="flex justify-end gap-3 border-t border-line px-6 py-4">
           <button
             type="button"
             onClick={onClose}
             disabled={saving}
-            className="cursor-pointer rounded-xl border border-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+            className="ui-btn ui-btn-secondary"
           >
             Cancel
           </button>

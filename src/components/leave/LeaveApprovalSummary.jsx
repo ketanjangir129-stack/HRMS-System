@@ -38,7 +38,7 @@ function LeaveApprovalSummary({ summary, loading = false }) {
 
           <div
             key={index}
-            className="h-36 animate-pulse rounded-2xl border border-slate-200 bg-white"
+            className="ui-card h-36 animate-pulse"
           />
 
         ))}
@@ -101,7 +101,7 @@ function LeaveApprovalSummary({ summary, loading = false }) {
 
         <div
           key={card.title}
-          className="group relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg"
+          className="ui-card ui-card-interactive group relative overflow-hidden p-6"
         >
 
           <span
@@ -112,25 +112,25 @@ function LeaveApprovalSummary({ summary, loading = false }) {
 
             <div>
 
-              <p className="text-sm font-medium text-slate-500">
+              <p className="text-sm font-medium text-ink-subtle">
                 {card.title}
               </p>
 
-              <h2 className="mt-2 text-4xl font-bold text-slate-900">
+              <h2 className="mt-2 text-4xl font-bold text-ink">
                 {card.value}
               </h2>
 
             </div>
 
             <div
-              className={`flex h-12 w-12 items-center justify-center rounded-2xl text-xl ${card.iconBg} ${card.iconColor}`}
+              className={`flex h-12 w-12 items-center justify-center rounded-2xl text-xl transition group-hover:scale-110 ${card.iconBg} ${card.iconColor}`}
             >
               {card.icon}
             </div>
 
           </div>
 
-          <p className="mt-5 text-sm text-slate-500">
+          <p className="mt-5 text-sm text-ink-subtle">
             {card.subtitle}
           </p>
 

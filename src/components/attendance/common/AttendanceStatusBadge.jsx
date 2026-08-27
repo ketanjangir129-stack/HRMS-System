@@ -29,7 +29,7 @@ function AttendanceStatusBadge({
 }) {
 
   if (!status) {
-    return <span className="text-sm text-slate-400">--</span>;
+    return <span className="text-sm text-ink-faint">--</span>;
   }
 
   const isAttendance = variant === "attendance";

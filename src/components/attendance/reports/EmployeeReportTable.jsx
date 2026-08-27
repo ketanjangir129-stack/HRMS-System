@@ -70,7 +70,7 @@ function EmployeeReportTable({
         key: "date",
         label: "Date",
         sortable: true,
-        className: "font-semibold text-slate-800",
+        className: "font-semibold text-ink-muted",
         render: (row) => (
           <div className="min-w-0">
 
@@ -81,12 +81,12 @@ function EmployeeReportTable({
             | hidden at exactly the breakpoint where its own column appears,
             | so a value is never shown twice and never missing in between.
             */}
-            <p className="mt-1 truncate text-xs font-medium text-slate-500 lg:hidden">
+            <p className="mt-1 truncate text-xs font-medium text-ink-subtle lg:hidden">
               {row.workingHours || "--"}
             </p>
 
             {row.remarks && (
-              <p className="mt-0.5 line-clamp-1 text-xs font-normal text-slate-400 xl:hidden">
+              <p className="mt-0.5 line-clamp-1 text-xs font-normal text-ink-faint xl:hidden">
                 {row.remarks}
               </p>
             )}
@@ -113,7 +113,7 @@ function EmployeeReportTable({
         label: "Working Hours",
         ...hideBelow("lg"),
         render: (row) => (
-          <span className="inline-flex whitespace-nowrap rounded-lg bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
+          <span className="inline-flex whitespace-nowrap rounded-lg bg-surface-muted px-3 py-1 text-xs font-semibold text-ink-muted">
             {row.workingHours || "--"}
           </span>
         ),
@@ -161,7 +161,7 @@ function EmployeeReportTable({
 
       <div className="flex items-center justify-between gap-3">
 
-        <p className="min-w-0 truncate text-sm font-semibold text-slate-800">
+        <p className="min-w-0 truncate text-sm font-semibold text-ink-muted">
           {formatDayLabel(row.date)}
         </p>
 
@@ -171,7 +171,7 @@ function EmployeeReportTable({
 
       </div>
 
-      <div className="grid grid-cols-3 gap-2 rounded-xl bg-slate-50 px-3 py-2.5">
+      <div className="grid grid-cols-3 gap-2 rounded-xl bg-surface-muted px-3 py-2.5">
 
         {[
           { label: "In", value: formatTime(row.punchIn) },
@@ -181,11 +181,11 @@ function EmployeeReportTable({
 
           <div key={item.label} className="min-w-0">
 
-            <p className="text-[11px] font-medium uppercase tracking-wide text-slate-400">
+            <p className="text-[11px] font-medium uppercase tracking-wide text-ink-faint">
               {item.label}
             </p>
 
-            <p className="mt-0.5 truncate text-sm font-semibold text-slate-800">
+            <p className="mt-0.5 truncate text-sm font-semibold text-ink-muted">
               {item.value}
             </p>
 
@@ -202,9 +202,9 @@ function EmployeeReportTable({
       | after the badges have taken their share.
       */}
       {getApprovalLabel(row) && (
-        <div className="flex items-center justify-between gap-3 border-t border-slate-100 pt-3">
+        <div className="flex items-center justify-between gap-3 border-t border-line-subtle pt-3">
 
-          <p className="text-[11px] font-medium uppercase tracking-wide text-slate-400">
+          <p className="text-[11px] font-medium uppercase tracking-wide text-ink-faint">
             Approval
           </p>
 
@@ -218,7 +218,7 @@ function EmployeeReportTable({
       )}
 
       {(row.approvalRemarks || row.remarks) && (
-        <p className="wrap-break-word text-xs text-slate-500">
+        <p className="wrap-break-word text-xs text-ink-subtle">
           {row.approvalRemarks || row.remarks}
         </p>
       )}

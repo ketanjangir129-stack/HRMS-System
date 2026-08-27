@@ -172,11 +172,11 @@ function LeaveHistoryTable({
       render: (row) => (
         <div className="min-w-0">
 
-          <p className="font-semibold text-slate-800">
+          <p className="font-semibold text-ink-muted">
             {formatLeaveRange(row)}
           </p>
 
-          {/* <p className="mt-0.5 truncate text-xs text-slate-500">
+          {/* <p className="mt-0.5 truncate text-xs text-ink-subtle">
             {row.requestId}
           </p> */}
 
@@ -185,7 +185,7 @@ function LeaveHistoryTable({
           | hidden at exactly the breakpoint where its own column appears, so
           | a value is never shown twice and never missing in between.
           */}
-          <p className="mt-1 text-xs text-slate-500 xl:hidden">
+          <p className="mt-1 text-xs text-ink-subtle xl:hidden">
 
             {formatLeaveType(row)}
 
@@ -198,7 +198,7 @@ function LeaveHistoryTable({
 
           </p>
 
-          <p className="mt-0.5 text-xs text-slate-400 xl:hidden">
+          <p className="mt-0.5 text-xs text-ink-faint xl:hidden">
             Applied {formatDateTime(row.requestedAt)}
           </p>
 
@@ -212,7 +212,7 @@ function LeaveHistoryTable({
       sortable: true,
       ...hideBelow("xl"),
       render: (row) => (
-        <span className="text-sm text-slate-700">
+        <span className="text-sm text-ink-muted">
           {formatLeaveType(row)}
         </span>
       ),
@@ -225,7 +225,7 @@ function LeaveHistoryTable({
       align: "center",
       ...hideBelow("lg"),
       render: (row) => (
-        <span className="inline-flex whitespace-nowrap rounded-lg bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700">
+        <span className="inline-flex whitespace-nowrap rounded-lg bg-surface-raised px-2.5 py-1 text-xs font-semibold text-ink-muted">
           {formatLeaveDuration(row.days)}
         </span>
       ),
@@ -238,7 +238,7 @@ function LeaveHistoryTable({
       render: (row) => (
         <p
           title={row.reason}
-          className="line-clamp-2 max-w-[240px] text-sm text-slate-600"
+          className="line-clamp-2 max-w-[240px] text-sm text-ink-muted"
         >
           {row.reason || "--"}
         </p>
@@ -251,7 +251,7 @@ function LeaveHistoryTable({
       sortable: true,
       ...hideBelow("xl"),
       render: (row) => (
-        <span className="whitespace-nowrap text-sm text-slate-600">
+        <span className="whitespace-nowrap text-sm text-ink-muted">
           {formatDateTime(row.requestedAt)}
         </span>
       ),
@@ -268,7 +268,7 @@ function LeaveHistoryTable({
           <LeaveStatusBadge status={row.status} size="sm" />
 
           {row.approvedBy && (
-            <span className="max-w-[120px] truncate text-[11px] text-slate-400">
+            <span className="max-w-[120px] truncate text-[11px] text-ink-faint">
               by {row.approvedBy}
             </span>
           )}
@@ -328,11 +328,11 @@ function LeaveHistoryTable({
 
           <div className="min-w-0">
 
-            <p className="text-sm font-semibold text-slate-800">
+            <p className="text-sm font-semibold text-ink-muted">
               {formatLeaveRange(row)}
             </p>
 
-            <p className="mt-0.5 text-xs text-slate-400">
+            <p className="mt-0.5 text-xs text-ink-faint">
               Applied {formatDateTime(row.requestedAt)}
             </p>
 
@@ -345,7 +345,7 @@ function LeaveHistoryTable({
           <LeaveStatusBadge status={row.status} size="sm" />
 
           {row.approvedBy && (
-            <span className="max-w-28 truncate text-[11px] text-slate-400">
+            <span className="max-w-28 truncate text-[11px] text-ink-faint">
               by {row.approvedBy}
             </span>
           )}
@@ -354,23 +354,23 @@ function LeaveHistoryTable({
 
       </div>
 
-      <div className="space-y-1.5 rounded-xl bg-slate-50 px-3 py-2.5">
+      <div className="space-y-1.5 rounded-xl bg-surface-muted px-3 py-2.5">
 
         {/* Only when the employee took the top line above. */}
         {showEmployee && (
-          <p className="text-xs font-semibold text-slate-800">
+          <p className="text-xs font-semibold text-ink-muted">
             {formatLeaveRange(row)}
           </p>
         )}
 
         <div className="flex flex-wrap items-center gap-2">
 
-          <span className="inline-flex whitespace-nowrap rounded-lg bg-white px-2.5 py-1 text-xs font-semibold text-slate-700 ring-1 ring-slate-200">
+          <span className="inline-flex whitespace-nowrap rounded-lg bg-surface px-2.5 py-1 text-xs font-semibold text-ink-muted ring-1 ring-line">
             {formatLeaveType(row)}
           </span>
 
           {hasColumn("days") && (
-            <span className="text-xs font-medium text-slate-600">
+            <span className="text-xs font-medium text-ink-muted">
               {formatLeaveDuration(row.days)}
             </span>
           )}
@@ -378,13 +378,13 @@ function LeaveHistoryTable({
         </div>
 
         {hasColumn("reason") && (
-          <p className="line-clamp-2 text-xs text-slate-500">
+          <p className="line-clamp-2 text-xs text-ink-subtle">
             {row.reason || "--"}
           </p>
         )}
 
         {showEmployee && (
-          <p className="text-xs text-slate-400">
+          <p className="text-xs text-ink-faint">
             Applied {formatDateTime(row.requestedAt)}
           </p>
         )}
@@ -418,14 +418,18 @@ function LeaveHistoryTable({
 
           <div className="relative w-full lg:max-w-sm">
 
-            <FiSearch className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <FiSearch className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-faint" />
 
             <input
               type="text"
               value={search}
               onChange={(event) => setSearch(event.target.value)}
               placeholder="Search leave requests..."
-              className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-10 pr-4 text-sm text-slate-700 outline-none transition-all placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+              /*
+              | Not `.ui-field`: the kit sets its own padding, and this box has
+              | to leave room on the left for the search icon sitting inside it.
+              */
+              className="w-full rounded-xl border border-line bg-surface py-2.5 pl-10 pr-4 text-sm text-ink outline-none transition-all placeholder:text-ink-faint focus:border-brand focus:ring-2 focus:ring-brand-ring"
             />
           </div>
 

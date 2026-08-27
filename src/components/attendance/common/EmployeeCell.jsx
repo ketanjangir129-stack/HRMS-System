@@ -33,11 +33,11 @@ function EmployeeCell({
 
       <div className="min-w-0">
 
-        <p className="truncate font-semibold text-slate-800">
+        <p className="truncate font-semibold text-ink-muted">
           {displayName}
         </p>
 
-        <p className="truncate text-xs text-slate-500">
+        <p className="truncate text-xs text-ink-subtle">
           {subtitle || employeeId}
         </p>
 

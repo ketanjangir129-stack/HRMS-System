@@ -161,17 +161,17 @@ function MyAttendance() {
           icon={<FiUser />}
         />
 
-        <div className="mt-5 flex flex-col items-center justify-center rounded-2xl border border-slate-200 bg-white px-4 py-14 text-center shadow-sm sm:mt-6 sm:px-6 sm:py-20">
+        <div className="ui-card mt-6 flex flex-col items-center justify-center px-4 py-14 text-center sm:mt-8 sm:px-6 sm:py-20">
 
-          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-slate-100 text-slate-500">
+          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-surface-muted text-ink-subtle">
             <FiUserX size={28} />
           </div>
 
-          <h3 className="mt-5 text-lg font-semibold text-slate-900 sm:text-xl">
+          <h3 className="mt-5 text-lg font-semibold text-ink sm:text-xl">
             No employee record linked
           </h3>
 
-          <p className="mt-2 max-w-sm text-sm text-slate-500">
+          <p className="mt-2 max-w-sm text-sm text-ink-subtle">
             This account is not linked to an employee, so it has no attendance
             of its own. Company wide attendance is on the monthly and report
             pages.
@@ -195,7 +195,7 @@ function MyAttendance() {
         icon={<FiUser />}
       />
 
-      <div className="mt-5 space-y-4 sm:mt-6 sm:space-y-6">
+      <div className="mt-6 space-y-4 sm:mt-8 sm:space-y-6">
 
         {/*
         | The pending card matters most here: it is where an employee finds

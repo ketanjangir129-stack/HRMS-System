@@ -175,7 +175,7 @@ function PunchMap({ punchIn, punchOut }) {
   return (
     <div
       ref={containerRef}
-      className="h-64 w-full overflow-hidden rounded-xl border border-slate-200"
+      className="h-64 w-full overflow-hidden rounded-xl border border-line"
     />
   );
 
@@ -183,14 +183,14 @@ function PunchMap({ punchIn, punchOut }) {
 
 function DetailItem({ icon, label, value }) {
   return (
-    <div className="rounded-xl bg-slate-50 p-3">
+    <div className="rounded-xl bg-surface-muted p-3">
 
-      <div className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+      <div className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-ink-subtle">
         {icon}
         {label}
       </div>
 
-      <p className="mt-1 truncate text-sm font-semibold text-slate-800">
+      <p className="mt-1 truncate text-sm font-semibold text-ink-muted">
         {value || "--"}
       </p>
 
@@ -207,7 +207,7 @@ const QUALITY_STYLES = {
   good: "bg-blue-50 text-blue-700",
   fair: "bg-amber-50 text-amber-700",
   poor: "bg-red-50 text-red-700",
-  unknown: "bg-slate-100 text-slate-600",
+  unknown: "bg-surface-muted text-ink-muted",
 };
 
 /*
@@ -218,7 +218,7 @@ const QUALITY_STYLES = {
 const OFFICE_STYLES = {
   inside: "border-emerald-200 bg-emerald-50 text-emerald-700",
   outside: "border-amber-200 bg-amber-50 text-amber-700",
-  unclear: "border-slate-200 bg-slate-50 text-slate-600",
+  unclear: "border-line bg-surface-muted text-ink-muted",
 };
 
 const OFFICE_LABELS = {
@@ -269,7 +269,7 @@ function PunchLocation({ icon, label, location, office }) {
       */}
       <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
 
-        <h3 className="flex items-center gap-2 text-sm font-semibold text-slate-900">
+        <h3 className="flex items-center gap-2 text-sm font-semibold text-ink">
           {icon}
           {label}
         </h3>
@@ -423,10 +423,10 @@ function LocationModal({ open, record, onClose }) {
     */
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-900/50 backdrop-blur-sm sm:items-center sm:p-4">
 
-      <div className="flex max-h-[92dvh] w-full max-w-lg flex-col overflow-hidden rounded-t-2xl bg-white shadow-2xl sm:max-h-[90dvh] sm:rounded-2xl">
+      <div className="flex max-h-[92dvh] w-full max-w-lg flex-col overflow-hidden rounded-t-2xl bg-surface shadow-2xl sm:max-h-[90dvh] sm:rounded-2xl">
 
         {/* Header */}
-        <div className="flex shrink-0 items-center justify-between gap-4 border-b border-slate-200 px-4 py-4 sm:px-6 sm:py-5">
+        <div className="flex shrink-0 items-center justify-between gap-4 border-b border-line px-4 py-4 sm:px-6 sm:py-5">
 
           <div className="flex min-w-0 items-center gap-3">
 
@@ -436,11 +436,11 @@ function LocationModal({ open, record, onClose }) {
 
             <div className="min-w-0">
 
-              <h2 className="text-lg font-semibold text-slate-900">
+              <h2 className="ui-card-title">
                 Punch Location
               </h2>
 
-              <p className="truncate text-sm text-slate-500">
+              <p className="truncate text-sm text-ink-subtle">
                 {record.employeeName || record.employeeId}
               </p>
 
@@ -452,7 +452,7 @@ function LocationModal({ open, record, onClose }) {
             type="button"
             onClick={onClose}
             aria-label="Close"
-            className="cursor-pointer rounded-lg p-2 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700"
+            className="ui-icon-btn"
           >
             <FiX size={20} />
           </button>
@@ -492,20 +492,20 @@ function LocationModal({ open, record, onClose }) {
           | the wording stays on what was measured.
           */}
           {movement && (
-            <section className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3.5">
+            <section className="rounded-xl border border-line bg-surface-muted px-4 py-3.5">
 
-              <h3 className="flex items-center gap-2 text-sm font-semibold text-slate-900">
-                <FiNavigation className="text-slate-500" size={15} />
+              <h3 className="flex items-center gap-2 text-sm font-semibold text-ink">
+                <FiNavigation className="text-ink-subtle" size={15} />
                 Movement
               </h3>
 
-              <p className="mt-1.5 text-base font-semibold text-slate-800">
+              <p className="mt-1.5 text-base font-semibold text-ink-muted">
                 {movement.withinMargin
                   ? "Within accuracy margin"
                   : `~${movement.label}`}
               </p>
 
-              <p className="mt-1 text-xs text-slate-500">
+              <p className="mt-1 text-xs text-ink-subtle">
                 {movement.withinMargin
                   ? "The difference between the two reported locations is smaller than the location uncertainty."
                   : movement.withinMargin === null
@@ -538,7 +538,7 @@ function LocationModal({ open, record, onClose }) {
           | being plottable.
           */}
           {!hasAny && (
-            <p className="text-sm text-slate-500">
+            <p className="text-sm text-ink-subtle">
               No location was recorded for this day.
             </p>
           )}
@@ -546,12 +546,12 @@ function LocationModal({ open, record, onClose }) {
         </div>
 
         {/* Footer */}
-        <div className="flex shrink-0 justify-end border-t border-slate-200 px-4 py-4 sm:px-6 sm:py-5">
+        <div className="flex shrink-0 justify-end border-t border-line px-4 py-4 sm:px-6 sm:py-5">
 
           <button
             type="button"
             onClick={onClose}
-            className="cursor-pointer rounded-xl border border-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50"
+            className="ui-btn ui-btn-secondary font-semibold"
           >
             Close
           </button>

@@ -35,16 +35,14 @@ function UrgentTasks({ tasks, employees, today, onViewAll }) {
             <FiCheckCircle className="text-emerald-500" size={20} />
           </span>
           <div>
-            <p className="text-sm font-semibold text-slate-700">
-              Nothing urgent
-            </p>
-            <p className="mt-0.5 text-sm text-slate-400">
+            <p className="text-sm font-semibold text-ink">Nothing urgent</p>
+            <p className="mt-0.5 text-sm text-ink-subtle">
               No overdue or high priority tasks right now.
             </p>
           </div>
         </div>
       ) : (
-        <ul className="divide-y divide-slate-100">
+        <ul className="divide-y divide-line-subtle">
           {tasks.map((task) => {
             const overdue = isOverdue(task, today);
 
@@ -52,10 +50,10 @@ function UrgentTasks({ tasks, employees, today, onViewAll }) {
               <li key={task.id} className="py-3.5 first:pt-0 last:pb-0">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-semibold text-slate-900">
+                    <p className="truncate text-sm font-semibold text-ink">
                       {task.title}
                     </p>
-                    <p className="mt-0.5 truncate text-xs text-slate-500">
+                    <p className="mt-0.5 truncate text-xs text-ink-subtle">
                       {assigneeName(task, employees)}
                     </p>
                   </div>
@@ -71,12 +69,12 @@ function UrgentTasks({ tasks, employees, today, onViewAll }) {
 
                 <p
                   className={`mt-1.5 text-xs font-medium ${
-                    overdue ? "text-red-600" : "text-slate-500"
+                    overdue ? "text-red-600" : "text-ink-subtle"
                   }`}
                 >
                   {formatDate(task.dueDate)}
                   {task.dueDate && (
-                    <span className="ml-1.5 text-slate-400">
+                    <span className="ml-1.5 text-ink-faint">
                       · {dueLabel(task.dueDate, today)}
                     </span>
                   )}
