@@ -2,7 +2,6 @@ import {Routes,Route,Navigate} from "react-router-dom";
 import Register from "../pages/authenticate/Register";
 import Login from "../pages/authenticate/login";
 import ChangePassword from "../pages/authenticate/ChangePassword";
-import MigrateAuth from "../pages/authenticate/MigrateAuth";
 import DashboardLayout from "../layouts/DashboardLayout";
 import Dashboard from "../pages/Dashboard";
 import Departments from "../pages/Departments";
@@ -68,13 +67,6 @@ function AppRoutes(){
                     </GuestRoute>
                 }
             />
-
-            {/*
-              One-time authentication migration. Not behind GuestRoute: until it
-              has run the owner has no /userIndex row, so no session can exist
-              for the guard to check. Remove once every company is migrated.
-            */}
-            <Route path="/migrate" element={<MigrateAuth />} />
 
             <Route
                 element={

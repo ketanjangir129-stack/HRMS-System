@@ -9,6 +9,7 @@ function DepartmentList({
     onEditDepartment,
     onAddDesignation,
     onEditDesignation,
+    onAssignManager,
     loading,
     expandedDepartment,
     toggleDepartment,
@@ -78,6 +79,7 @@ function DepartmentList({
                         onEditDepartment={onEditDepartment}
                         onAddDesignation={onAddDesignation}
                         onEditDesignation={onEditDesignation}
+                        onAssignManager={onAssignManager}
                     />
                 )
             )}

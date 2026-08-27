@@ -563,8 +563,22 @@ function EmployeeForm() {
               className={`cursor-pointer ${fieldClass(false)}`}
             >
               <option value="employee">Employee</option>
+              <option value="manager">Manager</option>
               <option value="hr">HR</option>
             </select>
+
+            {/*
+              A manager approves nothing until a department is handed to them
+              on the Departments screen, so the role on its own is not the
+              whole setup and the form says so rather than leaving somebody
+              wondering why the approval queue is empty.
+            */}
+            {employee.account.role === "manager" && (
+              <p className="mt-2 text-xs leading-relaxed text-slate-500">
+                Assign this manager to a department from the Departments page
+                to give them attendance and leave approvals for it.
+              </p>
+            )}
           </div>
 
           {/* Login is not asked for here — EmployeeService sets both the

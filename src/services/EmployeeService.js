@@ -6,42 +6,18 @@ import {
   getDownloadURL,
 } from "firebase/storage";
 import { checkEmployeeUniqueness } from "./ValidationService";
-import { provisionAuthUser } from "../firebase/secondaryAuth";
-import { createEmployeeIndex, syncUserIndex } from "./userIndexService";
+import { releaseManagerFromDepartments } from "./departmentService";
 import {
-  buildDefaultPassword,
-  buildEmployeeEmail,
-} from "../utils/auth/employeeIdentity";
-
-/*
-| Adding an employee now creates three things, in this order:
-|
-|   1. a Firebase Auth account, so the employee has a uid to sign in with
-|   2. the employee record
-|   3. the /userIndex row that tells the security rules which company and role
-|      that uid has
-|
-| The account is created through a second Firebase app instance — see
-| firebase/secondaryAuth.js — because doing it on the primary one would sign
-| the HR who clicked "Add Employee" out of their own session.
-|
-| No password is written to the database. The rules refuse it outright now.
-*/
+  getEmployeeRole,
+  releasesDepartments,
+  validateRoleChange,
+} from "../utils/permissions/roleAssignment";
+ 
+// Add Employee
 export const addEmployee = async (companyCode, employee) => {
   const employeeId = employee.employmentInfo.employeeId.trim().toUpperCase();
   const personal = employee.personalInfo || {};
-
-  const temporaryPassword = buildDefaultPassword(employeeId);
-
-  const provision = await provisionAuthUser(
-    buildEmployeeEmail(companyCode, employeeId),
-    temporaryPassword
-  );
-
-  if (!provision.success) {
-    return { success: false, message: provision.message };
-  }
-
+ 
   await set(
     ref(db, `companies/${companyCode}/employees/${employeeId}`),
     {
@@ -62,7 +38,7 @@ export const addEmployee = async (companyCode, employee) => {
       },
       account: {
         username: employeeId,
-        uid: provision.uid,
+        password: employeeId,
         role: employee.account.role,
         status: "Active",
         isPasswordChanged: false,
@@ -70,27 +46,18 @@ export const addEmployee = async (companyCode, employee) => {
       createdAt: Date.now(),
     }
   );
-
-  await createEmployeeIndex({
-    uid: provision.uid,
-    companyCode,
-    employeeId,
-    role: employee.account.role,
-  });
-
-  return { success: true, temporaryPassword };
 };
-
-
+ 
+ 
 // Get All Employees
 export const getEmployees = async (companyCode) => {
   const snapshot = await get(
     ref(db, `companies/${companyCode}/employees`)
   );
-
+ 
   return snapshot.exists() ? snapshot.val() : {};
 };
-
+ 
 // Get Employee By ID
 export const getEmployeeById = async (
   companyCode,
@@ -102,11 +69,11 @@ export const getEmployeeById = async (
       `companies/${companyCode}/employees/${employeeId.toUpperCase()}`
     )
   );
-
+ 
   return snapshot.exists() ? snapshot.val() : null;
 };
-
-
+ 
+ 
 // Update one section of an employee (e.g. { personalInfo: {...} })
 export const updateEmployee = async (companyCode, employeeId, data) => {
   await update(
@@ -114,7 +81,7 @@ export const updateEmployee = async (companyCode, employeeId, data) => {
     data
   );
 };
-
+ 
 // Details page ka section save — updateEmployee ke upar ek patli layer.
 // personalInfo ke liye email/mobile ka duplicate check + trim/lowercase karti hai.
 export const updateEmployeeSection = async (
@@ -127,7 +94,7 @@ export const updateEmployeeSection = async (
     await updateEmployee(companyCode, employeeId, { [sectionId]: sectionData });
     return { success: true, data: sectionData };
   }
-
+ 
   const nextData = {
     ...sectionData,
     name: sectionData.name?.trim() || "",
@@ -135,48 +102,131 @@ export const updateEmployeeSection = async (
     mobile: sectionData.mobile?.trim() || "",
     address: sectionData.address?.trim() || "",
   };
-
+ 
   const current = await getEmployeeById(companyCode, employeeId);
-
+ 
   const currentEmail = (
     current?.personalInfo?.email ||
     current?.employmentInfo?.email ||
     ""
   ).trim().toLowerCase();
-
+ 
   const currentMobile = (
     current?.personalInfo?.mobile ||
     current?.employmentInfo?.mobile ||
     ""
   ).trim();
-
+ 
   // Sirf badli hui value check karo — warna khud ka hi email duplicate nikal aayega
   const duplicate = await checkEmployeeUniqueness(companyCode, {
     email: nextData.email !== currentEmail ? nextData.email : undefined,
     mobile: nextData.mobile !== currentMobile ? nextData.mobile : undefined,
   });
-
+ 
   if (!duplicate.success) {
     return duplicate;
   }
-
+ 
   await updateEmployee(companyCode, employeeId, { personalInfo: nextData });
-
+ 
   return { success: true, data: nextData };
 };
-
+ 
+/*
+|--------------------------------------------------------------------------
+| Employee Role
+|--------------------------------------------------------------------------
+| The portal role, stored at `account.role`.
+|
+| It is written on its own rather than through `updateEmployeeSection`, for
+| two reasons. The account node also carries the username, the password and
+| the status, and a role change has no business replacing any of them - so a
+| multi-path write touches the one key, the same way the password change does.
+|
+| And a role change is not only a write. A manager who stops being one is
+| still written on the department nodes they were running, so they are
+| released in the same call. The deactivate flow on the details screen already
+| does this for the same reason; skipping it here would leave a department
+| pointing at somebody the scope no longer treats as its manager.
+|
+| The current role is read from the record rather than taken from the caller:
+| the list that offers the button may have been loaded minutes ago, and the
+| decision to release departments has to be made against what is stored.
+|--------------------------------------------------------------------------
+*/
+export const updateEmployeeRole = async (
+  companyCode,
+  employeeId,
+  nextRole,
+  actorRole
+) => {
+ 
+  const current = await getEmployeeById(companyCode, employeeId);
+ 
+  if (!current) {
+    return { success: false, message: "Employee not found." };
+  }
+ 
+  const currentRole = getEmployeeRole(current.account);
+ 
+  /*
+  | The same rule the modal ran before it offered the option, run again here
+  | so a role can never be written by a caller that went round the screen.
+  */
+  const problem = validateRoleChange({
+    actorRole,
+    nextRole,
+    currentRole,
+  });
+ 
+  if (problem) {
+    return { success: false, message: problem };
+  }
+ 
+  await updateEmployee(companyCode, employeeId, {
+    "account/role": nextRole,
+  });
+ 
+  if (releasesDepartments(currentRole, nextRole)) {
+ 
+    const released = await releaseManagerFromDepartments(
+      companyCode,
+      current.employmentInfo?.employeeId || employeeId
+    );
+ 
+    /*
+    | The role is already saved and is the part that matters, so a failed
+    | release is reported rather than thrown: the owner can clear the stale
+    | manager from the Departments screen, and hiding the problem would leave
+    | them with no reason to.
+    */
+    if (!released.success) {
+      return {
+        success: true,
+        role: nextRole,
+        warning:
+          "Role updated, but their departments could not be released. Please clear them from the Departments page.",
+      };
+    }
+ 
+  }
+ 
+  return { success: true, role: nextRole };
+ 
+};
+ 
 // Resume upload — PDF Storage mein jaata hai, DB mein sirf uska link save hota hai
 export const uploadResume = async (companyCode, employeeId, file) => {
   const fileRef = storageRef(
     storage,
     `companies/${companyCode}/employees/${employeeId.toUpperCase()}/resume.pdf`
   );
-
+ 
   await uploadBytes(fileRef, file, { contentType: "application/pdf" });
-
+ 
   return await getDownloadURL(fileRef);
 };
-
+ 
 // CREATE THE EMPLOYEES
 export const createEmployee = async (companyCode, employee) => {
   // Onboarding wala hi check use karte hain — wo employees ke saath
@@ -187,57 +237,15 @@ export const createEmployee = async (companyCode, employee) => {
     email: employee.personalInfo?.email,
     mobile: employee.personalInfo?.mobile,
   });
-
+ 
   if (!result.success) {
     return result;
   }
-
-  const created = await addEmployee(companyCode, employee);
-
-  // Auth account creation can fail on its own (an ID reused after a delete),
-  // and it fails before anything is written, so pass it straight back.
-  if (!created.success) {
-    return created;
-  }
-
+ 
+  await addEmployee(companyCode, employee);
+ 
   return {
     success: true,
     message: "Employee created successfully.",
-    temporaryPassword: created.temporaryPassword,
   };
-};
-
-/*
-| Role and status are stored twice: on the employee record, where HR edits
-| them, and on the /userIndex row, where the security rules read them. Change
-| one without the other and a demoted HR keeps manager access until they are
-| deleted. Route those two fields through here.
-*/
-export const updateEmployeeAccount = async (
-  companyCode,
-  employeeId,
-  changes
-) => {
-  const employee = await getEmployeeById(companyCode, employeeId);
-
-  if (!employee) {
-    return { success: false, message: "Employee not found." };
-  }
-
-  const updates = {};
-
-  if (changes.role !== undefined) updates["account/role"] = changes.role;
-  if (changes.status !== undefined) updates["account/status"] = changes.status;
-
-  await updateEmployee(companyCode, employeeId, updates);
-
-  // Pre-migration records have no uid; there is no index row to keep in step.
-  if (employee.account?.uid) {
-    await syncUserIndex(employee.account.uid, {
-      ...(changes.role !== undefined ? { role: changes.role } : {}),
-      ...(changes.status !== undefined ? { status: changes.status } : {}),
-    });
-  }
-
-  return { success: true };
 };

@@ -178,7 +178,7 @@ function EmployeeTasks() {
 
         <button
           onClick={() => navigate("/tasks")}
-          className="cursor-pointer bg-brand text-white text-sm sm:text-base px-3 sm:px-4 py-2 rounded-lg hover:bg-brand-hover transition-colors"
+          className="group flex shrink-0 cursor-pointer items-center gap-2 text-sm font-semibold text-blue-600 transition hover:text-blue-700"
         >
           View All
         </button>

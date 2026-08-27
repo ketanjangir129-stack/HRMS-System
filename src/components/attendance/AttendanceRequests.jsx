@@ -29,6 +29,13 @@ function AttendanceRequests({
   currentUser,
   onApprove,
   onReject,
+  /*
+  | The department scope of the signed in user, or null for a role that is
+  | never narrowed. Passed straight to the review helper, the same way the
+  | full requests page does it, so a manager's card offers the decision on
+  | exactly the rows their queue does.
+  */
+  reviewScope = null,
 }) {
 
   const navigate = useNavigate();
@@ -76,7 +83,7 @@ function AttendanceRequests({
 
           {visible.map((request) => {
 
-            const canDecide = canReviewRequest(request, currentUser);
+            const canDecide = canReviewRequest(request, currentUser, reviewScope);
 
             return (
 

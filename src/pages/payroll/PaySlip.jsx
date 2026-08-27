@@ -31,7 +31,7 @@ import styles from "./PaySlip.module.css";
 | The sheet is authored at this width and scaled to fit; see the header
 | comment in PaySlip.module.css for how the two co-operate.
 */
-const DESIGN_WIDTH = 800;
+const DESIGN_WIDTH = 900;
 const MAX_SCALE = 1.5;
 
 // Only a guard against degenerate measurements — not a readability floor.
@@ -49,13 +49,19 @@ const MIN_SCALE = 0.7;
 const COMPACT_WIDTH = 720;
 
 /*
-| A4 portrait at 96dpi minus the 10mm `@page` margins the stylesheet asks
-| for: 210 - 20 = 190mm wide, 297 - 20 = 277mm tall, less a millimetre of
-| slack so rounding can never tip the sheet onto a second page.
+| The printable area of an A4 portrait page: the sheet, less the `@page`
+| margins the stylesheet asks for, less a few millimetres of slack so
+| rounding — or a printer that keeps a little more of the edge for itself —
+| can never tip the payslip onto a second page.
+|
+| CSS fixes 1in at 96px whatever the printer's real resolution is, so a
+| millimetre is always the same number of the px the design is authored in.
 */
 const MM_TO_PX = 96 / 25.4;
-const PRINT_WIDTH = 180 * MM_TO_PX;
-const PRINT_HEIGHT = 256 * MM_TO_PX;
+const PAGE_MARGIN_MM = 12;
+const PAGE_SLACK_MM = 4;
+const PRINT_WIDTH = (210 - PAGE_MARGIN_MM * 2 - PAGE_SLACK_MM) * MM_TO_PX;
+const PRINT_HEIGHT = (277 - PAGE_MARGIN_MM * 2 - PAGE_SLACK_MM) * MM_TO_PX;
 
 /* The element the payslip would scroll inside, if it were allowed to. */
 const findScrollHost = (element) => {
@@ -90,68 +96,117 @@ const measureAvailableHeight = (canvas) => {
   return host.clientHeight - offset - bottomInset;
 };
 
-const AmountTable = ({ heading, rows, totalLabel, totalAmount }) => (
-  <div className={styles.section}>
-    <table className={styles.amountTable}>
-      <thead>
-        <tr>
-          <th>{heading}</th>
-          <th>Amount</th>
-        </tr>
-      </thead>
+/*
+| Every block down the sheet is the same object: a bordered table under a
+| tinted bar that names it and runs its full width. Only the columns beneath
+| the bar change from block to block, so the sheet reads as one document
+| rather than a stack of unrelated panels.
+*/
+const Block = ({ heading, columns, className = "", children }) => (
+  <table className={`${styles.blockTable} ${className}`}>
+    <thead>
+      <tr>
+        <th colSpan={columns}>{heading}</th>
+      </tr>
+    </thead>
 
-      <tbody>
-        {rows.length === 0 ? (
-          <tr>
-            <td>None</td>
-            <td>{formatAmount(0)}</td>
-          </tr>
-        ) : (
-          rows.map((item) => (
-            <tr key={item.title}>
-              <td>{item.title}</td>
-              <td>{formatAmount(item.amount)}</td>
-            </tr>
-          ))
-        )}
-
-        <tr className={styles.totalRow}>
-          <td>{totalLabel}</td>
-          <td>{formatAmount(totalAmount)}</td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
+    <tbody>{children}</tbody>
+  </table>
 );
 
-const DetailBlock = ({ className, rows }) => (
-  <div className={className}>
+/* A label on the left and its one reading on the right, a line each. */
+const DetailTable = ({ heading, className, rows }) => (
+  <Block heading={heading} columns={2} className={className}>
     {rows.map((row) => (
-      <p key={row.label}>
-        <span>{row.label}:</span> {row.value}
-      </p>
+      <tr key={row.label}>
+        <th scope="row">{row.label}</th>
+        <td className={row.tone ? styles[row.tone] : undefined}>{row.value}</td>
+      </tr>
     ))}
-  </div>
+  </Block>
 );
 
-const SummaryCard = ({ heading, rows }) => (
-  <div className={styles.card}>
-    <div className={styles.cardHeading}>{heading}</div>
+/*
+| Two label/value pairs to a line. Attendance is a column of small counts, and
+| one pair per line would leave the block half empty and twice as tall as it
+| needs to be.
+*/
+const PairTable = ({ heading, rows }) => {
+  const lines = [];
 
-    <table className={styles.cardTable}>
-      <tbody>
-        {rows.map((row) => (
-          <tr key={row.title}>
-            <td>{row.title}</td>
-            <td className={row.tone ? styles[row.tone] : undefined}>
-              {row.value}
-            </td>
+  for (let index = 0; index < rows.length; index += 2) {
+    lines.push([rows[index], rows[index + 1]]);
+  }
+
+  return (
+    <Block heading={heading} columns={4} className={styles.pairTable}>
+      {lines.map(([left, right]) => (
+        <tr key={left.title}>
+          <th scope="row">{left.title}</th>
+          <td className={left.tone ? styles[left.tone] : undefined}>
+            {left.value}
+          </td>
+
+          {right ? (
+            <>
+              <th scope="row">{right.title}</th>
+              <td className={right.tone ? styles[right.tone] : undefined}>
+                {right.value}
+              </td>
+            </>
+          ) : (
+            /* An odd number of counts leaves the last line half used. */
+            <td className={styles.pairFiller} colSpan={2} />
+          )}
+        </tr>
+      ))}
+    </Block>
+  );
+};
+
+/*
+| Earnings and deductions are read across from one another, so their totals
+| have to finish on the same line. `bodyRows` is the length of the longer of
+| the two lists and the shorter one is padded out to it.
+|
+| The padding stays in the markup on the compact layout — where the two
+| tables sit one above the other and have nothing to line up with — because
+| the sheet is measured for print with the compact class taken off, and rows
+| that were never rendered cannot be measured. It is hidden there instead.
+*/
+const AmountTable = ({ heading, rows, totalLabel, totalAmount, bodyRows }) => {
+  const lines = rows.length > 0 ? rows : [{ title: "None", amount: 0 }];
+
+  return (
+    <Block heading={heading} columns={2} className={styles.amountTable}>
+      {lines.map((item) => (
+        <tr key={item.title}>
+          <td>{item.title}</td>
+          <td>{formatAmount(item.amount)}</td>
+        </tr>
+      ))}
+
+      {Array.from(
+        { length: Math.max(0, bodyRows - lines.length) },
+        (_, index) => (
+          <tr
+            key={`filler-${index}`}
+            className={styles.fillerRow}
+            aria-hidden="true"
+          >
+            <td>&nbsp;</td>
+            <td />
           </tr>
-        ))}
-      </tbody>
-    </table>
-  </div>
-);
+        )
+      )}
+
+      <tr className={styles.totalRow}>
+        <td>{totalLabel}</td>
+        <td>{formatAmount(totalAmount)}</td>
+      </tr>
+    </Block>
+  );
+};
 
 /*
 | A count is only worth colouring when it is not zero: a payslip with a green
@@ -160,6 +215,7 @@ const SummaryCard = ({ heading, rows }) => (
 */
 const countTone = (value, tone) => (Number(value) > 0 ? tone : undefined);
 
+/* Listed in reading order: the pair table fills each line left to right. */
 const buildAttendanceRows = (summary = {}) => [
   { title: "Working Days", value: summary.workingDays ?? 0 },
   {
@@ -167,40 +223,33 @@ const buildAttendanceRows = (summary = {}) => [
     value: summary.present ?? 0,
     tone: countTone(summary.present, "positive"),
   },
-  // { title: "Late", value: summary.late ?? 0 },
-  { title: "Half Day", value: summary.halfDay ?? 0 },
-  { title: "Paid Leave", value: summary.paidLeave ?? 0 },
-  {
-    title: "Unpaid Leave",
-    value: summary.unpaidLeave ?? 0,
-    tone: countTone(summary.unpaidLeave, "negative"),
-  },
   {
     title: "Absent",
     value: summary.absent ?? 0,
     tone: countTone(summary.absent, "negative"),
   },
-  { title: "Holiday", value: summary.holiday ?? 0 },
+  { title: "Paid Leave", value: summary.paidLeave ?? 0 },
+  { title: "Half Day", value: summary.halfDay ?? 0 },
   { title: "Weekly Off", value: summary.weeklyOff ?? 0 },
-  { title: "Overtime Hours", value: summary.overtimeHours ?? 0 },
+  { title: "Overtime", value: `${summary.overtimeHours ?? 0} hrs` },
 ];
 
 const buildCalculationRows = (calculation = {}) => [
-  { title: "Per Day Salary", value: formatAmount(calculation.perDaySalary) },
-  { title: "Per Hour Salary", value: formatAmount(calculation.perHourSalary) },
-  { title: "Payable Days", value: calculation.payableDays ?? 0 },
+  { label: "Per Day Salary", value: formatAmount(calculation.perDaySalary) },
+  { label: "Per Hour Salary", value: formatAmount(calculation.perHourSalary) },
+  { label: "Payable Days", value: calculation.payableDays ?? 0 },
   {
-    title: "Loss Of Pay Days",
+    label: "LOP Days",
     value: calculation.lopDays ?? 0,
     tone: countTone(calculation.lopDays, "negative"),
   },
   {
-    title: "LOP Deduction",
+    label: "LOP Deduction",
     value: formatAmount(calculation.lopDeduction),
     tone: countTone(calculation.lopDeduction, "negative"),
   },
   {
-    title: "Overtime Pay",
+    label: "Overtime Pay",
     value: formatAmount(calculation.overtimePay),
     tone: countTone(calculation.overtimePay, "positive"),
   },
@@ -424,6 +473,18 @@ const PaySlip = () => {
     : 1;
 
   /*
+  | Half the page height the sheet does not use, which is the gap that puts
+  | it on the middle of the page rather than under its top edge.
+  |
+  | It is measured in the sheet's own units rather than the page's, because
+  | the box it pads is the one carrying the print zoom — see the print
+  | section of PaySlip.module.css.
+  */
+  const printOffset = designHeight
+    ? Math.max(0, (PRINT_HEIGHT / printZoom - designHeight) / 2)
+    : 0;
+
+  /*
   | The browser names the saved PDF after `document.title`, so swap in a
   | payslip filename for the duration of the print dialog and put the
   | original page title back once it closes.
@@ -498,22 +559,18 @@ const PaySlip = () => {
     );
   }
 
-  /*
-  | Who is being paid, and what they are being paid for. They are two
-  | different readings of the same block, so each gets its own column.
-  */
-
+  /* Who is being paid, and what the payment covers. */
   const employeeRows = [
     { label: "Employee Name", value: payroll.employee?.name || employeeId },
     { label: "Employee ID", value: payroll.employeeId },
     { label: "Department", value: payroll.employee?.department || "--" },
     { label: "Designation", value: payroll.employee?.designation || "--" },
+    { label: "Pay Period", value: formatPayPeriod(selectedMonth) },
+    { label: "Pay Date", value: formatPayrollDate(payroll.payPeriod?.payDate) },
   ];
 
-  const payPeriodRows = [
-    { label: "Pay Period", value: formatPayPeriod(selectedMonth) },
-    { label: "Pay Day", value: formatPayrollDate(payroll.payPeriod?.payDate) },
-  ];
+  /* The line the two amount tables both have to reach before their totals. */
+  const amountBodyRows = Math.max(1, earnings.length, deductions.length);
 
   return (
     <div className={styles.page}>
@@ -571,6 +628,7 @@ const PaySlip = () => {
             "--payslip-height": `${designHeight}px`,
             "--payslip-scale": scale,
             "--payslip-print-zoom": printZoom,
+            "--payslip-print-offset": `${printOffset}px`,
           }}
         >
           <div
@@ -580,11 +638,13 @@ const PaySlip = () => {
             {/* Header */}
             <div className={styles.header}>
               <div className={styles.headerLeft}>
+                {/*
+                | The company is named here and reached in the footer, so the
+                | band is left holding one line and can give the name the room.
+                */}
                 <h2 className={styles.companyName}>
                   {company?.companyName || "Company"}
                 </h2>
-                <p className={styles.companyLine}>{company?.address || ""}</p>
-                <p className={styles.companyLine}>{company?.email || ""}</p>
                 <p className={styles.companyLine}>{company?.phone || ""}</p>
 
                 <div className={styles.triangle} />
@@ -600,56 +660,94 @@ const PaySlip = () => {
 
             <h1 className={styles.title}>Pay Slip</h1>
 
-            {/* Employee Details */}
-            <div className={styles.employee}>
-              <DetailBlock
-                className={styles.employeeDetails}
+            {/* Employee Information */}
+            <div className={styles.section}>
+              <DetailTable
+                heading="Employee Information"
+                className={styles.detailTable}
                 rows={employeeRows}
-              />
-
-              <DetailBlock
-                className={styles.payDetails}
-                rows={payPeriodRows}
               />
             </div>
 
-            <AmountTable
-              heading="Earnings"
-              rows={earnings}
-              totalLabel="Total Earnings"
-              totalAmount={calculation.totalEarnings}
-            />
+            {/* Earnings & Deductions, read across from one another */}
+            <div className={styles.amountGrid}>
+              <AmountTable
+                heading="Earnings"
+                rows={earnings}
+                totalLabel="Total"
+                totalAmount={calculation.totalEarnings}
+                bodyRows={amountBodyRows}
+              />
 
-            <AmountTable
-              heading="Deductions"
-              rows={deductions}
-              totalLabel="Total Deductions"
-              totalAmount={calculation.totalDeductions}
-            />
+              <AmountTable
+                heading="Deductions"
+                rows={deductions}
+                totalLabel="Total"
+                totalAmount={calculation.totalDeductions}
+                bodyRows={amountBodyRows}
+              />
+            </div>
 
-            {/* Attendance & Payroll Calculation */}
-            <div className={styles.summaryGrid}>
-              <SummaryCard
-                heading="Attendance"
+            {/* Attendance Summary */}
+            <div className={styles.section}>
+              <PairTable
+                heading="Attendance Summary"
                 rows={buildAttendanceRows(payroll.attendanceSummary)}
               />
-              <SummaryCard
+            </div>
+
+            {/* Payroll Calculation */}
+            <div className={styles.section}>
+              <DetailTable
                 heading="Payroll Calculation"
+                className={styles.figureTable}
                 rows={buildCalculationRows(calculation)}
               />
             </div>
 
             {/* Net Salary */}
             <div className={styles.netSalary}>
-              <table className={styles.netSalaryTable}>
-                <tbody>
-                  <tr>
-                    <td>Net Salary</td>
-                    <td>{formatAmount(calculation.netPayable)}</td>
-                  </tr>
-                </tbody>
-              </table>
+              <div className={styles.netBanner}>
+                <span>Net Salary</span>
+                <span className={styles.netAmount}>
+                  {formatAmount(calculation.netPayable)}
+                </span>
+              </div>
             </div>
+
+            {/*
+            | Where to reach the company, closing the sheet the way the header
+            | opens it: a full width band in the same purple, flush to the
+            | edges rather than sitting in the body's inset column.
+            */}
+            <footer className={styles.footer}>
+              <div className={styles.footerInner}>
+                <div className={styles.footerBlock}>
+                  <span className={styles.footerLabel}>Address</span>
+                  <span className={styles.footerValue}>
+                    {company?.address || "--"}
+                  </span>
+                </div>
+
+                <div className={styles.footerBlock}>
+                  <span className={styles.footerLabel}>Mobile</span>
+                  <span className={styles.footerValue}>
+                    {company?.phone || "--"}
+                  </span>
+                </div>
+
+                <div className={styles.footerBlock}>
+                  <span className={styles.footerLabel}>Email</span>
+                  <span className={styles.footerValue}>
+                    {company?.email || "--"}
+                  </span>
+                </div>
+              </div>
+
+              <p className={styles.footNote}>
+                This is a computer-generated payslip.
+              </p>
+            </footer>
           </div>
         </div>
       </div>

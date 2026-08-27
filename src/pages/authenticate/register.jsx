@@ -57,35 +57,24 @@ const handleSubmit = async (e) => {
     try {
       // Convert company code to uppercase
       const companyCode = formData.companyCode.trim().toUpperCase();
-
-      /*
-      | Auth account first. Every read and write below is now checked against
-      | the security rules, and the rules want a uid — so there is nothing this
-      | page can ask the database until the owner is signed in. The old order
-      | (availability check, then sign-up) cannot work any more.
-      */
-      const authResult = await registerCompany(
-        formData.email,
-        formData.password
-      );
-
-      if (!authResult.success) {
-        // A duplicate email is the one failure the form can point at a field.
-        if (authResult.code === "auth/email-already-in-use") {
-          setErrors({ email: authResult.message });
-        } else {
-          toast.error(authResult.message);
-        }
-        return;
-      }
-
-      // Now signed in, so the availability check is allowed to read.
+      // Check company code
       const exists = await checkCompanyCodeExists(companyCode);
 
       if (exists) {
         setErrors({
           companyCode: "Company Code already exists.",
         });
+        return;
+      }
+
+      // Firebase Authentication
+      const authResult = await registerCompany(
+        formData.email,
+        formData.password
+      );
+      
+      if (!authResult.success) {
+        alert(authResult.message);
         return;
       }
 
@@ -100,27 +89,21 @@ const handleSubmit = async (e) => {
         address: formData.address.trim(),
       };
 
-      /*
-      | Claims the code, writes the company, then links the owner's uid to it.
-      | The three steps are ordered because each rule checks the one before:
-      | the company may only be created by whoever holds the code claim, and
-      | the owner's userIndex row is only accepted once the company names that
-      | uid as its owner.
-      */
+      // Save Company
       const companyResult = await createCompany(companyData);
 
       if (!companyResult.success) {
-        toast.error(companyResult.message);
+        alert(companyResult.message);
         return;
       }
 
-      toast.success("Company registered successfully.");
+      alert("Company Registered Successfully.");
 
       await new Promise((resolve) => setTimeout(resolve, 700));
-      navigate("/dashboard");
+      navigate("/login");
     } catch (error) {
       console.error(error);
-      toast.error(error.message);
+      alert(error.message);
     } finally {
       setLoading(false);
     }

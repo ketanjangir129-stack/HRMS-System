@@ -20,6 +20,7 @@ import useAuth from "../../hooks/useAuth";
 import useDailyAttendance from "../../hooks/useDailyAttendance";
 import useEmployeeDirectory from "../../hooks/useEmployeeDirectory";
 import useHolidayDates from "../../hooks/useHolidayDates";
+import useManagerScope from "../../hooks/useManagerScope";
 import useRoleAccess from "../../hooks/useRoleAccess";
 import { getDateKey } from "../../utils/attendance/attendanceDate";
 import {
@@ -44,6 +45,12 @@ import {
 |
 | Records store the employee id only, so they are joined with the employee
 | directory once here and every panel below works from that.
+|
+| For a manager that joined set is then narrowed to their departments, once,
+| before any of the panels read it. The summary cards, the analytics, the
+| activity feed and the today table are all derived from it, so a manager's
+| dashboard describes their department end to end instead of mixing a company
+| wide rate into a departmental table.
 |--------------------------------------------------------------------------
 */
 
@@ -117,11 +124,18 @@ function AttendanceDashboard() {
   const {
     directory,
     activeEmployees,
-    activeCount,
     loading: directoryLoading,
     error: directoryError,
     reload: reloadDirectory,
   } = useEmployeeDirectory(companyCode);
+
+  const {
+    scope: reviewScope,
+    canReview: canReviewRecord,
+    filterRows,
+    filterEmployees,
+    loading: scopeLoading,
+  } = useManagerScope();
 
   const {
     attendance,
@@ -174,22 +188,37 @@ function AttendanceDashboard() {
   | the activity feed and the request card all read the same resolved names.
   */
   const records = useMemo(
-    () => attachEmployeeDetails(attendance, directory),
-    [attendance, directory]
+    () => filterRows(attachEmployeeDetails(attendance, directory)),
+    [filterRows, attendance, directory]
   );
 
   /*
+  | The roster every rate on this page is measured against. It has to be the
+  | same set the records above were narrowed to, or a manager's present rate
+  | is their department divided by the whole company.
+  */
+  const scopedEmployees = useMemo(
+    () => filterEmployees(activeEmployees),
+    [filterEmployees, activeEmployees]
+  );
+
+  const activeCount = scopedEmployees.length;
+
+  /*
   | Reviewers see every request; everyone else only sees the ones they raised.
+  | A manager is a reviewer, so the scope is what narrows theirs.
   */
   const detailedRequests = useMemo(() => {
 
-    const detailed = attachEmployeeDetails(requests, directory);
+    const detailed = filterRows(
+      attachEmployeeDetails(requests, directory)
+    );
 
     return isApprover(currentUser)
       ? detailed
       : filterOwnRequests(detailed, currentUser);
 
-  }, [requests, directory, currentUser]);
+  }, [filterRows, requests, directory, currentUser]);
 
   /*
   | On a day nobody was expected in - a declared holiday or a weekly off - the
@@ -226,8 +255,14 @@ function AttendanceDashboard() {
 
   const handleApprove = async (request) => {
 
-    if (!isApprover(currentUser)) {
-      toast.error("You are not allowed to review requests.");
+    /*
+    | The card already withholds the button, so this is the second line and
+    | not the first. It stays because the two answers must not be able to
+    | drift: for a manager "allowed to review" also means "in one of my
+    | departments, and not mine".
+    */
+    if (!isApprover(currentUser) || !canReviewRecord(request)) {
+      toast.error("You are not allowed to review this request.");
       return;
     }
 
@@ -341,7 +376,7 @@ function AttendanceDashboard() {
       {showToday && (
         <AttendanceTodayTable
           attendance={records}
-          loading={attendanceLoading || directoryLoading}
+          loading={attendanceLoading || directoryLoading || scopeLoading}
           error={attendanceError || directoryError}
           onRetry={reloadDirectory}
         />
@@ -389,8 +424,9 @@ function AttendanceDashboard() {
           <div className="xl:col-span-12 self-start">
             <AttendanceRequests
               requests={detailedRequests}
-              loading={requestsLoading || directoryLoading}
+              loading={requestsLoading || directoryLoading || scopeLoading}
               currentUser={currentUser}
+              reviewScope={reviewScope}
               onApprove={handleApprove}
               onReject={setRejectRequest}
             />
@@ -407,7 +443,7 @@ function AttendanceDashboard() {
         | itself the approval and is filed under whoever recorded it.
         */
         onSave={(record) => markAttendance(record, actorName)}
-        employees={activeEmployees}
+        employees={scopedEmployees}
         dayRecords={records}
         recordsDate={getDateKey()}
       />

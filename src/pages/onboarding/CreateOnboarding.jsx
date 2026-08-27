@@ -5,13 +5,22 @@ import {
   FiAlertCircle,
   FiArrowLeft,
   FiBriefcase,
+  FiCheckCircle,
+  FiCopy,
   FiInfo,
+  FiLink,
   FiLoader,
+  FiMail,
   FiSend,
   FiUser,
   FiUserPlus,
+  FiXCircle,
 } from "react-icons/fi";
 import { createOnboardingRequest } from "../../services/OnboardingService";
+import {
+  isEmailServiceConfigured,
+  sendInvitationEmail,
+} from "../../services/email/onboardingEmailService";
 import { getDepartments } from "../../services/departmentService"
 import { validateField } from "../../utils/validation/validateField"
 import { validateForm } from "../../utils/validation/validateForm";
@@ -39,6 +48,16 @@ function OnBoardForm() {
   const [loading, setLoading] = useState(false);
   const [departments, setDepartments] = useState([]);
   const [designations, setDesignations] = useState([]);
+
+  /*
+  | What the page shows once the request exists: the joiner and the link
+  | generated for them. Creating the invitation and sending it are two
+  | separate decisions, so the form gives way to this rather than navigating
+  | off and leaving the link somewhere the user has to go looking for it.
+  */
+  const [created, setCreated] = useState(null);
+  const [emailing, setEmailing] = useState(false);
+  const [emailResult, setEmailResult] = useState(null);
 
 
   useEffect(() => {
@@ -131,7 +150,6 @@ function OnBoardForm() {
         companyCode,
         employee
       );
-      console.log("Invitation Link:", result.invitationLink);
 
       if (!result.success) {
 
@@ -142,11 +160,14 @@ function OnBoardForm() {
 
         return;
       }
+
       toast.success(result.message);
+
+      setCreated(result.employee);
+      setEmailResult(null);
       setEmployee(initialState);
       setErrors({});
       setDesignations([]);
-      navigate("/OnboardDashboard");
 
     } catch (error) {
 
@@ -157,6 +178,56 @@ function OnBoardForm() {
     } finally {
 
       setLoading(false);
+
+    }
+  };
+
+  /*
+  | The send itself. A failure is kept on the card rather than only thrown at
+  | a toast that disappears: the link is still there to be copied, and the
+  | button is still there to be tried again.
+  */
+  const handleSendInvitation = async () => {
+
+    setEmailing(true);
+
+    try {
+
+      const result = await sendInvitationEmail(companyCode, created);
+
+      setEmailResult(result);
+
+      if (result.success) {
+        toast.success(result.message);
+      } else {
+        toast.error(result.message);
+      }
+
+    } finally {
+
+      setEmailing(false);
+
+    }
+  };
+
+  const handleOnboardAnother = () => {
+    setCreated(null);
+    setEmailResult(null);
+  };
+
+  const copyLink = async () => {
+
+    try {
+
+      await navigator.clipboard.writeText(created.invitationLink);
+
+      toast.success("Invitation link copied.");
+
+    } catch (error) {
+
+      console.error(error);
+
+      toast.error("Could not copy to clipboard.");
 
     }
   };
@@ -212,7 +283,150 @@ function OnBoardForm() {
 
       </div>
 
+      {/*
+        The invitation, once it exists
+        ------------------------------
+        Generating the link and emailing it are kept apart on purpose. Some
+        joiners are told over WhatsApp, some over email, and some are chased
+        by a recruiter who wants the link in their own hand — so the link is
+        shown and copyable first, and sending it is a button next to it.
+      */}
+      {created && (
+
+        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+
+          <div className="flex items-center gap-3 border-b border-slate-100 bg-green-50/60 px-5 py-4 sm:px-6">
+
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-green-100 text-green-600">
+              <FiCheckCircle />
+            </div>
+
+            <div className="min-w-0">
+
+              <h2 className="text-base font-semibold text-slate-900">
+                Invitation Link Generated
+              </h2>
+
+              <p className="text-xs text-slate-500">
+                {created.name} ({created.employeeId}) is ready to be invited.
+              </p>
+
+            </div>
+
+          </div>
+
+          <div className="space-y-5 px-5 py-6 sm:px-6">
+
+            <div>
+
+              <p className="mb-1.5 flex items-center gap-2 text-sm font-medium text-slate-700">
+                <FiLink className="text-slate-400" />
+                Invitation Link
+              </p>
+
+              <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 p-3">
+
+                <span className="min-w-0 break-all font-mono text-xs text-slate-600">
+                  {created.invitationLink}
+                </span>
+
+                <button
+                  type="button"
+                  onClick={copyLink}
+                  title="Copy link"
+                  aria-label="Copy invitation link"
+                  className="flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition-all hover:border-blue-500 hover:text-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                >
+                  <FiCopy size={14} />
+                </button>
+
+              </div>
+
+            </div>
+
+            <div className="flex flex-col gap-3 rounded-xl border border-slate-200 p-4 sm:flex-row sm:items-center sm:justify-between">
+
+              <div className="min-w-0">
+
+                <p className="text-sm font-medium text-slate-700">
+                  Email the invitation
+                </p>
+
+                <p className="mt-0.5 truncate text-xs text-slate-500">
+                  {isEmailServiceConfigured()
+                    ? `Sends the onboarding link to ${created.email}.`
+                    : "Email sending is not configured yet."}
+                </p>
+
+              </div>
+
+              <button
+                type="button"
+                onClick={handleSendInvitation}
+                disabled={emailing || !isEmailServiceConfigured()}
+                className="flex shrink-0 cursor-pointer items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-blue-600/20 transition-all duration-200 hover:-translate-y-0.5 hover:bg-blue-700 hover:shadow-lg hover:shadow-blue-600/30 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-60 disabled:shadow-none disabled:hover:translate-y-0"
+              >
+                {emailing ? (
+                  <>
+                    <FiLoader className="animate-spin" />
+                    Sending...
+                  </>
+                ) : (
+                  <>
+                    <FiMail />
+                    {emailResult?.success ? "Send Again" : "Send Invitation Email"}
+                  </>
+                )}
+              </button>
+
+            </div>
+
+            {emailResult && (
+
+              <p
+                className={`flex items-start gap-2 text-xs ${emailResult.success ? "text-green-600" : "text-red-500"
+                  }`}
+              >
+                {emailResult.success ? (
+                  <FiCheckCircle className="mt-0.5 shrink-0" />
+                ) : (
+                  <FiXCircle className="mt-0.5 shrink-0" />
+                )}
+                {emailResult.message}
+              </p>
+
+            )}
+
+          </div>
+
+          <div className="flex flex-col gap-3 border-t border-slate-100 bg-slate-50 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+
+            <button
+              type="button"
+              onClick={handleOnboardAnother}
+              className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-600 shadow-sm transition-all hover:border-blue-500 hover:text-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2"
+            >
+              <FiUserPlus />
+              Onboard Another Employee
+            </button>
+
+            <button
+              type="button"
+              onClick={() => navigate("/OnboardDashboard/OnBoardRequest")}
+              className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-600 shadow-sm transition-all hover:border-blue-500 hover:text-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2"
+            >
+              View Onboarding Requests
+            </button>
+
+          </div>
+
+        </div>
+
+      )}
+
       {/* Form card */}
+      {!created && (
+
       <form
         onSubmit={handleSubmit}
         className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
@@ -506,7 +720,10 @@ function OnBoardForm() {
                 <option value="employee">
                   Employee
                 </option>
-
+                <option value="manager">
+                  Manager
+                </option>
+                
                 <option value="hr">
                   HR
                 </option>
@@ -546,6 +763,8 @@ function OnBoardForm() {
         </div>
 
       </form>
+
+      )}
 
     </div>
   );

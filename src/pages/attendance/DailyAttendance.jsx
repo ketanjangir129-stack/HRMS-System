@@ -7,12 +7,14 @@ import AttendanceRecordsTable from "../../components/attendance/AttendanceRecord
 import AttendanceSummaryCards from "../../components/attendance/AttendanceSummaryCards";
 import MarkAttendanceModal from "../../components/attendance/MarkAttendanceModal";
 import RejectRequestModal from "../../components/attendance/requests/RejectRequestModal";
+import DepartmentScopeNotice from "../../components/common/DepartmentScopeNotice";
 import HolidayNotice from "../../components/holiday/HolidayNotice";
 import WeeklyOffNotice from "../../components/holiday/WeeklyOffNotice";
 import useAuth from "../../hooks/useAuth";
 import useDailyAttendance from "../../hooks/useDailyAttendance";
 import useEmployeeDirectory from "../../hooks/useEmployeeDirectory";
 import useHolidayDates from "../../hooks/useHolidayDates";
+import useManagerScope from "../../hooks/useManagerScope";
 import { getDateKey } from "../../utils/attendance/attendanceDate";
 import { isApprover } from "../../utils/attendance/attendanceRequestUtils";
 import {
@@ -37,6 +39,11 @@ import { isWeeklyOff } from "../../utils/holiday/holidayUtils";
 | On a declared holiday or a weekly off nobody is counted absent: the office
 | was closed, so the roster is not turned into a list of absences and the
 | banner says why the day is empty.
+|
+| A manager opens the same page narrowed to the departments they run. That
+| narrowing is applied to the roster first and everything else is derived from
+| it, so the table, the summary cards, the absent count and the "Approve All"
+| button are all describing one department and cannot disagree with each other.
 |--------------------------------------------------------------------------
 */
 
@@ -65,11 +72,24 @@ function DailyAttendance() {
     directory,
     departments,
     activeEmployees,
-    activeCount,
     loading: directoryLoading,
     error: directoryError,
     reload: reloadDirectory,
   } = useEmployeeDirectory(companyCode);
+
+  /*
+  | For an owner or an HR user every one of these passes its argument straight
+  | back, so the page below reads the same for them as it did before the
+  | manager role existed.
+  */
+  const {
+    canReview: canReviewRecord,
+    filterRows,
+    filterEmployees,
+    isScoped,
+    departments: myDepartments,
+    loading: scopeLoading,
+  } = useManagerScope();
 
   const {
     attendance,
@@ -107,24 +127,54 @@ function DailyAttendance() {
     };
   }, [setSearch, setSearchPlaceholder]);
 
+  /*
+  | The roster this page is about. Narrowing it here rather than at each of
+  | the three places below is what keeps the denominator honest: the absent
+  | count is the roster minus everybody accounted for, so a manager measuring
+  | their eight people against a company of ninety would read as eighty two
+  | absences every morning.
+  */
+  const scopedEmployees = useMemo(
+    () => filterEmployees(activeEmployees),
+    [filterEmployees, activeEmployees]
+  );
+
+  /*
+  | The department filter offers only what the table can actually contain.
+  | Left unnarrowed it would list every department in the company and every
+  | one but the reviewer's own would filter the table down to nothing.
+  */
+  const departmentOptions = useMemo(
+    () =>
+      isScoped
+        ? myDepartments.map((department) => department.name)
+        : departments,
+    [isScoped, myDepartments, departments]
+  );
+
   const records = useMemo(
-    () => buildDailyReport(attendance, directory),
-    [attendance, directory]
+    () => filterRows(buildDailyReport(attendance, directory)),
+    [filterRows, attendance, directory]
   );
 
   const summary = useMemo(
     () =>
-      getAttendanceSummary(records, activeCount, {
+      getAttendanceSummary(records, scopedEmployees.length, {
         isNonWorkingDay: Boolean(todayHoliday) || todayWeeklyOff,
       }),
-    [records, activeCount, todayHoliday, todayWeeklyOff]
+    [records, scopedEmployees, todayHoliday, todayWeeklyOff]
   );
 
   const canReview = isApprover(currentUser);
 
+  /*
+  | What "Approve All" would actually decide, so the count on the button and
+  | the write behind it are the same set. A manager's own pending day is on
+  | the list above and not in here: it is theirs to see and HR's to sign off.
+  */
   const pending = useMemo(
-    () => getPendingApprovals(records),
-    [records]
+    () => getPendingApprovals(records).filter(canReviewRecord),
+    [records, canReviewRecord]
   );
 
   /*
@@ -138,6 +188,17 @@ function DailyAttendance() {
     `${record?.date}-${record?.employeeId}`;
 
   const handleApprove = async (record) => {
+
+    /*
+    | The button is already withheld on a row that is not this reviewer's, so
+    | this is the second line and not the first. It stays because the answer
+    | must be the same wherever it is asked: a decision reached through a
+    | stale render is still a decision that gets written.
+    */
+    if (!canReviewRecord(record)) {
+      toast.error("This employee is not in a department you manage.");
+      return;
+    }
 
     setBusyKey(recordKey(record));
 
@@ -170,6 +231,12 @@ function DailyAttendance() {
   const handleReject = async (remarks) => {
 
     if (!rejectRecord) return;
+
+    if (!canReviewRecord(rejectRecord)) {
+      toast.error("This employee is not in a department you manage.");
+      setRejectRecord(null);
+      return;
+    }
 
     setRejecting(true);
 
@@ -246,10 +313,14 @@ function DailyAttendance() {
   | Handed to the table only for a reviewer. Without it the column is not
   | rendered at all, so an employee who reaches this page never sees the
   | buttons rather than seeing them disabled.
+  |
+  | `canReview` goes down as a predicate rather than a boolean, so the column
+  | is drawn for every row - the decision is worth reading on all of them -
+  | while the two buttons appear only on the rows this reviewer may decide.
   */
   const approval = canReview
     ? {
-      canReview,
+      canReview: canReviewRecord,
       busyKey,
       onApprove: handleApprove,
       onReject: setRejectRecord,
@@ -310,6 +381,12 @@ function DailyAttendance() {
 
       <div className="mt-5 space-y-4 sm:mt-6 sm:space-y-6">
 
+        {/*
+        | Above the holiday banner, because it explains the whole page rather
+        | than this one day of it.
+        */}
+        <DepartmentScopeNotice subject="attendance" />
+
         <HolidayNotice holiday={todayHoliday} label="Today" />
 
         {todayWeeklyOff && <WeeklyOffNotice date={today} label="Today" />}
@@ -327,11 +404,11 @@ function DailyAttendance() {
 
         <AttendanceRecordsTable
           records={records}
-          loading={loading || directoryLoading}
+          loading={loading || directoryLoading || scopeLoading}
           error={error || directoryError}
           onRetry={reloadDirectory}
           search={search}
-          departments={departments}
+          departments={departmentOptions}
           approval={approval}
           live
           emptyMessage={
@@ -354,7 +431,12 @@ function DailyAttendance() {
         | filed under whoever recorded it and never joins the queue.
         */
         onSave={(record) => markAttendance(record, actorName)}
-        employees={activeEmployees}
+        /*
+        | The same narrowed roster the page is reporting on. Marking a day by
+        | hand is an approval in itself, so the picker cannot offer somebody
+        | this reviewer would not have been allowed to approve.
+        */
+        employees={scopedEmployees}
         dayRecords={records}
         recordsDate={today}
       />

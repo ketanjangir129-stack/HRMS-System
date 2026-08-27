@@ -98,6 +98,13 @@ const EXPORT_HEADER = [
 | the day is already in. A decision can be revisited - a day approved at nine
 | can turn out at eleven to have been nobody's day at all - and hiding the
 | buttons the moment a day is decided is what would make that impossible.
+|
+| Who counts as a reviewer can differ from row to row. HR reviews the whole
+| day; a manager reviews their own departments and not their own record, so
+| `canReview` is read as a predicate when one is given and as a plain boolean
+| when it is not. The buttons are left out rather than disabled for a row that
+| is not theirs to decide: a disabled control says "not yet", and this is
+| "not yours".
 |--------------------------------------------------------------------------
 */
 
@@ -129,6 +136,11 @@ function ApprovalCell({ record, approval, size = "md" }) {
 
   const status = getApprovalStatus(record);
 
+  const canReview =
+    typeof approval.canReview === "function"
+      ? approval.canReview(record)
+      : Boolean(approval.canReview);
+
   const busy =
     approval.busyKey === `${record.date}-${record.employeeId}`;
 
@@ -145,7 +157,7 @@ function ApprovalCell({ record, approval, size = "md" }) {
         size={size}
       />
 
-      {approval.canReview && (
+      {canReview && (
 
         <span className="flex shrink-0 items-center gap-1">
 

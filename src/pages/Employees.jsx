@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { getEmployees } from "../services/EmployeeService";
 import { useNavigate, useOutletContext } from "react-router-dom";
 import { searchEmployees } from "../utils/search/searchEmployees";
@@ -10,8 +10,10 @@ import {
     FiUsers,
 } from "react-icons/fi";
 import useRoleAccess from "../hooks/useRoleAccess";
+import useManagerScope from "../hooks/useManagerScope";
 import usePagination from "../hooks/usePagination";
 import Pagination from "../components/common/pagination/Pagination";
+import DepartmentScopeNotice from "../components/common/DepartmentScopeNotice";
 import EmployeeCard, {
     EmployeeStatusBadge,
 } from "../components/employees/EmployeeCard";
@@ -38,10 +40,23 @@ function Employees() {
     const canAdd = canAccessSection("employees.add");
     const canOpenDetails = canAccessSection("employees.details");
 
-    const [employees, setEmployees] = useState([]);
+    const [allEmployees, setAllEmployees] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
     const { search, setSearch, setSearchPlaceholder } = useOutletContext();
+
+    /*
+    | The directory a manager reads is the people they are responsible for, so
+    | it is narrowed to their departments. Everybody else gets the list back
+    | unchanged.
+    */
+    const { filterEmployees, isScoped, loading: scopeLoading } =
+        useManagerScope();
+
+    const employees = useMemo(
+        () => filterEmployees(allEmployees),
+        [filterEmployees, allEmployees]
+    );
 
 
     const loadEmployees = async () => {
@@ -86,10 +101,10 @@ function Employees() {
                         "Active",
                 };
             });
-            setEmployees(employeeArray);
+            setAllEmployees(employeeArray);
         } catch (err) {
             console.error("Failed to load employees:", err);
-            setEmployees([]);
+            setAllEmployees([]);
             setError(err.message || "Failed to load employees.");
         } finally {
             setLoading(false);
@@ -180,6 +195,8 @@ function Employees() {
 
             </div>
 
+            <DepartmentScopeNotice subject="employees" />
+
             {/* Directory */}
             <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
 
@@ -192,14 +209,16 @@ function Employees() {
                         </h2>
 
                         <p className="mt-1 text-xs text-slate-500 sm:text-sm">
-                            Everyone on the company and their current status.
+                            {isScoped
+                                ? "Everyone in the departments you manage, and their current status."
+                                : "Everyone on the company and their current status."}
                         </p>
 
                     </div>
 
                 </div>
 
-                {loading ? (
+                {loading || scopeLoading ? (
 
                     <div className="px-4 py-10 sm:px-6">
                         <Loader text="Loading employees..." />

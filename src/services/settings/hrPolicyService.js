@@ -3,9 +3,13 @@ import { db } from "../../firebase/firebase";
 import {
   normalizeHRPolicy,
   toStoredESIPolicy,
+  toStoredIncomeTaxPolicy,
   toStoredPFPolicy,
+  toStoredProfessionalTaxPolicy,
   validateESIPolicy,
+  validateIncomeTaxPolicy,
   validatePFPolicy,
+  validateProfessionalTaxPolicy,
 } from "../../utils/hrPolicy/hrPolicyConstants";
 
 /*
@@ -203,4 +207,27 @@ export const updateESIPolicy = (companyCode, draft) =>
     toStored: toStoredESIPolicy,
     context: "Update ESI Policy Error",
     fallbackMessage: "Failed to save the ESI policy. Please try again.",
+  });
+
+export const updateProfessionalTaxPolicy = (companyCode, draft) =>
+  savePolicy({
+    companyCode,
+    key: "professionalTax",
+    draft,
+    validate: validateProfessionalTaxPolicy,
+    toStored: toStoredProfessionalTaxPolicy,
+    context: "Update Professional Tax Policy Error",
+    fallbackMessage:
+      "Failed to save the Professional Tax policy. Please try again.",
+  });
+
+export const updateIncomeTaxPolicy = (companyCode, draft) =>
+  savePolicy({
+    companyCode,
+    key: "incomeTax",
+    draft,
+    validate: validateIncomeTaxPolicy,
+    toStored: toStoredIncomeTaxPolicy,
+    context: "Update Income Tax Policy Error",
+    fallbackMessage: "Failed to save the Income Tax policy. Please try again.",
   });

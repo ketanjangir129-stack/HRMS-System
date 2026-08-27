@@ -8,10 +8,13 @@ import AttendanceRequestList from "../../components/attendance/requests/Attendan
 import AttendanceRequestModal from "../../components/attendance/requests/AttendanceRequestModal";
 import RejectRequestModal from "../../components/attendance/requests/RejectRequestModal";
 import ConfirmDeleteModal from "../../components/common/ConfirmDeleteModal";
+import DepartmentScopeNotice from "../../components/common/DepartmentScopeNotice";
 import useAttendanceRequests from "../../hooks/useAttendanceRequests";
 import useAuth from "../../hooks/useAuth";
 import useEmployeeDirectory from "../../hooks/useEmployeeDirectory";
+import useManagerScope from "../../hooks/useManagerScope";
 import {
+  canReviewRequest,
   filterOwnRequests,
   getRequestTypeLabel,
   isApprover,
@@ -24,6 +27,13 @@ import { attachEmployeeDetails } from "../../utils/attendance/attendanceUtils";
 |--------------------------------------------------------------------------
 | Employees raise, edit and delete their own pending requests. HR and owners
 | review every request and approve or reject it.
+|
+| A manager reviews the same way, narrowed to the departments they run. The
+| narrowing is applied once, to the joined list, and the scope is then handed
+| down to the list and the modal so each row decides for itself whether the
+| approve and reject buttons belong on it. That is why the manager's own
+| request is still on the list: it is theirs to read and HR's to decide, and
+| filtering it out would hide a request they raised themselves.
 |
 | Requests store the employee id only, so they are joined with the employee
 | directory here before they are listed or searched.
@@ -58,6 +68,14 @@ function AttendanceRequests() {
     reload: reloadDirectory,
   } = useEmployeeDirectory(companyCode);
 
+  const {
+    scope: reviewScope,
+    isScoped,
+    filterRows,
+    filterEmployees,
+    loading: scopeLoading,
+  } = useManagerScope();
+
   // Employees only ever see their own requests.
   const [scope, setScope] = useState(() => (canReview ? "all" : "mine"));
 
@@ -81,8 +99,8 @@ function AttendanceRequests() {
   }, [setSearch, setSearchPlaceholder]);
 
   const detailedRequests = useMemo(
-    () => attachEmployeeDetails(requests, directory),
-    [requests, directory]
+    () => filterRows(attachEmployeeDetails(requests, directory)),
+    [filterRows, requests, directory]
   );
 
   const visibleRequests = useMemo(
@@ -163,7 +181,24 @@ function AttendanceRequests() {
   |--------------------------------------------------------------------------
   */
 
+  /*
+  | The same question the row's buttons were drawn from, asked again at the
+  | moment the write happens. The list already withholds them, so this only
+  | catches a decision made through a stale render.
+  */
+  const refuseOutOfScope = (request) => {
+
+    if (canReviewRequest(request, currentUser, reviewScope)) return false;
+
+    toast.error("This employee is not in a department you manage.");
+
+    return true;
+
+  };
+
   const handleApprove = async (request) => {
+
+    if (refuseOutOfScope(request)) return;
 
     setApproving(true);
 
@@ -195,6 +230,11 @@ function AttendanceRequests() {
   const handleReject = async (remarks) => {
 
     if (!rejectRequest) return;
+
+    if (refuseOutOfScope(rejectRequest)) {
+      setRejectRequest(null);
+      return;
+    }
 
     setRejecting(true);
 
@@ -268,16 +308,20 @@ function AttendanceRequests() {
         icon={<FiFileText />}
       />
 
-      <div className="mt-5 sm:mt-6">
+      <div className="mt-5 space-y-4 sm:mt-6 sm:space-y-6">
+
+        <DepartmentScopeNotice subject="requests" />
 
         <AttendanceRequestList
           requests={visibleRequests}
-          loading={loading || directoryLoading}
+          loading={loading || directoryLoading || scopeLoading}
           error={error}
           onRetry={reloadDirectory}
           currentUser={currentUser}
           headerSearch={search}
           canReview={canReview}
+          reviewScope={reviewScope}
+          allScopeLabel={isScoped ? "Department Requests" : "All Requests"}
           scope={scope}
           onScopeChange={setScope}
           onCreate={() => {
@@ -306,7 +350,11 @@ function AttendanceRequests() {
         submitting={submitting}
         initialData={editRequest}
         currentUser={currentUser}
-        employees={activeEmployees}
+        /*
+        | A reviewer may raise a correction on somebody's behalf, so the
+        | picker is the roster they review and not the whole company.
+        */
+        employees={filterEmployees(activeEmployees)}
         canSelectEmployee={canReview}
         title={
           editRequest ? "Edit Attendance Request" : "New Attendance Request"
@@ -322,6 +370,7 @@ function AttendanceRequests() {
         open={Boolean(activeDetail)}
         request={activeDetail}
         currentUser={currentUser}
+        reviewScope={reviewScope}
         onClose={() => setDetailRequest(null)}
         onApprove={handleApprove}
         onReject={(request) => {

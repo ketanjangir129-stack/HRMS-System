@@ -5,10 +5,14 @@ import { toast } from "react-toastify";
 import {
   getHRPolicy,
   updateESIPolicy,
+  updateIncomeTaxPolicy,
   updatePFPolicy,
+  updateProfessionalTaxPolicy,
 } from "../../services/settings/hrPolicyService";
 import ESIPolicyCard from "../../components/hrPolicy/ESIPolicyCard";
+import IncomeTaxPolicyCard from "../../components/hrPolicy/IncomeTaxPolicyCard";
 import PFPolicyCard from "../../components/hrPolicy/PFPolicyCard";
+import ProfessionalTaxPolicyCard from "../../components/hrPolicy/ProfessionalTaxPolicyCard";
 import Loader from "../../components/common/Loader";
 import useRoleAccess from "../../hooks/useRoleAccess";
 
@@ -27,10 +31,11 @@ import useRoleAccess from "../../hooks/useRoleAccess";
 | and writes back whichever card was saved; the fields, the rules behind them
 | and the drafts being typed belong to the cards under `components/hrPolicy`.
 |
-| Each policy is saved on its own. `hrPolicy.pf` and `hrPolicy.esi` decide
-| which cards a role is shown, and `hrPolicy.update` whether it may change
-| them - a role without it still reads the rates, which is what somebody who
-| has to answer "what is our PF set to" actually needs.
+| Each policy is saved on its own. `hrPolicy.pf`, `hrPolicy.esi`,
+| `hrPolicy.professionalTax` and `hrPolicy.incomeTax` decide which cards a role
+| is shown, and `hrPolicy.update` whether it may change them - a role without it
+| still reads the rates, which is what somebody who has to answer "what is our
+| PF set to" actually needs.
 |--------------------------------------------------------------------------
 */
 
@@ -42,7 +47,12 @@ function HRPolicy() {
 
   const canViewPF = canAccessSection("hrPolicy.pf");
   const canViewESI = canAccessSection("hrPolicy.esi");
+  const canViewProfessionalTax = canAccessSection("hrPolicy.professionalTax");
+  const canViewIncomeTax = canAccessSection("hrPolicy.incomeTax");
   const canUpdate = canAccessSection("hrPolicy.update");
+
+  const canViewAny =
+    canViewPF || canViewESI || canViewProfessionalTax || canViewIncomeTax;
 
   const [policy, setPolicy] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -194,7 +204,7 @@ function HRPolicy() {
       | A role with the page but neither policy on it. The page is still
       | reachable, so it says why it is empty instead of rendering nothing.
       */}
-      {!canViewPF && !canViewESI && (
+      {!canViewAny && (
 
         <div className="flex flex-col items-center justify-center rounded-2xl border border-slate-200 bg-white px-6 py-16 text-center shadow-sm">
 
@@ -207,8 +217,8 @@ function HRPolicy() {
           </h2>
 
           <p className="mt-1 max-w-md text-sm text-slate-500">
-            Your role does not include the PF or ESI policy. Contact the
-            account owner if you need either of them enabled.
+            Your role does not include any of the deduction policies. Contact
+            the account owner if you need one of them enabled.
           </p>
 
         </div>
@@ -220,7 +230,7 @@ function HRPolicy() {
       | defaults would present them as this company's configuration, and saving
       | one would then write a rate nobody chose.
       */}
-      {policy === null && (canViewPF || canViewESI) && (
+      {policy === null && canViewAny && (
 
         <div className="flex flex-col items-center justify-center rounded-2xl border border-slate-200 bg-white px-6 py-16 text-center shadow-sm">
 
@@ -273,6 +283,42 @@ function HRPolicy() {
                   key: "esi",
                   label: "ESI",
                   save: updateESIPolicy,
+                  draft,
+                })
+              }
+            />
+
+          )}
+
+          {canViewProfessionalTax && (
+
+            <ProfessionalTaxPolicyCard
+              policy={policy.professionalTax}
+              saving={saving === "professionalTax"}
+              readOnly={!canUpdate}
+              onSave={(draft) =>
+                savePolicy({
+                  key: "professionalTax",
+                  label: "Professional Tax",
+                  save: updateProfessionalTaxPolicy,
+                  draft,
+                })
+              }
+            />
+
+          )}
+
+          {canViewIncomeTax && (
+
+            <IncomeTaxPolicyCard
+              policy={policy.incomeTax}
+              saving={saving === "incomeTax"}
+              readOnly={!canUpdate}
+              onSave={(draft) =>
+                savePolicy({
+                  key: "incomeTax",
+                  label: "Income Tax",
+                  save: updateIncomeTaxPolicy,
                   draft,
                 })
               }

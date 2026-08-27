@@ -10,35 +10,20 @@ const ChangePassword = () => {
     confirmPassword: "",
   });
   const [loading, setLoading] = useState(false);
-  const { changePassword, currentUser, loading: authLoading } = useAuth();
+  const { changePassword } = useAuth();
   const navigate = useNavigate();
   const [errors, setErrors] = useState({});
 
   // Guards: only a logged-in HR/Employee whose password is still the default
   // may reach this page. Owner and already-updated users are sent to dashboard.
-  // Read from the context, not localStorage — the Auth session is restored
-  // asynchronously, so a refresh here would otherwise redirect before the app
-  // knows who is signed in.
-  if (authLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-100">
-        <div
-          className="h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-blue-600"
-          role="status"
-          aria-label="Loading"
-        />
-      </div>
-    );
-  }
+  const companyCode = localStorage.getItem("companyCode");
+  const role = localStorage.getItem("role");
+  const storedUser = JSON.parse(localStorage.getItem("currentUser") || "null");
 
-  if (!currentUser) {
+  if (!companyCode) {
     return <Navigate to="/login" replace />;
   }
-
-  if (
-    currentUser.role === "owner" ||
-    currentUser.account?.isPasswordChanged !== false
-  ) {
+  if (role === "owner" || storedUser?.account?.isPasswordChanged !== false) {
     return <Navigate to="/dashboard" replace />;
   }
 

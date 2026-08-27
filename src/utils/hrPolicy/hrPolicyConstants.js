@@ -65,9 +65,72 @@ export const DEFAULT_ESI_POLICY = {
   salaryEligibilityLimit: 21000,
 };
 
+/*
+| Professional Tax is a state tax, so there is no national rate to default to -
+| it is a flat monthly amount that steps up as the monthly gross crosses each
+| slab. The slabs below are the common Maharashtra table, which is a starting
+| point a company edits to its own state rather than a rule.
+|
+| The last slab has no ceiling. `upTo: null` is what says so, and every slab
+| table here is held that way: the final row catches everything above the row
+| before it, so no salary can fall through the table untaxed.
+*/
+
+export const DEFAULT_PROFESSIONAL_TAX_POLICY = {
+  enabled: false,
+  slabs: [
+    { upTo: 7500, amount: 0 },
+    { upTo: 10000, amount: 175 },
+    { upTo: null, amount: 200 },
+  ],
+};
+
+/*
+| Income tax is worked out on the year, not the month: the annual gross, less
+| the standard deduction, priced through the slabs, plus cess, divided back
+| down to a monthly deduction.
+|
+| `rebateLimit` is the 87A rebate - a taxable income at or under it pays
+| nothing at all. Without it the slabs alone would start deducting tax from
+| someone the law charges nothing, which is the single most visible way a
+| payslip can be wrong.
+|
+| The rates are the new regime's, and like everything else on this screen they
+| are editable, because the year they are right for moves.
+*/
+
+export const DEFAULT_INCOME_TAX_POLICY = {
+  enabled: false,
+  standardDeduction: 75000,
+  rebateLimit: 700000,
+  cess: 4,
+  slabs: [
+    { upTo: 300000, rate: 0 },
+    { upTo: 700000, rate: 5 },
+    { upTo: 1000000, rate: 10 },
+    { upTo: 1200000, rate: 15 },
+    { upTo: 1500000, rate: 20 },
+    { upTo: null, rate: 30 },
+  ],
+};
+
 export const DEFAULT_HR_POLICY = {
   pf: DEFAULT_PF_POLICY,
   esi: DEFAULT_ESI_POLICY,
+  professionalTax: DEFAULT_PROFESSIONAL_TAX_POLICY,
+  incomeTax: DEFAULT_INCOME_TAX_POLICY,
+};
+
+/*
+| Which key a slab table's second column is kept under. Professional Tax is a
+| rupee amount, income tax a percentage, and everything that handles a slab
+| table is told which of the two it is holding rather than guessing from the
+| value.
+*/
+
+export const SLAB_VALUE_KEY = {
+  PROFESSIONAL_TAX: "amount",
+  INCOME_TAX: "rate",
 };
 
 /*
@@ -116,6 +179,60 @@ export const toNumber = (value) => {
 
 export const toFieldValue = (value) =>
   Number.isFinite(Number(value)) ? String(Number(value)) : "";
+
+/*
+|--------------------------------------------------------------------------
+| Slab Rows
+|--------------------------------------------------------------------------
+| A slab table on the screen is a list of rows, and rows are added, removed and
+| reordered by the person editing them. React needs a key that survives that,
+| and the row's position cannot be it - removing the middle row would hand the
+| row below it the key of the one that just went, and the field the cursor is
+| in would inherit somebody else's value.
+|
+| So each row carries an id of its own. It exists only for the screen: it is
+| never validated, never compared and never stored.
+*/
+
+let rowKey = 0;
+
+const nextRowId = () => {
+  rowKey += 1;
+  return `slab-${rowKey}`;
+};
+
+export const createSlabRow = (valueKey) => ({
+  id: nextRowId(),
+  upTo: "",
+  [valueKey]: "",
+});
+
+/*
+| Stored slabs put into fields. A row with no ceiling is the open ended last
+| one, and its box is left empty rather than reading "null".
+*/
+
+export const toSlabFields = (slabs, valueKey) =>
+  (Array.isArray(slabs) ? slabs : []).map((row) => ({
+    id: nextRowId(),
+    upTo:
+      row?.upTo === null || row?.upTo === undefined
+        ? ""
+        : toFieldValue(row.upTo),
+    [valueKey]: toFieldValue(row?.[valueKey]),
+  }));
+
+/*
+| The same rows with the screen-only id dropped, so a draft can be compared
+| against what is stored without the ids - which are new on every read - making
+| an untouched card look edited.
+*/
+
+export const toComparableSlabs = (slabs, valueKey) =>
+  (Array.isArray(slabs) ? slabs : []).map((row) => ({
+    upTo: row?.upTo ?? "",
+    [valueKey]: row?.[valueKey] ?? "",
+  }));
 
 /*
 |--------------------------------------------------------------------------
@@ -172,9 +289,88 @@ export const normalizeESIPolicy = (stored) => ({
   ),
 });
 
+/*
+| A stored slab table put back into the shape everything downstream expects:
+| ceilings ascending, exactly one open ended row, and it last.
+|
+| Firebase hands an array back as an array but a table saved with a gap in it
+| as an object keyed by index, so the rows are taken with `Object.values`
+| rather than assumed to be a list. The order they come back in is not
+| guaranteed either, which is why the ceilings are sorted here rather than
+| trusted - a table read out of order would price the wrong band.
+|
+| A record with no slabs at all falls back to the defaults, copied rather than
+| shared, so a caller that edits what it was handed cannot reach back into the
+| defaults every later read is measured against.
+*/
+
+const normalizeSlabs = (stored, valueKey, fallback) => {
+
+  const rows = Object.values(stored ?? {}).filter(
+    (row) => row && typeof row === "object"
+  );
+
+  if (!rows.length) {
+    return fallback.map((row) => ({ ...row }));
+  }
+
+  const cleaned = rows.map((row) => ({
+    upTo:
+      Number.isFinite(Number(row.upTo)) && Number(row.upTo) > 0
+        ? Number(row.upTo)
+        : null,
+    [valueKey]: toStoredNumber(row[valueKey], 0),
+  }));
+
+  const bounded = cleaned
+    .filter((row) => row.upTo !== null)
+    .sort((left, right) => left.upTo - right.upTo);
+
+  const openEnded = cleaned.filter((row) => row.upTo === null);
+
+  /*
+  | The top band is whichever row was saved without a ceiling; a table saved
+  | entirely in bounded rows has its highest one opened up instead, so the
+  | income above it is still priced somewhere.
+  */
+  const top = openEnded.length ? openEnded[openEnded.length - 1] : bounded.pop();
+
+  return [...bounded, { ...top, upTo: null }];
+
+};
+
+export const normalizeProfessionalTaxPolicy = (stored) => ({
+  enabled: Boolean(stored?.enabled),
+  slabs: normalizeSlabs(
+    stored?.slabs,
+    SLAB_VALUE_KEY.PROFESSIONAL_TAX,
+    DEFAULT_PROFESSIONAL_TAX_POLICY.slabs
+  ),
+});
+
+export const normalizeIncomeTaxPolicy = (stored) => ({
+  enabled: Boolean(stored?.enabled),
+  standardDeduction: toStoredNumber(
+    stored?.standardDeduction,
+    DEFAULT_INCOME_TAX_POLICY.standardDeduction
+  ),
+  rebateLimit: toStoredNumber(
+    stored?.rebateLimit,
+    DEFAULT_INCOME_TAX_POLICY.rebateLimit
+  ),
+  cess: toStoredNumber(stored?.cess, DEFAULT_INCOME_TAX_POLICY.cess),
+  slabs: normalizeSlabs(
+    stored?.slabs,
+    SLAB_VALUE_KEY.INCOME_TAX,
+    DEFAULT_INCOME_TAX_POLICY.slabs
+  ),
+});
+
 export const normalizeHRPolicy = (stored) => ({
   pf: normalizePFPolicy(stored?.pf),
   esi: normalizeESIPolicy(stored?.esi),
+  professionalTax: normalizeProfessionalTaxPolicy(stored?.professionalTax),
+  incomeTax: normalizeIncomeTaxPolicy(stored?.incomeTax),
 });
 
 /*
@@ -274,6 +470,152 @@ export const validateESIPolicy = (draft) => {
 };
 
 /*
+| An amount that is allowed to be nothing. A rate has to be a real percentage
+| to mean anything, but a company can genuinely be on a zero standard deduction
+| or a zero cess, so 0 is an answer here rather than a missing one.
+*/
+
+const amountError = (value, label, { max = null } = {}) => {
+
+  const amount = toNumber(value);
+
+  if (!Number.isFinite(amount)) {
+    return `${label} is required.`;
+  }
+
+  if (amount < 0) {
+    return `${label} cannot be negative.`;
+  }
+
+  if (max !== null && amount > max) {
+    return `${label} cannot be more than ${max}%.`;
+  }
+
+  return "";
+
+};
+
+/*
+|--------------------------------------------------------------------------
+| Slab Validation
+|--------------------------------------------------------------------------
+| Errors are keyed by row: "2.upTo" is the ceiling on the third slab. That is
+| what lets the table put each message under the box it belongs to instead of
+| printing one complaint for the whole table.
+|
+| The messages themselves name the slab, because the service reports only the
+| first one in a toast and "Enter the upper limit" on its own does not say
+| which row to go and look at.
+|
+| The last row is the open ended one and has no ceiling to check. Everything
+| above it has to end above the row before it - a table that steps backwards
+| would leave a band no salary can ever match.
+*/
+
+const slabErrors = (slabs, { valueKey, valueLabel, isPercent = false }) => {
+
+  const errors = {};
+
+  const rows = Array.isArray(slabs) ? slabs : [];
+
+  if (!rows.length) {
+    errors.slabs = "Add at least one slab.";
+    return errors;
+  }
+
+  let previousCeiling = 0;
+
+  rows.forEach((row, index) => {
+
+    const isLast = index === rows.length - 1;
+
+    const position = `Slab ${index + 1}`;
+
+    if (!isLast) {
+
+      const ceiling = toNumber(row?.upTo);
+
+      if (!Number.isFinite(ceiling)) {
+        errors[`${index}.upTo`] = `${position}: enter the upper limit.`;
+      }
+
+      else if (ceiling <= previousCeiling) {
+        errors[`${index}.upTo`] =
+          `${position}: the upper limit must be above the slab before it.`;
+      }
+
+      else {
+        previousCeiling = ceiling;
+      }
+
+    }
+
+    const message = amountError(
+      row?.[valueKey],
+      `${position}: ${valueLabel}`,
+      { max: isPercent ? PERCENT_LIMIT : null }
+    );
+
+    if (message) {
+      errors[`${index}.${valueKey}`] = message;
+    }
+
+  });
+
+  return errors;
+
+};
+
+export const validateProfessionalTaxPolicy = (draft) => {
+
+  if (!draft?.enabled) return {};
+
+  return slabErrors(draft.slabs, {
+    valueKey: SLAB_VALUE_KEY.PROFESSIONAL_TAX,
+    valueLabel: "monthly amount",
+  });
+
+};
+
+export const validateIncomeTaxPolicy = (draft) => {
+
+  if (!draft?.enabled) return {};
+
+  const errors = {};
+
+  const standardDeduction = amountError(
+    draft.standardDeduction,
+    "Standard deduction"
+  );
+
+  if (standardDeduction) {
+    errors.standardDeduction = standardDeduction;
+  }
+
+  const rebateLimit = amountError(draft.rebateLimit, "Rebate limit");
+
+  if (rebateLimit) {
+    errors.rebateLimit = rebateLimit;
+  }
+
+  const cess = amountError(draft.cess, "Cess", { max: PERCENT_LIMIT });
+
+  if (cess) {
+    errors.cess = cess;
+  }
+
+  return {
+    ...errors,
+    ...slabErrors(draft.slabs, {
+      valueKey: SLAB_VALUE_KEY.INCOME_TAX,
+      valueLabel: "tax rate",
+      isPercent: true,
+    }),
+  };
+
+};
+
+/*
 |--------------------------------------------------------------------------
 | Storage Shape
 |--------------------------------------------------------------------------
@@ -329,6 +671,68 @@ export const toStoredESIPolicy = (draft) => ({
   salaryEligibilityLimit: toSavedNumber(
     draft?.salaryEligibilityLimit,
     DEFAULT_ESI_POLICY.salaryEligibilityLimit
+  ),
+});
+
+/*
+| A slab row written down. The open ended row is saved without a `upTo` key at
+| all rather than with a null one - Firebase deletes a key it is handed null
+| for, so the two would store identically anyway, and leaving it out says what
+| is meant instead of relying on that.
+|
+| The last row is forced open ended on the way out whatever the draft holds, so
+| the table that is stored always covers every salary.
+*/
+
+const toStoredSlab = (row, valueKey) => {
+
+  const ceiling = toSavedNumber(row?.upTo, 0);
+
+  const value = toSavedNumber(row?.[valueKey], 0);
+
+  return ceiling > 0
+    ? { upTo: ceiling, [valueKey]: value }
+    : { [valueKey]: value };
+
+};
+
+const toStoredSlabs = (slabs, valueKey, fallback) => {
+
+  const rows = Array.isArray(slabs) && slabs.length ? slabs : fallback;
+
+  return rows.map((row, index) =>
+    toStoredSlab(
+      index === rows.length - 1 ? { ...row, upTo: null } : row,
+      valueKey
+    )
+  );
+
+};
+
+export const toStoredProfessionalTaxPolicy = (draft) => ({
+  enabled: Boolean(draft?.enabled),
+  slabs: toStoredSlabs(
+    draft?.slabs,
+    SLAB_VALUE_KEY.PROFESSIONAL_TAX,
+    DEFAULT_PROFESSIONAL_TAX_POLICY.slabs
+  ),
+});
+
+export const toStoredIncomeTaxPolicy = (draft) => ({
+  enabled: Boolean(draft?.enabled),
+  standardDeduction: toSavedNumber(
+    draft?.standardDeduction,
+    DEFAULT_INCOME_TAX_POLICY.standardDeduction
+  ),
+  rebateLimit: toSavedNumber(
+    draft?.rebateLimit,
+    DEFAULT_INCOME_TAX_POLICY.rebateLimit
+  ),
+  cess: toSavedNumber(draft?.cess, DEFAULT_INCOME_TAX_POLICY.cess),
+  slabs: toStoredSlabs(
+    draft?.slabs,
+    SLAB_VALUE_KEY.INCOME_TAX,
+    DEFAULT_INCOME_TAX_POLICY.slabs
   ),
 });
 

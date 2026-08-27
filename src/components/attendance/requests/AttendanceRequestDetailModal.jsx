@@ -60,11 +60,18 @@ function AttendanceRequestDetailModal({
   onReject,
   approving = false,
   rejecting = false,
+  /*
+  | The department scope of the signed in user, or null for a role that is
+  | never narrowed. Asked here as well as on the list rather than trusted from
+  | it: the modal is reachable from a row somebody may only read, and the two
+  | must not be able to disagree about whether it may also be decided.
+  */
+  reviewScope = null,
 }) {
 
   if (!open || !request) return null;
 
-  const canDecide = canReviewRequest(request, currentUser);
+  const canDecide = canReviewRequest(request, currentUser, reviewScope);
 
   const busy = approving || rejecting;
 

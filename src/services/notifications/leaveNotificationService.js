@@ -23,9 +23,14 @@ export const notifyLeaveApprovers = async (
   requestId
 ) => {
 
+  /*
+  | The employee is passed on so the managers of their department are told as
+  | well as HR - they are the ones the request lands in front of.
+  */
   const approverIds =
     await getLeaveApproverIds(
-      companyCode
+      companyCode,
+      { employeeId: request?.employeeId }
     );
 
   if (!approverIds.length) {
