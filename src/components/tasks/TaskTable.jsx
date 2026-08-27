@@ -46,10 +46,10 @@ const STATUS_OPTIONS = TASK_STATUSES.map((status) => ({
 */
 function RowAction({ tone, title, onClick, icon }) {
   const styles = {
-    // Activity kuch badalti nahi, sirf dikhati hai — isliye saada slate,
-    // taaki edit ka blue aur delete ka red apna matlab na kho dein
-    activity: "hover:border-slate-400 hover:bg-slate-50 hover:text-slate-700",
-    edit: "hover:border-blue-500 hover:bg-blue-50 hover:text-blue-600",
+    // Activity kuch badalti nahi, sirf dikhati hai — isliye saada neutral,
+    // taaki edit ka brand aur delete ka red apna matlab na kho dein
+    activity: "hover:border-ink-faint hover:bg-surface-muted hover:text-ink",
+    edit: "hover:border-brand hover:bg-blue-50 hover:text-brand",
     delete: "hover:border-red-500 hover:bg-red-50 hover:text-red-600",
   };
 
@@ -63,7 +63,7 @@ function RowAction({ tone, title, onClick, icon }) {
       onKeyDown={(event) => event.stopPropagation()}
       title={title}
       aria-label={title}
-      className={`inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition-all ${styles[tone]}`}
+      className={`inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg border border-line text-ink-subtle transition-all ${styles[tone]}`}
     >
       {icon}
     </button>
@@ -141,7 +141,7 @@ function TaskTable({
       value={task.status || TASK_STATUSES[0]}
       onChange={(next) => onStatusChange(task, next)}
       ariaLabel={`Change status of ${task.title}`}
-      className="cursor-pointer rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+      className="cursor-pointer rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2"
       trigger={<TaskBadge value={task.status || TASK_STATUSES[0]} withCaret />}
     />
   );
@@ -207,10 +207,10 @@ function TaskTable({
       <div className="space-y-3">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-semibold text-slate-900">{task.title}</p>
+            <p className="text-sm font-semibold text-ink">{task.title}</p>
 
             {showAssignee && (
-              <p className="mt-0.5 truncate text-xs text-slate-500">
+              <p className="mt-0.5 truncate text-xs text-ink-subtle">
                 {assigneeName(task, employees)}
               </p>
             )}
@@ -222,12 +222,12 @@ function TaskTable({
           </span>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2 rounded-xl bg-slate-50 px-3 py-2.5">
+        <div className="flex flex-wrap items-center gap-2 rounded-xl bg-surface-muted px-3 py-2.5">
           <span
-            className={`inline-flex whitespace-nowrap rounded-lg bg-white px-2.5 py-1 text-xs font-semibold ring-1 ${
+            className={`inline-flex whitespace-nowrap rounded-lg bg-surface px-2.5 py-1 text-xs font-semibold ring-1 ${
               overdue
                 ? "text-red-600 ring-red-200"
-                : "text-slate-700 ring-slate-200"
+                : "text-ink-muted ring-line"
             }`}
           >
             {formatDate(task.dueDate)}
@@ -261,25 +261,25 @@ function TaskTable({
   if (tasks.length === 0) {
     return (
       <div className="flex flex-col items-center gap-4 px-6 py-20 text-center">
-        <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100 text-slate-400">
+        <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-surface-raised text-ink-faint">
           <FiInbox size={26} />
         </span>
 
         {hasTasks ? (
           // Tasks hain, bas filter se match nahi hue
           <div>
-            <p className="font-semibold text-slate-800">No matching tasks</p>
-            <p className="mt-1 text-sm text-slate-500">
+            <p className="font-semibold text-ink">No matching tasks</p>
+            <p className="mt-1 text-sm text-ink-subtle">
               Try a different search or status filter.
             </p>
           </div>
         ) : (
           <>
             <div>
-              <p className="font-semibold text-slate-800">
+              <p className="font-semibold text-ink">
                 {showAssignee ? "No tasks yet" : "Nothing assigned yet"}
               </p>
-              <p className="mt-1 text-sm text-slate-500">
+              <p className="mt-1 text-sm text-ink-subtle">
                 {onCreate
                   ? "Create your first task to start tracking work."
                   : "Tasks assigned to you will show up here."}
@@ -305,7 +305,7 @@ function TaskTable({
   return (
     <>
       {/* Mobile — card wrapper par wahi click/Enter jo row par hai */}
-      <div className="divide-y divide-slate-100 md:hidden">
+      <div className="divide-y divide-line-subtle md:hidden">
         {tasks.map((task) => (
           <div
             key={task.id}
@@ -314,7 +314,7 @@ function TaskTable({
             tabIndex={onRowClick ? 0 : undefined}
             className={`px-4 py-4 transition-colors ${
               onRowClick
-                ? "cursor-pointer active:bg-slate-50 focus:outline-none focus-visible:bg-slate-50 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-500"
+                ? "cursor-pointer active:bg-surface-muted focus:outline-none focus-visible:bg-surface-muted focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand"
                 : ""
             }`}
           >
@@ -331,7 +331,7 @@ function TaskTable({
       <div className="hidden overflow-x-auto md:block">
         <table className="w-full min-w-[560px] border-collapse text-left lg:min-w-[720px] xl:min-w-[860px]">
         {/* thead/tbody classes DataTable jaisi — poore project ka table pattern */}
-        <thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+        <thead className="border-b border-line bg-surface-muted text-xs uppercase tracking-wide text-ink-subtle">
           <tr>
             {/*
               Alignment HolidayTable/LeaveHistoryTable jaisa: text left,
@@ -371,7 +371,7 @@ function TaskTable({
           </tr>
         </thead>
 
-        <tbody className="divide-y divide-slate-100">
+        <tbody className="divide-y divide-line-subtle">
           {tasks.map((task) => {
             const name = assigneeName(task, employees);
             const overdue = isOverdue(task, today);
@@ -384,9 +384,9 @@ function TaskTable({
                 // Keyboard tabhi, jab row par kuch hota ho
                 tabIndex={onRowClick ? 0 : undefined}
                 title={onRowClick ? `View details of ${task.title}` : undefined}
-                className={`transition-colors hover:bg-slate-50 ${
+                className={`transition-colors hover:bg-surface-muted ${
                   onRowClick
-                    ? "cursor-pointer focus:outline-none focus-visible:bg-slate-50 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-500"
+                    ? "cursor-pointer focus:outline-none focus-visible:bg-surface-muted focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand"
                     : ""
                 }`}
               >
@@ -395,11 +395,11 @@ function TaskTable({
                     par kat jaata hai. */}
                 <td className="px-4 py-4 lg:px-6">
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-semibold text-slate-900">
+                    <p className="truncate text-sm font-semibold text-ink">
                       {task.title}
                     </p>
                     {/* {task.description && (
-                      <p className="mt-0.5 truncate text-xs text-slate-500">
+                      <p className="mt-0.5 truncate text-xs text-ink-subtle">
                         {task.description}
                       </p>
                     )} */}
@@ -421,7 +421,7 @@ function TaskTable({
 
                 {showAssignee && (
                   <td className="px-4 py-4 lg:px-6">
-                    <span className="block truncate text-sm font-medium text-slate-800">
+                    <span className="block truncate text-sm font-medium text-ink-muted">
                       {name}
                     </span>
                   </td>
@@ -433,7 +433,7 @@ function TaskTable({
                     className={`text-sm ${
                       overdue
                         ? "font-semibold text-red-600"
-                        : "font-medium text-slate-700"
+                        : "font-medium text-ink-muted"
                     }`}
                   >
                     {formatDate(task.dueDate)}
@@ -517,7 +517,7 @@ function TaskTable({
                         // wahin baithta hai jahan button baithta hai
                         <span
                           aria-label="No actions available"
-                          className="inline-flex h-9 w-9 items-center justify-center text-slate-300"
+                          className="inline-flex h-9 w-9 items-center justify-center text-ink-faint"
                         >
                           —
                         </span>

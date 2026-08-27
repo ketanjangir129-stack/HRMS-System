@@ -306,21 +306,29 @@ function Departments() {
         [departments]
     );
 
+    /*
+        The tile hue is per figure and stays put, the same way the dashboard's
+        quick links are keyed by colour: after a week the emerald tile IS the
+        coverage number, and shuffling them would cost more than it gained.
+    */
     const stats = [
         {
             title: "Total Departments",
             value: totalDepartments,
             icon: <FiGrid />,
+            tile: "bg-indigo-100 text-indigo-600",
         },
         {
             title: "Total Designations",
             value: totalDesignations,
             icon: <FiBriefcase />,
+            tile: "bg-violet-100 text-violet-600",
         },
         {
             title: "Managed",
             value: `${managedDepartments}/${totalDepartments}`,
             icon: <FiUserCheck />,
+            tile: "bg-emerald-100 text-emerald-600",
         },
     ];
 
@@ -338,80 +346,86 @@ function Departments() {
     }, []);
 
     return (
-        <div className="mx-auto max-w-[1600px] space-y-4 p-0 sm:space-y-6 sm:p-2">
+        <div className="flex-1 min-h-full">
 
-            {/* Header */}
-            <div className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-sm sm:px-6 sm:py-5 md:flex-row md:items-center md:justify-between">
+            {/*
+                Header
 
-                <div className="flex min-w-0 items-center gap-3 sm:gap-4">
+                Set the way the dashboard sets its own: the section name leads
+                as a quiet eyebrow in the brand hue, and the page title gets the
+                size rather than being boxed into a panel of its own.
+            */}
+            <div className="flex flex-wrap justify-between items-center gap-4 mb-6 sm:mb-8">
 
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-600 shadow-sm shadow-blue-600/20 sm:h-11 sm:w-11">
-                        <FiLayers className="text-white text-lg sm:text-xl" />
+                <div className="min-w-0">
+
+                    <div className="mb-1.5 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-brand">
+                        <FiLayers className="shrink-0" size={14} />
+                        <span className="truncate">Organisation</span>
                     </div>
 
-                    <div className="min-w-0">
-                        <h1 className="text-xl font-bold tracking-tight text-slate-900 sm:text-2xl lg:text-3xl">
-                            Departments
-                        </h1>
+                    <h1 className="text-2xl sm:text-3xl font-bold text-ink wrap-break-word">
+                        Departments
+                    </h1>
 
-                        <p className="mt-0.5 text-xs text-slate-500 sm:mt-1 sm:text-sm lg:text-base">
-                            Manage departments and designations
-                        </p>
-                    </div>
+                    <p className="mt-1 text-sm text-ink-subtle">
+                        Manage departments and designations
+                    </p>
 
                 </div>
 
-                {/* Stats + Action */}
-                <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-end">
+                <button
+                    onClick={() => {
+                        setEditingDepartmentId(null);
+                        setDepartmentName("");
+                        setDepartmentModal(true);
+                    }}
+                    className="ui-btn ui-btn-primary group font-semibold"
+                >
+                    <FiPlus
+                        size={18}
+                        className="transition-transform duration-200 group-hover:rotate-90"
+                    />
+                    Add Department
+                </button>
 
-                    {/*
-                        On a phone the pills are stacked full width, so the label
-                        sits left and the count right instead of wrapping into a
-                        ragged block. From `sm` up they go back to being chips.
-                    */}
-                    <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
+            </div>
 
-                        {stats.map((stat) => (
+            {/*
+                Stats
 
-                            <div
-                                key={stat.title}
-                                className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 sm:whitespace-nowrap"
-                            >
+                One card per figure on the same grid the dashboard cards sit on,
+                so the counts read as part of the page rather than as chips
+                crowded into the corner of a header strip.
+            */}
+            <div className="mb-6 grid grid-cols-1 gap-4 sm:mb-8 sm:grid-cols-3 sm:gap-6">
 
-                                <span className="shrink-0 text-sm text-slate-400">
-                                    {stat.icon}
-                                </span>
+                {stats.map((stat) => (
 
-                                <span className="min-w-0 flex-1 truncate text-xs font-medium text-slate-500 sm:flex-none">
-                                    {stat.title}
-                                </span>
-
-                                <span className="text-sm font-semibold text-slate-900">
-                                    {stat.value}
-                                </span>
-
-                            </div>
-
-                        ))}
-
-                    </div>
-
-                    <button
-                        onClick={() => {
-                            setEditingDepartmentId(null);
-                            setDepartmentName("");
-                            setDepartmentModal(true);
-                        }}
-                        className="group inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-md shadow-blue-600/20 transition-all duration-200 hover:-translate-y-0.5 hover:bg-blue-700 hover:shadow-lg hover:shadow-blue-600/30 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 active:translate-y-0 cursor-pointer whitespace-nowrap sm:px-5"
+                    <div
+                        key={stat.title}
+                        className="ui-card flex items-center gap-4 p-4 sm:p-5"
                     >
-                        <FiPlus
-                            size={18}
-                            className="transition-transform duration-200 group-hover:rotate-90"
-                        />
-                        Add Department
-                    </button>
 
-                </div>
+                        <span className={`ui-tile ui-tile-sm text-lg ${stat.tile}`}>
+                            {stat.icon}
+                        </span>
+
+                        <div className="min-w-0">
+
+                            <p className="truncate text-xs font-medium text-ink-subtle">
+                                {stat.title}
+                            </p>
+
+                            <p className="text-xl font-bold text-ink sm:text-2xl">
+                                {stat.value}
+                            </p>
+
+                        </div>
+
+                    </div>
+
+                ))}
 
             </div>
 

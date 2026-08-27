@@ -412,7 +412,7 @@ function PayrollDashboard() {
 
     return (
 
-        <div className="mx-auto max-w-[1600px] space-y-6 p-1 sm:p-2">
+        <div className="mx-auto max-w-[1600px] p-0 sm:p-2">
 
             {/*
             | Held open for the whole run, the reload of the month included,
@@ -433,7 +433,7 @@ function PayrollDashboard() {
                 confirmingText="Approving..."
                 confirming={closing === "approve"}
                 icon={<FiCheckCircle />}
-                tone="bg-indigo-600 shadow-indigo-600/20 hover:bg-indigo-700 focus:ring-indigo-400"
+                tone="ui-btn-primary"
                 onConfirm={() =>
                     closeMonth("approve", approveGate, approvePayroll)
                 }
@@ -449,7 +449,7 @@ function PayrollDashboard() {
                 confirmingText="Locking..."
                 confirming={closing === "lock"}
                 icon={<FiLock />}
-                tone="bg-slate-800 shadow-slate-800/20 hover:bg-slate-900 focus:ring-slate-500"
+                tone="bg-slate-800 text-white shadow-sm hover:bg-slate-900"
                 onConfirm={() => closeMonth("lock", lockGate, lockPayroll)}
                 onClose={() => setConfirming("")}
             />
@@ -467,81 +467,90 @@ function PayrollDashboard() {
                 generateGate={generateGate}
             />
 
-            <PayrollRunCard
-                run={run}
-                payrollMonth={payrollMonth}
-                loading={loading}
-                busy={closing}
-                approveGate={approveGate}
-                lockGate={lockGate}
-                onApprove={() => setConfirming("approve")}
-                onLock={() => setConfirming("lock")}
-            />
-
-            <PayrollStatsCards
-                totalEmployees={totalEmployees}
-                generatedCount={generatedCount}
-                pendingCount={pendingCount}
-                totalPayout={totalPayout}
-                loading={loading}
-            />
-
             {/*
-            | A month that has not started cannot be run, and the disabled
-            | button alone does not say why, so the reason is spelled out.
+            | The header sits directly on the canvas, so the panels below it
+            | open with the same gap the Dashboard leaves under its greeting
+            | rather than being pulled up against the heading.
             */}
-            {isFutureMonth && (
+            <div className="mt-6 space-y-4 sm:mt-8 sm:space-y-6">
 
-                <div className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-700">
+                <PayrollRunCard
+                    run={run}
+                    payrollMonth={payrollMonth}
+                    loading={loading}
+                    busy={closing}
+                    approveGate={approveGate}
+                    lockGate={lockGate}
+                    onApprove={() => setConfirming("approve")}
+                    onLock={() => setConfirming("lock")}
+                />
 
-                    <FiInfo className="mt-0.5 shrink-0" size={16} />
+                <PayrollStatsCards
+                    totalEmployees={totalEmployees}
+                    generatedCount={generatedCount}
+                    pendingCount={pendingCount}
+                    totalPayout={totalPayout}
+                    loading={loading}
+                />
 
-                    <span>
-                        {monthLabel} has not started yet, so payroll cannot be
-                        generated for it.
-                    </span>
+                {/*
+                | A month that has not started cannot be run, and the disabled
+                | button alone does not say why, so the reason is spelled out.
+                */}
+                {isFutureMonth && (
 
-                </div>
+                    <div className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-700 sm:p-4 sm:text-sm">
 
-            )}
+                        <FiInfo className="mt-0.5 shrink-0" size={16} />
 
-            {notice && (
+                        <span>
+                            {monthLabel} has not started yet, so payroll cannot
+                            be generated for it.
+                        </span>
 
-                <div className="flex items-start gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-700">
+                    </div>
 
-                    <FiCheckCircle className="mt-0.5 shrink-0" size={16} />
+                )}
 
-                    <span>{notice}</span>
+                {notice && (
 
-                </div>
+                    <div className="flex items-start gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-xs text-emerald-700 sm:p-4 sm:text-sm">
 
-            )}
+                        <FiCheckCircle className="mt-0.5 shrink-0" size={16} />
 
-            {error && (
+                        <span>{notice}</span>
 
-                <div className="flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-600">
+                    </div>
 
-                    <FiAlertCircle className="mt-0.5 shrink-0" size={16} />
+                )}
 
-                    <span>{error}</span>
+                {error && (
 
-                </div>
+                    <div className="flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-600 sm:p-4 sm:text-sm">
 
-            )}
+                        <FiAlertCircle className="mt-0.5 shrink-0" size={16} />
 
-            <PayrollTable
-                employees={employees}
-                loading={loading}
-                error={loadError}
-                onRetry={handleRefresh}
-                payrollMonth={payrollMonth}
-                headerSearch={search}
-                generating={generating}
-                isFutureMonth={isFutureMonth}
-                generateGate={generateGate}
-                onGenerate={handleGenerateOne}
-                onViewPayslip={openPayslip}
-            />
+                        <span>{error}</span>
+
+                    </div>
+
+                )}
+
+                <PayrollTable
+                    employees={employees}
+                    loading={loading}
+                    error={loadError}
+                    onRetry={handleRefresh}
+                    payrollMonth={payrollMonth}
+                    headerSearch={search}
+                    generating={generating}
+                    isFutureMonth={isFutureMonth}
+                    generateGate={generateGate}
+                    onGenerate={handleGenerateOne}
+                    onViewPayslip={openPayslip}
+                />
+
+            </div>
 
         </div>
 

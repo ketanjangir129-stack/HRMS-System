@@ -57,17 +57,17 @@ function HolidayCalendar({
 
   return (
 
-    <div className="flex h-full flex-col rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
+    <div className="ui-card ui-card-body flex h-full flex-col">
 
       {/* Header */}
 
-      <div className="mb-4 sm:mb-5">
+      <div className="mb-5">
 
-        <h2 className="text-base font-semibold text-slate-900 sm:text-lg">
+        <h2 className="ui-card-title">
           Holiday Calendar
         </h2>
 
-        <p className="mt-1 text-xs text-slate-500 sm:text-sm">
+        <p className="ui-card-subtitle">
           Company holidays across {year}
         </p>
 
@@ -77,14 +77,14 @@ function HolidayCalendar({
 
         <div className="flex-1 space-y-3">
 
-          <div className="h-8 w-full animate-pulse rounded-lg bg-slate-100" />
+          <div className="h-8 w-full animate-pulse rounded-lg bg-surface-muted" />
 
           {[0, 1, 2, 3, 4].map((row) => (
             <div key={row} className="grid grid-cols-7 gap-2">
               {[0, 1, 2, 3, 4, 5, 6].map((cell) => (
                 <div
                   key={cell}
-                  className="h-8 animate-pulse rounded-md bg-slate-100"
+                  className="h-8 animate-pulse rounded-md bg-surface-muted"
                 />
               ))}
             </div>
@@ -117,7 +117,7 @@ function HolidayCalendar({
 
       {!loading && selected && (
 
-        <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-3 sm:mt-5 sm:p-4">
+        <div className="mt-4 rounded-xl border border-line bg-surface-muted p-3 sm:mt-5 sm:p-4">
 
           {/*
           | The badge drops under the name on a phone: a type and an optional
@@ -128,11 +128,11 @@ function HolidayCalendar({
 
             <div className="min-w-0">
 
-              <p className="truncate text-sm font-semibold text-slate-800">
+              <p className="truncate text-sm font-semibold text-ink-muted">
                 {selected.holiday.name}
               </p>
 
-              <p className="mt-0.5 text-xs text-slate-500">
+              <p className="mt-0.5 text-xs text-ink-subtle">
                 {formatHolidayDateWithDay(selected.holiday.date)}
                 {selected.holiday.description
                   ? ` · ${selected.holiday.description}`
@@ -163,7 +163,7 @@ function HolidayCalendar({
 
           <div
             key={item.label}
-            className="flex items-center gap-1.5 rounded-lg bg-slate-50 px-2 py-2 text-[11px] font-medium text-slate-600 sm:gap-2 sm:px-3 sm:text-xs"
+            className="flex items-center gap-1.5 rounded-lg bg-surface-muted px-2 py-2 text-[11px] font-medium text-ink-muted sm:gap-2 sm:px-3 sm:text-xs"
           >
             <span className={`h-2 w-2 shrink-0 rounded-full ${item.color}`} />
             <span className="truncate">{item.label}</span>

@@ -37,14 +37,19 @@ import {
 |--------------------------------------------------------------------------
 */
 
+/*
+| Not `.ui-field`: the kit rests on the card surface, and this form's inputs
+| are recessed onto the muted one and lift to the surface on focus - which is
+| how every other modal in the app writes its fields.
+*/
 const inputClass =
-  "w-full rounded-xl border bg-slate-50 px-4 py-3 text-sm text-slate-800 outline-none transition-all placeholder:text-slate-400 focus:bg-white focus:ring-2";
+  "w-full rounded-xl border bg-surface-muted px-4 py-3 text-sm text-ink outline-none transition-all placeholder:text-ink-faint focus:bg-surface focus:ring-2";
 
 const fieldClass = (hasError) =>
   `${inputClass} ${
     hasError
       ? "border-red-300 focus:border-red-500 focus:ring-red-100"
-      : "border-slate-200 focus:border-blue-500 focus:ring-blue-100"
+      : "border-line focus:border-brand focus:ring-brand-ring"
   }`;
 
 function FieldError({ message }) {
@@ -191,11 +196,11 @@ function HolidayForm({
       | Taller on a phone, where the browser chrome already takes a slice of
       | the viewport and a 90vh sheet leaves the footer buttons floating.
       */}
-      <div className="hide-scrollbar max-h-[92vh] w-full max-w-3xl overflow-y-auto rounded-2xl bg-white shadow-2xl sm:max-h-[90vh]">
+      <div className="hide-scrollbar max-h-[92vh] w-full max-w-3xl overflow-y-auto rounded-2xl bg-surface shadow-2xl sm:max-h-[90vh]">
 
         {/* Header */}
 
-        <div className="sticky top-0 z-10 flex items-center justify-between gap-3 border-b border-slate-200 bg-white px-4 py-4 sm:gap-4 sm:px-8 sm:py-5">
+        <div className="sticky top-0 z-10 flex items-center justify-between gap-3 border-b border-line bg-surface px-4 py-4 sm:gap-4 sm:px-8 sm:py-5">
 
           <div className="flex min-w-0 items-center gap-3">
 
@@ -205,11 +210,11 @@ function HolidayForm({
 
             <div className="min-w-0">
 
-              <h2 className="text-lg font-bold text-slate-900 sm:text-xl">
+              <h2 className="ui-card-title">
                 {isEdit ? "Edit Holiday" : "Add Holiday"}
               </h2>
 
-              <p className="mt-0.5 truncate text-xs text-slate-500 sm:text-sm">
+              <p className="ui-card-subtitle truncate">
                 {isEdit
                   ? "Update the holiday details."
                   : `Declare a holiday on the ${year} calendar.`}
@@ -224,7 +229,7 @@ function HolidayForm({
             onClick={onClose}
             disabled={submitting}
             aria-label="Close"
-            className="cursor-pointer rounded-lg p-2 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
+            className="ui-icon-btn disabled:cursor-not-allowed disabled:opacity-50"
           >
             <FiX size={20} />
           </button>
@@ -241,7 +246,7 @@ function HolidayForm({
 
             <label
               htmlFor="holiday-name"
-              className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500"
+              className="ui-eyebrow mb-1.5 block"
             >
               Holiday Name <span className="text-red-500">*</span>
             </label>
@@ -268,7 +273,7 @@ function HolidayForm({
 
             <label
               htmlFor="holiday-date"
-              className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500"
+              className="ui-eyebrow mb-1.5 block"
             >
               Holiday Date <span className="text-red-500">*</span>
             </label>
@@ -292,7 +297,7 @@ function HolidayForm({
             */}
             {!errors.date && form.date && (
 
-              <p className="mt-1.5 text-xs text-slate-400">
+              <p className="mt-1.5 text-xs text-ink-faint">
                 {formatHolidayDateWithDay(form.date)}
                 {isWeekend(form.date) &&
                   ` · ${getDayName(form.date)} is a weekend`}
@@ -306,7 +311,7 @@ function HolidayForm({
 
           <div>
 
-            <label className="mb-3 block text-xs font-semibold uppercase tracking-wide text-slate-500">
+            <label className="ui-eyebrow mb-3 block">
               Holiday Type <span className="text-red-500">*</span>
             </label>
 
@@ -320,8 +325,8 @@ function HolidayForm({
                   onClick={() => setField("type", item.value)}
                   className={`cursor-pointer rounded-xl border px-4 py-3 text-left transition-all ${
                     form.type === item.value
-                      ? "border-blue-600 bg-blue-50 ring-2 ring-blue-100"
-                      : "border-slate-200 hover:border-blue-300 hover:bg-slate-50"
+                      ? "border-brand bg-blue-50 ring-2 ring-brand-ring"
+                      : "border-line hover:border-blue-300 hover:bg-surface-muted"
                   }`}
                 >
 
@@ -329,13 +334,13 @@ function HolidayForm({
                     className={`block text-sm font-semibold ${
                       form.type === item.value
                         ? "text-blue-700"
-                        : "text-slate-800"
+                        : "text-ink-muted"
                     }`}
                   >
                     {item.label}
                   </span>
 
-                  <span className="mt-0.5 block text-xs text-slate-500">
+                  <span className="mt-0.5 block text-xs text-ink-subtle">
                     {item.description}
                   </span>
 
@@ -359,17 +364,17 @@ function HolidayForm({
             className={`flex w-full cursor-pointer items-center justify-between gap-4 rounded-xl border px-4 py-4 text-left transition-all ${
               form.isOptional
                 ? "border-emerald-500 bg-emerald-50"
-                : "border-slate-200 bg-slate-50 hover:border-slate-300"
+                : "border-line bg-surface-muted hover:border-slate-300"
             }`}
           >
 
             <span className="min-w-0">
 
-              <span className="block text-sm font-semibold text-slate-800">
+              <span className="block text-sm font-semibold text-ink-muted">
                 Optional Holiday
               </span>
 
-              <span className="mt-0.5 block text-xs text-slate-500">
+              <span className="mt-0.5 block text-xs text-ink-subtle">
                 Employees may choose to work this day instead of taking it off.
               </span>
 
@@ -378,7 +383,12 @@ function HolidayForm({
             {/* A switch rather than a checkbox, to match the card controls above. */}
             <span
               className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors ${
-                form.isOptional ? "bg-emerald-500" : "bg-slate-300"
+                /*
+                | The off track is `ink-faint` rather than a surface token: a
+                | white knob has to stay visible on it, and every surface in
+                | the light theme is near enough to white to swallow it.
+                */
+                form.isOptional ? "bg-emerald-500" : "bg-ink-faint"
               }`}
             >
               <span
@@ -396,7 +406,7 @@ function HolidayForm({
 
             <label
               htmlFor="holiday-description"
-              className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500"
+              className="ui-eyebrow mb-1.5 block"
             >
               Description
             </label>
@@ -416,7 +426,7 @@ function HolidayForm({
             <FieldError message={errors.description} />
 
             {!errors.description && (
-              <p className="mt-1.5 text-xs text-slate-400">
+              <p className="mt-1.5 text-xs text-ink-faint">
                 Optional · {form.description.trim().length} /{" "}
                 {HOLIDAY_DESCRIPTION_MAX} characters
               </p>
@@ -444,13 +454,13 @@ function HolidayForm({
 
         {/* Footer */}
 
-        <div className="sticky bottom-0 flex flex-col-reverse gap-3 border-t border-slate-200 bg-white px-4 py-4 sm:flex-row sm:justify-end sm:px-8 sm:py-5">
+        <div className="sticky bottom-0 flex flex-col-reverse gap-3 border-t border-line bg-surface px-4 py-4 sm:flex-row sm:justify-end sm:px-8 sm:py-5">
 
           <button
             type="button"
             onClick={onClose}
             disabled={submitting}
-            className="w-full cursor-pointer rounded-xl border border-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
+            className="ui-btn ui-btn-secondary w-full font-semibold sm:w-auto"
           >
             Cancel
           </button>
@@ -459,7 +469,7 @@ function HolidayForm({
             type="button"
             onClick={handleSubmit}
             disabled={submitting}
-            className="inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-blue-600/20 transition-all duration-200 hover:-translate-y-0.5 hover:bg-blue-700 hover:shadow-lg hover:shadow-blue-600/30 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0 sm:w-auto"
+            className="ui-btn ui-btn-primary w-full font-semibold sm:w-auto"
           >
 
             {submitting && <FiLoader className="animate-spin" />}

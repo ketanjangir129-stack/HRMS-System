@@ -38,13 +38,13 @@ import Pagination from "./Pagination";
 function SortIcon({ active, order }) {
 
   if (!active) {
-    return <FiChevronDown className="text-slate-300" />;
+    return <FiChevronDown className="text-ink-faint" />;
   }
 
   return order === "asc" ? (
-    <FiChevronUp className="text-blue-600" />
+    <FiChevronUp className="text-brand" />
   ) : (
-    <FiChevronDown className="text-blue-600" />
+    <FiChevronDown className="text-brand" />
   );
 
 }
@@ -153,11 +153,11 @@ function DataTable({
         <div className="md:hidden">
 
           {sortableColumns.length > 0 && (
-            <div className="flex items-center gap-2 border-b border-slate-100 bg-slate-50/60 px-4 py-3">
+            <div className="flex items-center gap-2 border-b border-line-subtle bg-surface-muted/60 px-4 py-3">
 
               <label
                 htmlFor={sortFieldId}
-                className="shrink-0 text-[11px] font-semibold uppercase tracking-wide text-slate-500"
+                className="ui-eyebrow shrink-0"
               >
                 Sort
               </label>
@@ -169,7 +169,7 @@ function DataTable({
                   setSortBy(event.target.value);
                   setSortOrder("asc");
                 }}
-                className="min-w-0 flex-1 cursor-pointer rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 outline-none transition-all focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                className="min-w-0 flex-1 cursor-pointer rounded-lg border border-line bg-surface px-3 py-2 text-xs font-medium text-ink-muted outline-none transition-all focus:border-brand focus:ring-2 focus:ring-brand-ring"
               >
                 {!sortBy && <option value="">Default order</option>}
 
@@ -190,7 +190,7 @@ function DataTable({
                     ? "Sort descending"
                     : "Sort ascending"
                 }
-                className="inline-flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 transition-colors hover:bg-slate-50"
+                className="inline-flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-line bg-surface text-ink-muted transition-colors hover:bg-surface-muted"
               >
                 {sortOrder === "asc" ? (
                   <FiChevronUp size={16} />
@@ -202,13 +202,13 @@ function DataTable({
             </div>
           )}
 
-          <div className="divide-y divide-slate-100">
+          <div className="divide-y divide-line-subtle">
 
             {paged.map((row, index) => (
 
               <div
                 key={rowKey ? rowKey(row, index) : index}
-                className="px-4 py-4 transition-colors active:bg-slate-50"
+                className="px-4 py-4 transition-colors active:bg-surface-muted"
               >
                 {mobileCard(row, index)}
               </div>
@@ -228,14 +228,14 @@ function DataTable({
 
           <thead>
 
-            <tr className="border-b border-slate-200 bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+            <tr className="border-b border-line bg-surface-muted text-xs uppercase tracking-wide text-ink-subtle">
 
               {columns.map((column) => (
 
                 <th
                   key={column.key}
                   onClick={() => handleSort(column)}
-                  className={`px-4 py-3 font-semibold lg:px-6 ${alignClass[column.align] || "text-left"} ${column.sortable ? "cursor-pointer select-none transition-colors hover:text-slate-700" : ""} ${column.headerClassName || ""}`}
+                  className={`px-4 py-3 font-semibold lg:px-6 ${alignClass[column.align] || "text-left"} ${column.sortable ? "cursor-pointer select-none transition-colors hover:text-ink-muted" : ""} ${column.headerClassName || ""}`}
                 >
 
                   <span
@@ -261,20 +261,20 @@ function DataTable({
 
           </thead>
 
-          <tbody className="divide-y divide-slate-100">
+          <tbody className="divide-y divide-line-subtle">
 
             {paged.map((row, index) => (
 
               <tr
                 key={rowKey ? rowKey(row, index) : index}
-                className="group transition-colors hover:bg-slate-50"
+                className="group transition-colors hover:bg-surface-muted"
               >
 
                 {columns.map((column) => (
 
                   <td
                     key={column.key}
-                    className={`px-4 py-4 text-sm text-slate-700 lg:px-6 ${alignClass[column.align] || "text-left"} ${column.className || ""}`}
+                    className={`px-4 py-4 text-sm text-ink-muted lg:px-6 ${alignClass[column.align] || "text-left"} ${column.className || ""}`}
                   >
                     {column.render
                       ? column.render(row, index)

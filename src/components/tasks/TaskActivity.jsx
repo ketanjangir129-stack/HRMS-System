@@ -24,42 +24,41 @@ const dotClass = (entry) => STATUS_DOTS[entry.toStatus] || "bg-slate-400";
 function TaskActivity({ entries = [] }) {
   return (
     <div>
-      <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
-        Activity
-      </p>
+      <p className="ui-eyebrow">Activity</p>
 
       {entries.length === 0 ? (
         /*
         | Jis task ka records node hai hi nahi — unke liye yahi soft line
         | dikhti hai, bilkul waise jaise description na hone par dikhti hai.
         */
-        <p className="mt-1.5 text-sm italic text-slate-400">No activity yet.</p>
+        <p className="mt-1.5 text-sm italic text-ink-faint">No activity yet.</p>
       ) : (
         /*
         | Baayein ek patli lakeer, uspar har entry ka dot — lakeer border se
         | banti hai, isliye list chhoti ho ya lambi, khud hi utni lambi
         | rehti hai.
         */
-        <ol className="mt-3 space-y-4 border-l border-slate-200 pl-5">
+        <ol className="mt-3 space-y-4 border-l border-line pl-5">
           {entries.map((entry) => (
             <li key={entry.id} className="relative">
               {/*
-                ring-white isliye ki dot lakeer ko kaat kar uske upar
-                baithe, warna dono ek doosre mein ghul jaate hain
+                ring-surface isliye ki dot lakeer ko kaat kar uske upar
+                baithe, warna dono ek doosre mein ghul jaate hain. Rang card
+                ka hi hai, isliye dark theme mein bhi wo katav bana rehta hai.
               */}
               <span
-                className={`absolute -left-[23px] top-1.5 h-2.5 w-2.5 rounded-full ring-2 ring-white ${dotClass(
+                className={`absolute -left-[23px] top-1.5 h-2.5 w-2.5 rounded-full ring-2 ring-surface ${dotClass(
                   entry
                 )}`}
               />
 
-              <p className="truncate text-sm font-semibold text-slate-800">
+              <p className="truncate text-sm font-semibold text-ink">
                 {entry.actionBy || "Unknown"}
               </p>
 
-              <p className="text-sm text-slate-600">{activityLabel(entry)}</p>
+              <p className="text-sm text-ink-muted">{activityLabel(entry)}</p>
 
-              <p className="mt-0.5 text-xs text-slate-400">
+              <p className="mt-0.5 text-xs text-ink-faint">
                 {formatTimestamp(entry.timestamp)}
               </p>
             </li>

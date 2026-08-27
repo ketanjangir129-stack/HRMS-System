@@ -353,7 +353,7 @@ function DailyAttendance() {
                   type="button"
                   onClick={handleApproveDay}
                   disabled={approvingDay}
-                  className="inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-emerald-600/20 transition-all duration-200 hover:-translate-y-0.5 hover:bg-emerald-700 hover:shadow-lg hover:shadow-emerald-600/30 focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:ring-offset-2 active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-60 md:w-auto"
+                  className="ui-btn w-full bg-emerald-600 font-semibold text-white shadow-sm hover:bg-emerald-700 md:w-auto"
                 >
                   {approvingDay ? (
                     <FiLoader className="animate-spin" />
@@ -369,7 +369,7 @@ function DailyAttendance() {
               <button
                 type="button"
                 onClick={() => setMarkOpen(true)}
-                className="inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-blue-600/20 transition-all duration-200 hover:-translate-y-0.5 hover:bg-blue-700 hover:shadow-lg hover:shadow-blue-600/30 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 active:translate-y-0 md:w-auto"
+                className="ui-btn ui-btn-primary w-full font-semibold md:w-auto"
               >
                 Mark Attendance
               </button>
@@ -379,7 +379,7 @@ function DailyAttendance() {
         }
       />
 
-      <div className="mt-5 space-y-4 sm:mt-6 sm:space-y-6">
+      <div className="mt-6 space-y-4 sm:mt-8 sm:space-y-6">
 
         {/*
         | Above the holiday banner, because it explains the whole page rather

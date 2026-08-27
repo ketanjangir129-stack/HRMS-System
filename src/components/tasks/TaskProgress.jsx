@@ -29,13 +29,13 @@ function TaskProgress({ progress }) {
       icon={<FiPieChart />}
     >
       {total === 0 ? (
-        <p className="py-6 text-center text-sm text-slate-400">
+        <p className="py-6 text-center text-sm text-ink-faint">
           No tasks to measure yet.
         </p>
       ) : (
         <div className="space-y-4">
           {/* Stacked bar — teen segment, jod poora 100% */}
-          <div className="flex h-3 overflow-hidden rounded-full bg-slate-100">
+          <div className="flex h-3 overflow-hidden rounded-full bg-surface-raised">
             {segments.map((segment) => (
               <div
                 key={segment.label}
@@ -55,7 +55,7 @@ function TaskProgress({ progress }) {
             {segments.map((segment) => (
               <div key={segment.label}>
                 <div className="flex items-center justify-between text-sm">
-                  <span className="flex items-center gap-2 font-medium text-slate-700">
+                  <span className="flex items-center gap-2 font-medium text-ink-muted">
                     <span
                       className={`h-2 w-2 rounded-full ${
                         PROGRESS_BARS[segment.label]
@@ -64,15 +64,15 @@ function TaskProgress({ progress }) {
                     {segment.label}
                   </span>
 
-                  <span className="font-semibold text-slate-900">
+                  <span className="font-semibold text-ink">
                     {segment.value}
-                    <span className="ml-1.5 text-xs font-medium text-slate-400">
+                    <span className="ml-1.5 text-xs font-medium text-ink-faint">
                       {segment.percent}%
                     </span>
                   </span>
                 </div>
 
-                <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-slate-100">
+                <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-surface-raised">
                   <div
                     style={{ width: `${segment.share}%` }}
                     className={`h-full rounded-full transition-all duration-500 ${

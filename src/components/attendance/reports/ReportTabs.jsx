@@ -11,7 +11,7 @@ import { REPORT_TABS } from "../../../utils/attendance/attendanceConstants";
 
 function ReportTabs({ value, onChange }) {
   return (
-    <div className="hide-scrollbar overflow-x-auto rounded-2xl border border-slate-200 bg-white p-1.5 shadow-sm">
+    <div className="ui-card hide-scrollbar overflow-x-auto p-1.5">
 
       <div className="flex min-w-max gap-1.5">
 
@@ -27,15 +27,15 @@ function ReportTabs({ value, onChange }) {
               aria-current={isActive ? "page" : undefined}
               className={`flex-1 cursor-pointer whitespace-nowrap rounded-xl px-4 py-2.5 text-left transition-all duration-200 sm:px-5 sm:py-3 ${
                 isActive
-                  ? "bg-blue-600 text-white shadow-md shadow-blue-600/20"
-                  : "text-slate-600 hover:bg-slate-50"
+                  ? "bg-brand text-white shadow-sm"
+                  : "text-ink-muted hover:bg-surface-muted"
               }`}
             >
 
               <p className="text-sm font-semibold">{tab.label}</p>
 
               <p
-                className={`mt-0.5 text-xs ${isActive ? "text-blue-100" : "text-slate-400"}`}
+                className={`mt-0.5 text-xs ${isActive ? "text-blue-100" : "text-ink-faint"}`}
               >
                 {tab.description}
               </p>

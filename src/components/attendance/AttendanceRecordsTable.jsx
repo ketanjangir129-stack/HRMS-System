@@ -131,7 +131,7 @@ function ApprovalCell({ record, approval, size = "md" }) {
   | Nothing was ever recorded for this day, so there is nothing to decide.
   */
   if (!label) {
-    return <span className="text-sm text-slate-400">--</span>;
+    return <span className="text-sm text-ink-faint">--</span>;
   }
 
   const status = getApprovalStatus(record);
@@ -246,7 +246,7 @@ function AttendanceRecordsTable({
       <button
         type="button"
         onClick={() => setLocationRecord(record)}
-        className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs font-semibold text-slate-700 transition-colors hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-200"
+        className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-line px-2.5 py-1.5 text-xs font-semibold text-ink-muted transition-colors hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-200"
       >
         <FiMapPin />
         View
@@ -305,7 +305,7 @@ function AttendanceRecordsTable({
             | hidden at exactly the breakpoint where its own column appears,
             | so a value is never shown twice and never missing in between.
             */}
-            <p className="mt-1.5 truncate text-xs text-slate-500 xl:hidden">
+            <p className="mt-1.5 truncate text-xs text-ink-subtle xl:hidden">
 
               {record.department || "--"}
 
@@ -328,10 +328,10 @@ function AttendanceRecordsTable({
         ...hideBelow("xl"),
         render: (record) => (
           <>
-            <p className="font-medium text-slate-700">
+            <p className="font-medium text-ink-muted">
               {record.department || "--"}
             </p>
-            <p className="text-xs text-slate-400">
+            <p className="text-xs text-ink-faint">
               {record.designation || ""}
             </p>
           </>
@@ -356,7 +356,7 @@ function AttendanceRecordsTable({
         label: "Working Hours",
         ...hideBelow("lg"),
         render: (record) => (
-          <span className="inline-flex whitespace-nowrap rounded-lg bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
+          <span className="inline-flex whitespace-nowrap rounded-lg bg-surface-muted px-3 py-1 text-xs font-semibold text-ink-muted">
             {record.workingHours || "--"}
           </span>
         ),
@@ -424,7 +424,7 @@ function AttendanceRecordsTable({
 
       </div>
 
-      <div className="grid grid-cols-3 gap-2 rounded-xl bg-slate-50 px-3 py-2.5">
+      <div className="grid grid-cols-3 gap-2 rounded-xl bg-surface-muted px-3 py-2.5">
 
         {[
           { label: "In", value: formatTime(record.punchIn) },
@@ -434,11 +434,11 @@ function AttendanceRecordsTable({
 
           <div key={item.label} className="min-w-0">
 
-            <p className="text-[11px] font-medium uppercase tracking-wide text-slate-400">
+            <p className="ui-eyebrow">
               {item.label}
             </p>
 
-            <p className="mt-0.5 truncate text-sm font-semibold text-slate-800">
+            <p className="mt-0.5 truncate text-sm font-semibold text-ink-muted">
               {item.value}
             </p>
 
@@ -459,9 +459,9 @@ function AttendanceRecordsTable({
       | squeezed into the three column times grid.
       */}
       {hasLocation(record) && (
-        <div className="flex items-center justify-between gap-3 border-t border-slate-100 pt-3">
+        <div className="flex items-center justify-between gap-3 border-t border-line-subtle pt-3">
 
-          <p className="text-[11px] font-medium uppercase tracking-wide text-slate-400">
+          <p className="ui-eyebrow">
             Location
           </p>
 
@@ -476,9 +476,9 @@ function AttendanceRecordsTable({
       | row of its own and not a value.
       */}
       {approval && (
-        <div className="flex items-center justify-between gap-3 border-t border-slate-100 pt-3">
+        <div className="flex items-center justify-between gap-3 border-t border-line-subtle pt-3">
 
-          <p className="text-[11px] font-medium uppercase tracking-wide text-slate-400">
+          <p className="ui-eyebrow">
             Approval
           </p>
 

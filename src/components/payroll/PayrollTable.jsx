@@ -114,7 +114,7 @@ function PayrollTable({
           | hidden at exactly the breakpoint where its own column appears, so
           | a value is never shown twice and never missing in between.
           */}
-          <p className="mt-1 truncate pl-14 text-xs text-slate-500 lg:hidden">
+          <p className="mt-1 truncate pl-14 text-xs text-ink-subtle lg:hidden">
 
             <span className="md:hidden">
               {row.department || "--"}
@@ -136,7 +136,7 @@ function PayrollTable({
       sortable: true,
       ...hideBelow("md"),
       render: (row) => (
-        <span className="text-sm text-slate-600">
+        <span className="text-sm text-ink-muted">
           {row.department || "--"}
         </span>
       ),
@@ -147,7 +147,7 @@ function PayrollTable({
       label: "Designation",
       ...hideBelow("lg"),
       render: (row) => (
-        <span className="text-sm text-slate-600">
+        <span className="text-sm text-ink-muted">
           {row.designation || "--"}
         </span>
       ),
@@ -161,9 +161,9 @@ function PayrollTable({
       className: "whitespace-nowrap",
       render: (row) =>
         row.netPayable === null ? (
-          <span className="text-sm text-slate-400">--</span>
+          <span className="text-sm text-ink-faint">--</span>
         ) : (
-          <span className="text-sm font-semibold text-slate-900">
+          <span className="text-sm font-semibold text-ink">
             {formatCurrency(row.netPayable)}
           </span>
         ),
@@ -208,7 +208,7 @@ function PayrollTable({
               type="button"
               onClick={() => onViewPayslip(row.employeeId)}
               title="Open payslip"
-              className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition-all hover:border-blue-500 hover:bg-blue-50 hover:text-blue-600"
+              className="ui-btn ui-btn-secondary font-semibold"
             >
 
               <FiFileText size={14} />
@@ -244,7 +244,7 @@ function PayrollTable({
                   ? "Generate payroll for this employee"
                   : generateGate.reason
             }
-            className="inline-flex cursor-pointer items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm shadow-blue-600/20 transition-all hover:bg-blue-700 hover:shadow-md hover:shadow-blue-600/30 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:shadow-sm"
+            className="ui-btn ui-btn-primary font-semibold"
           >
 
             <FiPlay size={14} className={busy ? "animate-pulse" : ""} />

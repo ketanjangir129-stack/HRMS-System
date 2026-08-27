@@ -42,46 +42,47 @@ function SalaryDashboard() {
     return (
         <div className="mx-auto max-w-[1600px] space-y-6 p-1 sm:p-2">
 
-            {/* Header */}
-            <div className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white px-5 py-5 shadow-sm sm:px-6 md:flex-row md:items-center md:justify-between">
+            {/*
+            | Header
+            |
+            | Same shape the Dashboard opens with: a small brand eyebrow for
+            | context, the page name at heading size, and one quiet line under
+            | it. No card around it — the cards below are the page's first
+            | surface, and boxing the title as well made the screen read as two
+            | competing headers.
+            */}
+            <div className="min-w-0">
 
-                <div className="flex items-center gap-3 sm:gap-4">
-
-                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-600 shadow-sm shadow-blue-600/20">
-                        <TbReportMoney className="text-xl text-white" />
-                    </div>
-
-                    <div>
-
-                        <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
-                            Salary Management
-                        </h1>
-
-                        <p className="mt-1 text-sm text-slate-500 sm:text-base">
-                            Manage all employee salary records efficiently.
-                        </p>
-
-                    </div>
-
+                <div className="mb-1.5 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-brand">
+                    <TbReportMoney className="shrink-0" size={15} />
+                    <span className="truncate">Salary</span>
                 </div>
+
+                <h1 className="text-2xl font-bold text-ink wrap-break-word sm:text-3xl">
+                    Salary Management
+                </h1>
+
+                <p className="mt-1 text-sm text-ink-subtle">
+                    Manage all employee salary records efficiently.
+                </p>
 
             </div>
 
             {/* Modules */}
             {modules.length === 0 && (
-                <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center text-sm text-slate-500 shadow-sm">
+                <div className="ui-card ui-card-body text-center text-sm text-ink-subtle">
                     You do not have access to any salary module yet.
                 </div>
             )}
 
-            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+            <div className="grid grid-cols-1 gap-4 sm:gap-6 md:grid-cols-2">
 
                 {modules.map((module) => (
 
                     <button
                         key={module.title}
                         onClick={() => navigate(module.path)}
-                        className="group relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-6 text-left shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg cursor-pointer"
+                        className="ui-card ui-card-interactive ui-card-body group relative cursor-pointer overflow-hidden text-left"
                     >
 
                         {/* Top Border */}
@@ -92,24 +93,24 @@ function SalaryDashboard() {
                         <div className="flex items-start justify-between gap-4">
 
                             <div
-                                className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl transition-transform duration-200 group-hover:scale-110 ${module.color}`}
+                                className={`ui-tile transition-transform duration-200 group-hover:scale-110 ${module.color}`}
                             >
                                 {module.icon}
                             </div>
 
-                            <FiChevronRight className="mt-3 shrink-0 text-slate-300 transition-all duration-200 group-hover:translate-x-1 group-hover:text-blue-600" />
+                            <FiChevronRight className="mt-3 shrink-0 text-ink-faint transition-all duration-200 group-hover:translate-x-1 group-hover:text-brand" />
 
                         </div>
 
-                        <h2 className="mt-4 text-xl font-semibold text-slate-900 transition-colors group-hover:text-blue-600">
+                        <h2 className="mt-4 text-xl font-bold text-ink transition-colors group-hover:text-brand">
                             {module.title}
                         </h2>
 
-                        <p className="mt-2 text-sm text-slate-500">
+                        <p className="mt-2 text-sm text-ink-subtle">
                             {module.description}
                         </p>
 
-                        <p className="mt-4 text-xs font-medium uppercase tracking-wide text-slate-400">
+                        <p className="ui-eyebrow mt-4">
                             {module.hint}
                         </p>
 

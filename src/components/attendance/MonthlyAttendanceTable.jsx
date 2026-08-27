@@ -47,7 +47,7 @@ const COUNT_STYLES = {
   late: "ring-amber-200 bg-amber-50 text-amber-700",
   absent: "ring-red-200 bg-red-50 text-red-700",
   leave: "ring-blue-200 bg-blue-50 text-blue-700",
-  pending: "ring-slate-200 bg-slate-100 text-slate-700",
+  pending: "ring-line bg-surface-muted text-ink-muted",
 };
 
 /*
@@ -84,7 +84,7 @@ const COUNT_TEXT = {
   late: "text-amber-600",
   absent: "text-red-600",
   leave: "text-blue-600",
-  pending: "text-slate-600",
+  pending: "text-ink-muted",
 };
 
 /* The counts, in the order they read on both the table and the card. */
@@ -157,7 +157,7 @@ function MonthlyAttendanceTable({
             | hidden at exactly the breakpoint where its own column appears,
             | so a value is never shown twice and never missing in between.
             */}
-            <p className="mt-1.5 truncate text-xs text-slate-500 2xl:hidden">
+            <p className="mt-1.5 truncate text-xs text-ink-subtle 2xl:hidden">
 
               {row.department || "--"}
 
@@ -165,7 +165,7 @@ function MonthlyAttendanceTable({
 
             </p>
 
-            <p className="mt-0.5 truncate text-xs text-slate-400 2xl:hidden">
+            <p className="mt-0.5 truncate text-xs text-ink-faint 2xl:hidden">
 
               {row.workingDays} marked · {row.workingHours || "--"}
 
@@ -186,10 +186,10 @@ function MonthlyAttendanceTable({
         ...hideBelow("2xl"),
         render: (row) => (
           <>
-            <p className="font-medium text-slate-700">
+            <p className="font-medium text-ink-muted">
               {row.department || "--"}
             </p>
-            <p className="text-xs text-slate-400">{row.designation || ""}</p>
+            <p className="text-xs text-ink-faint">{row.designation || ""}</p>
           </>
         ),
       },
@@ -294,13 +294,13 @@ function MonthlyAttendanceTable({
       | one ends where the card does. A rule above them separates the month's
       | make up from the identity without drawing a box around either.
       */}
-      <div className="grid grid-cols-3 gap-2 border-t border-slate-100 pt-3 sm:grid-cols-5">
+      <div className="grid grid-cols-3 gap-2 border-t border-line-subtle pt-3 sm:grid-cols-5">
 
         {COUNT_TONES.map((count) => (
 
           <div key={count.key} className="min-w-0">
 
-            <p className="truncate text-[10px] font-medium uppercase tracking-wide text-slate-400">
+            <p className="truncate text-[10px] font-medium uppercase tracking-wide text-ink-faint">
               {count.label}
             </p>
 
@@ -317,7 +317,7 @@ function MonthlyAttendanceTable({
       </div>
 
       {/* Pushed to opposite edges rather than trailing off mid line. */}
-      <div className="flex items-center justify-between gap-3 text-xs text-slate-400">
+      <div className="flex items-center justify-between gap-3 text-xs text-ink-faint">
 
         <span className="truncate">{row.workingDays} marked days</span>
 

@@ -63,16 +63,14 @@ function TimeSpent({ entries }) {
   }, [time.running]);
 
   return (
-    <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50/70 p-3.5">
-      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white text-slate-500 ring-1 ring-slate-200">
+    <div className="flex items-center gap-3 rounded-xl border border-line bg-surface-muted/70 p-3.5">
+      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-surface text-ink-subtle ring-1 ring-line">
         <Timer size={17} />
       </span>
 
       <div className="min-w-0 flex-1">
-        <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
-          Time spent
-        </p>
-        <p className="mt-0.5 text-sm font-bold text-slate-900">
+        <p className="ui-eyebrow">Time spent</p>
+        <p className="mt-0.5 text-sm font-bold text-ink">
           {formatDuration(time.total)}
         </p>
       </div>
@@ -126,25 +124,22 @@ function TaskActivityModal({ open, task, entries = [], loading = false, onClose 
       {/* Andar click karne par modal band na ho */}
       <div
         onMouseDown={(event) => event.stopPropagation()}
-        className="flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl bg-white shadow-2xl"
+        className="flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl bg-surface shadow-2xl"
       >
         {/* Header */}
-        <div className="flex items-start justify-between gap-3 border-b border-slate-200 px-6 py-5">
+        <div className="flex items-start justify-between gap-3 border-b border-line px-6 py-5">
           <div className="flex min-w-0 items-center gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+            <div className="ui-tile ui-tile-sm bg-brand-ring text-brand">
               <Clock size={20} />
             </div>
 
             <div className="min-w-0">
-              <h2
-                id="task-activity-title"
-                className="text-lg font-semibold text-slate-900"
-              >
+              <h2 id="task-activity-title" className="ui-card-title">
                 Activity
               </h2>
               {/* Kis task ki activity hai — modal table se khulta hai, to
                   context yahan hona zaroori hai */}
-              <p className="truncate text-sm text-slate-500">{task.title}</p>
+              <p className="truncate text-sm text-ink-subtle">{task.title}</p>
             </div>
           </div>
 
@@ -152,16 +147,16 @@ function TaskActivityModal({ open, task, entries = [], loading = false, onClose 
             type="button"
             onClick={onClose}
             aria-label="Close"
-            className="cursor-pointer rounded-lg p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+            className="ui-icon-btn"
           >
             <X size={20} />
           </button>
         </div>
 
         {/* Body — lambi history par yahi hissa scroll hota hai */}
-        <div className="min-h-0 flex-1 space-y-5 overflow-y-auto px-6 py-5">
+        <div className="ui-scroll min-h-0 flex-1 space-y-5 overflow-y-auto px-6 py-5">
           {loading ? (
-            <p className="py-6 text-center text-sm text-slate-400">
+            <p className="py-6 text-center text-sm text-ink-faint">
               Loading activity...
             </p>
           ) : (
@@ -182,11 +177,11 @@ function TaskActivityModal({ open, task, entries = [], loading = false, onClose 
         </div>
 
         {/* Footer */}
-        <div className="flex justify-end border-t border-slate-200 px-6 py-4">
+        <div className="flex justify-end border-t border-line px-6 py-4">
           <button
             type="button"
             onClick={onClose}
-            className="cursor-pointer rounded-xl border border-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+            className="ui-btn ui-btn-secondary"
           >
             Close
           </button>

@@ -170,13 +170,13 @@ function ApprovalNotice({ record }) {
 
 function Stat({ label, value }) {
   return (
-    <div className="rounded-xl border border-slate-100 bg-slate-50 px-3 py-2.5 sm:px-4 sm:py-3">
+    <div className="rounded-xl border border-line-subtle bg-surface-muted px-3 py-2.5 sm:px-4 sm:py-3">
 
-      <p className="truncate text-[11px] font-medium uppercase tracking-wide text-slate-500 sm:text-xs">
+      <p className="ui-eyebrow truncate">
         {label}
       </p>
 
-      <div className="mt-1.5 flex h-7 items-center whitespace-nowrap text-base font-semibold text-slate-900 sm:mt-2 sm:text-lg">
+      <div className="mt-1.5 flex h-7 items-center whitespace-nowrap text-base font-semibold text-ink sm:mt-2 sm:text-lg">
         {value}
       </div>
 
@@ -272,18 +272,18 @@ function TodayAttendanceCard({ className = "" }) {
   const showWeeklyOffNotice =
     onWeeklyOff && !onApprovedLeave && !attendance?.punchIn;
 
-  const cardClass = `flex flex-col justify-center rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6 ${className}`;
+  const cardClass = `ui-card ui-card-body flex flex-col justify-center ${className}`;
 
   if (loading) {
     return (
       <div className={cardClass}>
-        <div className="h-5 w-40 animate-pulse rounded-md bg-slate-200" />
-        <div className="mt-3 h-3 w-28 animate-pulse rounded-md bg-slate-100" />
+        <div className="h-5 w-40 animate-pulse rounded-md bg-surface-raised" />
+        <div className="mt-3 h-3 w-28 animate-pulse rounded-md bg-surface-muted" />
         <div className="mt-5 grid grid-cols-2 gap-2.5 sm:mt-6 sm:gap-3">
           {[0, 1, 2, 3].map((item) => (
             <div
               key={item}
-              className="h-19 animate-pulse rounded-xl bg-slate-100"
+              className="h-19 animate-pulse rounded-xl bg-surface-muted"
             />
           ))}
         </div>
@@ -298,11 +298,11 @@ function TodayAttendanceCard({ className = "" }) {
 
         <div className="min-w-0">
 
-          <h2 className="text-lg font-semibold text-slate-900 sm:text-xl">
+          <h2 className="ui-card-title">
             My Attendance
           </h2>
 
-          <p className="mt-1 truncate text-sm text-slate-500">
+          <p className="ui-card-subtitle truncate">
             {currentUser?.personalInfo?.name ||
               currentUser?.name ||
               "Signed in user"}
@@ -310,7 +310,7 @@ function TodayAttendanceCard({ className = "" }) {
 
         </div>
 
-        <div className="flex shrink-0 items-center gap-2 rounded-lg bg-slate-50 px-2.5 py-2 text-xs font-medium text-slate-500 sm:px-3 sm:text-sm">
+        <div className="flex shrink-0 items-center gap-2 rounded-lg bg-surface-muted px-2.5 py-2 text-xs font-medium text-ink-subtle sm:px-3 sm:text-sm">
           <FiClock />
           {formatTime(now)}
         </div>
@@ -355,20 +355,20 @@ function TodayAttendanceCard({ className = "" }) {
       */}
       {!onApprovedLeave && <ApprovalNotice record={attendance} />}
 
-      <div className="mt-5 border-t border-slate-100 pt-4 sm:mt-6 sm:pt-5">
+      <div className="mt-5 border-t border-line-subtle pt-4 sm:mt-6 sm:pt-5">
 
         {error && (
           <p className="text-sm font-medium text-red-600">{error}</p>
         )}
 
         {!error && !employeeId && (
-          <p className="text-sm text-slate-500">
+          <p className="text-sm text-ink-subtle">
             Punching in is available for employee accounts.
           </p>
         )}
 
         {!error && employeeId && onApprovedLeave && (
-          <div className="flex items-center gap-2 font-semibold text-blue-600">
+          <div className="flex items-center gap-2 font-semibold text-brand">
             <FiCalendar />
             You are on approved leave today
           </div>
@@ -386,7 +386,7 @@ function TodayAttendanceCard({ className = "" }) {
             type="button"
             onClick={() => handlePunch(punchIn, "Punched in successfully.")}
             disabled={submitting}
-            className="inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 py-3 text-sm font-semibold text-white shadow-md shadow-emerald-600/20 transition-all duration-200 hover:-translate-y-0.5 hover:bg-emerald-700 hover:shadow-lg hover:shadow-emerald-600/30 focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:ring-offset-2 active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto sm:py-2.5"
+            className="ui-btn w-full bg-emerald-600 font-semibold text-white shadow-sm hover:bg-emerald-700 sm:w-auto"
           >
             {submitting ? <FiLoader className="animate-spin" /> : <FiLogIn />}
             Punch In
@@ -398,7 +398,7 @@ function TodayAttendanceCard({ className = "" }) {
             type="button"
             onClick={() => handlePunch(punchOut, "Punched out successfully.")}
             disabled={submitting}
-            className="inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-amber-600 px-5 py-3 text-sm font-semibold text-white shadow-md shadow-amber-600/20 transition-all duration-200 hover:-translate-y-0.5 hover:bg-amber-700 hover:shadow-lg hover:shadow-amber-600/30 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:ring-offset-2 active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto sm:py-2.5"
+            className="ui-btn w-full bg-amber-600 font-semibold text-white shadow-sm hover:bg-amber-700 sm:w-auto"
           >
             {submitting ? <FiLoader className="animate-spin" /> : <FiLogOut />}
             Punch Out

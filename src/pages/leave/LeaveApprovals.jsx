@@ -297,7 +297,7 @@ function LeaveApprovals() {
 
     return (
 
-      <div className="mx-auto max-w-[1600px] space-y-6 p-1 sm:p-2">
+      <div className="mx-auto max-w-[1600px] p-0 sm:p-2">
 
         <LeavePageHeader
           title="Leave Approvals"
@@ -305,17 +305,17 @@ function LeaveApprovals() {
           icon={<FiCheckSquare />}
         />
 
-        <div className="flex flex-col items-center justify-center rounded-2xl border border-slate-200 bg-white px-6 py-20 text-center shadow-sm">
+        <div className="ui-card mt-6 flex flex-col items-center justify-center px-6 py-20 text-center sm:mt-8">
 
           <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-amber-50 text-amber-600">
             <FiLock size={28} />
           </div>
 
-          <h3 className="mt-5 text-xl font-semibold text-slate-900">
+          <h3 className="mt-5 text-xl font-semibold text-ink">
             Approvals are restricted
           </h3>
 
-          <p className="mt-2 max-w-sm text-sm text-slate-500">
+          <p className="mt-2 max-w-sm text-sm text-ink-subtle">
             Only HR, department managers and the company owner can review
             leave requests. Your own requests are on the leave dashboard.
           </p>
@@ -330,7 +330,7 @@ function LeaveApprovals() {
 
   return (
 
-    <div className="mx-auto max-w-[1600px] space-y-6 p-1 sm:p-2">
+    <div className="mx-auto max-w-[1600px] p-0 sm:p-2">
 
       <LeavePageHeader
         title="Leave Approvals"
@@ -341,7 +341,11 @@ function LeaveApprovals() {
             value={year}
             onChange={(event) => setYear(Number(event.target.value))}
             aria-label="Leave year"
-            className="cursor-pointer rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 outline-none transition-all focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+            /*
+            | Not `.ui-field`: the kit's field fills its line, and this control
+            | is a header action that sits at its own width.
+            */
+            className="cursor-pointer rounded-xl border border-line bg-surface px-4 py-2.5 text-sm font-semibold text-ink-muted outline-none transition-all focus:border-brand focus:ring-2 focus:ring-brand-ring"
           >
             {years.map((item) => (
               <option key={item} value={item}>
@@ -352,98 +356,106 @@ function LeaveApprovals() {
         }
       />
 
-      <DepartmentScopeNotice subject="leave requests" />
+      {/*
+      | The header sits directly on the canvas, so the panels below it open
+      | with the same gap the Dashboard leaves under its greeting.
+      */}
+      <div className="mt-6 space-y-4 sm:mt-8 sm:space-y-6">
 
-      <LeaveApprovalSummary
-        summary={summary}
-        loading={loading || directoryLoading || scopeLoading}
-      />
+        <DepartmentScopeNotice subject="leave requests" />
 
-      <LeaveHistoryTable
-        requests={yearRequests}
-        loading={loading || directoryLoading || scopeLoading}
-        error={error}
-        onRetry={reload}
-        title="Leave Requests"
-        subtitle={
-          summary.pending > 0
-            ? `${summary.pending} request${summary.pending !== 1 ? "s" : ""} awaiting your review`
-            : "No requests awaiting review"
-        }
-        showEmployee
-        visibleColumns={APPROVAL_COLUMNS}
-        headerSearch={search}
-        emptyTitle="No Leave Requests"
-        emptyMessage="Leave requests raised by employees will appear here."
-        renderActions={(request) => (
+        <LeaveApprovalSummary
+          summary={summary}
+          loading={loading || directoryLoading || scopeLoading}
+        />
 
-          <div className="flex items-center justify-end gap-2">
+        <LeaveHistoryTable
+          requests={yearRequests}
+          loading={loading || directoryLoading || scopeLoading}
+          error={error}
+          onRetry={reload}
+          title="Leave Requests"
+          subtitle={
+            summary.pending > 0
+              ? `${summary.pending} request${summary.pending !== 1 ? "s" : ""} awaiting your review`
+              : "No requests awaiting review"
+          }
+          showEmployee
+          visibleColumns={APPROVAL_COLUMNS}
+          headerSearch={search}
+          emptyTitle="No Leave Requests"
+          emptyMessage="Leave requests raised by employees will appear here."
+          renderActions={(request) => (
 
-            <button
-              type="button"
-              onClick={() => setDetailRequest(request)}
-              aria-label="View request"
-              title="View request"
-              className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition-all hover:border-blue-500 hover:bg-blue-50 hover:text-blue-600"
-            >
-              <FiEye size={15} />
-            </button>
+            <div className="flex items-center justify-end gap-2">
 
-            {/*
-            | The decision, only on the rows this reviewer may decide. A
-            | manager's own request keeps the eye and loses the tick, which is
-            | the whole point: they can watch it, and HR grants it.
-            */}
-            {isPendingLeave(request) && canReviewRequest(request) && (
-
-              <>
-
-                <button
-                  type="button"
-                  onClick={() => handleApprove(request)}
-                  disabled={approving}
-                  aria-label="Approve request"
-                  title="Approve request"
-                  className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition-all hover:border-emerald-500 hover:bg-emerald-50 hover:text-emerald-600 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  <FiCheck size={15} />
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setRejectRequest(request)}
-                  aria-label="Reject request"
-                  title="Reject request"
-                  className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition-all hover:border-red-500 hover:bg-red-50 hover:text-red-600"
-                >
-                  <FiX size={15} />
-                </button>
-
-              </>
-
-            )}
-
-            {/*
-            | Deleting releases an approved request's days back to the
-            | employee, so it is the same authority as approving it and is
-            | offered on the same rows.
-            */}
-            {canReviewRequest(request) && (
               <button
                 type="button"
-                onClick={() => setDeleteRequest(request)}
-                aria-label="Delete request"
-                title="Delete request"
-                className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition-all hover:border-red-500 hover:bg-red-50 hover:text-red-600"
+                onClick={() => setDetailRequest(request)}
+                aria-label="View request"
+                title="View request"
+                className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg border border-line text-ink-subtle transition-all hover:border-blue-500 hover:bg-blue-50 hover:text-blue-600"
               >
-                <FiTrash2 size={15} />
+                <FiEye size={15} />
               </button>
-            )}
 
-          </div>
+              {/*
+              | The decision, only on the rows this reviewer may decide. A
+              | manager's own request keeps the eye and loses the tick, which is
+              | the whole point: they can watch it, and HR grants it.
+              */}
+              {isPendingLeave(request) && canReviewRequest(request) && (
 
-        )}
-      />
+                <>
+
+                  <button
+                    type="button"
+                    onClick={() => handleApprove(request)}
+                    disabled={approving}
+                    aria-label="Approve request"
+                    title="Approve request"
+                    className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg border border-line text-ink-subtle transition-all hover:border-emerald-500 hover:bg-emerald-50 hover:text-emerald-600 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <FiCheck size={15} />
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setRejectRequest(request)}
+                    aria-label="Reject request"
+                    title="Reject request"
+                    className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg border border-line text-ink-subtle transition-all hover:border-red-500 hover:bg-red-50 hover:text-red-600"
+                  >
+                    <FiX size={15} />
+                  </button>
+
+                </>
+
+              )}
+
+              {/*
+              | Deleting releases an approved request's days back to the
+              | employee, so it is the same authority as approving it and is
+              | offered on the same rows.
+              */}
+              {canReviewRequest(request) && (
+                <button
+                  type="button"
+                  onClick={() => setDeleteRequest(request)}
+                  aria-label="Delete request"
+                  title="Delete request"
+                  className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg border border-line text-ink-subtle transition-all hover:border-red-500 hover:bg-red-50 hover:text-red-600"
+                >
+                  <FiTrash2 size={15} />
+                </button>
+              )}
+
+            </div>
+
+          )}
+        />
+
+      </div>
 
       <LeaveRequestDetailModal
         open={Boolean(activeDetail)}

@@ -15,7 +15,7 @@
 .leave-calendar .react-calendar__navigation button {
   font-size: 14px;
   font-weight: 600;
-  color: #0f172a;
+  color: var(--color-ink);
   min-width: 36px;
   background: transparent;
   border-radius: 10px;
@@ -24,12 +24,12 @@
 
 .leave-calendar .react-calendar__navigation button:hover,
 .leave-calendar .react-calendar__navigation button:focus {
-  background: #f1f5f9;
+  background: var(--color-surface-raised);
 }
 
 .leave-calendar .react-calendar__navigation button:disabled {
   background: transparent;
-  color: #cbd5e1;
+  color: color-mix(in oklab, var(--color-ink-faint) 55%, transparent);
 }
 
 /* Weekdays */
@@ -39,7 +39,7 @@
   font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.05em;
-  color: #94a3b8;
+  color: var(--color-ink-faint);
   padding-bottom: 6px;
 }
 
@@ -56,30 +56,30 @@
   border-radius: 12px;
   font-size: 13px;
   font-weight: 500;
-  color: #334155;
+  color: var(--color-ink-muted);
   background: transparent;
   transition: background 0.2s ease, color 0.2s ease;
 }
 
 .leave-calendar .react-calendar__tile:hover {
-  background: #f1f5f9;
+  background: var(--color-surface-raised);
 }
 
 .leave-calendar .react-calendar__month-view__days__day--neighboringMonth {
-  color: #cbd5e1;
+  color: color-mix(in oklab, var(--color-ink-faint) 55%, transparent);
 }
 
 .leave-calendar .react-calendar__tile--now {
-  background: #eef2ff;
-  color: #4f46e5;
+  background: color-mix(in oklab, var(--color-brand) 12%, transparent);
+  color: var(--color-brand);
   font-weight: 700;
 }
 
 .leave-calendar .react-calendar__tile--active,
 .leave-calendar .react-calendar__tile--active:hover {
-  background: #eef2ff !important;
-  color: #4338ca;
-  box-shadow: inset 0 0 0 2px #4f46e5;
+  background: color-mix(in oklab, var(--color-brand) 12%, transparent) !important;
+  color: var(--color-brand-hover);
+  box-shadow: inset 0 0 0 2px var(--color-brand);
 }
 
 /* Leave status */

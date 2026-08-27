@@ -1,53 +1,73 @@
 import { FiArrowLeft } from "react-icons/fi";
 import { useNavigate } from "react-router-dom";
 
+/*
+|--------------------------------------------------------------------------
+| Salary Page Header
+|--------------------------------------------------------------------------
+| The same anatomy the Dashboard opens with: an eyebrow for context, the page
+| name at heading size, then the one line that says what the page is for, with
+| whatever action belongs to the page on the right.
+|
+| The way back is the eyebrow itself rather than a separate boxed arrow. It is
+| the only line above the title, so it is where the eye already is, and a 40px
+| square button beside the heading is the one piece of chrome the Dashboard's
+| header does not have.
+|
+| The icon each page passes stays with the eyebrow rather than being blown up
+| into a filled tile: at eyebrow size it labels the section without competing
+| with the heading under it.
+|--------------------------------------------------------------------------
+*/
+
 function SalaryPageHeader({
   title,
   subtitle,
   icon,
   action,
   backTo = "/salarydashboard",
+  backLabel = "Salary",
 }) {
   const navigate = useNavigate();
 
   return (
     <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
 
-      <div className="flex items-center gap-4">
+      <div className="min-w-0">
 
         <button
+          type="button"
           onClick={() => navigate(backTo)}
-          title="Go back"
-          className="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 shadow-sm transition-all hover:border-blue-500 hover:text-blue-600"
+          aria-label={`Back to ${backLabel}`}
+          className="mb-1.5 flex cursor-pointer items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-brand transition-colors hover:text-brand-hover"
         >
-          <FiArrowLeft size={18} />
-        </button>
 
-        <div className="flex items-center gap-4">
+          <FiArrowLeft className="shrink-0" size={14} />
 
           {icon && (
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-blue-600 text-xl text-white shadow-sm shadow-blue-600/20">
+            <span className="flex shrink-0 items-center text-sm" aria-hidden="true">
               {icon}
-            </div>
+            </span>
           )}
 
-          <div>
+          <span className="truncate">{backLabel}</span>
 
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
-              {title}
-            </h1>
+        </button>
 
-            <p className="mt-1 text-sm text-slate-500 sm:text-base">
-              {subtitle}
-            </p>
+        <h1 className="text-2xl font-bold text-ink wrap-break-word sm:text-3xl">
+          {title}
+        </h1>
 
-          </div>
-
-        </div>
+        {subtitle && (
+          <p className="mt-1 text-sm text-ink-subtle">
+            {subtitle}
+          </p>
+        )}
 
       </div>
 
-      {action}
+      {/* Its own line on a phone, beside the title from `md`. */}
+      {action && <div className="shrink-0">{action}</div>}
 
     </div>
   );

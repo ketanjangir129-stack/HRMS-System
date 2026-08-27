@@ -216,11 +216,11 @@ function ApplyLeaveForm({
     */
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-900/50 backdrop-blur-sm sm:items-center sm:p-4">
 
-      <div className="flex max-h-[92dvh] w-full max-w-3xl flex-col overflow-hidden rounded-t-2xl bg-white shadow-2xl sm:max-h-[90dvh] sm:rounded-2xl">
+      <div className="flex max-h-[92dvh] w-full max-w-3xl flex-col overflow-hidden rounded-t-2xl bg-surface shadow-2xl sm:max-h-[90dvh] sm:rounded-2xl">
 
         {/* Header */}
 
-        <div className="flex shrink-0 items-center justify-between gap-3 border-b border-slate-200 px-4 py-4 sm:gap-4 sm:px-6 sm:py-5 lg:px-8">
+        <div className="flex shrink-0 items-center justify-between gap-3 border-b border-line px-4 py-4 sm:gap-4 sm:px-6 sm:py-5 lg:px-8">
 
           <div className="flex min-w-0 items-center gap-3">
 
@@ -230,11 +230,11 @@ function ApplyLeaveForm({
 
             <div className="min-w-0">
 
-              <h2 className="text-base font-bold text-slate-900 sm:text-xl">
+              <h2 className="ui-card-title">
                 Apply Leave
               </h2>
 
-              <p className="mt-0.5 truncate text-xs text-slate-500 sm:text-sm">
+              <p className="ui-card-subtitle truncate">
                 Submit a leave request for approval.
               </p>
 
@@ -247,7 +247,7 @@ function ApplyLeaveForm({
             onClick={onClose}
             disabled={submitting}
             aria-label="Close"
-            className="cursor-pointer rounded-lg p-2 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
+            className="ui-icon-btn disabled:cursor-not-allowed disabled:opacity-50"
           >
             <FiX size={20} />
           </button>
@@ -262,7 +262,7 @@ function ApplyLeaveForm({
 
           <div>
 
-            <label className="mb-2.5 block text-xs font-semibold uppercase tracking-wide text-slate-500 sm:mb-3">
+            <label className="ui-eyebrow mb-2.5 block sm:mb-3">
               Request Type
             </label>
 
@@ -276,8 +276,8 @@ function ApplyLeaveForm({
                   onClick={() => handleTypeChange(item.value)}
                   className={`cursor-pointer rounded-xl border px-4 py-3 text-left transition-all ${
                     requestType === item.value
-                      ? "border-blue-600 bg-blue-50 ring-2 ring-blue-100"
-                      : "border-slate-200 hover:border-blue-300 hover:bg-slate-50"
+                      ? "border-brand bg-blue-50 ring-2 ring-brand-ring"
+                      : "border-line hover:border-blue-300 hover:bg-surface-muted"
                   }`}
                 >
 
@@ -285,13 +285,13 @@ function ApplyLeaveForm({
                     className={`block text-sm font-semibold ${
                       requestType === item.value
                         ? "text-blue-700"
-                        : "text-slate-800"
+                        : "text-ink-muted"
                     }`}
                   >
                     {item.label}
                   </span>
 
-                  <span className="mt-0.5 block text-xs text-slate-500">
+                  <span className="mt-0.5 block text-xs text-ink-subtle">
                     {item.description}
                   </span>
 
@@ -309,7 +309,7 @@ function ApplyLeaveForm({
 
             <div>
 
-              <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">
+              <label className="ui-eyebrow mb-1.5 block">
                 Leave Date
               </label>
 
@@ -320,7 +320,7 @@ function ApplyLeaveForm({
                 onChange={(e) =>
                   handleFromDateChange(e.target.value)
                 }
-                className="w-full cursor-pointer rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-800 outline-none transition-all focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-100"
+                className="w-full cursor-pointer rounded-xl border border-line bg-surface-muted px-4 py-3 text-sm text-ink outline-none transition-all focus:border-brand focus:bg-surface focus:ring-2 focus:ring-brand-ring"
               />
 
             </div>
@@ -333,7 +333,7 @@ function ApplyLeaveForm({
 
               <div>
 
-                <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">
+                <label className="ui-eyebrow mb-1.5 block">
                   From Date
                 </label>
 
@@ -344,14 +344,14 @@ function ApplyLeaveForm({
                   onChange={(e) =>
                     handleFromDateChange(e.target.value)
                   }
-                  className="w-full cursor-pointer rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-800 outline-none transition-all focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-100"
+                  className="w-full cursor-pointer rounded-xl border border-line bg-surface-muted px-4 py-3 text-sm text-ink outline-none transition-all focus:border-brand focus:bg-surface focus:ring-2 focus:ring-brand-ring"
                 />
 
               </div>
 
               <div>
 
-                <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">
+                <label className="ui-eyebrow mb-1.5 block">
                   To Date
                 </label>
 
@@ -362,7 +362,7 @@ function ApplyLeaveForm({
                   onChange={(e) =>
                     setToDate(e.target.value)
                   }
-                  className="w-full cursor-pointer rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-800 outline-none transition-all focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-100"
+                  className="w-full cursor-pointer rounded-xl border border-line bg-surface-muted px-4 py-3 text-sm text-ink outline-none transition-all focus:border-brand focus:bg-surface focus:ring-2 focus:ring-brand-ring"
                 />
 
               </div>
@@ -377,7 +377,7 @@ function ApplyLeaveForm({
 
               <div>
 
-                <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">
+                <label className="ui-eyebrow mb-1.5 block">
                   Leave Date
                 </label>
 
@@ -388,14 +388,14 @@ function ApplyLeaveForm({
                   onChange={(e) =>
                     handleFromDateChange(e.target.value)
                   }
-                  className="w-full cursor-pointer rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-800 outline-none transition-all focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-100"
+                  className="w-full cursor-pointer rounded-xl border border-line bg-surface-muted px-4 py-3 text-sm text-ink outline-none transition-all focus:border-brand focus:bg-surface focus:ring-2 focus:ring-brand-ring"
                 />
 
               </div>
 
               <div>
 
-                <label className="mb-2.5 block text-xs font-semibold uppercase tracking-wide text-slate-500 sm:mb-3">
+                <label className="ui-eyebrow mb-2.5 block sm:mb-3">
                   Session
                 </label>
 
@@ -413,8 +413,8 @@ function ApplyLeaveForm({
                       }
                       className={`inline-flex cursor-pointer items-center justify-center gap-2 rounded-xl border px-4 py-3 text-sm font-semibold transition-all ${
                         halfDaySession === item
-                          ? "border-blue-600 bg-blue-50 text-blue-700 ring-2 ring-blue-100"
-                          : "border-slate-200 text-slate-700 hover:border-blue-300 hover:bg-slate-50"
+                          ? "border-brand bg-blue-50 text-blue-700 ring-2 ring-brand-ring"
+                          : "border-line text-ink-muted hover:border-blue-300 hover:bg-surface-muted"
                       }`}
                     >
 
@@ -438,21 +438,21 @@ function ApplyLeaveForm({
 
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
 
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:p-5">
+            <div className="rounded-2xl border border-line bg-surface-muted p-4 sm:p-5">
 
               <div className="flex items-center gap-3">
 
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-slate-500 shadow-sm">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-surface text-ink-subtle shadow-sm">
                   <FiClock />
                 </div>
 
                 <div className="min-w-0">
 
-                  <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500 sm:text-xs">
+                  <p className="ui-eyebrow">
                     Leave Duration
                   </p>
 
-                  <h3 className="mt-1 text-lg font-bold text-slate-900 sm:text-xl">
+                  <h3 className="mt-1 text-lg font-bold text-ink sm:text-xl">
                     {formatLeaveDuration(leaveDays)}
                   </h3>
 
@@ -467,7 +467,7 @@ function ApplyLeaveForm({
               */}
               {breakdown.skippedDays > 0 && (
 
-                <p className="mt-3 text-xs text-slate-500">
+                <p className="mt-3 text-xs text-ink-subtle">
                   {breakdown.totalDays} day
                   {breakdown.totalDays === 1 ? "" : "s"} selected ·{" "}
                   {[
@@ -500,7 +500,7 @@ function ApplyLeaveForm({
               <div className="flex items-center gap-3">
 
                 <div
-                  className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white shadow-sm ${
+                  className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-surface shadow-sm ${
                     isOverdrawn ? "text-red-600" : "text-blue-600"
                   }`}
                 >
@@ -509,7 +509,7 @@ function ApplyLeaveForm({
 
                 <div className="min-w-0">
 
-                  <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500 sm:text-xs">
+                  <p className="ui-eyebrow">
                     Remaining Balance
                   </p>
 
@@ -525,7 +525,7 @@ function ApplyLeaveForm({
 
               </div>
 
-              <p className="mt-3 text-xs text-slate-500">
+              <p className="mt-3 text-xs text-ink-subtle">
                 {isOverdrawn
                   ? `Only ${availableBalance} day(s) available to apply.`
                   : `Remaining after approval · ${availableBalance} available now`}
@@ -548,7 +548,7 @@ function ApplyLeaveForm({
 
           <div>
 
-            <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">
+            <label className="ui-eyebrow mb-1.5 block">
               Reason <span className="text-red-500">*</span>
             </label>
 
@@ -559,10 +559,10 @@ function ApplyLeaveForm({
                 setReason(e.target.value)
               }
               placeholder="Enter leave reason..."
-              className="w-full resize-none rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-800 outline-none transition-all placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-100"
+              className="w-full resize-none rounded-xl border border-line bg-surface-muted px-4 py-3 text-sm text-ink outline-none transition-all placeholder:text-ink-faint focus:border-brand focus:bg-surface focus:ring-2 focus:ring-brand-ring"
             />
 
-            <p className="mt-1.5 text-xs text-slate-400">
+            <p className="mt-1.5 text-xs text-ink-faint">
               At least 10 characters · {reason.trim().length} entered
             </p>
 
@@ -572,13 +572,13 @@ function ApplyLeaveForm({
 
         {/* Footer */}
 
-        <div className="flex shrink-0 flex-col-reverse gap-2 border-t border-slate-200 px-4 py-4 sm:flex-row sm:justify-end sm:gap-3 sm:px-6 sm:py-5 lg:px-8">
+        <div className="flex shrink-0 flex-col-reverse gap-2 border-t border-line px-4 py-4 sm:flex-row sm:justify-end sm:gap-3 sm:px-6 sm:py-5 lg:px-8">
 
           <button
             type="button"
             onClick={onClose}
             disabled={submitting}
-            className="cursor-pointer rounded-xl border border-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+            className="ui-btn ui-btn-secondary font-semibold"
           >
             Cancel
           </button>
@@ -587,7 +587,7 @@ function ApplyLeaveForm({
             type="button"
             onClick={handleSubmit}
             disabled={submitting}
-            className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-blue-600/20 transition-all duration-200 hover:-translate-y-0.5 hover:bg-blue-700 hover:shadow-lg hover:shadow-blue-600/30 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0"
+            className="ui-btn ui-btn-primary font-semibold"
           >
             {submitting && <FiLoader className="animate-spin" />}
             {submitting ? "Applying..." : "Apply Leave"}

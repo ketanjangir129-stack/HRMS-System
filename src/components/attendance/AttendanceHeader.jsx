@@ -1,7 +1,19 @@
-import {
-  FiCalendar,
-  FiPlus,
-} from "react-icons/fi";
+import { FiCalendar, FiPlus } from "react-icons/fi";
+
+/*
+|--------------------------------------------------------------------------
+| Attendance Header
+|--------------------------------------------------------------------------
+| The attendance module's top level header, written in the same anatomy the
+| main Dashboard uses: a small brand coloured eyebrow carrying the context,
+| the page name at heading size under it, then the one line that says what
+| the page is for.
+|
+| No card and no filled icon tile. The Dashboard sets its heading directly on
+| the page canvas, and a white strip around this one made the first thing on
+| the page read as a panel of its own rather than as the page's title.
+|--------------------------------------------------------------------------
+*/
 
 function AttendanceHeader({ onMarkAttendance, canMarkAttendance = true }) {
 
@@ -27,38 +39,36 @@ function AttendanceHeader({ onMarkAttendance, canMarkAttendance = true }) {
   });
 
   return (
-    <div className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-sm sm:px-6 sm:py-5 md:flex-row md:items-center md:justify-between">
+    <div className="flex flex-wrap items-center justify-between gap-4">
 
-      {/* Left */}
-      <div className="flex min-w-0 items-center gap-3 sm:gap-4">
+      <div className="min-w-0">
 
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-600 shadow-sm shadow-blue-600/20 sm:h-11 sm:w-11">
-          <FiCalendar className="text-lg text-white sm:text-xl" />
-        </div>
+        <div className="mb-1.5 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-brand">
 
-        <div className="min-w-0">
+          <FiCalendar className="shrink-0" size={14} />
 
-          <h1 className="text-xl font-bold tracking-tight text-slate-900 sm:text-2xl lg:text-3xl">
-            Attendance
-          </h1>
-
-          <p className="mt-0.5 truncate text-xs text-slate-500 sm:mt-1 sm:text-sm lg:text-base">
-            <span className="hidden sm:inline">
-              Attendance overview · {todayLong}
-            </span>
+          <span className="truncate">
+            <span className="hidden sm:inline">{todayLong}</span>
             <span className="sm:hidden">{todayShort}</span>
-          </p>
+          </span>
 
         </div>
+
+        <h1 className="text-2xl font-bold text-ink sm:text-3xl">
+          Attendance
+        </h1>
+
+        <p className="mt-1 text-sm text-ink-subtle">
+          Here's how attendance is looking today.
+        </p>
 
       </div>
 
-      {/* Right */}
       {canMarkAttendance && (
         <button
           type="button"
           onClick={onMarkAttendance}
-          className="group inline-flex w-full shrink-0 cursor-pointer items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-blue-600/20 transition-all duration-200 hover:-translate-y-0.5 hover:bg-blue-700 hover:shadow-lg hover:shadow-blue-600/30 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 active:translate-y-0 md:w-auto"
+          className="ui-btn ui-btn-primary group w-full shrink-0 font-semibold md:w-auto"
         >
 
           <FiPlus

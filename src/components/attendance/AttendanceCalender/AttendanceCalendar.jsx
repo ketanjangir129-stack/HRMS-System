@@ -38,10 +38,10 @@ const LEGEND = [
   { label: "Leave", color: "bg-blue-500" },
   { label: "Half Day", color: "bg-purple-500" },
   { label: "Holiday", color: "bg-teal-500" },
-  { label: "Weekly Off", color: "bg-slate-300" },
+  { label: "Weekly Off", color: "bg-ink-faint" },
   {
     label: "Pending Approval",
-    color: "bg-white ring-2 ring-amber-500",
+    color: "bg-surface ring-2 ring-amber-500",
     span: "sm:col-span-2 xl:col-span-1",
   },
 ];
@@ -93,16 +93,16 @@ function AttendanceCalendar({
   };
 
   return (
-    <div className="flex h-full flex-col rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
+    <div className="ui-card ui-card-body flex h-full flex-col">
 
       {/* Header */}
       <div className="mb-5">
 
-        <h2 className="text-base font-semibold text-slate-900 sm:text-lg">
+        <h2 className="ui-card-title">
           Attendance Calendar
         </h2>
 
-        <p className="mt-1 text-xs text-slate-500 sm:text-sm">
+        <p className="ui-card-subtitle">
           Your monthly attendance overview
         </p>
 
@@ -112,14 +112,14 @@ function AttendanceCalendar({
 
         <div className="flex-1 space-y-3">
 
-          <div className="h-8 w-full animate-pulse rounded-lg bg-slate-100" />
+          <div className="h-8 w-full animate-pulse rounded-lg bg-surface-muted" />
 
           {[0, 1, 2, 3, 4].map((row) => (
             <div key={row} className="grid grid-cols-7 gap-2">
               {[0, 1, 2, 3, 4, 5, 6].map((cell) => (
                 <div
                   key={cell}
-                  className="h-8 animate-pulse rounded-md bg-slate-100"
+                  className="h-8 animate-pulse rounded-md bg-surface-muted"
                 />
               ))}
             </div>
@@ -150,7 +150,7 @@ function AttendanceCalendar({
 
           <div
             key={item.label}
-            className={`flex items-center gap-2 rounded-lg bg-slate-50 px-2.5 py-2 text-[11px] font-medium text-slate-600 sm:px-3 sm:text-xs ${item.span || ""}`}
+            className={`flex items-center gap-2 rounded-lg bg-surface-muted px-2.5 py-2 text-[11px] font-medium text-ink-muted sm:px-3 sm:text-xs ${item.span || ""}`}
           >
             <span className={`h-2 w-2 shrink-0 rounded-full ${item.color}`} />
             <span className="truncate">{item.label}</span>

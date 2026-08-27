@@ -134,7 +134,7 @@ function HolidayTable({
           onClick={() => onEdit(row)}
           aria-label="Edit holiday"
           title="Edit holiday"
-          className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition-all hover:border-blue-500 hover:bg-blue-50 hover:text-blue-600 md:h-8 md:w-8"
+          className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg border border-line text-ink-subtle transition-all hover:border-brand hover:bg-blue-50 hover:text-blue-600 md:h-8 md:w-8"
         >
           <FiEdit2 size={14} />
         </button>
@@ -146,7 +146,7 @@ function HolidayTable({
           onClick={() => onDelete(row)}
           aria-label="Delete holiday"
           title="Delete holiday"
-          className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition-all hover:border-red-500 hover:bg-red-50 hover:text-red-600 md:h-8 md:w-8"
+          className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg border border-line text-ink-subtle transition-all hover:border-red-500 hover:bg-red-50 hover:text-red-600 md:h-8 md:w-8"
         >
           <FiTrash2 size={14} />
         </button>
@@ -177,7 +177,7 @@ function HolidayTable({
             <div
               className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${
                 past
-                  ? "bg-slate-100 text-slate-400"
+                  ? "bg-surface-muted text-ink-faint"
                   : "bg-blue-50 text-blue-600"
               }`}
             >
@@ -188,7 +188,7 @@ function HolidayTable({
 
               <p
                 className={`truncate font-semibold ${
-                  past ? "text-slate-500" : "text-slate-800"
+                  past ? "text-ink-subtle" : "text-ink-muted"
                 }`}
               >
                 {row.name}
@@ -199,13 +199,13 @@ function HolidayTable({
               | hidden at exactly the breakpoint where its own column appears,
               | so a value is never shown twice and never missing in between.
               */}
-              <p className="mt-1 text-xs text-slate-500 lg:hidden">
+              <p className="mt-1 text-xs text-ink-subtle lg:hidden">
                 {row.type}
                 {row.isOptional ? " · Optional" : ""}
               </p>
 
               {row.description && (
-                <p className="mt-0.5 line-clamp-1 text-xs text-slate-400 2xl:hidden">
+                <p className="mt-0.5 line-clamp-1 text-xs text-ink-faint 2xl:hidden">
                   {row.description}
                 </p>
               )}
@@ -224,7 +224,7 @@ function HolidayTable({
       label: "Date",
       sortable: true,
       render: (row) => (
-        <span className="whitespace-nowrap text-sm font-medium text-slate-700">
+        <span className="whitespace-nowrap text-sm font-medium text-ink-muted">
           {formatHolidayDate(row.date)}
         </span>
       ),
@@ -234,7 +234,7 @@ function HolidayTable({
       key: "day",
       label: "Day",
       render: (row) => (
-        <span className="whitespace-nowrap text-sm text-slate-600">
+        <span className="whitespace-nowrap text-sm text-ink-muted">
           {getDayName(row.date)}
         </span>
       ),
@@ -264,7 +264,7 @@ function HolidayTable({
       render: (row) => (
         <p
           title={row.description}
-          className="line-clamp-2 max-w-[260px] text-sm text-slate-600"
+          className="line-clamp-2 max-w-[260px] text-sm text-ink-muted"
         >
           {row.description || "--"}
         </p>
@@ -315,7 +315,7 @@ function HolidayTable({
             <div
               className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${
                 past
-                  ? "bg-slate-100 text-slate-400"
+                  ? "bg-surface-muted text-ink-faint"
                   : "bg-blue-50 text-blue-600"
               }`}
             >
@@ -326,13 +326,13 @@ function HolidayTable({
 
               <p
                 className={`text-sm font-semibold ${
-                  past ? "text-slate-500" : "text-slate-800"
+                  past ? "text-ink-subtle" : "text-ink-muted"
                 }`}
               >
                 {row.name}
               </p>
 
-              <p className="mt-0.5 text-xs text-slate-400">
+              <p className="mt-0.5 text-xs text-ink-faint">
                 {past ? "Passed" : "Upcoming"}
               </p>
 
@@ -350,22 +350,22 @@ function HolidayTable({
 
         </div>
 
-        <div className="space-y-1.5 rounded-xl bg-slate-50 px-3 py-2.5">
+        <div className="space-y-1.5 rounded-xl bg-surface-muted px-3 py-2.5">
 
           <div className="flex flex-wrap items-center gap-2">
 
-            <span className="inline-flex whitespace-nowrap rounded-lg bg-white px-2.5 py-1 text-xs font-semibold text-slate-700 ring-1 ring-slate-200">
+            <span className="inline-flex whitespace-nowrap rounded-lg bg-surface px-2.5 py-1 text-xs font-semibold text-ink-muted ring-1 ring-line">
               {formatHolidayDate(row.date)}
             </span>
 
-            <span className="text-xs font-medium text-slate-600">
+            <span className="text-xs font-medium text-ink-muted">
               {getDayName(row.date)}
             </span>
 
           </div>
 
           {row.description && (
-            <p className="line-clamp-2 text-xs text-slate-500">
+            <p className="line-clamp-2 text-xs text-ink-subtle">
               {row.description}
             </p>
           )}
@@ -399,14 +399,18 @@ function HolidayTable({
 
           <div className="relative w-full lg:max-w-sm">
 
-            <FiSearch className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <FiSearch className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-faint" />
 
             <input
               type="text"
               value={search}
               onChange={(event) => setSearch(event.target.value)}
               placeholder="Search holidays..."
-              className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-10 pr-4 text-sm text-slate-700 outline-none transition-all placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+              /*
+              | Not `.ui-field`: the kit sets its own padding, and this box has
+              | to leave room on the left for the search icon sitting inside it.
+              */
+              className="w-full rounded-xl border border-line bg-surface py-2.5 pl-10 pr-4 text-sm text-ink outline-none transition-all placeholder:text-ink-faint focus:border-brand focus:ring-2 focus:ring-brand-ring"
             />
 
           </div>

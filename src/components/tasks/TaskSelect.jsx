@@ -245,7 +245,7 @@ function TaskSelect({
           <>
             <span
               className={`flex min-w-0 flex-1 items-center gap-2 truncate ${
-                selected ? "" : "text-slate-400"
+                selected ? "" : "text-ink-faint"
               }`}
             >
               {selected?.dot && (
@@ -258,7 +258,7 @@ function TaskSelect({
 
             <FiChevronDown
               size={16}
-              className={`shrink-0 text-slate-400 transition-transform ${
+              className={`shrink-0 text-ink-faint transition-transform ${
                 open ? "rotate-180" : ""
               }`}
             />
@@ -274,7 +274,7 @@ function TaskSelect({
             role="listbox"
             aria-label={ariaLabel}
             style={panelStyle}
-            className="z-[100] overflow-y-auto rounded-xl border border-slate-200 bg-white py-1 shadow-xl"
+            className="ui-scroll z-[100] overflow-y-auto rounded-xl border border-line bg-surface py-1 shadow-xl"
           >
             {options.map((option, index) => {
               const isSelected = option.value === value;
@@ -290,7 +290,7 @@ function TaskSelect({
                   onClick={() => selectOption(option)}
                   onMouseEnter={() => setActiveIndex(index)}
                   className={`flex cursor-pointer items-center gap-2 px-3 py-2 text-sm ${
-                    index === activeIndex ? "bg-blue-50" : "bg-white"
+                    index === activeIndex ? "bg-blue-50" : "bg-surface"
                   }`}
                 >
                   {option.dot && (
@@ -303,7 +303,7 @@ function TaskSelect({
                     className={`min-w-0 flex-1 truncate ${
                       isSelected
                         ? "font-semibold text-blue-700"
-                        : "font-normal text-slate-700"
+                        : "font-normal text-ink-muted"
                     }`}
                   >
                     {option.label}

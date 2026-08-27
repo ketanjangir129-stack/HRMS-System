@@ -26,30 +26,28 @@ function RecentTasks({ tasks, employees, onViewAll }) {
     >
       {tasks.length === 0 ? (
         <div className="flex flex-col items-center gap-3 py-8 text-center">
-          <span className="flex h-11 w-11 items-center justify-center rounded-full bg-slate-100">
-            <FiInbox className="text-slate-400" size={20} />
+          <span className="flex h-11 w-11 items-center justify-center rounded-full bg-surface-raised">
+            <FiInbox className="text-ink-faint" size={20} />
           </span>
           <div>
-            <p className="text-sm font-semibold text-slate-700">
-              No activity yet
-            </p>
-            <p className="mt-0.5 text-sm text-slate-400">
+            <p className="text-sm font-semibold text-ink">No activity yet</p>
+            <p className="mt-0.5 text-sm text-ink-subtle">
               Newly created tasks will show up here.
             </p>
           </div>
         </div>
       ) : (
-        <ul className="divide-y divide-slate-100">
+        <ul className="divide-y divide-line-subtle">
           {tasks.map((task) => (
             <li key={task.id} className="py-3.5 first:pt-0 last:pb-0">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-semibold text-slate-900">
+                  <p className="truncate text-sm font-semibold text-ink">
                     {task.title}
                   </p>
-                  <p className="mt-0.5 truncate text-xs text-slate-500">
+                  <p className="mt-0.5 truncate text-xs text-ink-subtle">
                     {assigneeName(task, employees)}
-                    <span className="text-slate-400">
+                    <span className="text-ink-faint">
                       {" · "}
                       {formatDate(task.dueDate)}
                     </span>

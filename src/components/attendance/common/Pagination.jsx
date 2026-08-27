@@ -55,17 +55,17 @@ function Pagination({
   const pages = getPageWindow(page, totalPages);
 
   return (
-    <div className="flex flex-col gap-3 border-t border-slate-200 px-4 py-4 sm:px-6 lg:flex-row lg:items-center lg:justify-between">
+    <div className="flex flex-col gap-3 border-t border-line px-4 py-4 sm:px-6 lg:flex-row lg:items-center lg:justify-between">
 
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
 
-        <p className="text-xs text-slate-500 sm:text-sm">
+        <p className="text-xs text-ink-subtle sm:text-sm">
           Showing{" "}
-          <span className="font-semibold text-slate-800">
+          <span className="font-semibold text-ink-muted">
             {range.from}-{range.to}
           </span>{" "}
           of{" "}
-          <span className="font-semibold text-slate-800">
+          <span className="font-semibold text-ink-muted">
             {range.total}
           </span>{" "}
           {label}
@@ -78,7 +78,7 @@ function Pagination({
               onPageSizeChange(Number(event.target.value))
             }
             aria-label="Rows per page"
-            className="cursor-pointer rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-xs font-semibold text-slate-600 outline-none transition-all focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+            className="cursor-pointer rounded-lg border border-line bg-surface px-2 py-1.5 text-xs font-medium text-ink-muted outline-none transition-all focus:border-brand focus:ring-2 focus:ring-brand-ring"
           >
             {PAGE_SIZE_OPTIONS.map((option) => (
               <option key={option} value={option}>
@@ -96,7 +96,7 @@ function Pagination({
           onClick={() => onPageChange(page - 1)}
           disabled={page === 1}
           aria-label="Previous page"
-          className="inline-flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-slate-200 text-slate-600 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+          className="inline-flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-line text-ink-muted transition-colors hover:bg-surface-muted disabled:cursor-not-allowed disabled:opacity-40"
         >
           <FiChevronLeft size={16} />
         </button>
@@ -112,8 +112,8 @@ function Pagination({
                 : "hidden sm:inline-flex"
             } ${
               pageNumber === page
-                ? "border-blue-600 bg-blue-600 text-white"
-                : "border-slate-200 text-slate-600 hover:bg-slate-50"
+                ? "border-brand bg-brand text-white"
+                : "border-line text-ink-muted hover:bg-surface-muted"
             }`}
           >
             {pageNumber}
@@ -124,7 +124,7 @@ function Pagination({
           onClick={() => onPageChange(page + 1)}
           disabled={page === totalPages}
           aria-label="Next page"
-          className="inline-flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-slate-200 text-slate-600 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+          className="inline-flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-line text-ink-muted transition-colors hover:bg-surface-muted disabled:cursor-not-allowed disabled:opacity-40"
         >
           <FiChevronRight size={16} />
         </button>

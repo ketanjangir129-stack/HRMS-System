@@ -562,16 +562,25 @@ function AllTasks() {
   if (loading) return <Loader text="Loading tasks..." />;
 
   return (
-    // space-y-6 — header ab khud ek card hai, isliye gap poore page ka ek jaisa
-    <div className="mx-auto max-w-[1600px] space-y-4 p-1 sm:space-y-6 sm:p-2">
+    /*
+    | Dashboard ki hi banawat: headline khuli hui page par, uske neeche card.
+    | Na apni padding, na apni max-width — dono DashboardLayout ke <main> se
+    | aate hain (p-4 sm:p-6 lg:p-8, max-w-[1600px]), aur Dashboard.jsx bhi
+    | wahi bharosa karta hai. Pehle yahan p-1 sm:p-2 aur max-w dobara likhi
+    | thi, jisse /tasks ka content baaki pages se thoda andar khisak jaata.
+    |
+    | Gap bhi Dashboard wala: header ke baad 6/8, uske andar cards ke beech 4/6.
+    */
+    <div className="min-h-full flex-1 space-y-6 sm:space-y-8">
       <TaskPageHeader
         title="Tasks"
+        eyebrow="Task management"
         subtitle={
           canViewAll
             ? "Plan work, keep ownership clear, and stay ahead of deadlines"
             : "Everything assigned to you, in one place"
         }
-        icon={<FiCheckSquare />}
+        icon={<FiCheckSquare size={14} />}
         action={
           canOpenCreate && (
             <button
@@ -592,7 +601,7 @@ function AllTasks() {
         }
       />
 
-      <div className="space-y-6">
+      <div className="space-y-4 sm:space-y-6">
         {error && (
           <div className="flex items-center justify-between rounded-2xl border border-red-200 bg-red-50 px-5 py-4 text-sm font-medium text-red-700">
             <span>{error}</span>
@@ -610,18 +619,13 @@ function AllTasks() {
         <TaskSummaryCards summary={summary} />
 
         {/* ref — dono "View all" isi card par scroll karte hain */}
-        <div
-          ref={tableRef}
-          className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
-        >
-          <div className="flex flex-col gap-4 border-b border-slate-200 px-6 py-5 lg:flex-row lg:items-center lg:justify-between">
+        <div ref={tableRef} className="ui-card overflow-hidden">
+          <div className="flex flex-col gap-4 border-b border-line px-6 py-5 lg:flex-row lg:items-center lg:justify-between">
             <div className="min-w-0">
-              <h2 className="text-lg font-semibold text-slate-900">
-                Task overview
-              </h2>
+              <h2 className="ui-card-title">Task overview</h2>
 
               <div className="mt-1 flex flex-wrap items-center gap-2">
-                <p className="text-sm text-slate-500">
+                <p className="text-sm text-ink-subtle">
                   {visibleTasks.length} task
                   {visibleTasks.length === 1 ? "" : "s"} shown
                 </p>
@@ -696,7 +700,7 @@ function AllTasks() {
         */}
         {(showProgress || showWorkload) && (
           <div
-            className={`grid grid-cols-1 items-start gap-6 ${
+            className={`grid grid-cols-1 items-start gap-4 sm:gap-6 ${
               showProgress && showWorkload ? "lg:grid-cols-2" : ""
             }`}
           >
@@ -708,7 +712,7 @@ function AllTasks() {
 
         {(showUrgent || showRecent) && (
           <div
-            className={`grid grid-cols-1 gap-6 ${
+            className={`grid grid-cols-1 gap-4 sm:gap-6 ${
               showUrgent && showRecent ? "lg:grid-cols-2" : ""
             }`}
           >

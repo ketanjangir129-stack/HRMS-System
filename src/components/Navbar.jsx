@@ -44,7 +44,7 @@ const Navbar = ({ search, setSearch, searchPlaceholder, onMenuClick }) => {
         <button
           type="button"
           onClick={onMenuClick}
-          className="ui-icon-btn shrink-0 lg:hidden"
+          className="ui-icon-btn shrink-0 lg:hidden!"
           aria-label="Open menu"
           title="Menu"
         >

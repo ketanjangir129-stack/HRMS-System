@@ -59,8 +59,12 @@ import { isWeeklyOff } from "../../utils/holiday/holidayUtils";
 |--------------------------------------------------------------------------
 */
 
+/*
+| Not `.ui-field`: it pins the control to the full width of its container, and
+| these three sit inline in a toolbar that gives them a fixed width from `sm`.
+*/
 const selectClass =
-  "w-full cursor-pointer rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 outline-none transition-all focus:border-blue-500 focus:ring-2 focus:ring-blue-100 sm:w-64";
+  "w-full cursor-pointer rounded-xl border border-line bg-surface px-4 py-2.5 text-sm font-medium text-ink outline-none transition-all focus:border-brand focus:ring-2 focus:ring-brand-ring sm:w-64";
 
 /*
 | A report is read, not decided: the approving is done on the daily attendance
@@ -311,7 +315,7 @@ function AttendanceReports() {
         icon={<FiBarChart2 />}
       />
 
-      <div className="mt-5 space-y-4 sm:mt-6 sm:space-y-6">
+      <div className="mt-6 space-y-4 sm:mt-8 sm:space-y-6">
 
         <DepartmentScopeNotice subject="reports" />
 
@@ -330,11 +334,11 @@ function AttendanceReports() {
 
         {isDaily && (
           <>
-            <div className="flex flex-col gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-sm sm:flex-row sm:items-center sm:gap-4 sm:px-6">
+            <div className="ui-card flex flex-col gap-2 px-4 py-4 sm:flex-row sm:items-center sm:gap-4 sm:px-6">
 
               <label
                 htmlFor="report-date"
-                className="text-xs font-semibold uppercase tracking-wide text-slate-500"
+                className="ui-eyebrow"
               >
                 Report date
               </label>
