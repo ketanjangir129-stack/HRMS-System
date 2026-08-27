@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { useLocation, useNavigate } from "react-router-dom";
 import { ArrowLeft, ChevronRight, LogOut, UserRound } from "lucide-react";
 import { toast } from "react-toastify";
@@ -62,7 +63,15 @@ const ProfileDrawer = ({ isOpen, onClose }) => {
     }
   };
 
-  return (
+  /*
+    Portal to <body>, warna drawer navbar ke andar hi reh jata hai. Navbar par
+    `backdrop-filter` lagta hai (.ui-appbar), aur backdrop-filter wala element
+    apne `fixed` bacchon ka containing block ban jata hai. Us case me band
+    drawer ka `translate-x-full` use navbar ke right edge se 280px bahar park
+    kar deta tha — asli overflow, jiski wajah se page horizontally scroll hone
+    lagta tha. Body me portal karne se drawer viewport se hi chipakta hai.
+  */
+  return createPortal(
     <>
       {/* Backdrop */}
       <div
@@ -140,7 +149,8 @@ const ProfileDrawer = ({ isOpen, onClose }) => {
           </button>
         </div>
       </aside>
-    </>
+    </>,
+    document.body
   );
 };
 

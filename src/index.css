@@ -13,7 +13,7 @@
 | like. Values are the ones the app already used before the theme existed.
 */
 @theme {
-  --color-canvas: #f3f4f6;
+  --color-canvas: #f8fafc;
   --color-surface: #ffffff;
   --color-surface-muted: #f8fafc;
   --color-surface-raised: #f1f5f9;
@@ -26,11 +26,133 @@
   --color-ink-subtle: #64748b;
   --color-ink-faint: #94a3b8;
 
-  --color-brand: #2563eb;
-  --color-brand-hover: #1d4ed8;
-  --color-brand-ring: #dbeafe;
+  --color-brand: #4f46e5;
+  --color-brand-hover: #4338ca;
+  --color-brand-ring: #e0e7ff;
 
   --color-accent: #10b981;
+
+  /*
+  |------------------------------------------------------------------------
+  | Type
+  |------------------------------------------------------------------------
+  | Inter, loaded in index.html. The stack behind it is the system UI face
+  | on each platform, so the layout is drawn in the right metrics even on
+  | the first paint or if the network never delivers the webfont.
+  */
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system,
+    "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+
+  /*
+  |------------------------------------------------------------------------
+  | Brand hue - blue is re-pointed at indigo
+  |------------------------------------------------------------------------
+  | The interface is drawn in indigo, but the app was written in blue: some
+  | two hundred files say `bg-blue-600`, `text-blue-600`, `focus:ring-blue-100`,
+  | `hover:border-blue-500`. Re-pointing the scale here moves every one of
+  | them at once, and keeps moving anything written tomorrow, instead of the
+  | hue being correct only in the files that happened to be edited.
+  |
+  | It is the SCALE that is redefined, not a set of utility overrides, so
+  | `bg-`, `text-`, `border-`, `ring-`, `divide-`, `from-`, `accent-` and
+  | every variant of them follow together and stay in step. Opacity
+  | modifiers (`bg-blue-500/12`) still work, because they are computed from
+  | this value.
+  |
+  | The values are Tailwind's own indigo, so nothing here is invented - blue
+  | and indigo are simply the same scale now, which is what makes a status
+  | badge and a primary button read as one system rather than two blues that
+  | nearly match.
+  |
+  | The neutral, status and category hues are untouched: red still means
+  | error, amber still means pending, emerald still means success.
+  */
+  --color-blue-50: #eef2ff;
+  --color-blue-100: #e0e7ff;
+  --color-blue-200: #c7d2fe;
+  --color-blue-300: #a5b4fc;
+  --color-blue-400: #818cf8;
+  --color-blue-500: #6366f1;
+  --color-blue-600: #4f46e5;
+  --color-blue-700: #4338ca;
+  --color-blue-800: #3730a3;
+  --color-blue-900: #312e81;
+  --color-blue-950: #1e1b4b;
+
+  /*
+  |------------------------------------------------------------------------
+  | Neutral - gray is re-pointed at slate
+  |------------------------------------------------------------------------
+  | The interface is drawn on slate, which is a neutral with a trace of blue
+  | in it. Forty-odd places across a dozen files still say `gray`, which is
+  | the flat neutral, and the two are close enough that nobody spots them
+  | individually and far enough apart that a `text-gray-500` caption reads
+  | faintly warm beside the `text-slate-500` one next to it.
+  |
+  | Collapsing the scale onto slate settles all of them at once and means a
+  | file written in either word from now on lands on the same colour. Same
+  | reasoning as the hue above: the scale is redefined rather than the
+  | utilities overridden, so every prefix and variant follows.
+  */
+  --color-gray-50: #f8fafc;
+  --color-gray-100: #f1f5f9;
+  --color-gray-200: #e2e8f0;
+  --color-gray-300: #cbd5e1;
+  --color-gray-400: #94a3b8;
+  --color-gray-500: #64748b;
+  --color-gray-600: #475569;
+  --color-gray-700: #334155;
+  --color-gray-800: #1e293b;
+  --color-gray-900: #0f172a;
+  --color-gray-950: #020617;
+
+  /*
+  |------------------------------------------------------------------------
+  | Corners
+  |------------------------------------------------------------------------
+  | The interface has three radii and no others: a control is 0.75rem, a
+  | card is 1rem, a pill is fully round.
+  |
+  | `lg` and `md` are bumped rather than rewritten across the app for the
+  | same reason the hue is: `rounded-lg` is the app's button, its input and
+  | its menu row, written a few hundred times. Moving the step moves all of
+  | them onto the control radius, so a button beside a hand-written one is
+  | the same shape.
+  |
+  | `xl` and `2xl` already hold the values the design uses and are left
+  | exactly as they are.
+  */
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+
+  /*
+  |------------------------------------------------------------------------
+  | Elevation
+  |------------------------------------------------------------------------
+  | Cards are separated by a hairline border and the faintest lift, not by
+  | a drop shadow - which is what keeps a page of twelve panels calm.
+  |
+  | `md` and `lg` are pulled back to roughly what Tailwind's `sm` and `md`
+  | were, because the app reaches for `shadow-md` where the design wants
+  | `shadow-sm`. Anything that asks for more elevation still gets more than
+  | its neighbour; the whole scale is simply quieter.
+  |
+  | The `0 0 0 1px` layer is the hairline. Forty-six of the fifty panels
+  | written with `shadow-md` have no border on them, and once the shadow
+  | under them was pulled back they had no edge left at all - a white card
+  | dissolving into a near-white page. Carrying the hairline in the shadow
+  | draws it on all of them at once, follows whatever `rounded-` the panel
+  | has, and costs no layout, because a spread shadow is painted outside the
+  | border box rather than added to it. The four that do carry a border get
+  | a very slightly firmer edge, which is the cheaper half of the trade.
+  */
+  --shadow-sm: 0 1px 2px 0 rgb(15 23 42 / 0.04);
+  --shadow-md: 0 0 0 1px rgb(15 23 42 / 0.05),
+    0 1px 3px 0 rgb(15 23 42 / 0.05), 0 1px 2px -1px rgb(15 23 42 / 0.04);
+  --shadow-lg: 0 0 0 1px rgb(15 23 42 / 0.05),
+    0 4px 12px -2px rgb(15 23 42 / 0.08), 0 2px 6px -2px rgb(15 23 42 / 0.04);
+  --shadow-xl: 0 0 0 1px rgb(15 23 42 / 0.05),
+    0 12px 28px -6px rgb(15 23 42 / 0.12), 0 6px 12px -6px rgb(15 23 42 / 0.06);
 }
 
 /* The same roles, re-pointed for the dark theme. */
@@ -48,16 +170,84 @@
   --color-ink-subtle: #94a3b8;
   --color-ink-faint: #64748b;
 
-  --color-brand: #3b82f6;
-  --color-brand-hover: #60a5fa;
-  --color-brand-ring: rgb(59 130 246 / 35%);
+  /* Indigo held one step lighter, so the brand clears AA on a dark card. */
+  --color-brand: #6366f1;
+  --color-brand-hover: #818cf8;
+  --color-brand-ring: rgb(99 102 241 / 35%);
 
   --color-accent: #34d399;
+}
+
+/*
+|--------------------------------------------------------------------------
+| THEME COMPATIBILITY - elevation
+|--------------------------------------------------------------------------
+| The same scale as the light theme, with the hairline inverted. A card is
+| edged there by a shadow slightly darker than the page; on a dark canvas
+| darker-than-the-page is invisible, so the edge has to be drawn as a faint
+| light one instead. The blur layers are deepened for the same reason - a
+| soft grey shadow does not register against a dark background.
+|
+| These are utility overrides rather than `--shadow-*` redefinitions,
+| because Tailwind v4 resolves `@theme` shadows at BUILD time: it inlines
+| the value straight into `.shadow-md` instead of leaving a `var()` behind.
+| Re-pointing the token under `.dark` therefore changes nothing at all - the
+| variable is emitted, and no rule reads it. The utility is the only hook.
+|
+| `var(--tw-shadow-color, ...)` is kept on every layer, which is how
+| Tailwind writes them: it is what lets `shadow-brand/25` on the sidebar
+| logo keep tinting its own shadow instead of being flattened to grey here.
+|--------------------------------------------------------------------------
+*/
+
+.dark .shadow-sm {
+  --tw-shadow: 0 1px 2px 0 var(--tw-shadow-color, rgb(0 0 0 / 0.3));
+}
+
+.dark .shadow-md {
+  --tw-shadow: 0 0 0 1px var(--tw-shadow-color, rgb(255 255 255 / 0.06)),
+    0 1px 3px 0 var(--tw-shadow-color, rgb(0 0 0 / 0.35)),
+    0 1px 2px -1px var(--tw-shadow-color, rgb(0 0 0 / 0.3));
+}
+
+.dark .shadow-lg {
+  --tw-shadow: 0 0 0 1px var(--tw-shadow-color, rgb(255 255 255 / 0.06)),
+    0 4px 12px -2px var(--tw-shadow-color, rgb(0 0 0 / 0.45)),
+    0 2px 6px -2px var(--tw-shadow-color, rgb(0 0 0 / 0.3));
+}
+
+.dark .shadow-xl {
+  --tw-shadow: 0 0 0 1px var(--tw-shadow-color, rgb(255 255 255 / 0.08)),
+    0 12px 28px -6px var(--tw-shadow-color, rgb(0 0 0 / 0.55)),
+    0 6px 12px -6px var(--tw-shadow-color, rgb(0 0 0 / 0.35));
+}
+
+/*
+| The kit's own panel sets `box-shadow` directly rather than through a
+| utility, so it is restated here. No hairline layer on this one: `.ui-card`
+| already draws a real border, and in the dark theme that border is the
+| visible edge - adding a light ring outside it would draw the edge twice.
+*/
+.dark .ui-card {
+  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.3);
 }
 
 body {
   background-color: var(--color-canvas);
   color: var(--color-ink-muted);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/*
+| Headings carry a touch of negative tracking. At 24px and up, Inter set at
+| its default spacing reads loose against the tight interface around it.
+*/
+h1,
+h2,
+h3 {
+  letter-spacing: -0.015em;
 }
 
 /*
@@ -98,6 +288,292 @@ body {
 .hide-scrollbar {
   scrollbar-width: none;
   -ms-overflow-style: none;
+}
+
+/*
+|--------------------------------------------------------------------------
+| UI KIT
+|--------------------------------------------------------------------------
+| The shapes the interface is built from, named once. These are the pieces
+| the design repeats - a panel, a primary button, a field, a soft icon tile,
+| a section heading - and writing them here rather than as a class list on
+| every element is what keeps the twelfth panel identical to the first.
+|
+| They are plain classes rather than `@utility`, because they are compositions
+| rather than single properties, and because a component should be able to add
+| a Tailwind utility after one to adjust it: `class="ui-card p-4"` overrides
+| the padding, since the utility is emitted later in the cascade.
+|
+| Every colour here goes through the tokens above, so the whole kit follows
+| the theme without a single `dark:` in it.
+|--------------------------------------------------------------------------
+*/
+
+/* The panel everything sits in: hairline, soft corner, barely a lift. */
+.ui-card {
+  border-radius: var(--radius-2xl);
+  border: 1px solid color-mix(in oklab, var(--color-line) 80%, transparent);
+  background-color: var(--color-surface);
+  box-shadow: var(--shadow-sm);
+}
+
+/* A card that responds to the pointer - used where the whole panel is a link. */
+.ui-card-interactive {
+  transition: box-shadow 200ms ease, border-color 200ms ease,
+    transform 200ms ease;
+}
+
+.ui-card-interactive:hover {
+  border-color: color-mix(in oklab, var(--color-brand) 30%, transparent);
+  box-shadow: var(--shadow-lg);
+  transform: translateY(-2px);
+}
+
+/* Padding for a panel's body, and for the header strip above it. */
+.ui-card-body {
+  padding: 1.25rem;
+}
+
+@media (min-width: 640px) {
+  .ui-card-body {
+    padding: 1.5rem;
+  }
+}
+
+/*
+| The line a panel introduces itself with: bold title, quiet caption, and
+| whatever action belongs to it pushed to the far end.
+*/
+.ui-card-title {
+  font-size: 1.125rem;
+  font-weight: 700;
+  line-height: 1.4;
+  color: var(--color-ink);
+}
+
+.ui-card-subtitle {
+  margin-top: 0.125rem;
+  font-size: 0.75rem;
+  color: var(--color-ink-subtle);
+}
+
+/*
+| Buttons. One height, one radius, one weight - only the fill changes, which
+| is what makes "the indigo one is the action" legible without a label.
+*/
+.ui-btn {
+  display: inline-flex;
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  white-space: nowrap;
+  border-radius: var(--radius-xl);
+  padding: 0.625rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: background-color 200ms ease, border-color 200ms ease,
+    color 200ms ease, box-shadow 200ms ease;
+}
+
+.ui-btn:focus-visible {
+  outline: 2px solid var(--color-brand);
+  outline-offset: 2px;
+}
+
+.ui-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.ui-btn-primary {
+  background-color: var(--color-brand);
+  color: #ffffff;
+  box-shadow: var(--shadow-sm);
+}
+
+.ui-btn-primary:hover:not(:disabled) {
+  background-color: var(--color-brand-hover);
+}
+
+/* The quiet twin: same shape, drawn as an outline on the page instead. */
+.ui-btn-secondary {
+  border: 1px solid var(--color-line);
+  background-color: var(--color-surface);
+  color: var(--color-ink-muted);
+  box-shadow: var(--shadow-sm);
+}
+
+.ui-btn-secondary:hover:not(:disabled) {
+  background-color: var(--color-surface-muted);
+  color: var(--color-ink);
+}
+
+/* No border at all - for actions that sit inside a panel that already has one. */
+.ui-btn-ghost {
+  color: var(--color-ink-subtle);
+}
+
+.ui-btn-ghost:hover:not(:disabled) {
+  background-color: var(--color-surface-muted);
+  color: var(--color-ink);
+}
+
+/*
+| The square icon control in a toolbar - the bell, the theme switch, the
+| overflow menu. Sized to the same 40px the buttons above resolve to.
+*/
+.ui-icon-btn {
+  display: inline-flex;
+  height: 2.5rem;
+  width: 2.5rem;
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-xl);
+  color: var(--color-ink-subtle);
+  transition: background-color 200ms ease, color 200ms ease;
+}
+
+.ui-icon-btn:hover {
+  background-color: var(--color-surface-muted);
+  color: var(--color-ink);
+}
+
+.ui-icon-btn:focus-visible {
+  outline: 2px solid var(--color-brand);
+  outline-offset: 2px;
+}
+
+/*
+| Fields. The border is the resting state and the brand ring is the focused
+| one, so a form reads as quiet until it is being used.
+*/
+.ui-field {
+  width: 100%;
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--color-line);
+  background-color: var(--color-surface);
+  padding: 0.625rem 0.875rem;
+  font-size: 0.875rem;
+  color: var(--color-ink);
+  outline: none;
+  transition: border-color 200ms ease, box-shadow 200ms ease;
+}
+
+.ui-field::placeholder {
+  color: var(--color-ink-faint);
+}
+
+.ui-field:focus {
+  border-color: var(--color-brand);
+  box-shadow: 0 0 0 3px var(--color-brand-ring);
+}
+
+.ui-field:disabled {
+  background-color: var(--color-surface-muted);
+  color: var(--color-ink-faint);
+}
+
+.ui-label {
+  display: block;
+  margin-bottom: 0.375rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--color-ink-muted);
+}
+
+/*
+| The soft-tinted square an icon sits in. The hue is set by a Tailwind pair
+| on the element (`bg-emerald-50 text-emerald-600`); this only fixes the
+| shape, so a tile is the same size everywhere it appears.
+*/
+.ui-tile {
+  display: flex;
+  height: 3rem;
+  width: 3rem;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-2xl);
+}
+
+.ui-tile-sm {
+  height: 2.5rem;
+  width: 2.5rem;
+  border-radius: var(--radius-xl);
+}
+
+/* The pill a status is written in. Hue comes from utilities, as with tiles. */
+.ui-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  border-radius: 9999px;
+  padding: 0.125rem 0.625rem;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+/* The small grey word that stands over a group in the sidebar or a form. */
+.ui-eyebrow {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-ink-faint);
+}
+
+/*
+| The bar pinned to the top of the content column. Translucent with a blur
+| behind it, so the page scrolling underneath is felt rather than hidden.
+|
+| The fallback matters: `backdrop-filter` is what makes the translucency
+| legible, and without support the same 80% white over live content is just
+| unreadable. Browsers that cannot blur get an opaque bar instead.
+*/
+.ui-appbar {
+  background-color: var(--color-surface);
+  border-bottom: 1px solid var(--color-line);
+}
+
+@supports (backdrop-filter: blur(12px)) or (-webkit-backdrop-filter: blur(12px)) {
+  .ui-appbar {
+    background-color: color-mix(in oklab, var(--color-surface) 80%, transparent);
+    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
+  }
+}
+
+/*
+| A thin scrollbar for the panels that scroll inside themselves - the
+| holiday list, the notification tray - so the track does not cut a grey
+| channel down the side of a card.
+*/
+.ui-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-line) transparent;
+}
+
+.ui-scroll::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.ui-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.ui-scroll::-webkit-scrollbar-thumb {
+  border-radius: 9999px;
+  background-color: var(--color-line);
+}
+
+.ui-scroll:hover::-webkit-scrollbar-thumb {
+  background-color: var(--color-ink-faint);
 }
 
 /*

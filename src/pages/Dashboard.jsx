@@ -1,13 +1,4 @@
-import {
-  FaUserTie,
-  FaCog,
-  FaGlobe,
-  FaGraduationCap,
-  FaChartBar,
-  FaImage,
-  FaBuilding,
-  FaShieldAlt,
-} from "react-icons/fa";
+import { FiCalendar } from "react-icons/fi";
 import useAuth from "../hooks/useAuth";
 import useRoleAccess from "../hooks/useRoleAccess";
 import EmployeeTasks from "../components/Tasks"
@@ -34,19 +25,25 @@ const Dashboard = () => {
     currentUser?.name || "Loading....";
 
   return (
-    <div className="flex-1 p-2 sm:p-4 lg:p-6 bg-canvas min-h-full">
+    <div className="flex-1 min-h-full">
       {/* Welcome Section */}
-      <div className="flex flex-wrap justify-between items-center gap-4 mb-6 sm:mb-8 lg:mb-9">
+      {/*
+        The date leads as an eyebrow rather than a headline. It is context for
+        the greeting under it, not the thing the page is about - so it is set
+        small and in the brand hue, and the name gets the size instead.
+      */}
+      <div className="flex flex-wrap justify-between items-center gap-4 mb-6 sm:mb-8">
         <div className="min-w-0">
-          <p className="text-base sm:text-xl lg:text-2xl text-ink mb-1 sm:mb-2 font-semibold">
-            {today}
-          </p>
+          <div className="mb-1.5 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-brand">
+            <FiCalendar className="shrink-0" size={14} />
+            <span className="truncate">{today}</span>
+          </div>
 
-          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-green-600 mb-1 sm:mb-2 wrap-break-word">
+          <h1 className="text-2xl sm:text-3xl font-bold text-ink wrap-break-word">
             Hello, {displayName}
           </h1>
 
-          <p className="text-sm sm:text-base text-ink-subtle">
+          <p className="mt-1 text-sm text-ink-subtle">
             Here's what's happening with your HRMS today.
           </p>
         </div>

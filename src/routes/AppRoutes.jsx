@@ -12,6 +12,7 @@ import PermissionRoute from "./PermissionRoute";
 import GuestRoute from "./GuestRoute";
 import EmployeesDetails from "../pages/EmployeesDetails";
 import OnboardingDashboard from "../pages/onboarding/OnboardingDashboard"
+import BulkOnboarding from "../pages/onboarding/BulkOnboarding"
 import OnBoardForm from "../pages/onboarding/CreateOnboarding"
 import OnboardingRequests from "../pages/onboarding/OnboardingRequests"
 import Onboardinghistory from "../pages/onboarding/OnBoardhistory"
@@ -135,6 +136,14 @@ function AppRoutes(){
                     element={
                         <PermissionRoute permission="onboarding.create">
                             <OnBoardForm />
+                        </PermissionRoute>
+                    }
+                />
+                 <Route
+                    path="/OnboardDashboard/BulkOnboard"
+                    element={
+                        <PermissionRoute permission="onboarding.create">
+                            <BulkOnboarding />
                         </PermissionRoute>
                     }
                 />
