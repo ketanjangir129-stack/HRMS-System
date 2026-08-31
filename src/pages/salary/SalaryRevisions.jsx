@@ -156,7 +156,7 @@ function SalaryRevisions() {
             backTo="/salarydashboard"
             action={
                 detailedRevisions.length > 0 && (
-                    <div className="flex w-fit items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-2.5 shadow-sm">
+                    <div className="ui-card flex w-fit items-center gap-3 px-4 py-2.5">
 
                         <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
                             <FiCalendar size={16} />
@@ -164,11 +164,11 @@ function SalaryRevisions() {
 
                         <div>
 
-                            <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
+                            <p className="ui-eyebrow">
                                 Last Revision
                             </p>
 
-                            <p className="mt-0.5 text-sm font-semibold text-slate-800">
+                            <p className="mt-0.5 text-sm font-semibold text-ink">
                                 {formatDateTime(
                                     detailedRevisions[0].updatedAt
                                 )}
@@ -196,24 +196,24 @@ function SalaryRevisions() {
 
                 {header}
 
-                <div className="flex flex-col items-center justify-center rounded-2xl border border-slate-200 bg-white px-6 py-16 text-center shadow-sm">
+                <div className="ui-card flex flex-col items-center justify-center px-6 py-14 text-center sm:py-20">
 
-                    <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100 text-slate-400">
-                        <FiInbox size={26} />
+                    <div className="ui-tile h-16 w-16 bg-blue-50 text-blue-600">
+                        <FiInbox size={28} />
                     </div>
 
-                    <h2 className="mt-4 text-lg font-semibold text-slate-900">
+                    <h2 className="mt-5 text-lg font-bold text-ink sm:text-xl">
                         No salary revisions yet
                     </h2>
 
-                    <p className="mt-1 max-w-md text-sm text-slate-500">
+                    <p className="mt-2 max-w-sm text-sm text-ink-subtle">
                         Revisions appear here once an existing salary
                         structure is updated for the first time.
                     </p>
 
                     <button
                         onClick={() => navigate("/salarydashboard/salary")}
-                        className="mt-6 inline-flex cursor-pointer items-center justify-center rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-blue-600/20 transition-all duration-200 hover:-translate-y-0.5 hover:bg-blue-700 hover:shadow-lg hover:shadow-blue-600/30"
+                        className="ui-btn ui-btn-primary mt-6 font-semibold"
                     >
                         Go to Salaries
                     </button>
@@ -230,15 +230,15 @@ function SalaryRevisions() {
             {header}
 
             {/* Filters */}
-            <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white px-5 py-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+            <div className="ui-card flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
 
-                <p className="text-sm text-slate-500">
+                <p className="text-sm text-ink-subtle">
                     Showing{" "}
-                    <span className="font-semibold text-slate-700">
+                    <span className="font-semibold text-ink">
                         {visibleRevisions.length}
                     </span>{" "}
                     of{" "}
-                    <span className="font-semibold text-slate-700">
+                    <span className="font-semibold text-ink">
                         {filteredRevisions.length}
                     </span>{" "}
                     revisions
@@ -249,7 +249,7 @@ function SalaryRevisions() {
                     onChange={(e) =>
                         setEmployeeFilter(e.target.value)
                     }
-                    className="w-full cursor-pointer rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm outline-none transition-all hover:border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 sm:w-64"
+                    className="ui-field w-full cursor-pointer font-medium sm:w-64"
                 >
                     {employees.map((employee) => (
                         <option key={employee} value={employee}>
@@ -264,17 +264,17 @@ function SalaryRevisions() {
 
             {!filteredRevisions.length && (
 
-                <div className="flex flex-col items-center justify-center rounded-2xl border border-slate-200 bg-white px-6 py-14 text-center shadow-sm">
+                <div className="ui-card flex flex-col items-center justify-center px-6 py-14 text-center">
 
-                    <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100 text-slate-400">
-                        <FiInbox size={26} />
+                    <div className="ui-tile h-16 w-16 bg-blue-50 text-blue-600">
+                        <FiInbox size={28} />
                     </div>
 
-                    <h2 className="mt-4 text-lg font-semibold text-slate-900">
+                    <h2 className="mt-5 text-lg font-bold text-ink sm:text-xl">
                         No matching revisions
                     </h2>
 
-                    <p className="mt-1 text-sm text-slate-500">
+                    <p className="mt-2 max-w-sm text-sm text-ink-subtle">
                         Try a different employee or search term.
                     </p>
 
@@ -296,15 +296,15 @@ function SalaryRevisions() {
 
                         <div
                             key={revision.id}
-                            className={`relative overflow-hidden rounded-2xl border bg-white shadow-sm transition-all duration-300 ${isOpen
+                            className={`ui-card relative overflow-hidden transition-all duration-300 ${isOpen
                                 ? "border-blue-200 shadow-lg"
-                                : "border-slate-200 hover:shadow-lg"
+                                : "hover:shadow-lg"
                                 }`}
                         >
 
                             {/* Top Border */}
                             <span
-                                className={`absolute left-0 top-0 h-1 w-full transition-colors duration-300 ${isOpen ? "bg-blue-500" : "bg-slate-200"
+                                className={`absolute left-0 top-0 h-1 w-full transition-colors duration-300 ${isOpen ? "bg-blue-500" : "bg-line"
                                     }`}
                             />
 
@@ -318,7 +318,7 @@ function SalaryRevisions() {
 
                                 <div className="flex items-center gap-3">
 
-                                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-base font-bold text-blue-600">
+                                    <div className="ui-tile ui-tile-sm bg-blue-50 text-base font-bold text-blue-600">
                                         {revision.employeeName
                                             .charAt(0)
                                             .toUpperCase()}
@@ -326,11 +326,11 @@ function SalaryRevisions() {
 
                                     <div>
 
-                                        <h2 className="text-lg font-semibold text-slate-900">
+                                        <h2 className="ui-card-title">
                                             {revision.employeeName}
                                         </h2>
 
-                                        <p className="mt-1 text-sm text-slate-500">
+                                        <p className="mt-1 text-sm text-ink-subtle">
                                             {revision.employeeId} ·{" "}
                                             {revision.department}
                                         </p>
@@ -341,11 +341,18 @@ function SalaryRevisions() {
 
                                 <div className="flex flex-wrap items-center gap-3">
 
-                                    <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
+                                    {/*
+                                    | A date and a name read worse in the
+                                    | badge's small caps than they do as
+                                    | written, so the metadata chips keep the
+                                    | pill shape and leave `.ui-badge` to the
+                                    | net change beside them.
+                                    */}
+                                    <span className="inline-flex items-center gap-1.5 rounded-full bg-surface-muted px-3 py-1 text-xs font-medium text-ink-muted">
                                         Revision #{revision.revisionNumber}
                                     </span>
 
-                                    <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
+                                    <span className="inline-flex items-center gap-1.5 rounded-full bg-surface-muted px-3 py-1 text-xs font-medium text-ink-muted">
 
                                         <FiCalendar size={12} />
 
@@ -353,7 +360,7 @@ function SalaryRevisions() {
 
                                     </span>
 
-                                    <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1 text-xs font-medium capitalize text-slate-600">
+                                    <span className="inline-flex items-center gap-1.5 rounded-full bg-surface-muted px-3 py-1 text-xs font-medium capitalize text-ink-muted">
 
                                         <FiUser size={12} />
 
@@ -369,7 +376,7 @@ function SalaryRevisions() {
                                             ? "bg-emerald-50 text-emerald-700"
                                             : decreased
                                                 ? "bg-red-50 text-red-700"
-                                                : "bg-slate-100 text-slate-600"
+                                                : "bg-surface-muted text-ink-muted"
                                             }`}
                                     >
 
@@ -387,7 +394,7 @@ function SalaryRevisions() {
 
                                     </span>
 
-                                    <span className="inline-flex items-center gap-1.5 text-sm font-medium text-blue-600">
+                                    <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-brand">
 
                                         {revision.changes.length}{" "}
                                         {revision.changes.length === 1
@@ -416,11 +423,11 @@ function SalaryRevisions() {
 
                                 <div className="overflow-hidden">
 
-                                    <div className="border-t border-slate-100 px-6 pb-6">
+                                    <div className="border-t border-line-subtle px-6 pb-6">
 
                                         {!revision.changes.length ? (
 
-                                            <p className="pt-5 text-sm text-slate-500">
+                                            <p className="pt-5 text-sm text-ink-subtle">
                                                 No field level differences were
                                                 recorded for this revision.
                                             </p>
@@ -433,16 +440,16 @@ function SalaryRevisions() {
 
                                                     <div
                                                         key={section.group}
-                                                        className="overflow-hidden rounded-xl border border-slate-200"
+                                                        className="overflow-hidden rounded-xl border border-line"
                                                     >
 
-                                                        <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50 px-4 py-2.5">
+                                                        <div className="flex items-center justify-between border-b border-line-subtle bg-surface-muted/60 px-4 py-2.5">
 
-                                                            <h3 className="text-sm font-semibold text-slate-900">
+                                                            <h3 className="text-sm font-bold text-ink">
                                                                 {section.group}
                                                             </h3>
 
-                                                            <span className="text-xs font-medium text-slate-400">
+                                                            <span className="text-xs font-medium text-ink-faint">
                                                                 {section.changes.length}{" "}
                                                                 {section.changes.length === 1
                                                                     ? "change"
@@ -451,7 +458,7 @@ function SalaryRevisions() {
 
                                                         </div>
 
-                                                        <div className="divide-y divide-slate-100">
+                                                        <div className="divide-y divide-line-subtle">
 
                                                             {section.changes.map((change) => {
 
@@ -470,16 +477,16 @@ function SalaryRevisions() {
 
                                                                     <div
                                                                         key={change.key}
-                                                                        className="flex flex-col gap-2 px-4 py-3 text-sm transition-colors hover:bg-slate-50 sm:flex-row sm:items-center sm:justify-between"
+                                                                        className="flex flex-col gap-2 px-4 py-3 text-sm transition-colors hover:bg-surface-muted sm:flex-row sm:items-center sm:justify-between"
                                                                     >
 
-                                                                        <span className="font-medium text-slate-600">
+                                                                        <span className="font-medium text-ink-muted">
                                                                             {change.label}
                                                                         </span>
 
                                                                         <div className="flex flex-wrap items-center gap-3">
 
-                                                                            <span className="text-slate-400 line-through">
+                                                                            <span className="text-ink-faint line-through">
                                                                                 {isCurrency
                                                                                     ? formatCurrency(change.from)
                                                                                     : change.from}
@@ -487,10 +494,10 @@ function SalaryRevisions() {
 
                                                                             <FiArrowRight
                                                                                 size={14}
-                                                                                className="text-slate-300"
+                                                                                className="text-ink-faint"
                                                                             />
 
-                                                                            <span className="font-semibold text-slate-900">
+                                                                            <span className="font-semibold text-ink">
                                                                                 {isCurrency
                                                                                     ? formatCurrency(change.to)
                                                                                     : change.to}
@@ -539,22 +546,22 @@ function SalaryRevisions() {
                                         )}
 
                                         {/* Footer */}
-                                        <div className="mt-6 flex flex-col gap-3 border-t border-slate-100 pt-4 sm:flex-row sm:items-center sm:justify-between">
+                                        <div className="mt-6 flex flex-col gap-3 border-t border-line-subtle pt-4 sm:flex-row sm:items-center sm:justify-between">
 
                                             <div className="flex items-center gap-3">
 
-                                                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-500">
+                                                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-surface-muted text-ink-subtle">
                                                     <FiUser size={16} />
                                                 </div>
 
                                                 <div>
 
-                                                    <p className="text-xs capitalize text-slate-500">
+                                                    <p className="text-xs capitalize text-ink-subtle">
                                                         Changed by ·{" "}
                                                         {revision.updatedBy?.role || "unknown"}
                                                     </p>
 
-                                                    <p className="text-sm font-semibold text-slate-800">
+                                                    <p className="text-sm font-semibold text-ink">
                                                         {revision.updatedByName}
                                                         {revision.updatedBy?.employeeId
                                                             ? ` (${revision.updatedBy.employeeId})`
@@ -571,7 +578,7 @@ function SalaryRevisions() {
                                                         `/salarydashboard/salary/history/${revision.employeeId}`
                                                     )
                                                 }
-                                                className="inline-flex w-fit cursor-pointer items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-600 shadow-sm transition-all duration-200 hover:border-blue-500 hover:text-blue-600"
+                                                className="ui-btn ui-btn-secondary w-fit font-semibold"
                                             >
 
                                                 <BsClockHistory size={15} />
@@ -606,7 +613,7 @@ function SalaryRevisions() {
                                 (count) => count + PAGE_SIZE
                             )
                         }
-                        className="inline-flex cursor-pointer items-center justify-center rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-600 shadow-sm transition-all duration-200 hover:border-blue-500 hover:text-blue-600"
+                        className="ui-btn ui-btn-secondary font-semibold"
                     >
                         Load more revisions
                     </button>

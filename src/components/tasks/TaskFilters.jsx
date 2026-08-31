@@ -47,7 +47,7 @@ function TaskFilters({
   return (
     <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
       {showScope && (
-        <div className="inline-flex rounded-xl border border-slate-200 bg-white p-1">
+        <div className="inline-flex rounded-xl border border-line bg-surface p-1">
           {SCOPES.map((option) => (
             <button
               key={option.key}
@@ -55,8 +55,8 @@ function TaskFilters({
               onClick={() => onScopeChange(option.key)}
               className={`cursor-pointer rounded-lg px-4 py-1.5 text-sm font-semibold transition-all ${
                 scope === option.key
-                  ? "bg-blue-600 text-white shadow-sm shadow-blue-600/20"
-                  : "text-slate-600 hover:bg-slate-50 hover:text-blue-600"
+                  ? "bg-brand text-white shadow-sm"
+                  : "text-ink-muted hover:bg-surface-muted hover:text-brand"
               }`}
             >
               {option.label}
@@ -66,12 +66,12 @@ function TaskFilters({
       )}
 
       <div className="relative">
-        <FiSearch className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+        <FiSearch className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-faint" />
         <input
           value={search}
           onChange={(event) => onSearchChange(event.target.value)}
           placeholder="Search tasks or people..."
-          className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-10 pr-4 text-sm text-slate-700 outline-none transition-all placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 lg:w-64"
+          className="w-full rounded-xl border border-line bg-surface py-2.5 pl-10 pr-4 text-sm text-ink outline-none transition-all placeholder:text-ink-faint focus:border-brand focus:ring-3 focus:ring-brand-ring lg:w-64"
         />
       </div>
 
@@ -81,14 +81,14 @@ function TaskFilters({
         aur pointer-events-none se click neeche button tak pahunch jaata hai.
       */}
       <div className="relative lg:w-52">
-        <FiFilter className="pointer-events-none absolute left-3.5 top-1/2 z-10 -translate-y-1/2 text-slate-400" />
+        <FiFilter className="pointer-events-none absolute left-3.5 top-1/2 z-10 -translate-y-1/2 text-ink-faint" />
 
         <TaskSelect
           options={STATUS_OPTIONS}
           value={statusFilter}
           onChange={onStatusChange}
           ariaLabel="Filter by status"
-          className="w-full cursor-pointer rounded-xl border border-slate-200 bg-white py-2.5 pl-10 pr-3 text-sm font-semibold text-slate-700 outline-none transition-all focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+          className="w-full cursor-pointer rounded-xl border border-line bg-surface py-2.5 pl-10 pr-3 text-sm font-semibold text-ink outline-none transition-all focus:border-brand focus:ring-3 focus:ring-brand-ring"
         />
       </div>
     </div>

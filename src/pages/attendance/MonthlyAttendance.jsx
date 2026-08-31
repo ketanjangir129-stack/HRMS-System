@@ -161,24 +161,24 @@ function MonthlyAttendance() {
           icon={<FiClock />}
         />
 
-        <div className="mt-5 flex flex-col items-center justify-center rounded-2xl border border-slate-200 bg-white px-4 py-14 text-center shadow-sm sm:mt-6 sm:px-6 sm:py-20">
+        <div className="ui-card mt-6 flex flex-col items-center justify-center px-4 py-14 text-center sm:mt-8 sm:px-6 sm:py-20">
 
           <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-amber-50 text-amber-600">
             <FiLock size={28} />
           </div>
 
-          <h3 className="mt-5 text-lg font-semibold text-slate-900 sm:text-xl">
+          <h3 className="mt-5 text-lg font-semibold text-ink sm:text-xl">
             Monthly attendance is restricted
           </h3>
 
-          <p className="mt-2 max-w-sm text-sm text-slate-500">
+          <p className="mt-2 max-w-sm text-sm text-ink-subtle">
             Only HR, department managers and the company owner can see other
             employees' months. Your own attendance is on My Attendance.
           </p>
 
           <Link
             to="/attendance/my"
-            className="mt-6 inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-md shadow-blue-600/20 transition-all duration-200 hover:-translate-y-0.5 hover:bg-blue-700 hover:shadow-lg hover:shadow-blue-600/30"
+            className="ui-btn ui-btn-primary mt-6 font-semibold"
           >
             <FiUser />
             View My Attendance
@@ -201,7 +201,7 @@ function MonthlyAttendance() {
         icon={<FiClock />}
       />
 
-      <div className="mt-5 space-y-4 sm:mt-6 sm:space-y-6">
+      <div className="mt-6 space-y-4 sm:mt-8 sm:space-y-6">
 
         <DepartmentScopeNotice subject="attendance" />
 

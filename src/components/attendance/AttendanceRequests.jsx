@@ -58,7 +58,7 @@ function AttendanceRequests({
         <button
           type="button"
           onClick={() => navigate("/attendance/requests")}
-          className="group inline-flex cursor-pointer items-center gap-2 text-sm font-semibold text-blue-600 transition hover:text-blue-700"
+          className="group inline-flex cursor-pointer items-center gap-2 text-sm font-semibold text-brand transition hover:text-brand-hover"
         >
           View All
           <FiArrowRight className="text-xs transition-transform duration-200 group-hover:translate-x-1" />
@@ -79,7 +79,7 @@ function AttendanceRequests({
 
       {!loading && visible.length > 0 && (
 
-        <div className="divide-y divide-slate-100">
+        <div className="divide-y divide-line-subtle">
 
           {visible.map((request) => {
 
@@ -89,7 +89,7 @@ function AttendanceRequests({
 
               <div
                 key={request.requestId}
-                className="flex flex-col gap-3 px-4 py-4 transition hover:bg-slate-50 sm:flex-row sm:items-center sm:justify-between sm:px-6"
+                className="flex flex-col gap-3 px-4 py-4 transition hover:bg-surface-muted sm:flex-row sm:items-center sm:justify-between sm:px-6"
               >
 
                 {/*

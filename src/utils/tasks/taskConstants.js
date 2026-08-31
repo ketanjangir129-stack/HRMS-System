@@ -63,10 +63,13 @@ export const PROGRESS_BARS = {
   Overdue: "bg-red-500",
 };
 
-// Dashboard sections ka common white card — pehle ye string AllTasks mein
-// hardcoded thi, ab TaskSectionCard isi se banta hai
-export const SECTION_CARD_CLASS =
-  "overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm";
+/*
+| Dashboard sections ka common card. Ye ab apni classes khud nahi likhta —
+| `.ui-card` wahi panel hai jo Dashboard ke teeno card (Today's Tasks, Quick
+| Find, Upcoming Holidays) use karte hain, isliye /tasks ka panel unse
+| hu-ba-hu milta hai aur theme badalne par saath badalta hai.
+*/
+export const SECTION_CARD_CLASS = "ui-card overflow-hidden";
 
 // Dashboard lists (Urgent / Recent) mein kitni rows dikhein
 export const SECTION_ROW_LIMIT = 5;
@@ -101,13 +104,26 @@ export const EMPTY_TASK_FORM = {
 // Description ki hadd — rules.js ke taskDescription se match karti hai
 export const DESCRIPTION_LIMIT = 500;
 
-// Form ke inputs ka common look — attendance ke FilterSelect jaisa
+/*
+| Form ke inputs ka common look. Shape wahi hai jo pehle thi — sirf rang ab
+| semantic tokens se aate hain (surface / line / ink / brand), wahi jo
+| Dashboard aur UI kit ki `.ui-field` use karti hai.
+|
+| `.ui-field` ka istemaal seedha nahi kiya: uska focus rule utilities ke
+| BAAD emit hota hai, isliye error wale field par laal focus ring dabb
+| jaati. Dono variants ek hi tarah likhe hain, to farq sirf hue ka rehta hai.
+*/
 export const INPUT_CLASS =
-  "h-11 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm font-normal text-slate-700 outline-none transition-all placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100";
+  "h-11 w-full rounded-xl border border-line bg-surface px-4 text-sm font-normal text-ink outline-none transition-all placeholder:text-ink-faint focus:border-brand focus:ring-3 focus:ring-brand-ring";
 
 export const ERROR_INPUT_CLASS =
-  "h-11 w-full rounded-xl border border-red-300 bg-white px-4 text-sm font-normal text-slate-700 outline-none transition-all placeholder:text-slate-400 focus:border-red-500 focus:ring-2 focus:ring-red-100";
+  "h-11 w-full rounded-xl border border-red-300 bg-surface px-4 text-sm font-normal text-ink outline-none transition-all placeholder:text-ink-faint focus:border-red-500 focus:ring-3 focus:ring-red-100";
 
-// Primary button — attendance ke "Mark Attendance" jaisa
-export const PRIMARY_BUTTON_CLASS =
-  "inline-flex cursor-pointer items-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-blue-600/20 transition-all duration-200 hover:-translate-y-0.5 hover:bg-blue-700 hover:shadow-lg hover:shadow-blue-600/30 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0";
+/*
+| Primary button — UI kit ka apna, wahi jo Dashboard ke "Create a task" par
+| lagta hai. Ek hi height, ek hi radius, ek hi weight; sirf bhraav badalta
+| hai. Yahan koi padding/weight utility nahi jodi: kit ki classes kisi
+| Tailwind layer mein nahi hain, isliye wo utilities se jeet jaati hain aur
+| jodi hui class chup-chaap bekaar padi rehti.
+*/
+export const PRIMARY_BUTTON_CLASS = "ui-btn ui-btn-primary";

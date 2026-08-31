@@ -7,6 +7,14 @@ import { FiCalendar, FiPlus, FiRefreshCw } from "react-icons/fi";
 | The dashboard toolbar: the year every panel below is read for, a refresh,
 | and the add action.
 |
+| Written in the same anatomy the main Dashboard uses: a small brand coloured
+| eyebrow carrying the date, the page name at heading size under it, then the
+| one line that says what the page is for.
+|
+| No card and no filled icon tile. The Dashboard sets its heading directly on
+| the page canvas, and a white strip around this one made the first thing on
+| the page read as a panel of its own rather than as the page's title.
+|
 | Holidays are stored per year, so the selector drives the whole page rather
 | than only the table. The range runs one year back and one forward, which is
 | the same window the leave header offers: next year's calendar is usually
@@ -46,29 +54,53 @@ function HolidayHeader({
     years.sort((a, b) => a - b);
   }
 
+  /*
+  | "Monday, 11 August 2026" is too long for a phone once it shares the line
+  | with the heading, so the weekday and the full month are dropped below
+  | `sm` and the date reads "11 Aug 2026" instead.
+  */
+  const formatToday = (options) =>
+    new Date().toLocaleDateString("en-US", options);
+
+  const todayLong = formatToday({
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+
+  const todayShort = formatToday({
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+
   return (
 
-    <div className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:gap-5 sm:p-6 lg:flex-row lg:items-center lg:justify-between">
+    <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
 
-      <div className="flex items-center gap-3 sm:gap-4">
+      <div className="min-w-0">
 
-        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-blue-600 text-lg text-white shadow-sm shadow-blue-600/20 sm:h-12 sm:w-12 sm:text-xl">
-          <FiCalendar />
-        </div>
+        <div className="mb-1.5 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-brand">
 
-        <div className="min-w-0">
+          <FiCalendar className="shrink-0" size={14} />
 
-          <h1 className="text-lg font-bold text-slate-900 sm:text-2xl">
-            Holiday Management
-          </h1>
-
-          <p className="mt-0.5 text-xs text-slate-500 sm:mt-1 sm:text-sm">
-            {totalHolidays > 0
-              ? `${totalHolidays} holiday${totalHolidays === 1 ? "" : "s"} declared for ${year}.`
-              : "Declare and manage the company holiday calendar."}
-          </p>
+          <span className="truncate">
+            <span className="hidden sm:inline">{todayLong}</span>
+            <span className="sm:hidden">{todayShort}</span>
+          </span>
 
         </div>
+
+        <h1 className="text-2xl font-bold text-ink sm:text-3xl">
+          Holiday Management
+        </h1>
+
+        <p className="mt-1 text-sm text-ink-subtle">
+          {totalHolidays > 0
+            ? `${totalHolidays} holiday${totalHolidays === 1 ? "" : "s"} declared for ${year}.`
+            : "Declare and manage the company holiday calendar."}
+        </p>
 
       </div>
 
@@ -81,7 +113,7 @@ function HolidayHeader({
       | `col-span-2` is a grid property, so it is simply ignored once the
       | container becomes the inline flex row from `sm` up.
       */}
-      <div className="grid grid-cols-2 gap-2.5 sm:flex sm:flex-wrap sm:items-center sm:gap-3">
+      <div className="grid shrink-0 grid-cols-2 gap-2.5 sm:flex sm:flex-wrap sm:items-center sm:gap-3">
 
         <select
           value={year}
@@ -89,7 +121,11 @@ function HolidayHeader({
             setYear(Number(event.target.value))
           }
           aria-label="Holiday year"
-          className="w-full cursor-pointer rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-700 outline-none transition-all focus:border-blue-500 focus:ring-2 focus:ring-blue-100 sm:w-auto sm:px-4"
+          /*
+          | Not `.ui-field`: the kit's field fills its line, and this control
+          | is a toolbar item that shrinks to its own width from `sm` up.
+          */
+          className="w-full cursor-pointer rounded-xl border border-line bg-surface px-3 py-2.5 text-sm font-semibold text-ink-muted outline-none transition-all focus:border-brand focus:ring-2 focus:ring-brand-ring sm:w-auto sm:px-4"
         >
 
           {years.map((item) => (
@@ -106,7 +142,7 @@ function HolidayHeader({
           type="button"
           onClick={onRefresh}
           disabled={loading}
-          className="inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 transition-all hover:border-blue-500 hover:bg-blue-50 hover:text-blue-600 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
+          className="ui-btn ui-btn-secondary w-full font-semibold sm:w-auto"
         >
 
           <FiRefreshCw
@@ -122,10 +158,13 @@ function HolidayHeader({
           <button
             type="button"
             onClick={onAddHoliday}
-            className="col-span-2 inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-blue-600/20 transition-all duration-200 hover:-translate-y-0.5 hover:bg-blue-700 hover:shadow-lg hover:shadow-blue-600/30 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 active:translate-y-0 sm:w-auto"
+            className="ui-btn ui-btn-primary group col-span-2 w-full font-semibold sm:w-auto"
           >
 
-            <FiPlus />
+            <FiPlus
+              size={18}
+              className="transition-transform duration-200 group-hover:rotate-90"
+            />
 
             Add Holiday
 

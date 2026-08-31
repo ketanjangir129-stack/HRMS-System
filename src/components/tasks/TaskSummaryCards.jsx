@@ -67,11 +67,16 @@ function TaskSummaryCards({ summary }) {
   ];
 
   return (
-    <div className="grid h-full grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-4">
+    <div className="grid h-full grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 xl:grid-cols-4">
       {cards.map((card) => (
+        /*
+          `ui-card` + `ui-card-interactive` — wahi panel aur wahi hover jo
+          Dashboard ke Quick Find tiles par hai, isliye hover ka jhukav poore
+          app mein ek jaisa rehta hai.
+        */
         <div
           key={card.title}
-          className="group relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg"
+          className="ui-card ui-card-interactive ui-card-body group relative overflow-hidden"
         >
           {/* Top Border */}
           <span className={`absolute left-0 top-0 h-1 w-full ${card.bar}`} />
@@ -79,17 +84,17 @@ function TaskSummaryCards({ summary }) {
           {/* Header */}
           <div className="flex items-start justify-between">
             <div>
-              <p className="text-sm font-medium text-slate-500">
+              <p className="text-sm font-medium text-ink-subtle">
                 {card.title}
               </p>
 
-              <h2 className="mt-2 text-4xl font-bold text-slate-900">
+              <h2 className="mt-2 text-4xl font-bold text-ink">
                 {card.value}
               </h2>
             </div>
 
             <div
-              className={`flex h-12 w-12 items-center justify-center rounded-2xl text-xl ${card.iconBg} ${card.iconColor} transition group-hover:scale-110`}
+              className={`ui-tile text-xl ${card.iconBg} ${card.iconColor} transition-transform group-hover:scale-110`}
             >
               {card.icon}
             </div>
@@ -97,12 +102,12 @@ function TaskSummaryCards({ summary }) {
 
           {/* Progress */}
           <div className="mt-6">
-            <div className="mb-2 flex items-center justify-between text-xs font-medium text-slate-500">
+            <div className="mb-2 flex items-center justify-between text-xs font-medium text-ink-subtle">
               <span>{card.subtitle}</span>
               <span>{card.percentage}%</span>
             </div>
 
-            <div className="h-2 overflow-hidden rounded-full bg-slate-100">
+            <div className="h-2 overflow-hidden rounded-full bg-surface-raised">
               <div
                 className={`h-full rounded-full transition-all duration-500 ${card.bar}`}
                 style={{ width: `${card.percentage}%` }}

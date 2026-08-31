@@ -29,7 +29,7 @@ function TeamWorkload({ workload, className = "" }) {
       icon={<FiUsers />}
     >
       {workload.length === 0 ? (
-        <p className="py-4 text-center text-sm text-slate-400">
+        <p className="py-4 text-center text-sm text-ink-faint">
           No tasks assigned to anyone yet.
         </p>
       ) : (
@@ -68,7 +68,7 @@ function TeamWorkload({ workload, className = "" }) {
               table ke saath scroll ho jaata hai. Shadow th par lagti hai,
               isliye wo header ke saath hi tiki rehti hai.
             */}
-            <thead className="sticky top-0 z-10 text-xs uppercase tracking-wide text-slate-500 [&_th]:bg-surface-raised [&_th]:shadow-[inset_0_-1px_0_0_var(--color-line)]">
+            <thead className="sticky top-0 z-10 text-xs uppercase tracking-wide text-ink-subtle [&_th]:bg-surface-raised [&_th]:shadow-[inset_0_-1px_0_0_var(--color-line)]">
               <tr>
                 <th className="px-3 py-2 font-semibold first:pl-6">Employee</th>
                 <th className="px-3 py-2 text-center font-semibold">Total</th>
@@ -86,16 +86,19 @@ function TeamWorkload({ workload, className = "" }) {
               </tr>
             </thead>
 
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-line-subtle">
               {workload.map((person) => {
                 const donePercent = person.total
                   ? (person.completed / person.total) * 100
                   : 0;
 
                 return (
-                  <tr key={person.id} className="transition-colors hover:bg-slate-50">
+                  <tr
+                    key={person.id}
+                    className="transition-colors hover:bg-surface-muted"
+                  >
                     <td className="px-3 py-2.5 first:pl-6">
-                      <span className="block truncate text-sm font-medium text-slate-800">
+                      <span className="block truncate text-sm font-medium text-ink-muted">
                         {person.name}
                       </span>
 
@@ -111,19 +114,19 @@ function TeamWorkload({ workload, className = "" }) {
                           <span className="font-semibold text-blue-600">
                             {person.active}
                           </span>
-                          <span className="text-slate-400"> in progress</span>
+                          <span className="text-ink-faint"> in progress</span>
                         </span>
 
                         <span className="block">
                           <span className="font-semibold text-emerald-600">
                             {person.completed}
                           </span>
-                          <span className="text-slate-400"> completed</span>
+                          <span className="text-ink-faint"> completed</span>
                         </span>
                       </span>
                     </td>
 
-                    <td className="px-3 py-2.5 text-center text-sm font-bold text-slate-900">
+                    <td className="px-3 py-2.5 text-center text-sm font-bold text-ink">
                       {person.total}
                     </td>
 
@@ -136,13 +139,13 @@ function TeamWorkload({ workload, className = "" }) {
                     </td>
 
                     <td className="px-3 py-2.5 last:pr-6">
-                      <div className="h-1.5 overflow-hidden rounded-full bg-slate-100">
+                      <div className="h-1.5 overflow-hidden rounded-full bg-surface-raised">
                         <div
                           style={{ width: `${donePercent}%` }}
                           className={`h-full rounded-full transition-all duration-500 ${PROGRESS_BARS.Completed}`}
                         />
                       </div>
-                      <p className="mt-0.5 text-xs font-medium text-slate-400">
+                      <p className="mt-0.5 text-xs font-medium text-ink-faint">
                         {Math.round(donePercent)}% done
                       </p>
                     </td>

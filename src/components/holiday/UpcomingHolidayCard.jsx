@@ -47,7 +47,7 @@ function UpcomingHolidayCard({
           : "The next days the office is closed"
       }
       action={
-        <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-600">
+        <span className="ui-badge bg-blue-50 text-blue-700">
           {holidays.length} Upcoming
         </span>
       }
@@ -72,11 +72,11 @@ function UpcomingHolidayCard({
 
       {!loading && !error && holidays.length > 0 && (
 
-        <div className="divide-y divide-slate-100">
+        <div className="divide-y divide-line-subtle">
 
           {/* Next holiday */}
 
-          <div className="flex flex-col gap-3 bg-blue-50/40 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:px-6 sm:py-5">
+          <div className="flex flex-col gap-3 bg-brand/5 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:px-6 sm:py-5">
 
             <div className="flex min-w-0 items-center gap-3 sm:gap-4">
 
@@ -84,7 +84,7 @@ function UpcomingHolidayCard({
               | A date block rather than an icon: the date is the thing being
               | looked up, so it is what the eye should land on first.
               */}
-              <div className="flex h-12 w-12 shrink-0 flex-col items-center justify-center rounded-2xl bg-blue-600 text-white shadow-sm shadow-blue-600/20 sm:h-14 sm:w-14">
+              <div className="flex h-12 w-12 shrink-0 flex-col items-center justify-center rounded-2xl bg-brand text-white shadow-sm shadow-brand/20 sm:h-14 sm:w-14">
 
                 <span className="text-base font-bold leading-none sm:text-lg">
                   {String(next.date).slice(8, 10)}
@@ -98,11 +98,11 @@ function UpcomingHolidayCard({
 
               <div className="min-w-0">
 
-                <p className="truncate text-sm font-bold text-slate-900 sm:text-base">
+                <p className="truncate text-sm font-bold text-ink sm:text-base">
                   {next.name}
                 </p>
 
-                <p className="mt-0.5 truncate text-xs text-slate-500">
+                <p className="mt-0.5 truncate text-xs text-ink-subtle">
                   {getDayName(next.date)} · {formatHolidayDate(next.date)}
                 </p>
 
@@ -113,7 +113,7 @@ function UpcomingHolidayCard({
             {/* Indented to clear the date block when the row stacks on mobile. */}
             <div className="flex shrink-0 flex-wrap items-center gap-2 pl-15 sm:pl-0">
 
-              <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-blue-700 ring-1 ring-blue-200">
+              <span className="ui-badge bg-surface text-blue-700 ring-1 ring-blue-200">
                 {formatDaysUntil(next.daysUntil)}
               </span>
 
@@ -133,7 +133,7 @@ function UpcomingHolidayCard({
 
             <div
               key={holiday.holidayId}
-              className="flex flex-col gap-3 px-4 py-4 transition-colors hover:bg-slate-50 sm:flex-row sm:items-center sm:justify-between sm:px-6"
+              className="flex flex-col gap-3 px-4 py-4 transition-colors hover:bg-surface-muted sm:flex-row sm:items-center sm:justify-between sm:px-6"
             >
 
               <div className="flex min-w-0 items-start gap-3">
@@ -144,11 +144,11 @@ function UpcomingHolidayCard({
 
                 <div className="min-w-0">
 
-                  <p className="truncate text-sm font-semibold text-slate-800">
+                  <p className="truncate text-sm font-semibold text-ink-muted">
                     {holiday.name}
                   </p>
 
-                  <p className="mt-0.5 truncate text-xs text-slate-500">
+                  <p className="mt-0.5 truncate text-xs text-ink-subtle">
                     {getDayName(holiday.date, { short: true })} ·{" "}
                     {formatHolidayDate(holiday.date)} ·{" "}
                     {formatDaysUntil(holiday.daysUntil)}

@@ -2,38 +2,45 @@
 |--------------------------------------------------------------------------
 | Task Page Header
 |--------------------------------------------------------------------------
-| Icon + title + subtitle, aur daayein taraf page ka main action.
+| Page ka pehla block — eyebrow, headline aur uske saath page ka main action.
 |
+<<<<<<< HEAD
 | Project mein do tarah ke header hain:
 |   - sub-page wale (AttendancePageHeader, SalaryPageHeader) — back arrow
 |     ke saath, bare, koi card nahi
-|   - top-level dashboard wale (AttendanceHeader, SalaryDashboard) — white
-|     card mein, back arrow nahi
+|   - top-level dashboard wale (AttendanceHeader, PayrollHeader, aur
+|     SalaryPageHeader ka `card` variant) — white card mein, back arrow nahi
+=======
+| Ye Dashboard ke welcome block ki hi banawat hai: chhota brand-rang ka
+| eyebrow upar (icon ke saath), uske neeche bada ink headline, aur uske
+| neeche ek halki line. Card jaan-boojhkar nahi hai — Dashboard bhi apna
+| headline khuli hui page par likhta hai, aur card sirf un panels ke liye
+| bachaakar rakhta hai jinme sach mein content hota hai.
+>>>>>>> e7eeaae0804103b0978302b66d7fcd47413debda
 |
-| /tasks Sidebar ka apna page hai (jaise /attendance aur /salarydashboard),
-| iske peeche jaane ko kuch nahi. Isliye ye doosra pattern follow karta hai
-| aur classes AttendanceHeader se hu-ba-hu li gayi hain — dono jagah header
-| ek jaisa dikhna chahiye.
+| Pehle ye AttendanceHeader wala white card tha. Us tarah header khud ek
+| panel ban jaata tha aur neeche wale asli panels se takraata tha; ab page
+| par sirf ek hi tarah ka card hai.
 |--------------------------------------------------------------------------
 */
 
-function TaskPageHeader({ title, subtitle, icon, action }) {
+function TaskPageHeader({ title, subtitle, icon, eyebrow, action }) {
   return (
-    <div className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white px-5 py-5 shadow-sm sm:px-6 md:flex-row md:items-center md:justify-between">
+    <div className="flex flex-wrap items-center justify-between gap-4">
       {/* min-w-0 — lamba title chhoti screen par action ko dhakel na de */}
-      <div className="flex min-w-0 items-center gap-3 sm:gap-4">
-        {icon && (
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-xl text-white shadow-sm shadow-blue-600/20">
-            {icon}
+      <div className="min-w-0">
+        {(icon || eyebrow) && (
+          <div className="mb-1.5 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-brand">
+            {icon && <span className="shrink-0 text-sm">{icon}</span>}
+            {eyebrow && <span className="truncate">{eyebrow}</span>}
           </div>
         )}
 
-        <div className="min-w-0">
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
-            {title}
-          </h1>
-          <p className="mt-1 text-sm text-slate-500 sm:text-base">{subtitle}</p>
-        </div>
+        <h1 className="text-2xl font-bold text-ink wrap-break-word sm:text-3xl">
+          {title}
+        </h1>
+
+        <p className="mt-1 text-sm text-ink-subtle">{subtitle}</p>
       </div>
 
       {/* shrink-0 — button chhoti screen par squeeze na ho */}

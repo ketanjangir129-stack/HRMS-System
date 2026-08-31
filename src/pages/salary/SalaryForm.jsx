@@ -1,10 +1,22 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { FiTrendingUp, FiTrendingDown, FiCheck } from "react-icons/fi";
+import {
+    FiTrendingUp,
+    FiTrendingDown,
+    FiCheck,
+    FiInfo,
+    FiAlertTriangle,
+    FiLock,
+} from "react-icons/fi";
 import { TbMoneybagEdit } from "react-icons/tb";
 import { getEmployeeById } from "../../services/EmployeeService";
 import { calculateSalary } from "../../utils/salary/calculateSalary"
+import {
+    calculateStatutoryDeductions,
+    describeStatutoryDeductions,
+} from "../../utils/salary/calculateStatutoryDeductions";
 import { createSalary, getSalary, editSalary } from "../../services/SalaryService";
+import { getHRPolicy } from "../../services/settings/hrPolicyService";
 import { EARNING_FIELDS, DEDUCTION_FIELDS } from "../../utils/salary/salaryFields";
 import { formatCurrency } from "../../utils/salary/formatCurrency";
 import SalaryPageHeader from "../../components/salary/SalaryPageHeader";
@@ -37,6 +49,19 @@ const toAmountInput = (value) => {
 
     // Only the first decimal point is a decimal point; "1.2.3" is 1.23.
     return rest.length ? `${whole}.${rest.join("")}` : whole;
+
+};
+
+/*
+| Names read out as a sentence rather than as a list: "PF, ESI and Income Tax"
+| instead of "PF, ESI, Income Tax", because the note they go into is a sentence.
+*/
+
+const toSentenceList = (names) => {
+
+    if (names.length <= 1) return names.join("");
+
+    return `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
 
 };
 
@@ -81,6 +106,12 @@ function SalaryForm() {
         bonus: "",
     });
 
+    /*
+    | The deductions as they were typed. PF, ESI, Professional Tax and Income
+    | Tax are not typed at all once the HR Policy runs them, so what is kept
+    | here for those four is only whatever an older record was saved with - the
+    | policy's own figures are merged over the top below.
+    */
     const [deductions, setDeductions] = useState({
         pf: "",
         esi: "",
@@ -90,11 +121,88 @@ function SalaryForm() {
         other: "",
     });
 
-    const [summary, setSummary] = useState({
-        grossSalary: 0,
-        totalDeduction: 0,
-        netSalary: 0,
-    });
+    /*
+    | The company's HR Policy, which is what prices PF, ESI, Professional Tax
+    | and Income Tax. It is held here rather than read inside the calculation so
+    | the four deductions are re-priced from one loaded copy as the earnings are
+    | typed, instead of one read per keystroke.
+    |
+    | `null` while it is still loading and after a read that failed. The
+    | difference is `policyError`: a failed read leaves every deduction as a
+    | field the user fills in themselves and says so, because pricing them
+    | against defaults nobody chose would be worse than not pricing them.
+    */
+    const [policy, setPolicy] = useState(null);
+
+    const [policyError, setPolicyError] = useState("");
+
+    /*
+    |--------------------------------------------------------------------------
+    | Policy Driven Deductions
+    |--------------------------------------------------------------------------
+    | PF, ESI, Professional Tax and Income Tax are not entered - they are what
+    | the company's HR Policy charges on the earnings above, so they are priced
+    | from the earnings as they are typed.
+    |
+    | They are derived rather than written into the deduction state. A field
+    | that is both typed into and written back to by the screen has two owners
+    | and will eventually disagree with itself; here the state holds what a
+    | person entered, the policy holds what it charges, and the merge below is
+    | the only thing that decides which of the two a field shows.
+    |
+    | An amount of `null` is a policy the company does not run, and those fields
+    | fall through to whatever was entered - they are ordinary fields.
+    |
+    | On an existing structure this re-prices the four against the policy as it
+    | stands today rather than showing the figures the last revision was saved
+    | with, which is the point of them being policy driven: the salary screen
+    | and the policy screen cannot disagree.
+    */
+    const policyDeductions = useMemo(
+        () =>
+            policy
+                ? calculateStatutoryDeductions({ earnings, policy })
+                : {},
+        [earnings, policy]
+    );
+
+    const policyHints = useMemo(
+        () => describeStatutoryDeductions(policy),
+        [policy]
+    );
+
+    const isPolicyDriven = (name) =>
+        policyDeductions[name] !== null &&
+        policyDeductions[name] !== undefined;
+
+    // What the screen shows, what the summary is built on, and what is saved.
+    const effectiveDeductions = useMemo(() => {
+
+        const merged = { ...deductions };
+
+        Object.entries(policyDeductions).forEach(([name, amount]) => {
+
+            if (amount === null) return;
+
+            merged[name] = String(amount);
+
+        });
+
+        return merged;
+
+    }, [deductions, policyDeductions]);
+
+    /*
+    | The totals follow from the amounts, so they are worked out as the amounts
+    | change rather than being held alongside them - two copies of the same
+    | figure is two things that can be out of step, and the one on screen would
+    | be the stale one.
+    */
+    const summary = useMemo(
+        () => calculateSalary(earnings, effectiveDeductions),
+        [earnings, effectiveDeductions]
+    );
+
     // today's date in YYYY-MM-DD (same format as joiningDate)
     const getToday = () => {
         const now = new Date();
@@ -110,7 +218,7 @@ function SalaryForm() {
     const salary = {
         employeeId,
         earnings,
-        deductions,
+        deductions: effectiveDeductions,
         grossSalary: summary.grossSalary,
         totalDeduction: summary.totalDeduction,
         netSalary: summary.netSalary,
@@ -134,6 +242,31 @@ function SalaryForm() {
             setLoading(false);
         }
     };
+    const loadPolicy = async () => {
+
+        try {
+
+            setPolicy(
+                await getHRPolicy(companyCode)
+            );
+
+            setPolicyError("");
+
+        } catch (error) {
+
+            console.error(error);
+
+            setPolicy(null);
+
+            setPolicyError(
+                error.message ||
+                "Could not load the HR Policy, so the statutory deductions have not been calculated."
+            );
+
+        }
+
+    };
+
     const loadSalary = async (employeeData) => {
 
         // joining date of the employee this salary belongs to
@@ -159,15 +292,11 @@ function SalaryForm() {
 
         setDeductions(salary.deductions);
 
-        setSummary({
-
-            grossSalary: salary.grossSalary,
-
-            totalDeduction: salary.totalDeduction,
-
-            netSalary: salary.netSalary,
-
-        });
+        /*
+        | The stored totals are not read back. They follow from the amounts
+        | above, which have just been loaded, and a stored total that disagreed
+        | with them would be shown until the first keystroke corrected it.
+        */
 
         // a salary already exists, so this is a revision -
         // it takes effect from today, not from the joining date
@@ -246,7 +375,7 @@ function SalaryForm() {
 
                         earnings,
 
-                        deductions,
+                        deductions: effectiveDeductions,
 
                         grossSalary:
                             summary.grossSalary,
@@ -268,7 +397,7 @@ function SalaryForm() {
                 alert(result.message);
 
             }
-            navigate("/salarydashboard/salary");
+            navigate("/salarydashboard");
         }
         catch (error) {
             console.error(error)
@@ -276,16 +405,11 @@ function SalaryForm() {
     }
 
     useEffect(() => {
-        const salarySummary =
-            calculateSalary(
-                earnings, deductions
-            );
-        setSummary(salarySummary);
-    }, [earnings, deductions]);
-
-    useEffect(() => {
         const loadData = async () => {
-            const employeeData = await loadEmployee();
+            const [employeeData] = await Promise.all([
+                loadEmployee(),
+                loadPolicy(),
+            ]);
             await loadSalary(employeeData);
         };
         loadData();
@@ -308,13 +432,14 @@ function SalaryForm() {
                     subtitle="Employee not found"
                     icon={<TbMoneybagEdit />}
                     backTo="/salarydashboard/salary"
+                    backLabel="Salaries"
                 />
 
-                <div className="rounded-2xl border border-slate-200 bg-white p-10 text-center shadow-sm">
+                <div className="ui-card p-10 text-center">
 
-                    <p className="text-slate-500">
+                    <p className="text-sm text-ink-subtle">
                         We couldn't find an employee with the ID{" "}
-                        <span className="font-semibold text-slate-700">
+                        <span className="font-semibold text-ink">
                             {employeeId}
                         </span>.
                     </p>
@@ -345,6 +470,10 @@ function SalaryForm() {
         },
     ];
 
+    /*
+    | The figure is set in ink and the hue is carried by the tile and the bar
+    | above it, the way the dashboard's stat cards are drawn.
+    */
     const summaryCards = [
         {
             title: "Gross Salary",
@@ -353,7 +482,6 @@ function SalaryForm() {
             icon: <FiTrendingUp />,
             iconBg: "bg-emerald-50",
             iconColor: "text-emerald-600",
-            valueColor: "text-emerald-600",
             bar: "bg-emerald-500",
         },
         {
@@ -363,7 +491,6 @@ function SalaryForm() {
             icon: <FiTrendingDown />,
             iconBg: "bg-red-50",
             iconColor: "text-red-600",
-            valueColor: "text-red-600",
             bar: "bg-red-500",
         },
         {
@@ -373,25 +500,63 @@ function SalaryForm() {
             icon: <TbMoneybagEdit />,
             iconBg: "bg-blue-50",
             iconColor: "text-blue-600",
-            valueColor: "text-blue-600",
             bar: "bg-blue-500",
         },
     ];
 
-    const renderAmountField = (field, value, onChange) => (
+    /*
+    | The deductions the policy is filling in, under the short half of their
+    | label - "PF (Provident Fund)" reads as a definition in a list of three.
+    */
+    const policyDrivenNames = DEDUCTION_FIELDS
+        .filter((field) => isPolicyDriven(field.name))
+        .map((field) => field.label.replace(/\s*\(.*\)\s*$/, ""));
+
+    const policyDrivenNote = !policy
+        ? ""
+        : policyDrivenNames.length
+            ? `${toSentenceList(policyDrivenNames)} ${
+                policyDrivenNames.length === 1 ? "is" : "are"
+            } calculated from your company's HR Policy as the earnings are entered, so ${
+                policyDrivenNames.length === 1 ? "it is" : "they are"
+            } read only here.`
+            : "No statutory deductions are switched on in your company's HR Policy, so every amount below is entered by hand.";
+
+    /*
+    | `readOnly` is a field the HR Policy fills in - PF, ESI, Professional Tax
+    | or Income Tax while the matching policy is switched on. It is deliberately
+    | not `disabled`: a disabled input is skipped by the keyboard and greyed to
+    | the point of being hard to read, and this is a figure the person assigning
+    | the salary is meant to see and check.
+    |
+    | `hint` is the rule behind that figure. A box somebody cannot type into has
+    | to answer "why is it that number" where it stands.
+    */
+    const renderAmountField = (
+        field,
+        value,
+        onChange,
+        { readOnly = false, hint = "" } = {}
+    ) => (
 
         <div key={field.name}>
 
-            <label
-                htmlFor={field.name}
-                className="mb-2 block text-sm font-medium text-slate-700"
-            >
+            <label htmlFor={field.name} className="ui-label">
                 {field.label}
+
+                {readOnly && (
+                    <FiLock
+                        size={12}
+                        className="shrink-0 text-slate-400"
+                        aria-hidden="true"
+                    />
+                )}
+
             </label>
 
             <div className="relative">
 
-                <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm font-medium text-slate-400">
+                <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm font-medium text-ink-faint">
                     ₹
                 </span>
 
@@ -408,11 +573,23 @@ function SalaryForm() {
                     name={field.name}
                     value={value ?? ""}
                     onChange={onChange}
+                    readOnly={readOnly}
                     placeholder="0"
-                    className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-8 pr-4 text-sm text-slate-900 shadow-sm outline-none transition-all placeholder:text-slate-300 hover:border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                    /*
+                    | `pl-8` after the kit class, not instead of it: the utility
+                    | is emitted later in the cascade, so it only moves the text
+                    | clear of the ₹ and leaves the rest of the field alone.
+                    */
+                    className="ui-field pl-8"
                 />
 
             </div>
+
+            {hint && (
+                <p className="mt-1.5 text-xs text-slate-400">
+                    {hint}
+                </p>
+            )}
 
         </div>
 
@@ -430,9 +607,10 @@ function SalaryForm() {
                 }
                 icon={<TbMoneybagEdit />}
                 backTo="/salarydashboard/salary"
+                backLabel="Salaries"
                 action={
                     <span
-                        className={`inline-flex w-fit items-center rounded-full px-3 py-1 text-sm font-medium ${
+                        className={`ui-badge ${
                             isEditMode
                                 ? "bg-amber-50 text-amber-700"
                                 : "bg-emerald-50 text-emerald-700"
@@ -444,13 +622,13 @@ function SalaryForm() {
             />
 
             {/* Employee Information */}
-            <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+            <div className="ui-card ui-card-body">
 
                 <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
 
                     <div className="flex items-center gap-4">
 
-                        <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-blue-50 text-xl font-bold text-blue-600">
+                        <div className="ui-tile h-14 w-14 bg-blue-50 text-xl font-bold text-blue-600">
                             {(employee.personalInfo?.name || "?")
                                 .charAt(0)
                                 .toUpperCase()}
@@ -458,11 +636,11 @@ function SalaryForm() {
 
                         <div>
 
-                            <h2 className="text-lg font-semibold text-slate-900">
+                            <h2 className="ui-card-title">
                                 {employee.personalInfo?.name || "—"}
                             </h2>
 
-                            <p className="mt-1 text-sm text-slate-500">
+                            <p className="ui-card-subtitle">
                                 Employee information
                             </p>
 
@@ -476,11 +654,11 @@ function SalaryForm() {
 
                             <div key={detail.label}>
 
-                                <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
+                                <p className="ui-eyebrow">
                                     {detail.label}
                                 </p>
 
-                                <p className="mt-1 text-sm font-semibold text-slate-800">
+                                <p className="mt-1 text-sm font-semibold text-ink">
                                     {detail.value}
                                 </p>
 
@@ -495,23 +673,23 @@ function SalaryForm() {
             </div>
 
             {/* Earnings & Deductions */}
-            <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+            <div className="grid grid-cols-1 gap-4 sm:gap-6 xl:grid-cols-2">
 
-                <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+                <div className="ui-card ui-card-body">
 
                     <div className="mb-5 flex items-center gap-3">
 
-                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
+                        <div className="ui-tile ui-tile-sm bg-emerald-50 text-emerald-600">
                             <FiTrendingUp size={20} />
                         </div>
 
                         <div>
 
-                            <h2 className="text-lg font-semibold text-slate-900">
+                            <h2 className="ui-card-title">
                                 Earnings
                             </h2>
 
-                            <p className="text-sm text-slate-500">
+                            <p className="ui-card-subtitle">
                                 Salary components added to the gross pay
                             </p>
 
@@ -545,21 +723,21 @@ function SalaryForm() {
 
                 </div>
 
-                <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+                <div className="ui-card ui-card-body">
 
                     <div className="mb-5 flex items-center gap-3">
 
-                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-red-50 text-red-600">
+                        <div className="ui-tile ui-tile-sm bg-red-50 text-red-600">
                             <FiTrendingDown size={20} />
                         </div>
 
                         <div>
 
-                            <h2 className="text-lg font-semibold text-slate-900">
+                            <h2 className="ui-card-title">
                                 Deductions
                             </h2>
 
-                            <p className="text-sm text-slate-500">
+                            <p className="ui-card-subtitle">
                                 Amounts subtracted from the gross pay
                             </p>
 
@@ -567,13 +745,59 @@ function SalaryForm() {
 
                     </div>
 
+                    {/*
+                    | Which of the deductions the screen is filling in itself,
+                    | named rather than left for the reader to work out from
+                    | which boxes happen to be greyed.
+                    */}
+                    {policyDrivenNote && (
+
+                        <div className="mb-5 flex items-start gap-3 rounded-xl border border-blue-100 bg-blue-50/60 px-4 py-3">
+
+                            <FiInfo
+                                size={16}
+                                className="mt-0.5 shrink-0 text-blue-600"
+                            />
+
+                            <p className="text-xs text-blue-900 sm:text-sm">
+                                {policyDrivenNote}
+                            </p>
+
+                        </div>
+
+                    )}
+
+                    {policyError && (
+
+                        <div className="mb-5 flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+
+                            <FiAlertTriangle
+                                size={16}
+                                className="mt-0.5 shrink-0 text-amber-600"
+                            />
+
+                            <p className="text-xs text-amber-900 sm:text-sm">
+                                {policyError} Enter every deduction below by
+                                hand, or refresh the page to try again.
+                            </p>
+
+                        </div>
+
+                    )}
+
                     <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
 
                         {DEDUCTION_FIELDS.map((field) =>
                             renderAmountField(
                                 field,
-                                deductions[field.name],
-                                handleDeductionChange
+                                effectiveDeductions[field.name],
+                                handleDeductionChange,
+                                {
+                                    readOnly: isPolicyDriven(field.name),
+                                    hint: isPolicyDriven(field.name)
+                                        ? policyHints[field.name]
+                                        : "",
+                                }
                             )
                         )}
 
@@ -596,19 +820,19 @@ function SalaryForm() {
             </div>
 
             {/* Salary Summary */}
-            <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+            <div className="ui-card ui-card-body">
 
-                <h2 className="mb-5 text-lg font-semibold text-slate-900">
+                <h2 className="ui-card-title mb-5">
                     Salary Summary
                 </h2>
 
-                <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+                <div className="grid grid-cols-1 gap-4 sm:gap-6 md:grid-cols-3">
 
                     {summaryCards.map((card) => (
 
                         <div
                             key={card.title}
-                            className="group relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg"
+                            className="ui-card ui-card-interactive group relative overflow-hidden p-4 sm:p-6"
                         >
 
                             <span
@@ -617,26 +841,24 @@ function SalaryForm() {
 
                             <div className="flex items-start justify-between gap-3">
 
-                                <div>
+                                <div className="min-w-0">
 
-                                    <p className="text-sm font-medium text-slate-500">
+                                    <p className="truncate text-xs font-medium text-ink-subtle sm:text-sm">
                                         {card.title}
                                     </p>
 
-                                    <h3
-                                        className={`mt-2 text-2xl font-bold ${card.valueColor}`}
-                                    >
+                                    <h3 className="mt-1 text-2xl font-bold text-ink sm:mt-2 sm:text-3xl">
                                         {formatCurrency(card.value)}
                                     </h3>
 
-                                    <p className="mt-2 text-xs font-medium text-slate-400">
+                                    <p className="mt-2 text-[11px] font-medium text-ink-subtle sm:text-xs">
                                         {card.subtitle}
                                     </p>
 
                                 </div>
 
                                 <div
-                                    className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-xl transition group-hover:scale-110 ${card.iconBg} ${card.iconColor}`}
+                                    className={`ui-tile h-10 w-10 text-lg transition group-hover:scale-110 sm:h-12 sm:w-12 sm:text-xl ${card.iconBg} ${card.iconColor}`}
                                 >
                                     {card.icon}
                                 </div>
@@ -652,9 +874,9 @@ function SalaryForm() {
             </div>
 
             {/* Actions */}
-            <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white px-5 py-4 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:px-6">
+            <div className="ui-card flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
 
-                <p className="text-sm text-slate-500">
+                <p className="text-sm text-ink-subtle">
                     {isEditMode
                         ? "The current structure is saved to salary history before it is replaced."
                         : "Review the amounts before assigning the salary."}
@@ -664,14 +886,14 @@ function SalaryForm() {
 
                     <button
                         onClick={() => navigate("/salarydashboard/salary")}
-                        className="inline-flex cursor-pointer items-center justify-center rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-600 shadow-sm transition-all duration-200 hover:border-slate-300 hover:bg-slate-50"
+                        className="ui-btn ui-btn-secondary font-semibold"
                     >
                         Cancel
                     </button>
 
                     <button
                         onClick={handleSubmit}
-                        className="group inline-flex cursor-pointer items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-blue-600/20 transition-all duration-200 hover:-translate-y-0.5 hover:bg-blue-700 hover:shadow-lg hover:shadow-blue-600/30 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 active:translate-y-0"
+                        className="ui-btn ui-btn-primary group font-semibold"
                     >
 
                         <FiCheck

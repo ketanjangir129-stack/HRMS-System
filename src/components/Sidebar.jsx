@@ -13,6 +13,7 @@ import {
   Users,
   Wallet,
   X,
+  ShieldUser,
 } from "lucide-react";
 import { NavLink } from "react-router-dom";
 import { useMemo } from "react";
@@ -107,6 +108,12 @@ const menuGroups = [
         label: "Tasks",
         path: "/tasks",
         icon: ListChecks,
+        permission: "tasks",
+      },
+      {
+        label: "HR Policy",
+        path: "/hr-policy",
+        icon: ShieldUser ,
         permission: "tasks",
       },
     ],

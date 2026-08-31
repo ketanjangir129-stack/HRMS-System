@@ -36,26 +36,38 @@ const DARK = "dark";
 
 /*
 |--------------------------------------------------------------------------
-| Signed out is always light
+| Outside the shell is always light
 |--------------------------------------------------------------------------
-| The toggle lives in the navbar, and the navbar only exists behind a login.
-| So on the register, login, change-password and public on-boarding screens
-| the theme would be applied with no way to leave it - somebody who last
-| signed out in the dark would be handed a dark login page and nothing to
+| The toggle lives in the navbar, so the theme may only be applied where the
+| navbar is. Anywhere else it would arrive with no way to leave it: somebody
+| who last signed out in the dark would be handed a dark page and nothing to
 | press. Those screens are pinned to light instead.
 |
 | The preference itself is untouched by this: it stays in storage through the
-| whole signed out stretch and the dashboard comes back in the theme it was
-| left in.
+| whole stretch outside the shell, and the dashboard comes back in the theme
+| it was left in.
 |
-| It is keyed on the session rather than on the path because two of those
-| four screens are not guarded routes, and a route list is one more thing to
-| keep in step. `companyCode` is the same key ProtectedRoute and GuestRoute
-| read, so the theme and the routing can never disagree about who is in.
+| Two things have to be true, because being signed in is not the same as
+| being inside the shell:
+|
+|   - there is a session. Register, login and the public on-boarding link
+|     have none, and none of them is drawn in the shell.
+|
+|   - the password is settled. `/change-password` is reached AFTER the login
+|     that sets the session - ProtectedRoute sends the user there - but it is
+|     mounted outside DashboardLayout, so it has no navbar either. The
+|     session alone would call it signed in and paint it dark, which is the
+|     exact trap this whole rule exists to avoid.
+|
+| Both are read from storage rather than from the path, because two of those
+| screens are not guarded routes and a route list is one more thing to keep
+| in step. They are the same two keys ProtectedRoute reads, so the theme and
+| the routing can never disagree about where the user is.
 |--------------------------------------------------------------------------
 */
 
 const SESSION_KEY = "companyCode";
+const USER_KEY = "currentUser";
 
 const hasStoredSession = () => {
 
@@ -67,6 +79,28 @@ const hasStoredSession = () => {
   }
 
 };
+
+/*
+| Only an explicit `false` holds the theme back. An owner has no account
+| object at all and a settled employee has `true`, so both read as settled
+| and neither needs a role check to say so.
+*/
+const passwordSettled = (user) => user?.account?.isPasswordChanged !== false;
+
+const storedPasswordSettled = () => {
+
+  try {
+    return passwordSettled(JSON.parse(localStorage.getItem(USER_KEY) || "null"));
+  } catch {
+    // Unreadable storage - treat it as settled rather than pin the app light.
+    return true;
+  }
+
+};
+
+// Signed in AND past the forced password change, which is what "in the
+// shell" means for everything the theme cares about.
+const inShell = () => hasStoredSession() && storedPasswordSettled();
 
 // Matches the rule in index.css that holds transitions off during the swap.
 const SWITCHING = "theme-switching";
@@ -143,11 +177,11 @@ const applyThemeInstantly = (theme) => {
 | mounted in main.jsx. The stored theme is therefore on <html> for React's
 | first render instead of arriving an effect later.
 |
-| The session is read here as well, for the same reason the theme is: waiting
-| for the provider to work it out would paint one dark frame of the login
-| screen on a device that last signed out in the dark.
+| Where the user is gets read here as well, for the same reason the theme is:
+| waiting for the provider to work it out would paint one dark frame of the
+| login screen on a device that last signed out in the dark.
 */
-applyTheme(hasStoredSession() ? readStoredTheme() : LIGHT);
+applyTheme(inShell() ? readStoredTheme() : LIGHT);
 
 export const ThemeContext = createContext();
 
@@ -170,8 +204,14 @@ export const ThemeProvider = ({ children }) => {
   | is the same key the route guards decide on, so the frame it paints is the
   | one the router is about to agree with, and by the time it is replaced the
   | two say the same thing.
+  |
+  | Either way the password has to be settled too - `currentUser` carries the
+  | same `account` the stored copy does, so the answer does not change as the
+  | restore finishes.
   */
-  const signedIn = loading ? hasStoredSession() : Boolean(currentUser);
+  const signedIn = loading
+    ? inShell()
+    : Boolean(currentUser) && passwordSettled(currentUser);
 
   /*
   | What is actually on screen. The preference is only honoured behind a

@@ -79,7 +79,7 @@ function AttendanceAnalytics({ analytics = {} }) {
   ];
 
   return (
-    <div className="flex h-full flex-col rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
+    <div className="ui-card ui-card-body flex h-full flex-col">
 
       {/* Header */}
 
@@ -87,17 +87,17 @@ function AttendanceAnalytics({ analytics = {} }) {
 
         <div className="min-w-0">
 
-          <h2 className="text-base font-semibold text-slate-900 sm:text-lg">
+          <h2 className="ui-card-title">
             Attendance Analytics
           </h2>
 
-          <p className="mt-1 text-xs text-slate-500 sm:text-sm">
+          <p className="ui-card-subtitle">
             Today's attendance insights
           </p>
 
         </div>
 
-        <span className="inline-flex shrink-0 items-center gap-2 rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-600">
+        <span className="ui-badge shrink-0 bg-blue-50 text-blue-700">
 
           <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-blue-600" />
 
@@ -130,17 +130,17 @@ function AttendanceAnalytics({ analytics = {} }) {
               */}
               <div className="min-w-0 flex-1">
 
-                <p className="truncate text-sm font-semibold text-slate-800">
+                <p className="truncate text-sm font-semibold text-ink-muted">
                   {row.title}
                 </p>
 
-                <p className="truncate text-xs text-slate-400">
+                <p className="truncate text-xs text-ink-faint">
                   {row.subtitle}
                 </p>
 
               </div>
 
-              <span className="shrink-0 whitespace-nowrap text-base font-bold text-slate-900">
+              <span className="shrink-0 whitespace-nowrap text-base font-bold text-ink">
                 {row.value}
               </span>
 
@@ -148,7 +148,7 @@ function AttendanceAnalytics({ analytics = {} }) {
 
             {row.progress !== null && (
 
-              <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
+              <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-surface-muted">
 
                 <div
                   className={`h-full rounded-full transition-all duration-700 ${row.bar}`}

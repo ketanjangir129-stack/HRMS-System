@@ -148,32 +148,37 @@ function Employees() {
         resetPagination();
     }, [search]);
 
-    const placeholder = <span className="text-slate-300">—</span>;
+    const placeholder = <span className="text-ink-faint">—</span>;
 
     return (
-        <div className="p-0 space-y-4 sm:p-2 sm:space-y-6">
+        <div className="flex-1 min-h-full space-y-4 sm:space-y-6">
 
-            {/* Header */}
-            <div className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:gap-5 sm:p-6 lg:flex-row lg:items-center lg:justify-between">
+            {/*
+            | Header
+            |
+            | Same shape the dashboard opens with: a small brand eyebrow for
+            | context, the page name at heading size, and one quiet line under
+            | it. No card around it — the panel below is the page's first
+            | surface, and boxing the title as well made the screen read as two
+            | competing headers.
+            */}
+            <div className="mb-6 flex flex-wrap items-center justify-between gap-4 sm:mb-8">
 
-                <div className="flex min-w-0 items-center gap-3 sm:gap-4">
+                <div className="min-w-0">
 
-                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-blue-600 text-lg text-white shadow-sm shadow-blue-600/20 sm:h-12 sm:w-12 sm:text-xl">
-                        <FiUsers />
+                    <div className="mb-1.5 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-brand">
+                        <FiUsers className="shrink-0" size={14} />
+                        <span className="truncate">Directory</span>
                     </div>
 
-                    <div className="min-w-0">
+                    <h1 className="text-2xl font-bold text-ink wrap-break-word sm:text-3xl">
+                        Employees
+                    </h1>
 
-                        <h1 className="text-xl font-bold text-slate-900 sm:text-2xl">
-                            Employees
-                        </h1>
-
-                        <p className="mt-0.5 text-xs text-slate-500 sm:mt-1 sm:text-sm">
-                            {search ? `${filteredEmployees.length} of ${employees.length} employees`
-                                : `${employees.length} total employee${employees.length === 1 ? "" : "s"}`}
-                        </p>
-
-                    </div>
+                    <p className="mt-1 text-sm text-ink-subtle">
+                        {search ? `${filteredEmployees.length} of ${employees.length} employees`
+                            : `${employees.length} total employee${employees.length === 1 ? "" : "s"}`}
+                    </p>
 
                 </div>
 
@@ -183,13 +188,13 @@ function Employees() {
                         onClick={() => navigate("/employees/add")}
                         title="Add Employee"
                         aria-label="Add Employee"
-                        className="group inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-blue-600/20 transition-all duration-200 hover:-translate-y-0.5 hover:bg-blue-700 hover:shadow-lg hover:shadow-blue-600/30 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 active:translate-y-0 sm:w-auto"
+                        className="ui-btn ui-btn-primary group w-full font-semibold sm:w-auto"
                     >
                         <FiUserPlus
                             size={18}
                             className="transition-transform duration-200 group-hover:scale-110"
                         />
-                        Add Employee
+                        
                     </button>
                 )}
 
@@ -198,17 +203,17 @@ function Employees() {
             <DepartmentScopeNotice subject="employees" />
 
             {/* Directory */}
-            <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+            <div className="ui-card overflow-hidden">
 
-                <div className="flex flex-col gap-4 border-b border-slate-200 px-4 py-4 sm:px-6 sm:py-5 lg:flex-row lg:items-center lg:justify-between">
+                <div className="flex flex-col gap-4 border-b border-line-subtle px-5 pb-4 pt-5 sm:px-6 sm:pt-6 lg:flex-row lg:items-center lg:justify-between">
 
                     <div className="min-w-0">
 
-                        <h2 className="text-base font-semibold text-slate-900 sm:text-lg">
+                        <h2 className="ui-card-title">
                             Employees List
                         </h2>
 
-                        <p className="mt-1 text-xs text-slate-500 sm:text-sm">
+                        <p className="ui-card-subtitle">
                             {isScoped
                                 ? "Everyone in the departments you manage, and their current status."
                                 : "Everyone on the company and their current status."}
@@ -228,15 +233,15 @@ function Employees() {
 
                     <div className="flex flex-col items-center justify-center px-4 py-14 text-center sm:px-6 sm:py-16">
 
-                        <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-red-50 text-red-600">
+                        <div className="ui-tile h-16 w-16 bg-red-50 text-red-600">
                             <FiAlertTriangle size={28} />
                         </div>
 
-                        <h3 className="mt-5 text-lg font-semibold text-slate-900 sm:text-xl">
+                        <h3 className="mt-5 text-lg font-bold text-ink sm:text-xl">
                             Failed to Load
                         </h3>
 
-                        <p className="mt-2 max-w-sm text-sm text-slate-500">
+                        <p className="mt-2 max-w-sm text-sm text-ink-subtle">
                             {error}
                         </p>
 
@@ -245,7 +250,7 @@ function Employees() {
                                 setLoading(true);
                                 loadEmployees();
                             }}
-                            className="mt-6 cursor-pointer rounded-xl border border-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-700 transition-all hover:border-blue-500 hover:bg-blue-50 hover:text-blue-600"
+                            className="ui-btn ui-btn-secondary mt-6 font-semibold"
                         >
                             Retry
                         </button>
@@ -256,15 +261,15 @@ function Employees() {
 
                     <div className="flex flex-col items-center justify-center px-4 py-14 text-center sm:px-6 sm:py-20">
 
-                        <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-blue-50 text-blue-600">
+                        <div className="ui-tile h-16 w-16 bg-blue-50 text-blue-600">
                             <FiUsers size={28} />
                         </div>
 
-                        <h3 className="mt-5 text-lg font-semibold text-slate-900 sm:text-xl">
+                        <h3 className="mt-5 text-lg font-bold text-ink sm:text-xl">
                             {search ? "No Matches Found" : "No Employees Yet"}
                         </h3>
 
-                        <p className="mt-2 max-w-sm text-sm text-slate-500">
+                        <p className="mt-2 max-w-sm text-sm text-ink-subtle">
                             {search
                                 ? "No employees match your search."
                                 : "No employees yet."}
@@ -284,7 +289,7 @@ function Employees() {
                     */}
                         {/* Tinted behind the cards so the white cards read as
                             separate rows rather than one flat panel. */}
-                        <div className="space-y-3 bg-slate-50/70 p-4 md:hidden">
+                        <div className="space-y-3 bg-surface-muted/70 p-4 md:hidden">
 
                             {paginatedEmployees.map((emp) => (
                                 <EmployeeCard
@@ -313,7 +318,7 @@ function Employees() {
 
                                 <thead>
 
-                                    <tr className="border-b border-slate-200 bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+                                    <tr className="border-b border-line-subtle bg-surface-muted text-[11px] uppercase tracking-wider text-ink-faint">
 
                                         <th className="px-4 py-3 text-left font-semibold sm:px-6">Employee</th>
                                         <th className="px-4 py-3 text-left font-semibold sm:px-6">Employee ID</th>
@@ -332,7 +337,7 @@ function Employees() {
 
                                 </thead>
 
-                                <tbody className="divide-y divide-slate-100">
+                                <tbody className="divide-y divide-line-subtle">
 
                                     {paginatedEmployees.map((emp) => (
 
@@ -343,21 +348,21 @@ function Employees() {
                                                     ? () => navigate(`/employees/details/${emp.id}`)
                                                     : undefined
                                             }
-                                            className={`group transition-colors hover:bg-slate-50 ${canOpenDetails ? "cursor-pointer" : ""
+                                            className={`group transition-colors hover:bg-surface-muted ${canOpenDetails ? "cursor-pointer" : ""
                                                 }`}
                                         >
 
-                                            <td className="px-4 py-4 text-left text-sm text-slate-700 sm:px-6">
+                                            <td className="px-4 py-4 text-left text-sm text-ink-muted sm:px-6">
 
                                                 <div className="flex min-w-0 items-center gap-3">
 
-                                                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-50 text-xs font-semibold text-blue-700">
+                                                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-50 text-xs font-bold text-blue-600">
                                                         {getInitials(emp.name || emp.employeeId) || "--"}
                                                     </div>
 
                                                     <div className="min-w-0">
 
-                                                        <p className="truncate font-semibold text-slate-800">
+                                                        <p className="truncate font-semibold text-ink">
                                                             {emp.name || placeholder}
                                                         </p>
 
@@ -366,11 +371,11 @@ function Employees() {
                                                         | line disappears at exactly the breakpoint where its own
                                                         | column appears, so nothing is shown twice.
                                                         */}
-                                                        <p className="mt-0.5 truncate text-xs text-slate-500 lg:hidden">
+                                                        <p className="mt-0.5 truncate text-xs text-ink-subtle lg:hidden">
                                                             {emp.email || "--"}
                                                         </p>
 
-                                                        <p className="mt-0.5 truncate text-xs text-slate-400 xl:hidden">
+                                                        <p className="mt-0.5 truncate text-xs text-ink-faint xl:hidden">
                                                             {[emp.department, emp.designation]
                                                                 .filter(Boolean)
                                                                 .join(" · ") || "--"}
@@ -382,17 +387,17 @@ function Employees() {
 
                                             </td>
 
-                                            <td className="px-4 py-4 text-left text-sm font-semibold text-slate-700 sm:px-6">
+                                            <td className="px-4 py-4 text-left text-sm font-semibold text-ink-muted sm:px-6">
                                                 {emp.employeeId || placeholder}
                                             </td>
 
-                                            <td className="hidden px-4 py-4 text-left text-sm text-slate-500 sm:px-6 lg:table-cell">
+                                            <td className="hidden px-4 py-4 text-left text-sm text-ink-subtle sm:px-6 lg:table-cell">
                                                 {emp.email || placeholder}
                                             </td>
 
-                                            <td className="hidden px-4 py-4 text-left text-sm text-slate-700 sm:px-6 xl:table-cell">
+                                            <td className="hidden px-4 py-4 text-left text-sm text-ink-muted sm:px-6 xl:table-cell">
                                                 {emp.department ? (
-                                                    <span className="inline-flex items-center rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
+                                                    <span className="inline-flex items-center rounded-full bg-surface-raised px-3 py-1 text-xs font-semibold text-ink-muted">
                                                         {emp.department}
                                                     </span>
                                                 ) : (
@@ -400,18 +405,18 @@ function Employees() {
                                                 )}
                                             </td>
 
-                                            <td className="hidden px-4 py-4 text-left text-sm text-slate-700 sm:px-6 xl:table-cell">
+                                            <td className="hidden px-4 py-4 text-left text-sm text-ink-muted sm:px-6 xl:table-cell">
                                                 {emp.designation || placeholder}
                                             </td>
 
-                                            <td className="px-4 py-4 text-left text-sm text-slate-700 sm:px-6">
+                                            <td className="px-4 py-4 text-left text-sm text-ink-muted sm:px-6">
                                                 <EmployeeStatusBadge status={emp.status} />
                                             </td>
 
                                             {canOpenDetails && (
                                                 <td className="w-12 px-4 py-4 text-right sm:px-6">
                                                     <FiChevronRight
-                                                        className="ml-auto text-slate-300 transition-colors group-hover:text-blue-600"
+                                                        className="ml-auto text-ink-faint transition-colors group-hover:text-brand"
                                                         size={18}
                                                     />
                                                 </td>

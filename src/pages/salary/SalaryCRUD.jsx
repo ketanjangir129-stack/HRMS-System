@@ -209,6 +209,11 @@ function SalaryCRUD() {
     /*
     | Counts are read from the whole register rather than the filtered list, so
     | they stay a summary of the company instead of restating the table.
+    |
+    | The number itself is set in ink and the hue is carried by the tile and the
+    | bar above it, which is how the dashboard's stat cards read: three coloured
+    | figures side by side compete, one ink figure with a coloured marker does
+    | not.
     */
     const stats = [
         {
@@ -218,7 +223,6 @@ function SalaryCRUD() {
             icon: <FiUsers />,
             iconBg: "bg-blue-50",
             iconColor: "text-blue-600",
-            valueColor: "text-blue-600",
             bar: "bg-blue-500",
         },
         {
@@ -228,7 +232,6 @@ function SalaryCRUD() {
             icon: <FiCheckCircle />,
             iconBg: "bg-emerald-50",
             iconColor: "text-emerald-600",
-            valueColor: "text-emerald-600",
             bar: "bg-emerald-500",
         },
         {
@@ -238,7 +241,6 @@ function SalaryCRUD() {
             icon: <FiAlertCircle />,
             iconBg: "bg-amber-50",
             iconColor: "text-amber-600",
-            valueColor: "text-amber-600",
             bar: "bg-amber-500",
         },
     ];
@@ -274,7 +276,7 @@ function SalaryCRUD() {
                     | appears, so a value is never shown twice and never missing
                     | in between.
                     */}
-                    <p className="mt-1 truncate pl-14 text-xs text-slate-500 lg:hidden">
+                    <p className="mt-1 truncate pl-14 text-xs text-ink-subtle lg:hidden">
 
                         <span className="md:hidden">
                             {row.department || "--"}
@@ -296,7 +298,7 @@ function SalaryCRUD() {
             sortable: true,
             ...hideBelow("md"),
             render: (row) => (
-                <span className="text-sm text-slate-600">
+                <span className="text-sm text-ink-muted">
                     {row.department || "--"}
                 </span>
             ),
@@ -307,7 +309,7 @@ function SalaryCRUD() {
             label: "Designation",
             ...hideBelow("lg"),
             render: (row) => (
-                <span className="text-sm text-slate-600">
+                <span className="text-sm text-ink-muted">
                     {row.designation || "--"}
                 </span>
             ),
@@ -321,7 +323,7 @@ function SalaryCRUD() {
             render: (row) => (
 
                 <span
-                    className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ${row.salaryAssigned
+                    className={`ui-badge ${row.salaryAssigned
                         ? "bg-emerald-50 text-emerald-700"
                         : "bg-amber-50 text-amber-700"
                         }`}
@@ -349,7 +351,7 @@ function SalaryCRUD() {
                 if (!row.salaryAssigned) {
 
                     if (!canCreate) {
-                        return <span className="text-sm text-slate-300">--</span>;
+                        return <span className="text-sm text-ink-faint">--</span>;
                     }
 
                     return (
@@ -362,7 +364,7 @@ function SalaryCRUD() {
                                 )
                             }
                             title="Assign salary to this employee"
-                            className="inline-flex cursor-pointer items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm shadow-blue-600/20 transition-all hover:bg-blue-700 hover:shadow-md hover:shadow-blue-600/30 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2"
+                            className="ui-btn ui-btn-primary px-4 py-2 font-semibold"
                         >
 
                             <FiPlus size={14} />
@@ -380,7 +382,7 @@ function SalaryCRUD() {
                 | an empty cell with no explanation.
                 */
                 if (!canUpdate && !canViewHistory) {
-                    return <span className="text-sm text-slate-300">--</span>;
+                    return <span className="text-sm text-ink-faint">--</span>;
                 }
 
                 return (
@@ -397,7 +399,7 @@ function SalaryCRUD() {
                                     )
                                 }
                                 title="Edit employee salary"
-                                className="inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-xl border border-slate-200 text-slate-500 transition-all hover:border-blue-500 hover:bg-blue-50 hover:text-blue-600"
+                                className="inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-xl border border-line text-ink-subtle transition-all hover:border-brand hover:bg-blue-50 hover:text-brand"
                             >
                                 <TbMoneybagEdit size={18} />
                             </button>
@@ -414,7 +416,7 @@ function SalaryCRUD() {
                                     )
                                 }
                                 title="Check salary history"
-                                className="inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-xl border border-slate-200 text-slate-500 transition-all hover:border-blue-500 hover:bg-blue-50 hover:text-blue-600"
+                                className="inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-xl border border-line text-ink-subtle transition-all hover:border-brand hover:bg-blue-50 hover:text-brand"
                             >
                                 <BsClockHistory size={16} />
                             </button>
@@ -441,7 +443,7 @@ function SalaryCRUD() {
                 backTo="/salarydashboard"
                 action={
                     !loading && (
-                        <span className="inline-flex w-fit items-center gap-2 rounded-full bg-blue-50 px-3 py-1 text-sm font-medium text-blue-700">
+                        <span className="ui-badge bg-blue-50 text-blue-700">
                             {assignedCount} of {employees.length} assigned
                         </span>
                     )
@@ -449,13 +451,13 @@ function SalaryCRUD() {
             />
 
             {/* Summary */}
-            <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+            <div className="grid grid-cols-1 gap-4 sm:gap-6 md:grid-cols-3">
 
                 {stats.map((stat) => (
 
                     <div
                         key={stat.title}
-                        className="group relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg"
+                        className="ui-card ui-card-interactive group relative overflow-hidden p-4 sm:p-6"
                     >
 
                         <span
@@ -464,26 +466,24 @@ function SalaryCRUD() {
 
                         <div className="flex items-start justify-between gap-3">
 
-                            <div>
+                            <div className="min-w-0">
 
-                                <p className="text-sm font-medium text-slate-500">
+                                <p className="truncate text-xs font-medium text-ink-subtle sm:text-sm">
                                     {stat.title}
                                 </p>
 
-                                <h3
-                                    className={`mt-2 text-2xl font-bold ${stat.valueColor}`}
-                                >
+                                <h3 className="mt-1 text-3xl font-bold text-ink sm:mt-2 sm:text-4xl">
                                     {loading ? "--" : stat.value}
                                 </h3>
 
-                                <p className="mt-2 text-xs font-medium text-slate-400">
+                                <p className="mt-2 text-[11px] font-medium text-ink-subtle sm:text-xs">
                                     {stat.subtitle}
                                 </p>
 
                             </div>
 
                             <div
-                                className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-xl transition group-hover:scale-110 ${stat.iconBg} ${stat.iconColor}`}
+                                className={`ui-tile h-10 w-10 text-lg transition group-hover:scale-110 sm:h-12 sm:w-12 sm:text-xl ${stat.iconBg} ${stat.iconColor}`}
                             >
                                 {stat.icon}
                             </div>

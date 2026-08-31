@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { UserPlus, ClipboardList, ClipboardClock } from "lucide-react";
+import { UserPlus, ClipboardList, ClipboardClock, Users } from "lucide-react";
 
 function OnboardingDashboard() {
 
@@ -37,6 +37,28 @@ function OnboardingDashboard() {
 
                     <p className="text-gray-500 mt-2">
                         Create an onboarding invitation for a new employee.
+                    </p>
+
+                </div>
+
+                {/* Bulk Onboarding */}
+
+                <div
+                    onClick={() => navigate("/OnboardDashboard/BulkOnboard")}
+                    className="cursor-pointer bg-white rounded-2xl shadow p-8 hover:shadow-lg transition"
+                >
+
+                    <Users
+                        size={40}
+                        className="text-purple-600"
+                    />
+
+                    <h2 className="text-xl font-semibold mt-4">
+                        Bulk Onboarding
+                    </h2>
+
+                    <p className="text-gray-500 mt-2">
+                        Onboard multiple employees at once from an Excel file.
                     </p>
 
                 </div>

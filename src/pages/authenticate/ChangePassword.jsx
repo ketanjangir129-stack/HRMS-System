@@ -2,19 +2,12 @@ import { useState } from "react";
 import useAuth from "../../hooks/useAuth";
 import { Navigate, useNavigate } from "react-router-dom";
 import { toast } from 'react-toastify';
-import { Eye, EyeOff } from "lucide-react";
 
 const ChangePassword = () => {
   const [formData, setFormData] = useState({
     currentPassword: "",
     newPassword: "",
     confirmPassword: "",
-  });
-  // Each password field toggles its own visibility independently.
-  const [visibleFields, setVisibleFields] = useState({
-    currentPassword: false,
-    newPassword: false,
-    confirmPassword: false,
   });
   const [loading, setLoading] = useState(false);
   const { changePassword } = useAuth();
@@ -40,13 +33,6 @@ const ChangePassword = () => {
     setFormData((prev) => ({
       ...prev,
       [name]: value,
-    }));
-  };
-
-  const toggleVisibility = (name) => {
-    setVisibleFields((prev) => ({
-      ...prev,
-      [name]: !prev[name],
     }));
   };
 
@@ -152,32 +138,15 @@ const ChangePassword = () => {
                 Current Password
               </label>
 
-              <div className="relative">
-                <input
-                  type={visibleFields.currentPassword ? "text" : "password"}
-                  name="currentPassword"
-                  value={formData.currentPassword}
-                  onChange={handleChange}
-                  onBlur={handleBlur}
-                  placeholder="********"
-                  className="w-full border rounded-lg p-3 pr-12"
-                />
-
-                <button
-                  type="button"
-                  onClick={() => toggleVisibility("currentPassword")}
-                  aria-label={visibleFields.currentPassword ? "Hide password" : "Show password"}
-                  aria-pressed={visibleFields.currentPassword}
-                  className="absolute inset-y-0 right-0 flex w-12 items-center justify-center text-slate-400 transition-colors hover:text-blue-600 cursor-pointer rounded-r-lg"
-                >
-                  {visibleFields.currentPassword ? (
-                    <EyeOff className="h-5 w-5" aria-hidden="true" />
-                  ) : (
-                    <Eye className="h-5 w-5" aria-hidden="true" />
-                  )}
-                </button>
-              </div>
-
+              <input
+                type="password"
+                name="currentPassword"
+                value={formData.currentPassword}
+                onChange={handleChange}
+                onBlur={handleBlur}
+                placeholder="********"
+                className="w-full border rounded-lg p-3"
+              />
               {errors.currentPassword && (
                 <p className="text-red-500 text-sm mt-1">
                   {errors.currentPassword}
@@ -191,31 +160,15 @@ const ChangePassword = () => {
                 New Password
               </label>
 
-              <div className="relative">
-                <input
-                  type={visibleFields.newPassword ? "text" : "password"}
-                  name="newPassword"
-                  value={formData.newPassword}
-                  onChange={handleChange}
-                  onBlur={handleBlur}
-                  placeholder="********"
-                  className="w-full border rounded-lg p-3 pr-12"
-                />
-
-                <button
-                  type="button"
-                  onClick={() => toggleVisibility("newPassword")}
-                  aria-label={visibleFields.newPassword ? "Hide password" : "Show password"}
-                  aria-pressed={visibleFields.newPassword}
-                  className="absolute inset-y-0 right-0 flex w-12 items-center justify-center text-slate-400 transition-colors hover:text-blue-600 cursor-pointer rounded-r-lg"
-                >
-                  {visibleFields.newPassword ? (
-                    <EyeOff className="h-5 w-5" aria-hidden="true" />
-                  ) : (
-                    <Eye className="h-5 w-5" aria-hidden="true" />
-                  )}
-                </button>
-              </div>
+              <input
+                type="password"
+                name="newPassword"
+                value={formData.newPassword}
+                onChange={handleChange}
+                onBlur={handleBlur}
+                placeholder="********"
+                className="w-full border rounded-lg p-3"
+              />
 
               {errors.newPassword && (
                 <p className="text-red-500 text-sm mt-1">
@@ -230,32 +183,15 @@ const ChangePassword = () => {
                 Confirm Password
               </label>
 
-              <div className="relative">
-                <input
-                  type={visibleFields.confirmPassword ? "text" : "password"}
-                  name="confirmPassword"
-                  value={formData.confirmPassword}
-                  onChange={handleChange}
-                  onBlur={handleBlur}
-                  placeholder="********"
-                  className="w-full border rounded-lg p-3 pr-12"
-                />
-
-                <button
-                  type="button"
-                  onClick={() => toggleVisibility("confirmPassword")}
-                  aria-label={visibleFields.confirmPassword ? "Hide password" : "Show password"}
-                  aria-pressed={visibleFields.confirmPassword}
-                  className="absolute inset-y-0 right-0 flex w-12 items-center justify-center text-slate-400 transition-colors hover:text-blue-600 cursor-pointer rounded-r-lg"
-                >
-                  {visibleFields.confirmPassword ? (
-                    <EyeOff className="h-5 w-5" aria-hidden="true" />
-                  ) : (
-                    <Eye className="h-5 w-5" aria-hidden="true" />
-                  )}
-                </button>
-              </div>
-
+              <input
+                type="password"
+                name="confirmPassword"
+                value={formData.confirmPassword}
+                onChange={handleChange}
+                onBlur={handleBlur}
+                placeholder="********"
+                className="w-full border rounded-lg p-3"
+              />
               {errors.confirmPassword && (
                 <p className="text-red-500 text-sm mt-1">
                   {errors.confirmPassword}

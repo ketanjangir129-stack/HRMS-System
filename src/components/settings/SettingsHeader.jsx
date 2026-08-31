@@ -1,33 +1,41 @@
 import { FiSettings } from "react-icons/fi";
 
+/*
+|--------------------------------------------------------------------------
+| SettingsHeader
+|--------------------------------------------------------------------------
+| Same shape as the dashboard greeting: a small brand-hued eyebrow for
+| context, the page name at heading size, and one quiet line under it. No
+| card around it - the panels below are the surfaces on this page, and a
+| second one up here would compete with them.
+|--------------------------------------------------------------------------
+*/
+
 function SettingsHeader({ companyName }) {
   return (
-    <div className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:px-6 sm:py-5 md:flex-row md:items-center md:justify-between">
+    <div className="flex flex-wrap justify-between items-center gap-4 mb-6 sm:mb-8">
 
       {/*
-      | `min-w-0` on both the row and the text column is what keeps a long
-      | company name inside the card: without it a flex item refuses to shrink
-      | below its content and the name pushes the panel wider than the page.
+      | `min-w-0` is what keeps a long company name inside the column: without
+      | it a flex item refuses to shrink below its content and the name pushes
+      | the header wider than the page.
       */}
-      <div className="flex min-w-0 items-center gap-3 sm:gap-4">
+      <div className="min-w-0">
 
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-600 shadow-sm shadow-blue-600/20 sm:h-11 sm:w-11">
-          <FiSettings className="text-lg text-white sm:text-xl" />
+        <div className="mb-1.5 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-brand">
+          <FiSettings className="shrink-0" size={14} />
+          <span className="truncate">Company Settings</span>
         </div>
 
-        <div className="min-w-0">
+        <h1 className="text-2xl sm:text-3xl font-bold text-ink wrap-break-word">
+          Settings
+        </h1>
 
-          <h1 className="text-xl font-bold tracking-tight text-slate-900 sm:text-2xl lg:text-3xl">
-            Settings
-          </h1>
-
-          <p className="mt-0.5 text-xs wrap-break-word text-slate-500 sm:mt-1 sm:text-sm lg:text-base">
-            {companyName
-              ? `Company configuration · ${companyName}`
-              : "Company configuration"}
-          </p>
-
-        </div>
+        <p className="mt-1 text-sm wrap-break-word text-ink-subtle">
+          {companyName
+            ? `Company configuration · ${companyName}`
+            : "Company configuration"}
+        </p>
 
       </div>
 

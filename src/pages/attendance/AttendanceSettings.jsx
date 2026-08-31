@@ -35,30 +35,28 @@ function AttendanceSettings() {
         icon={<FiSettings />}
       />
 
-      <div className="mt-5 grid grid-cols-1 gap-4 sm:mt-6 sm:gap-6 md:grid-cols-2 xl:grid-cols-3">
+      <div className="mt-6 grid grid-cols-1 gap-4 sm:mt-8 sm:gap-6 md:grid-cols-2 xl:grid-cols-3">
 
         {SETTINGS.map((item) => (
 
           <div
             key={item.title}
-            className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6"
+            className="ui-card ui-card-body"
           >
 
-            <div
-              className={`flex h-11 w-11 items-center justify-center rounded-2xl text-lg sm:h-12 sm:w-12 sm:text-xl ${item.color}`}
-            >
+            <div className={`ui-tile text-xl ${item.color}`}>
               {item.icon}
             </div>
 
-            <h2 className="mt-4 text-base font-semibold text-slate-900">
+            <h2 className="ui-card-title mt-4">
               {item.title}
             </h2>
 
-            <p className="mt-1 text-sm text-slate-500">
+            <p className="ui-card-subtitle">
               {item.description}
             </p>
 
-            <span className="mt-4 inline-flex rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-500">
+            <span className="ui-badge mt-4 bg-surface-muted text-ink-subtle">
               Coming soon
             </span>
 

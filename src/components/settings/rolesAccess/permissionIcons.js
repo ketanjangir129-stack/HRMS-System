@@ -2,6 +2,7 @@ import {
   MdDashboard,
   MdOutlineBeachAccess,
   MdOutlineCelebration,
+  MdOutlinePolicy,
 } from "react-icons/md";
 import { FaBuilding, FaTasks } from "react-icons/fa";
 import { BsFillPersonLinesFill, BsCalendarCheck } from "react-icons/bs";
@@ -31,6 +32,7 @@ export const PERMISSION_ICONS = {
   holidays: MdOutlineCelebration,
   salary: GiTakeMyMoney,
   payroll: BadgeIndianRupee,
+  hrPolicy: MdOutlinePolicy,
   tasks: FaTasks,
 };
 

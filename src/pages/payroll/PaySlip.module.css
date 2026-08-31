@@ -16,6 +16,10 @@
 |
 | `.page` deliberately has no min-height: it must be free to end above the
 | fold, and the shell's `main` already paints the same grey behind it.
+|
+| Scaling only survives while the sheet stays readable. Once the room runs
+| out the component switches the sheet to `.compact` and the document reflows
+| instead — see the compact section at the foot of this file.
 */
 
 .page {
@@ -64,48 +68,44 @@
 |--------------------------------------------------------------------------
 */
 
+/*
+| The controls are the app's kit (`.ui-btn`, the toolbar select), so this only
+| places them: the Back button holds the left edge, the month and the download
+| sit at the right, and all three wrap onto their own lines rather than
+| overflowing once the frame is narrower than the row.
+*/
+
 .toolbar {
   display: flex;
+  flex-wrap: wrap;
+  align-items: center;
   justify-content: flex-end;
+  gap: 0.75rem;
   margin-bottom: 1rem;
 }
 
-.downloadButton {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.625rem 1rem;
-  border: none;
-  border-radius: 0.75rem;
-  background: var(--color-brand, #4f46e5);
-  color: #fff;
-  font-size: 0.875rem;
-  line-height: 1.25rem;
-  font-weight: 600;
-  cursor: pointer;
-  box-shadow:
-    0 4px 6px -1px rgb(79 70 229 / 0.2),
-    0 2px 4px -2px rgb(79 70 229 / 0.2);
-  transition: all 200ms;
+.back {
+  margin-right: auto;
 }
 
-.downloadButton:hover {
-  background: var(--color-brand-hover, #4338ca);
-  transform: translateY(-0.125rem);
+/*
+| The same button in a quieter colour. It follows `.downloadButton` so its
+| hover wins on the element that carries both classes.
+*/
+
+.backButton {
+  margin-right: auto;
+  background: #475569;
   box-shadow:
-    0 10px 15px -3px rgb(79 70 229 / 0.3),
-    0 4px 6px -4px rgb(79 70 229 / 0.3);
+    0 4px 6px -1px rgb(71 85 105 / 0.2),
+    0 2px 4px -2px rgb(71 85 105 / 0.2);
 }
 
-.downloadButton:focus-visible {
-  outline: none;
+.backButton:hover {
+  background: #334155;
   box-shadow:
-    0 0 0 2px #fff,
-    0 0 0 4px #818cf8;
-}
-
-.downloadButton:active {
-  transform: translateY(0);
+    0 10px 15px -3px rgb(71 85 105 / 0.3),
+    0 4px 6px -4px rgb(71 85 105 / 0.3);
 }
 
 /*
@@ -120,8 +120,17 @@
   height: 9rem;
 }
 
+/*
+| The band holds the company name and one line under it, so its contents are
+| centred in it rather than pinned to the top with the space left below them.
+| The triangle is positioned absolutely and is not part of the column.
+*/
+
 .headerLeft {
   position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
   width: 35%;
   padding: 1rem;
   background: #b6a7cb;
@@ -129,8 +138,8 @@
 }
 
 .companyName {
-  font-size: 1.5rem;
-  line-height: 2rem;
+  font-size: 2rem;
+  line-height: 2.375rem;
   font-weight: 700;
 }
 
@@ -209,49 +218,110 @@
 }
 
 /*
-| Two columns: who is being paid on the left, what the payment covers on the
-| right. The pay column is right aligned so it ends on the same edge as the
-| amount tables underneath it, and it never wraps — a pay period broken over
-| two lines would push the two columns out of line with each other.
+| Earnings and deductions are two halves of one sum, so they are set side by
+| side and read across. The component pads the shorter list out to the length
+| of the longer one, which is what puts the two total rows on the same line.
 */
 
-.employee {
-  composes: section;
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 2rem;
-  margin-top: 2.5rem;
-  font-size: 15px;
-}
-
-.employeeDetails {
-  min-width: 0;
-}
-
-.payDetails {
-  flex-shrink: 0;
-  white-space: nowrap;
-}
-
-.employee p + p {
-  margin-top: 0.25rem;
-}
-
-.employee span {
-  font-weight: 700;
-}
-
-.summaryGrid {
+.amountGrid {
   composes: section;
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 1.5rem;
+  margin-top: 2.5rem;
 }
 
 .netSalary {
   composes: section;
-  padding-bottom: 2.5rem;
+}
+
+/*
+| The one figure the whole sheet is working towards, so it is given a line of
+| its own rather than another row in another table.
+*/
+
+.netBanner {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 0.875rem 1rem;
+  border: 1px solid #000;
+  background: #ddd6e9;
+  font-size: 1.125rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.netAmount {
+  font-size: 1.375rem;
+  letter-spacing: normal;
+}
+
+/*
+|--------------------------------------------------------------------------
+| Footer
+|--------------------------------------------------------------------------
+| Where to reach the company. It closes the sheet the way the header opens
+| it — the same purple, run edge to edge — so the body sits between two bands
+| instead of trailing off into white.
+|
+| It is the last thing in the sheet and has no margin under it, which is what
+| lets it finish flush with the bottom edge.
+*/
+
+.footer {
+  margin-top: 2.5rem;
+  border-top: 6px solid #b6a7cb;
+  background: #4c3a63;
+  color: #fff;
+}
+
+/*
+| Address on the left, email on the right, each reading from its own edge so
+| the pair brackets the band. The inset matches the body's 10% column.
+*/
+
+.footerInner {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 2.5rem;
+  padding: 1rem 10%;
+}
+
+.footerBlock {
+  min-width: 0;
+}
+
+.footerBlock:last-child {
+  text-align: right;
+}
+
+.footerLabel {
+  display: block;
+  font-size: 11px;
+  line-height: 1rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #c9b9de;
+}
+
+.footerValue {
+  display: block;
+  font-size: 13px;
+  line-height: 1.25rem;
+}
+
+.footNote {
+  padding: 0.5rem 10% 0.75rem;
+  border-top: 1px solid rgb(255 255 255 / 0.2);
+  text-align: center;
+  font-size: 11px;
+  line-height: 1rem;
+  color: #c9b9de;
 }
 
 /*
@@ -260,67 +330,98 @@
 |--------------------------------------------------------------------------
 */
 
-.amountTable {
+/*
+| Every block is the same object — a bordered table under a tinted bar naming
+| it — so only what sits in the columns tells the blocks apart. The modifier
+| classes below set the columns, and each is one class deeper than the shared
+| rules it overrides.
+*/
+
+.blockTable {
   width: 100%;
   border: 1px solid #000;
   border-collapse: collapse;
   font-size: 15px;
 }
 
-.amountTable th,
-.amountTable td {
+.blockTable th,
+.blockTable td {
   padding: 0.5rem 0.75rem;
   border: 1px solid #000;
+  vertical-align: top;
 }
 
-.amountTable thead tr {
+.blockTable thead th {
   background: #ddd6e9;
-}
-
-.amountTable th:first-child {
   text-align: left;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
 }
 
-.amountTable th:last-child,
-.amountTable td:last-child {
+/*
+| The cells down the left of a block are row labels, not headings, so they
+| are told to drop the bar's treatment rather than being written as data
+| cells that only look like labels.
+*/
+
+.blockTable tbody th {
+  background: none;
+  text-align: left;
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+/* Employee information: a label and a piece of text, which reads from the left. */
+
+.detailTable tbody th {
+  width: 38%;
+}
+
+/* Payroll calculation: the same shape, but figures, which line up on the right. */
+
+.figureTable tbody th {
+  width: 38%;
+}
+
+.figureTable tbody td {
   text-align: right;
+}
+
+/* Attendance: two label/value pairs to a line, so four columns of equal width. */
+
+.pairTable tbody th,
+.pairTable tbody td {
+  width: 25%;
+}
+
+.pairTable tbody td {
+  text-align: right;
+}
+
+.pairFiller {
+  background: none;
+}
+
+.amountTable tbody td:last-child {
+  text-align: right;
+}
+
+/*
+| Padding that only exists to push the total row down to the line its
+| opposite number sits on, so it is empty and carries nothing to read.
+*/
+
+.fillerRow td {
+  height: 1.25rem;
 }
 
 .totalRow {
+  background: #efeaf6;
   font-weight: 700;
-}
-
-.card {
-  border: 1px solid #000;
-}
-
-.cardHeading {
-  padding: 0.5rem 0.75rem;
-  border-bottom: 1px solid #000;
-  background: #ddd6e9;
-  font-weight: 700;
-}
-
-.cardTable {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.cardTable td {
-  padding: 0.5rem 0.75rem;
-  border-bottom: 1px solid #000;
-}
-
-.cardTable td:first-child {
-  border-right: 1px solid #000;
-}
-
-.cardTable tr:last-child td {
-  border-bottom: none;
-}
-
-.cardTable td:last-child {
-  text-align: right;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
 .positive {
@@ -333,24 +434,198 @@
   font-weight: 600;
 }
 
-.netSalaryTable {
-  width: 100%;
-  border: 1px solid #000;
-  border-collapse: collapse;
-}
+/*
+|--------------------------------------------------------------------------
+| Compact
+|--------------------------------------------------------------------------
+| Fitting an 800px design into a phone means scaling it to about four tenths,
+| and a payslip nobody can read without pinching is not a payslip. Below the
+| width the component calls compact the sheet stops being scaled and reflows
+| instead: it fills the screen, the paired columns stack, and the type drops
+| to phone sizes.
+|
+| Screen only, deliberately. The printed payslip is always the design layout —
+| the component measures the sheet at its design size even while these rules
+| are on screen — so a download from a phone gives the same page as a
+| download from a desktop.
+|
+| Only the sheet carries `.compact`, because that measurement works by taking
+| the class off and reading the height the design layout would have. Anything
+| outside the sheet that reflows gets a class of its own, so removing the
+| sheet's really does take every one of these rules off it.
+*/
 
-.netSalaryTable tr {
-  background: #ddd6e9;
-  font-weight: 700;
-}
+@media screen {
+  .canvas.canvasCompact {
+    width: 100%;
+    height: auto;
+  }
 
-.netSalaryTable td {
-  padding: 0.75rem;
-  border: 1px solid #000;
-}
+  .sheet.compact {
+    width: 100%;
+    transform: none;
+    overflow-wrap: break-word;
+  }
 
-.netSalaryTable td:last-child {
-  text-align: right;
+  /* The header keeps its two halves, at a size the narrower sheet can hold. */
+
+  .compact .header {
+    height: auto;
+    min-height: 5.5rem;
+  }
+
+  .compact .headerLeft {
+    width: 58%;
+    padding: 0.75rem;
+  }
+
+  .compact .companyName {
+    font-size: 1.5rem;
+    line-height: 1.875rem;
+  }
+
+  .compact .companyLine {
+    font-size: 0.6875rem;
+    line-height: 1rem;
+  }
+
+  .compact .triangle {
+    right: -18px;
+    border-top-width: 18px;
+    border-left-width: 18px;
+  }
+
+  .compact .logo {
+    top: 0.75rem;
+    right: 0.75rem;
+    width: 4rem;
+    height: 4rem;
+  }
+
+  .compact .logoTop {
+    font-size: 0.625rem;
+    line-height: 0.875rem;
+  }
+
+  .compact .logoMain {
+    font-size: 1rem;
+    line-height: 1.25rem;
+  }
+
+  .compact .title {
+    margin-top: 1.5rem;
+    font-size: 1.375rem;
+    line-height: 1.75rem;
+  }
+
+  /* The 80% inset becomes a plain gutter — 20% of a phone is a lot to give up. */
+
+  .compact .section {
+    width: auto;
+    margin-inline: 0.875rem;
+    margin-top: 1.25rem;
+  }
+
+  /*
+  | Side by side, earnings and deductions leave each other half a phone. They
+  | stack — and once they do there is nothing across from them to line their
+  | totals up with, so the padding that did the lining up goes.
+  */
+
+  .compact .amountGrid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1rem;
+    margin-top: 1.5rem;
+  }
+
+  .compact .fillerRow {
+    display: none;
+  }
+
+  .compact .blockTable {
+    font-size: 0.75rem;
+    line-height: 1.125rem;
+  }
+
+  .compact .blockTable th,
+  .compact .blockTable td {
+    padding: 0.375rem 0.5rem;
+  }
+
+  /* Four columns of attendance on a phone: the labels get what they need. */
+
+  .compact .pairTable tbody th {
+    width: 30%;
+  }
+
+  .compact .pairTable tbody td {
+    width: 20%;
+  }
+
+  .compact .netBanner {
+    padding: 0.625rem 0.75rem;
+    font-size: 0.875rem;
+  }
+
+  .compact .netAmount {
+    font-size: 1.0625rem;
+  }
+
+  /*
+  | Side by side the two blocks leave each other half a phone, and an address
+  | is the longer of the two. They stack, and both then read from the left.
+  */
+
+  .compact .footer {
+    margin-top: 1.5rem;
+    border-top-width: 4px;
+  }
+
+  .compact .footerInner {
+    display: block;
+    padding: 0.75rem 0.875rem;
+  }
+
+  .compact .footerBlock:last-child {
+    margin-top: 0.625rem;
+    text-align: left;
+  }
+
+  .compact .footerLabel {
+    font-size: 0.625rem;
+  }
+
+  .compact .footerValue {
+    font-size: 0.75rem;
+    line-height: 1.125rem;
+  }
+
+  .compact .footNote {
+    padding: 0.5rem 0.875rem 0.625rem;
+    font-size: 0.625rem;
+  }
+
+  /*
+  | The month takes a line of its own above the two buttons, which then split
+  | the line under it — the same three-controls-on-one-line break the payroll
+  | header solves this way.
+  */
+
+  .toolbar.toolbarCompact {
+    gap: 0.5rem;
+  }
+
+  .toolbarCompact .monthSelect {
+    order: -1;
+    width: 100%;
+  }
+
+  .toolbarCompact .backButton,
+  .toolbarCompact .downloadButton {
+    flex: 1 1 0;
+    justify-content: center;
+    padding-inline: 0.75rem;
+  }
 }
 
 /*
@@ -367,12 +642,18 @@
 | printer paginates correctly where a transform does not. Its factor is sized
 | against the A4 printable area by the component, so the payslip always lands
 | on a single page.
+|
+| The zoom is put on the canvas rather than on the sheet, which leaves the
+| sheet an ordinary unzoomed block inside a box whose width is the printable
+| width expressed in the sheet's own units. Centring it is then plain
+| `margin-inline: auto` — there is no reasoning about what an auto margin
+| means on a box that is scaling its own coordinates.
 */
 
 @media print {
   @page {
     size: A4 portrait;
-    margin: 10mm;
+    margin: 12mm;
   }
 
   html,
@@ -399,11 +680,32 @@
     background: #fff !important;
   }
 
+  /*
+  | The canvas is the only box the print zoom is on, and it is the sheet's
+  | containing block. This rule follows the `:has()` one above and matches
+  | exactly as tightly, so where the two collide this is the one that takes.
+  |
+  | The padding is the leftover page height the component has already halved.
+  | Padding rather than a margin on the sheet, because a margin on the first
+  | child of a run of plain blocks collapses straight out of the page.
+  */
+  body .canvas {
+    zoom: var(--payslip-print-zoom, 1);
+    padding-top: var(--payslip-print-offset, 0px) !important;
+  }
+
+  /*
+  | An auto margin either side is what centres the payslip on the page; the
+  | border draws the edge of the sheet inside the page's own margin, so the
+  | payslip reads as a document on the paper rather than as ink that ran to
+  | wherever the paper stopped.
+  */
   .sheet {
     width: var(--payslip-width) !important;
     transform: none !important;
-    zoom: var(--payslip-print-zoom, 0.89);
-    margin: 0 !important;
+    zoom: normal;
+    margin: 0 auto !important;
+    border: 1px solid #4c3a63;
     box-shadow: none !important;
   }
 
@@ -415,7 +717,7 @@
   }
 
   .sheet table,
-  .sheet .card {
+  .sheet .netBanner {
     break-inside: avoid;
     page-break-inside: avoid;
   }

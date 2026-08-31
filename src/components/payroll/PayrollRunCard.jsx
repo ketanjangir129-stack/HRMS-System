@@ -48,15 +48,20 @@ const formatStamp = (at, by) => {
   return by?.name ? `${when} · ${by.name}` : when;
 };
 
+/*
+| A stamp is a date, a time and a name on one line, so it takes the full width
+| of the phone grid — half of it truncates the name away, which is the half
+| that makes the month auditable.
+*/
 const Step = ({ label, at, by, pending }) => (
   <div className="min-w-0">
-    <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+    <p className="ui-eyebrow">
       {label}
     </p>
 
     <p
       className={`mt-1 truncate text-sm ${
-        at ? "font-medium text-slate-700" : "text-slate-400"
+        at ? "font-medium text-ink-muted" : "text-ink-faint"
       }`}
       title={formatStamp(at, by)}
     >
@@ -67,11 +72,11 @@ const Step = ({ label, at, by, pending }) => (
 
 const Total = ({ label, value }) => (
   <div className="min-w-0">
-    <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+    <p className="ui-eyebrow">
       {label}
     </p>
 
-    <p className="mt-1 truncate text-lg font-bold text-slate-900">{value}</p>
+    <p className="mt-1 truncate text-lg font-bold text-ink">{value}</p>
   </div>
 );
 
@@ -87,7 +92,7 @@ const ActionButton = ({ gate, busy, busyLabel, label, icon, tone, onClick }) => 
     onClick={onClick}
     disabled={!gate.allowed || busy}
     title={gate.reason || label}
-    className={`inline-flex cursor-pointer items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold text-white shadow-md transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-offset-2 active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:shadow-md ${tone}`}
+    className={`ui-btn w-full font-semibold sm:w-auto ${tone}`}
   >
     {icon}
     {busy ? busyLabel : label}
@@ -106,9 +111,7 @@ function PayrollRunCard({
 }) {
 
   if (loading) {
-    return (
-      <div className="h-44 animate-pulse rounded-2xl border border-slate-200 bg-white" />
-    );
+    return <div className="ui-card h-44 animate-pulse" />;
   }
 
   const status = getRunStatus(run);
@@ -117,15 +120,15 @@ function PayrollRunCard({
 
   return (
 
-    <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+    <div className="ui-card ui-card-body">
 
-      <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+      <div className="flex flex-col gap-4 sm:gap-5 lg:flex-row lg:items-start lg:justify-between">
 
         <div className="min-w-0">
 
-          <div className="flex flex-wrap items-center gap-3">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
 
-            <h2 className="text-lg font-bold tracking-tight text-slate-900">
+            <h2 className="ui-card-title">
               {formatPayrollMonth(payrollMonth)} Run
             </h2>
 
@@ -133,7 +136,7 @@ function PayrollRunCard({
 
           </div>
 
-          <p className="mt-1 text-sm text-slate-500">
+          <p className="mt-1 text-sm text-ink-subtle">
             {isPending
               ? "This month has not been generated yet."
               : status === PAYROLL_RUN_STATUS.LOCKED
@@ -145,7 +148,11 @@ function PayrollRunCard({
 
         </div>
 
-        <div className="flex flex-wrap items-center gap-3">
+        {/*
+        | Stacked and full width on a phone, side by side from `sm` - the same
+        | shape the modals below give their pair of actions.
+        */}
+        <div className="grid shrink-0 grid-cols-1 gap-2.5 sm:flex sm:flex-wrap sm:items-center sm:gap-3">
 
           <ActionButton
             gate={approveGate}
@@ -153,17 +160,22 @@ function PayrollRunCard({
             busyLabel="Approving..."
             label="Approve"
             icon={<FiCheckCircle />}
-            tone="bg-indigo-600 shadow-indigo-600/20 hover:bg-indigo-700 hover:shadow-indigo-600/30 focus:ring-indigo-400"
+            tone="ui-btn-primary"
             onClick={onApprove}
           />
 
+          {/*
+          | Not the brand fill: locking is the end of the month rather than
+          | another step through it, so it is drawn in the neutral the theme
+          | keeps dark in both light and dark mode.
+          */}
           <ActionButton
             gate={lockGate}
             busy={busy === "lock"}
             busyLabel="Locking..."
             label="Lock"
             icon={<FiLock />}
-            tone="bg-slate-800 shadow-slate-800/20 hover:bg-slate-900 hover:shadow-slate-800/30 focus:ring-slate-500"
+            tone="bg-slate-800 text-white shadow-sm hover:bg-slate-900"
             onClick={onLock}
           />
 
@@ -178,7 +190,7 @@ function PayrollRunCard({
       */}
       {!isPending && (
 
-        <div className="mt-6 grid grid-cols-2 gap-5 border-t border-slate-100 pt-5 sm:grid-cols-3 lg:grid-cols-6">
+        <div className="mt-6 grid grid-cols-2 gap-5 border-t border-line-subtle pt-5 sm:grid-cols-3 lg:grid-cols-6">
 
           <Total label="Employees" value={run?.totalEmployees ?? 0} />
 
@@ -219,9 +231,9 @@ function PayrollRunCard({
 
       {isPending && (
 
-        <div className="mt-6 flex items-center gap-3 border-t border-slate-100 pt-5 text-sm text-slate-500">
+        <div className="mt-6 flex items-center gap-3 border-t border-line-subtle pt-5 text-sm text-ink-subtle">
 
-          <FiPlayCircle className="shrink-0 text-slate-400" />
+          <FiPlayCircle className="shrink-0 text-ink-faint" />
 
           <span>
             Generate the month to open it for approval.

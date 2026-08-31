@@ -12,12 +12,12 @@ import {
   releasesDepartments,
   validateRoleChange,
 } from "../utils/permissions/roleAssignment";
-
+ 
 // Add Employee
 export const addEmployee = async (companyCode, employee) => {
   const employeeId = employee.employmentInfo.employeeId.trim().toUpperCase();
   const personal = employee.personalInfo || {};
-
+ 
   await set(
     ref(db, `companies/${companyCode}/employees/${employeeId}`),
     {
@@ -47,17 +47,17 @@ export const addEmployee = async (companyCode, employee) => {
     }
   );
 };
-
-
+ 
+ 
 // Get All Employees
 export const getEmployees = async (companyCode) => {
   const snapshot = await get(
     ref(db, `companies/${companyCode}/employees`)
   );
-
+ 
   return snapshot.exists() ? snapshot.val() : {};
 };
-
+ 
 // Get Employee By ID
 export const getEmployeeById = async (
   companyCode,
@@ -69,11 +69,11 @@ export const getEmployeeById = async (
       `companies/${companyCode}/employees/${employeeId.toUpperCase()}`
     )
   );
-
+ 
   return snapshot.exists() ? snapshot.val() : null;
 };
-
-
+ 
+ 
 // Update one section of an employee (e.g. { personalInfo: {...} })
 export const updateEmployee = async (companyCode, employeeId, data) => {
   await update(
@@ -81,7 +81,7 @@ export const updateEmployee = async (companyCode, employeeId, data) => {
     data
   );
 };
-
+ 
 // Details page ka section save — updateEmployee ke upar ek patli layer.
 // personalInfo ke liye email/mobile ka duplicate check + trim/lowercase karti hai.
 export const updateEmployeeSection = async (
@@ -94,7 +94,7 @@ export const updateEmployeeSection = async (
     await updateEmployee(companyCode, employeeId, { [sectionId]: sectionData });
     return { success: true, data: sectionData };
   }
-
+ 
   const nextData = {
     ...sectionData,
     name: sectionData.name?.trim() || "",
@@ -102,36 +102,36 @@ export const updateEmployeeSection = async (
     mobile: sectionData.mobile?.trim() || "",
     address: sectionData.address?.trim() || "",
   };
-
+ 
   const current = await getEmployeeById(companyCode, employeeId);
-
+ 
   const currentEmail = (
     current?.personalInfo?.email ||
     current?.employmentInfo?.email ||
     ""
   ).trim().toLowerCase();
-
+ 
   const currentMobile = (
     current?.personalInfo?.mobile ||
     current?.employmentInfo?.mobile ||
     ""
   ).trim();
-
+ 
   // Sirf badli hui value check karo — warna khud ka hi email duplicate nikal aayega
   const duplicate = await checkEmployeeUniqueness(companyCode, {
     email: nextData.email !== currentEmail ? nextData.email : undefined,
     mobile: nextData.mobile !== currentMobile ? nextData.mobile : undefined,
   });
-
+ 
   if (!duplicate.success) {
     return duplicate;
   }
-
+ 
   await updateEmployee(companyCode, employeeId, { personalInfo: nextData });
-
+ 
   return { success: true, data: nextData };
 };
-
+ 
 /*
 |--------------------------------------------------------------------------
 | Employee Role
@@ -160,15 +160,15 @@ export const updateEmployeeRole = async (
   nextRole,
   actorRole
 ) => {
-
+ 
   const current = await getEmployeeById(companyCode, employeeId);
-
+ 
   if (!current) {
     return { success: false, message: "Employee not found." };
   }
-
+ 
   const currentRole = getEmployeeRole(current.account);
-
+ 
   /*
   | The same rule the modal ran before it offered the option, run again here
   | so a role can never be written by a caller that went round the screen.
@@ -178,22 +178,22 @@ export const updateEmployeeRole = async (
     nextRole,
     currentRole,
   });
-
+ 
   if (problem) {
     return { success: false, message: problem };
   }
-
+ 
   await updateEmployee(companyCode, employeeId, {
     "account/role": nextRole,
   });
-
+ 
   if (releasesDepartments(currentRole, nextRole)) {
-
+ 
     const released = await releaseManagerFromDepartments(
       companyCode,
       current.employmentInfo?.employeeId || employeeId
     );
-
+ 
     /*
     | The role is already saved and is the part that matters, so a failed
     | release is reported rather than thrown: the owner can clear the stale
@@ -208,25 +208,25 @@ export const updateEmployeeRole = async (
           "Role updated, but their departments could not be released. Please clear them from the Departments page.",
       };
     }
-
+ 
   }
-
+ 
   return { success: true, role: nextRole };
-
+ 
 };
-
+ 
 // Resume upload — PDF Storage mein jaata hai, DB mein sirf uska link save hota hai
 export const uploadResume = async (companyCode, employeeId, file) => {
   const fileRef = storageRef(
     storage,
     `companies/${companyCode}/employees/${employeeId.toUpperCase()}/resume.pdf`
   );
-
+ 
   await uploadBytes(fileRef, file, { contentType: "application/pdf" });
-
+ 
   return await getDownloadURL(fileRef);
 };
-
+ 
 // CREATE THE EMPLOYEES
 export const createEmployee = async (companyCode, employee) => {
   // Onboarding wala hi check use karte hain — wo employees ke saath
@@ -237,13 +237,13 @@ export const createEmployee = async (companyCode, employee) => {
     email: employee.personalInfo?.email,
     mobile: employee.personalInfo?.mobile,
   });
-
+ 
   if (!result.success) {
     return result;
   }
-
+ 
   await addEmployee(companyCode, employee);
-
+ 
   return {
     success: true,
     message: "Employee created successfully.",

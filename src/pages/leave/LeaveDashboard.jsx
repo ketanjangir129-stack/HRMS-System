@@ -233,7 +233,7 @@ function LeaveDashboard() {
 
     return (
 
-        <div className="mx-auto max-w-[1600px] space-y-4 p-1 sm:space-y-6 sm:p-2">
+        <div className="mx-auto max-w-[1600px] p-0 sm:p-2">
 
             <LeaveHeader
                 year={year}
@@ -248,72 +248,81 @@ function LeaveDashboard() {
                 pendingCount={pendingCount}
             />
 
-            {showBalance && (
-                <>
-
-                    <LeaveBalanceCards
-                        balance={balance}
-                        loading={balanceLoading}
-                    />
-
-                    {balanceError && (
-                        <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-600 sm:p-4 sm:text-sm">
-                            {balanceError}
-                        </div>
-                    )}
-
-                </>
-            )}
-
             {/*
-            | The calendar and the recent list only sit side by side from `xl`.
-            | Below that the calendar needs the full width to keep seven
-            | readable columns, so the two stack rather than being squeezed
-            | into halves of a tablet.
+            | The header sits directly on the canvas, so the panels below it
+            | open with the same gap the Dashboard leaves under its greeting
+            | rather than being pulled up against the heading.
             */}
-            {(showCalendar || showHistory) && (
+            <div className="mt-6 space-y-4 sm:mt-8 sm:space-y-6">
 
-                <div className="grid grid-cols-1 gap-4 sm:gap-6 xl:grid-cols-12">
+                {showBalance && (
+                    <>
 
-                    {showCalendar && (
-                        <div className={showHistory ? "xl:col-span-5" : "xl:col-span-12"}>
-                            <LeaveCalendar
-                                requests={yearRequests}
-                                loading={requestsLoading}
-                                year={year}
-                            />
-                        </div>
-                    )}
+                        <LeaveBalanceCards
+                            balance={balance}
+                            loading={balanceLoading}
+                        />
 
-                    {showHistory && (
-                        <div className={showCalendar ? "xl:col-span-7" : "xl:col-span-12"}>
-                            <RecentLeaveRequests
-                                requests={yearRequests}
-                                loading={requestsLoading}
-                                error={requestsError}
-                                onRetry={reloadRequests}
-                                employeeId={employeeId}
-                                onView={setDetailRequest}
-                                onDelete={setDeleteRequest}
-                            />
-                        </div>
-                    )}
+                        {balanceError && (
+                            <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-600 sm:p-4 sm:text-sm">
+                                {balanceError}
+                            </div>
+                        )}
 
-                </div>
+                    </>
+                )}
 
-            )}
+                {/*
+                | The calendar and the recent list only sit side by side from
+                | `xl`. Below that the calendar needs the full width to keep
+                | seven readable columns, so the two stack rather than being
+                | squeezed into halves of a tablet.
+                */}
+                {(showCalendar || showHistory) && (
 
-            {showHistory && (
-                <LeaveHistoryTable
-                    requests={yearRequests}
-                    loading={requestsLoading}
-                    error={requestsError}
-                    onRetry={reloadRequests}
-                    subtitle={`Every leave request you submitted in ${year}`}
-                    headerSearch={search}
-                    emptyMessage="Leave requests you submit will appear here."
-                />
-            )}
+                    <div className="grid grid-cols-1 gap-4 sm:gap-6 xl:grid-cols-12">
+
+                        {showCalendar && (
+                            <div className={showHistory ? "xl:col-span-5" : "xl:col-span-12"}>
+                                <LeaveCalendar
+                                    requests={yearRequests}
+                                    loading={requestsLoading}
+                                    year={year}
+                                />
+                            </div>
+                        )}
+
+                        {showHistory && (
+                            <div className={showCalendar ? "xl:col-span-7" : "xl:col-span-12"}>
+                                <RecentLeaveRequests
+                                    requests={yearRequests}
+                                    loading={requestsLoading}
+                                    error={requestsError}
+                                    onRetry={reloadRequests}
+                                    employeeId={employeeId}
+                                    onView={setDetailRequest}
+                                    onDelete={setDeleteRequest}
+                                />
+                            </div>
+                        )}
+
+                    </div>
+
+                )}
+
+                {showHistory && (
+                    <LeaveHistoryTable
+                        requests={yearRequests}
+                        loading={requestsLoading}
+                        error={requestsError}
+                        onRetry={reloadRequests}
+                        subtitle={`Every leave request you submitted in ${year}`}
+                        headerSearch={search}
+                        emptyMessage="Leave requests you submit will appear here."
+                    />
+                )}
+
+            </div>
 
             <ApplyLeaveModal
                 open={showApplyModal && canApply}

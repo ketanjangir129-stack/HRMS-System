@@ -322,118 +322,135 @@ function AttendanceDashboard() {
   };
 
   return (
-    <div className="mx-auto max-w-[1600px] space-y-4 p-0 sm:space-y-6 sm:p-2">
+    <div className="mx-auto max-w-[1600px] p-0 sm:p-2">
 
       <AttendanceHeader
         onMarkAttendance={() => setMarkOpen(true)}
         canMarkAttendance={isApprover(currentUser)}
       />
 
-      <HolidayNotice holiday={todayHoliday} label="Today" />
+      {/*
+      | The heading is separated from the page the way the main Dashboard
+      | separates its own: a wider gap under the title than between the panels
+      | below it, so the greeting reads as the page's heading rather than as
+      | the first card in the stack.
+      */}
+      <div className="mt-6 space-y-4 sm:mt-8 sm:space-y-6">
 
-      {todayWeeklyOff && <WeeklyOffNotice date={todayKey} label="Today" />}
+        <HolidayNotice holiday={todayHoliday} label="Today" />
 
-      <div className="grid grid-cols-1 items-stretch gap-4 sm:gap-6 xl:grid-cols-12">
-        <div
-          className={
-            showSummary
-              ? "xl:col-span-5"
-              : quickActionsBesideCard
-                ? "xl:col-span-6"
-                : "xl:col-span-12"
-          }
-        >
-          <TodayAttendanceCard className="h-full" />
+        {todayWeeklyOff && <WeeklyOffNotice date={todayKey} label="Today" />}
+
+        <div className="grid grid-cols-1 items-stretch gap-4 sm:gap-6 xl:grid-cols-12">
+          <div
+            className={
+              showSummary
+                ? "xl:col-span-5"
+                : quickActionsBesideCard
+                  ? "xl:col-span-6"
+                  : "xl:col-span-12"
+            }
+          >
+            <TodayAttendanceCard className="h-full" />
+          </div>
+
+          {showSummary && (
+            /*
+            | Top aligned, not stretched: the punch card next to it is much
+            | the taller of the two, and matching its height is what left the
+            | four cards mostly empty. Aligned to the top they keep their own
+            | size and their top edge lines up with the card beside them,
+            | which is how the insight panels further down the page sit too.
+            */
+            <div className="self-start xl:col-span-7">
+              <AttendanceSummaryCards
+                summary={summary}
+                compact
+                gridClassName="grid-cols-2 sm:grid-rows-2"
+              />
+            </div>
+          )}
+
+          {quickActionsBesideCard && (
+            <div className="xl:col-span-6">
+              <AttendanceQuickActions gridClassName="grid grid-cols-1 gap-2" />
+            </div>
+          )}
+
         </div>
 
-        {showSummary && (
-          <div className="xl:col-span-7">
-            <AttendanceSummaryCards
-              summary={summary}
-              compact
-              gridClassName="grid-cols-2 sm:grid-rows-2"
-            />
+        {/*
+        | Today
+        |
+        | The table gets the row to itself. Its six columns never fitted beside
+        | another card: the status of a day sat behind a horizontal scrollbar,
+        | and sharing a row also stretched the card to the height of whatever
+        | was next to it, which left a block of empty white below a single row
+        | of attendance.
+        */}
+        {showToday && (
+          <AttendanceTodayTable
+            attendance={records}
+            loading={attendanceLoading || directoryLoading || scopeLoading}
+            error={attendanceError || directoryError}
+            onRetry={reloadDirectory}
+          />
+        )}
+
+        {!quickActionsBesideCard && <AttendanceQuickActions />}
+
+        {/* Insights */}
+        {insightCount > 0 && (
+          <div className="grid grid-cols-1 gap-4 sm:gap-6 lg:grid-cols-2 xl:grid-cols-12">
+
+            {showCalendar && (
+              <div className={insightSpan}>
+                <AttendanceCalendar
+                  history={history}
+                  holidayDates={holidayDates}
+                  loading={calendarLoading}
+                  onMonthChange={handleMonthChange}
+                />
+              </div>
+            )}
+
+            {showActivity && (
+              <div className={`lg:col-span-2 self-start ${insightSpan}`}>
+                <AttendanceRecentActivity
+                  activities={activities}
+                  loading={attendanceLoading || directoryLoading}
+                />
+              </div>
+            )}
+
+            {showAnalytics && (
+              <div className={`self-start ${insightSpan}`}>
+                <AttendanceAnalytics analytics={analytics} />
+              </div>
+            )}
+
           </div>
         )}
 
-        {quickActionsBesideCard && (
-          <div className="xl:col-span-6">
-            <AttendanceQuickActions gridClassName="grid grid-cols-1 gap-2" />
+        {/* Requests */}
+        {showRequests && (
+          <div className="grid grid-cols-1 gap-4 sm:gap-6 xl:grid-cols-12">
+
+            <div className="xl:col-span-12 self-start">
+              <AttendanceRequests
+                requests={detailedRequests}
+                loading={requestsLoading || directoryLoading || scopeLoading}
+                currentUser={currentUser}
+                reviewScope={reviewScope}
+                onApprove={handleApprove}
+                onReject={setRejectRequest}
+              />
+            </div>
+
           </div>
         )}
 
       </div>
-
-      {/*
-      | Today
-      |
-      | The table gets the row to itself. Its six columns never fitted beside
-      | another card: the status of a day sat behind a horizontal scrollbar,
-      | and sharing a row also stretched the card to the height of whatever
-      | was next to it, which left a block of empty white below a single row
-      | of attendance.
-      */}
-      {showToday && (
-        <AttendanceTodayTable
-          attendance={records}
-          loading={attendanceLoading || directoryLoading || scopeLoading}
-          error={attendanceError || directoryError}
-          onRetry={reloadDirectory}
-        />
-      )}
-
-      {!quickActionsBesideCard && <AttendanceQuickActions />}
-
-      {/* Insights */}
-      {insightCount > 0 && (
-        <div className="grid grid-cols-1 gap-4 sm:gap-6 lg:grid-cols-2 xl:grid-cols-12">
-
-          {showCalendar && (
-            <div className={insightSpan}>
-              <AttendanceCalendar
-                history={history}
-                holidayDates={holidayDates}
-                loading={calendarLoading}
-                onMonthChange={handleMonthChange}
-              />
-            </div>
-          )}
-
-          {showActivity && (
-            <div className={`lg:col-span-2 self-start ${insightSpan}`}>
-              <AttendanceRecentActivity
-                activities={activities}
-                loading={attendanceLoading || directoryLoading}
-              />
-            </div>
-          )}
-
-          {showAnalytics && (
-            <div className={`self-start ${insightSpan}`}>
-              <AttendanceAnalytics analytics={analytics} />
-            </div>
-          )}
-
-        </div>
-      )}
-
-      {/* Requests */}
-      {showRequests && (
-        <div className="grid grid-cols-1 gap-4 sm:gap-6 xl:grid-cols-12">
-
-          <div className="xl:col-span-12 self-start">
-            <AttendanceRequests
-              requests={detailedRequests}
-              loading={requestsLoading || directoryLoading || scopeLoading}
-              currentUser={currentUser}
-              reviewScope={reviewScope}
-              onApprove={handleApprove}
-              onReject={setRejectRequest}
-            />
-          </div>
-
-        </div>
-      )}
 
       <MarkAttendanceModal
         open={markOpen}

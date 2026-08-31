@@ -62,7 +62,7 @@ function DeleteHolidayModal({
 
       <div
         onClick={(event) => event.stopPropagation()}
-        className="hide-scrollbar max-h-[92vh] w-full max-w-md overflow-y-auto rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl sm:p-6"
+        className="hide-scrollbar max-h-[92vh] w-full max-w-md overflow-y-auto rounded-2xl border border-line bg-surface p-5 shadow-2xl sm:p-6"
       >
 
         {/* Header */}
@@ -75,7 +75,7 @@ function DeleteHolidayModal({
               <FiAlertTriangle />
             </div>
 
-            <h2 className="text-lg font-bold tracking-tight text-slate-900 sm:text-xl">
+            <h2 className="ui-card-title">
               Delete Holiday
             </h2>
 
@@ -86,20 +86,20 @@ function DeleteHolidayModal({
             onClick={onClose}
             disabled={deleting}
             title="Close"
-            className="flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600 disabled:cursor-not-allowed disabled:opacity-50"
+            className="ui-icon-btn h-8 w-8 shrink-0 disabled:cursor-not-allowed disabled:opacity-50"
           >
             <FiX />
           </button>
 
         </div>
 
-        <p className="text-sm leading-relaxed text-slate-600">
+        <p className="text-sm leading-relaxed text-ink-muted">
           Are you sure you want to remove this holiday from the calendar?
         </p>
 
         {/* The holiday being removed */}
 
-        <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-3 sm:p-4">
+        <div className="mt-4 rounded-xl border border-line bg-surface-muted p-3 sm:p-4">
 
           {/*
           | The badge drops under the holiday on a phone: a type and an
@@ -111,11 +111,11 @@ function DeleteHolidayModal({
 
             <div className="min-w-0">
 
-              <p className="truncate text-sm font-bold text-slate-900">
+              <p className="truncate text-sm font-bold text-ink">
                 {holiday.name}
               </p>
 
-              <p className="mt-0.5 text-xs text-slate-500">
+              <p className="mt-0.5 text-xs text-ink-subtle">
                 {formatHolidayDateWithDay(holiday.date)}
               </p>
 
@@ -151,7 +151,7 @@ function DeleteHolidayModal({
             type="button"
             onClick={onClose}
             disabled={deleting}
-            className="w-full cursor-pointer rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-600 transition-all duration-200 hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-300 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
+            className="ui-btn ui-btn-secondary w-full font-semibold sm:w-auto"
           >
             Cancel
           </button>
@@ -160,7 +160,7 @@ function DeleteHolidayModal({
             type="button"
             onClick={onConfirm}
             disabled={deleting}
-            className="inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-red-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-red-600/20 transition-all duration-200 hover:-translate-y-0.5 hover:bg-red-700 hover:shadow-lg hover:shadow-red-600/30 focus:outline-none focus:ring-2 focus:ring-red-400 focus:ring-offset-2 active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-70 disabled:hover:translate-y-0 sm:w-auto"
+            className="ui-btn w-full bg-red-600 font-semibold text-white shadow-sm hover:bg-red-700 sm:w-auto"
           >
 
             {deleting ? (

@@ -46,19 +46,19 @@ function TodayFooter({ records }) {
     | a 360px card would break "Punched out" across two lines and leave the
     | numbers sitting under each other's captions.
     */
-    <div className="grid grid-cols-1 divide-y divide-slate-100 border-t border-slate-200 bg-slate-50/70 sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+    <div className="grid grid-cols-1 divide-y divide-line-subtle border-t border-line bg-surface-muted/70 sm:grid-cols-3 sm:divide-x sm:divide-y-0">
 
       {stats.map((stat) => (
 
         <div key={stat.label} className="px-4 py-3 sm:px-6 sm:py-4">
 
-          <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+          <p className="ui-eyebrow">
             {stat.label}
           </p>
 
-          <p className="mt-1 text-lg font-bold text-slate-900">
+          <p className="mt-1 text-lg font-bold text-ink">
             {stat.value}{" "}
-            <span className="text-sm font-medium text-slate-500">
+            <span className="text-sm font-medium text-ink-subtle">
               {stat.caption}
             </span>
           </p>

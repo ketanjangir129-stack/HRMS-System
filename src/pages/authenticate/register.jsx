@@ -8,7 +8,7 @@ import {
 } from "../../services/companyService";
 import { toast } from "react-toastify";
 import { useNavigate } from "react-router-dom";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff } from "lucide-react"; 
 
 
 const Register = () => {
@@ -23,8 +23,8 @@ const Register = () => {
         phone: "",
         address: "",
     });
-    const [errors, setErrors] = useState({});
     const [showPassword, setShowPassword] = useState(false);
+    const [errors, setErrors] = useState({});
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -236,6 +236,7 @@ const handleSubmit = async (e) => {
                                 <label className="block text-sm font-medium text-ink-muted mb-2">
                                     Password
                                 </label>
+
                                 <div className="relative">
                                     <input
                                         type={showPassword ? "text" : "password"}
@@ -261,7 +262,6 @@ const handleSubmit = async (e) => {
                                         )}
                                     </button>
                                 </div>
-
                                 {errors.password && (
                                     <p className="mt-1 text-sm text-red-500">
                                         {errors.password}
