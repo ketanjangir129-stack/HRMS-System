@@ -465,6 +465,15 @@ h3 {
   color: var(--color-ink-faint);
 }
 
+/*
+| A field with a currency mark parked inside it. The kit rules here are
+| unlayered, so they outrank Tailwind's `pl-*` utilities however late those
+| are written; the left inset has to be restated as its own rule to land.
+*/
+.ui-field-currency {
+  padding-left: 2rem;
+}
+
 .ui-field:focus {
   border-color: var(--color-brand);
   box-shadow: 0 0 0 3px var(--color-brand-ring);
