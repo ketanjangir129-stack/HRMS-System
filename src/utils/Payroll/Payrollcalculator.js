@@ -4,7 +4,7 @@ import {
   roundHours,
   roundMoney,
 } from "./payrollConstants";
-import { WORK_RULES } from "../attendance/attendanceConstants";
+import { DEFAULT_WORK_DAY_MINUTES } from "../attendance/attendanceSettings";
 
 /*
 |--------------------------------------------------------------------------
@@ -42,9 +42,15 @@ const sum = (values = {}) =>
 
 /*
 | The full working day, in hours, that an hourly rate is derived from.
+|
+| The default day rather than the company's configured one, and for the same
+| reason the overtime threshold it prices is: an hourly rate that moved with a
+| change to the office hours would reprice overtime that was already paid.
+| Pricing a company's own working day is a payroll decision, not a consequence
+| of configuring attendance.
 */
 
-const HOURS_PER_DAY = WORK_RULES.fullDayMinutes / 60;
+const HOURS_PER_DAY = DEFAULT_WORK_DAY_MINUTES / 60;
 
 /*
 | The days of the month that are not paid for.

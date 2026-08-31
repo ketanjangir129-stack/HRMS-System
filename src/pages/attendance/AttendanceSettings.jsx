@@ -1,29 +1,25 @@
-import { FiBell, FiMapPin, FiSettings } from "react-icons/fi";
+import { FiSettings } from "react-icons/fi";
 import AttendancePageHeader from "../../components/attendance/AttendancePageHeader";
+import WorkingHoursPanel from "../../components/attendance/settings/WorkingHoursPanel";
 
 /*
 |--------------------------------------------------------------------------
 | Attendance Settings
 |--------------------------------------------------------------------------
-| Attendance preferences. The working day rules live in
-| `utils/attendance/attendanceConstants.js`.
+| Attendance preferences, for the signed in user's company only.
+|
+| The working day is the first section on it: the start time, the end time and
+| the grace period every punch in on this company's records is measured
+| against. Each section is a card that opens onto its own form, so a page that
+| will grow past one section reads as a list of what can be configured rather
+| than as a wall of fields; anything added later belongs in this stack beneath
+| it.
+|
+| The whole page is mounted behind `PermissionRoute permission="attendance.settings"`,
+| which is off for HR, manager and employee by default - so it is the owner's
+| screen until the owner hands it out on Roles & Access.
 |--------------------------------------------------------------------------
 */
-
-const SETTINGS = [
-  {
-    title: "Geo Fencing",
-    description: "Allowed locations for punch in",
-    icon: <FiMapPin />,
-    color: "bg-emerald-50 text-emerald-600",
-  },
-  {
-    title: "Notifications",
-    description: "Late arrival and absence alerts",
-    icon: <FiBell />,
-    color: "bg-amber-50 text-amber-600",
-  },
-];
 
 function AttendanceSettings() {
   return (
@@ -35,34 +31,15 @@ function AttendanceSettings() {
         icon={<FiSettings />}
       />
 
+      {/*
+        The settings grid. Each section is a card in it, and a card that has
+        been opened takes the whole row for its form - so the grid is what
+        decides how big a closed card is, and the card is what decides how much
+        of the row it needs.
+      */}
       <div className="mt-6 grid grid-cols-1 gap-4 sm:mt-8 sm:gap-6 md:grid-cols-2 xl:grid-cols-3">
 
-        {SETTINGS.map((item) => (
-
-          <div
-            key={item.title}
-            className="ui-card ui-card-body"
-          >
-
-            <div className={`ui-tile text-xl ${item.color}`}>
-              {item.icon}
-            </div>
-
-            <h2 className="ui-card-title mt-4">
-              {item.title}
-            </h2>
-
-            <p className="ui-card-subtitle">
-              {item.description}
-            </p>
-
-            <span className="ui-badge mt-4 bg-surface-muted text-ink-subtle">
-              Coming soon
-            </span>
-
-          </div>
-
-        ))}
+        <WorkingHoursPanel />
 
       </div>
 

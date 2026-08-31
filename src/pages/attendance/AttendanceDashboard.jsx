@@ -16,6 +16,7 @@ import WeeklyOffNotice from "../../components/holiday/WeeklyOffNotice";
 import useAttendanceHistory from "../../hooks/useAttendanceHistory";
 import useAttendanceQuickActions from "../../hooks/useAttendanceQuickActions";
 import useAttendanceRequests from "../../hooks/useAttendanceRequests";
+import useAttendanceSettings from "../../hooks/useAttendanceSettings";
 import useAuth from "../../hooks/useAuth";
 import useDailyAttendance from "../../hooks/useDailyAttendance";
 import useEmployeeDirectory from "../../hooks/useEmployeeDirectory";
@@ -172,6 +173,17 @@ function AttendanceDashboard() {
     holidayYears
   );
 
+  /*
+  | The company's working day, read once for the page. Only the analytics panel
+  | uses it - to state the expected start time and to measure the hours
+  | progress bar against a full day - so the read is skipped entirely when the
+  | panel is withheld.
+  |
+  | Nothing else on this page needs it: every status it renders was decided by
+  | the service when the punch was written and is read straight off the record.
+  */
+  const { settings: workRules } = useAttendanceSettings(showAnalytics);
+
   const todayKey = getDateKey();
 
   const todayHoliday = holidayMap[todayKey] || null;
@@ -238,8 +250,12 @@ function AttendanceDashboard() {
   );
 
   const analytics = useMemo(
-    () => getAttendanceAnalytics(records, activeCount, dayOptions),
-    [records, activeCount, dayOptions]
+    () =>
+      getAttendanceAnalytics(records, activeCount, {
+        ...dayOptions,
+        workRules,
+      }),
+    [records, activeCount, dayOptions, workRules]
   );
 
   const activities = useMemo(
@@ -425,7 +441,10 @@ function AttendanceDashboard() {
 
             {showAnalytics && (
               <div className={`self-start ${insightSpan}`}>
-                <AttendanceAnalytics analytics={analytics} />
+                <AttendanceAnalytics
+                  analytics={analytics}
+                  workRules={workRules}
+                />
               </div>
             )}
 

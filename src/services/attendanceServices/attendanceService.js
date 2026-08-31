@@ -20,13 +20,19 @@ import {
 import {
   APPROVAL_STATUS,
   ATTENDANCE_STATUS,
+  DEFAULT_WORK_RULES,
 } from "../../utils/attendance/attendanceConstants";
+import { getAttendanceSettings } from "../settings/attendanceSettingsService";
 
 /*
 |--------------------------------------------------------------------------
 | Attendance Service
 |--------------------------------------------------------------------------
-| The only place that talks to the attendance branch of the database.
+| The only place that talks to the attendance records branch of the database.
+| The two siblings beside it have services of their own - `requests` belongs to
+| `attendanceRequestService` and `settings` to `attendanceSettingsService` - so
+| the attendance tree has three writers, one per leaf, and none of them can
+| reach into another's.
 |
 | A record stores the minimum a day of attendance needs. Employee details are
 | never copied here: they are resolved from
@@ -104,7 +110,50 @@ const buildApproval = ({
 };
 
 /*
+|--------------------------------------------------------------------------
+| Working Day Rules
+|--------------------------------------------------------------------------
+| The company's configured start time, end time and grace period, which is
+| what decides whether a punch in is Present or Late.
+|
+| Read once per operation and passed down, never fetched inside the record
+| builder: `clearLeaveAttendance` rebuilds a whole range of days from a single
+| decision, and a builder that read for itself would go back to Firebase once
+| per day of a fortnight's leave.
+|
+| A failed read is never allowed to fail a punch. A company with no settings
+| node, an employee whose role cannot read the settings branch, a dropped
+| connection - none of those are reasons to refuse to record that somebody came
+| to work, so the day is recorded against the defaults and the reason is left
+| in the console. This is the attendance module deciding it can live without a
+| configuration; the settings service still throws, so the Settings screen can
+| say plainly that it could not load.
+*/
+
+const readWorkRules = async (companyCode) => {
+
+  try {
+
+    return await getAttendanceSettings(companyCode);
+
+  } catch (error) {
+
+    console.error(
+      "Failed to load attendance settings, using the default working day:",
+      error
+    );
+
+    return DEFAULT_WORK_RULES;
+
+  }
+
+};
+
+/*
 | Firebase rejects `undefined`, so every field is written explicitly.
+|
+| `workRules` is only consulted when no status was supplied - a caller that
+| already knows what the day was does not need the working day to derive it.
 */
 
 const buildAttendanceRecord = ({
@@ -115,6 +164,7 @@ const buildAttendanceRecord = ({
   status,
   remarks = "",
   approval,
+  workRules,
 }) => ({
 
   employeeId,
@@ -131,7 +181,7 @@ const buildAttendanceRecord = ({
 
   status:
     status ||
-    (punchIn ? resolvePunchInStatus(punchIn) : ""),
+    (punchIn ? resolvePunchInStatus(punchIn, workRules) : ""),
 
   remarks,
 
@@ -352,10 +402,16 @@ export const punchInEmployee = async (
 
   }
 
+  /*
+  | Read here rather than at the top of the function, so a day that is already
+  | marked - the two branches above - is answered without a settings read that
+  | nothing was going to use.
+  */
   const attendance = buildAttendanceRecord({
     employeeId,
     date: today,
     punchIn: Date.now(),
+    workRules: await readWorkRules(companyCode),
   });
 
   const record = location
@@ -473,12 +529,21 @@ export const saveAttendance = async (
 
   const existing = snapshot.exists() ? snapshot.val() : null;
 
+  /*
+  | The form always sends a status, so the working day is only needed for a
+  | caller that left it out and gave a punch time instead. Reading it only then
+  | keeps marking a day by hand at the two reads it has always been.
+  */
   const record = buildAttendanceRecord({
     ...attendance,
     approval: {
       status: APPROVAL_STATUS.APPROVED,
       by: approvedBy,
     },
+    workRules:
+      !attendance.status && attendance.punchIn
+        ? await readWorkRules(companyCode)
+        : undefined,
   });
 
   await set(
@@ -761,11 +826,18 @@ export const clearLeaveAttendance = async (
     return { success: true, days: 0 };
   }
 
-  const snapshots = await readEmployeeDays(
-    companyCode,
-    employeeId,
-    dateKeys
-  );
+  const [snapshots, workRules] = await Promise.all([
+
+    readEmployeeDays(companyCode, employeeId, dateKeys),
+
+    /*
+    | Once for the whole range. A day given back that had no status before the
+    | leave was written over it has its status derived from its punch in again,
+    | so the range is rebuilt against the working day the company is on now.
+    */
+    readWorkRules(companyCode),
+
+  ]);
 
   const updates = {};
 
@@ -803,6 +875,7 @@ export const clearLeaveAttendance = async (
           | again, which covers a day that had no status to begin with.
           */
           status: current.leaveStatusBefore || "",
+          workRules,
           remarks: "",
           /*
           | Back to a plain punched day, so back to Pending like any other.

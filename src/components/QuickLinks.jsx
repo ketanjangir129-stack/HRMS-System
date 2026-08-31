@@ -1,4 +1,5 @@
 import { useNavigate } from "react-router-dom";
+import { useMemo } from "react";
 import {
     Building,
     Building2,
@@ -9,27 +10,15 @@ import {
     Users,
     Wallet,
 } from "lucide-react";
+import useRoleAccess from "../hooks/useRoleAccess";
+
+/* Quick Find (Dashboard card) */
 
 /*
-|--------------------------------------------------------------------------
-| Quick Find (Dashboard card)
-|--------------------------------------------------------------------------
-| The eight places somebody lands on most, as one grid of tiles.
-|
-| The tiles were eight hand-written blocks that differed only in their icon,
-| hue and destination, which is how three of them had drifted onto a
-| different icon set and one onto a grey that read as disabled. They are one
-| list now, so a tile cannot drift from its neighbours.
-|
-| The icons are `lucide-react`, and deliberately the same glyphs the sidebar
-| uses: a shortcut to Employees and the Employees item in the menu are the
-| same picture, so the tile is recognised as the link it duplicates rather
-| than read as a different feature.
-|
-| The hue is per destination and stays put, because it is the fastest thing
-| to aim at - after a week the amber tile IS Departments, and shuffling the
-| colours would cost more than it gained.
-|--------------------------------------------------------------------------
+    Every tile carries the permission its screen is offered under, the same way
+    the sidebar menu does. A shortcut to a page the role cannot open is not
+    dimmed, it is not in the grid at all - offering it would only lead to the
+    route guard turning it away.
 */
 
 const LINKS = [
@@ -37,6 +26,7 @@ const LINKS = [
         label: "Employees",
         icon: Users,
         path: "/employees",
+        permission: "employees",
         tile: "bg-indigo-100 text-indigo-600",
         hover: "hover:border-indigo-200 hover:bg-indigo-50/60",
         text: "group-hover:text-indigo-600",
@@ -45,6 +35,7 @@ const LINKS = [
         label: "Payroll",
         icon: ReceiptIndianRupee,
         path: "/payrolldashboard",
+        permission: "payroll",
         tile: "bg-emerald-100 text-emerald-600",
         hover: "hover:border-emerald-200 hover:bg-emerald-50/60",
         text: "group-hover:text-emerald-600",
@@ -53,6 +44,7 @@ const LINKS = [
         label: "Departments",
         icon: Building2,
         path: "/departments",
+        permission: "departments",
         tile: "bg-amber-100 text-amber-600",
         hover: "hover:border-amber-200 hover:bg-amber-50/60",
         text: "group-hover:text-amber-600",
@@ -61,6 +53,7 @@ const LINKS = [
         label: "OnBoarding",
         icon: UserRoundPlus,
         path: "/OnboardDashboard",
+        permission: "onboarding",
         tile: "bg-rose-100 text-rose-600",
         hover: "hover:border-rose-200 hover:bg-rose-50/60",
         text: "group-hover:text-rose-600",
@@ -69,6 +62,7 @@ const LINKS = [
         label: "Tasks",
         icon: ListChecks,
         path: "/tasks",
+        permission: "tasks",
         tile: "bg-teal-100 text-teal-600",
         hover: "hover:border-teal-200 hover:bg-teal-50/60",
         text: "group-hover:text-teal-600",
@@ -77,34 +71,65 @@ const LINKS = [
         label: "Attendance",
         icon: CalendarCheck,
         path: "/attendance",
+        permission: "attendance",
         tile: "bg-pink-100 text-pink-600",
         hover: "hover:border-pink-200 hover:bg-pink-50/60",
         text: "group-hover:text-pink-600",
-    },
-    /*
-    | No destination yet - the Offices screen does not exist. It is rendered
-    | as plain text rather than a button so it does not offer a click that
-    | goes nowhere, and keeps its place in the grid.
-    */
-    {
-        label: "Offices",
-        icon: Building,
-        tile: "bg-cyan-100 text-cyan-600",
-        hover: "",
-        text: "",
     },
     {
         label: "Salary",
         icon: Wallet,
         path: "/salarydashboard",
+        permission: "salary",
         tile: "bg-violet-100 text-violet-600",
         hover: "hover:border-violet-200 hover:bg-violet-50/60",
         text: "group-hover:text-violet-600",
     },
 ];
 
+/*
+    Stand-ins for the tiles while the configuration is read. Rendering the full
+    grid first would show shortcuts that are about to disappear.
+*/
+
+function QuickLinksSkeleton() {
+    return (
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-3 gap-3 sm:gap-4">
+
+            {Array.from({ length: 6 }).map((_, index) => (
+
+                <div
+                    key={index}
+                    className="flex flex-col items-center rounded-xl border border-line-subtle bg-surface-muted/50 p-4"
+                >
+
+                    <span className="mb-2 h-10 w-10 animate-pulse rounded-xl bg-surface-raised" />
+
+                    <span className="h-3 w-16 animate-pulse rounded bg-surface-raised" />
+
+                </div>
+
+            ))}
+
+        </div>
+    );
+}
+
 function QuickLinks() {
     const navigate = useNavigate();
+
+    const { canAccessPage, loading } = useRoleAccess();
+
+    const visibleLinks = useMemo(
+        () => LINKS.filter((link) => canAccessPage(link.permission)),
+        [canAccessPage]
+    );
+
+    /*
+        A role with none of these screens gets no card rather than an empty
+        one standing under its heading.
+    */
+    if (!loading && visibleLinks.length === 0) return null;
 
     return (
         <div className="ui-card ui-card-body">
@@ -114,11 +139,17 @@ function QuickLinks() {
                 <p className="ui-card-subtitle">Jump straight to a section</p>
             </div>
 
-            {/* Two per row on a phone, four once there is room, back to three
-                beside the tasks card on a wide screen. */}
+            {loading ? (
+
+                <QuickLinksSkeleton />
+
+            ) : (
+
+            /* Two per row on a phone, four once there is room, back to three
+                beside the tasks card on a wide screen. */
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-3 gap-3 sm:gap-4">
 
-                {LINKS.map((link) => {
+                {visibleLinks.map((link) => {
 
                     const Icon = link.icon;
 
@@ -157,6 +188,8 @@ function QuickLinks() {
                 })}
 
             </div>
+
+            )}
 
         </div>
     );

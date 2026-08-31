@@ -4,7 +4,7 @@ import {
   FiUserCheck,
   FiAlertCircle,
 } from "react-icons/fi";
-import { WORK_RULES } from "../../utils/attendance/attendanceConstants";
+import { formatTimeValue } from "../../utils/attendance/attendanceSettings";
 
 /*
 |--------------------------------------------------------------------------
@@ -37,7 +37,14 @@ const toPercent = (value) => {
 
 };
 
-function AttendanceAnalytics({ analytics = {} }) {
+/*
+| `workRules` is the company's configured working day. The card only reads the
+| start time off it, to say what the average punch in is being compared with;
+| the hours progress bar it draws was already measured against the same
+| schedule by `getAttendanceAnalytics`, so the two cannot disagree.
+*/
+
+function AttendanceAnalytics({ analytics = {}, workRules }) {
 
   const rows = [
     {
@@ -56,7 +63,7 @@ function AttendanceAnalytics({ analytics = {} }) {
       icon: <FiClock />,
       iconColor: "bg-blue-50 text-blue-600",
       bar: "bg-blue-500",
-      subtitle: `Expected by ${WORK_RULES.startTime}`,
+      subtitle: `Expected by ${formatTimeValue(workRules?.startTime)}`,
     },
     {
       title: "Working Hours",
