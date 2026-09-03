@@ -144,7 +144,7 @@ export const PERMISSION_PAGES = [
         key: "editRole",
         label: "Edit Employee Role",
         description: "Change an employee's portal role",
-        defaults: { hr: true, manager: true, employee: false },
+        defaults: { hr: true, manager: false, employee: false },
       },
     ],
   },
