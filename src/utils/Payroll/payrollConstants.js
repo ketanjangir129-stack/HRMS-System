@@ -112,6 +112,24 @@ export const PAYROLL_PERMISSION = {
 };
 
 /*
+| My Payroll is a page of its own rather than a section of the dashboard
+| above, because the two answer different questions: that one runs the
+| company's month, this one shows an employee what they were paid. An employee
+| is given this and not that, so a section switch on `payroll` could not
+| express it - holding the page at all would hand them everybody's salaries.
+|
+| Its own sections are the panels of that page, so an owner can hand out the
+| payslip archive without the yearly totals, or the other way round.
+*/
+
+export const MY_PAYROLL_PERMISSION = {
+  SUMMARY: "myPayroll.summary",
+  CURRENT_MONTH: "myPayroll.currentMonth",
+  HISTORY: "myPayroll.history",
+  PAYSLIP: "myPayroll.payslip",
+};
+
+/*
 | Holding any one of the three is what makes somebody a payroll operator
 | rather than a person being paid, and that is the line a payslip is released
 | across: an operator has to read a month before it is closed in order to

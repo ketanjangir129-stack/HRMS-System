@@ -1,9 +1,18 @@
 # HRMS Email Service (Google Apps Script)
 
-Every email the HRMS sends — today, the onboarding invitation — goes through
-one Apps Script web app. The app posts the recipients to it; the script logs
-each one into a Google Sheet and then sends the mail from the Google account
-that owns the script.
+Every email the HRMS sends goes through one Apps Script web app. The app posts
+the recipients to it; the script logs each one into a Google Sheet and then
+sends the mail from the Google account that owns the script.
+
+Two emails exist today, one at each end of onboarding:
+
+| Template                | Sent when                                              | Carries                                            |
+| ----------------------- | ------------------------------------------------------ | -------------------------------------------------- |
+| `onboarding-invitation` | HR creates the invitation link, singly or in bulk       | The link to the onboarding form                     |
+| `onboarding-approved`   | HR approves the form the joiner submitted               | The sign-in link, company code, user id, first password |
+
+Both are poured into the same frame and built from the same employee details,
+so the second reads like the first — see *Adding another email* below.
 
 Sending from a Google account rather than a mail provider is what makes a
 whole joining batch possible in one go: there is no per-recipient provider
@@ -71,10 +80,20 @@ Edits are not live until they are deployed. Use **Deploy ▸ Manage deployments
 
 One row per recipient, written *before* anything is sent:
 
-| Logged At | Company Code | Company | Employee ID | Name | Email | Designation | Department | Joining Date | Invitation Link | Status | Message |
+| Logged At | Company Code | Company | Employee ID | Name | Email | Designation | Department | Joining Date | Link | Status | Message | Email Type |
 
-One sheet serves every company on the HRMS, which is why the code is logged
-next to the name — filter the tab by it to see one company's invitations.
+One sheet serves every company and every template on the HRMS, which is why
+the code is logged next to the name and the email type next to the outcome —
+filter the tab by either to see one company's invitations, or everybody who
+has been sent their sign-in details.
+
+`Link` is whichever link that email carried: the onboarding form for an
+invitation, the sign-in page for an approval.
+
+A sheet started by an earlier version of `Code.gs` is brought up to date on
+the next send — the heading row is rewritten in place. Columns here are only
+ever renamed or added on the end, never reordered, so rows already on the
+sheet keep their meaning.
 
 `Status` starts as `Pending` and becomes `Sent` or `Failed` once that row has
 been attempted. The order matters: Apps Script stops a run at six minutes, so
@@ -116,8 +135,66 @@ session.
 
 ## Adding another email later
 
-`renderTemplate_` in `Code.gs` maps a template name to a function. Add a
-function next to `onboardingInvitation_`, add a line to `renderTemplate_`, and
-add the name to `EMAIL_TEMPLATES` in
-[emailService.js](../src/services/email/emailService.js). The layout, the
-sheet logging and the batching are already shared.
+A template in `Code.gs` does not draw anything. It *describes* the email — a
+heading, some paragraphs, cards of label/value rows, and the one link the
+message exists for — and `message_` builds the HTML and the plain text from
+that description together, so the two can never drift apart:
+
+```js
+function contractRenewal_(data) {
+    return message_({
+        companyName: data.companyName,
+        subject: "Your contract at " + data.companyName,
+        preheader: "Please review and sign your renewed contract.",
+        heading: "Hello " + data.name + ",",
+        intro: ["Your contract has been renewed for another year."],
+        cards: [{ title: "The details", rows: employmentRows_(data) }],
+        action: { label: "Review and Sign", href: data.contractLink },
+        closing: ["Reply to this email if anything looks wrong."],
+    });
+}
+```
+
+Anything empty falls away on its own: a card whose rows are all blank, a
+button with no link, a paragraph that only applies sometimes.
+
+Then:
+
+1. Add an entry to `TEMPLATES` in `Code.gs` with the name and a label — the
+   label is what the sheet's *Email Type* column and the per-row results say.
+2. Add the same name to `EMAIL_TEMPLATES` in
+   [emailService.js](../src/services/email/emailService.js).
+3. Give the screens something to call, next to `sendInvitationEmail` and
+   `sendApprovalEmail` in
+   [onboardingEmailService.js](../src/services/email/onboardingEmailService.js).
+   That is where the company is read for the letterhead and the employee is
+   flattened into the shape the template expects.
+4. Redeploy the script (see above) — a new template is not live until you do.
+
+The layout, the sheet logging, the batching and the retry-safe failure
+reporting are all already shared.
+
+## How the layout handles phones
+
+Because a template describes rather than draws, every email gets the same
+responsive frame without asking for it — there is nothing to add to the
+function above.
+
+`layout_` writes each element twice over: an inline style, which is the
+desktop layout and is all a client like Outlook will read, and a class picked
+up by one media query in `RESPONSIVE_CSS` that fires at 600px and below —
+the width the card is built to, so it triggers exactly when the screen can no
+longer hold it. On a phone:
+
+- the outer and inner padding come in, so text is not pinched against the edge
+- body type steps **up** to 16px, the size below which iOS offers to zoom
+- card rows stack, label above value, instead of splitting a narrow screen 40/60
+- the button spans the column, making it a thumb-sized target
+
+Outlook ignores the media query entirely, which is the right division — it is
+never on a phone. It gets a conditional ghost table instead, because it does
+not honour `max-width` and the card would otherwise run the full width of a
+maximised window.
+
+If you change the frame, check it at 320px as well as on a desktop. The
+narrow end is where a two-column row or a fixed 32px padding gives out first.

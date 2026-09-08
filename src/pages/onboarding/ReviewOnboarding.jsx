@@ -4,6 +4,10 @@ import { FiArrowLeft } from "react-icons/fi";
 import { getOnboardingRequestById } from "../../services/OnboardingService";
 import Loader from "../../components/common/Loader";
 import { approveOnboarding, rejectOnboarding } from "../../services/ApprovalService";
+import {
+    isEmailServiceConfigured,
+    sendApprovalEmail,
+} from "../../services/email/onboardingEmailService";
 import RejectModal from "../../pages/onboarding/RejectModal";
 import { toast } from "react-toastify";
 
@@ -36,6 +40,46 @@ function ReviewOnboarding() {
         }
     };
 
+    /*
+    | Tells the new joiner they are through, with the details they need to
+    | sign in. Silent when no email service is configured — an installation
+    | without one should not toast a warning on every approval.
+    */
+    const notifyApproved = async (employee) => {
+
+        if (!employee?.email || !isEmailServiceConfigured()) {
+            return;
+        }
+
+        /*
+        | Its own try/catch, so that nothing going wrong on the way to the
+        | inbox can fall through to the caller and be reported there as the
+        | approval itself having failed.
+        */
+        try {
+
+            const outcome = await sendApprovalEmail(companyCode, employee);
+
+            if (outcome.success) {
+                toast.success(outcome.message);
+                return;
+            }
+
+            toast.warning(
+                `Employee approved, but the email could not be sent. ${outcome.message}`
+            );
+
+        } catch (error) {
+
+            console.error(error);
+
+            toast.warning(
+                "Employee approved, but the approval email could not be sent."
+            );
+
+        }
+    };
+
     const handleApprove = async () => {
         setApproving(true);
         try {
@@ -49,6 +93,16 @@ function ReviewOnboarding() {
             toast.success(
                 result?.message || "Onboarding approved successfully."
             );
+
+            /*
+            | The welcome email goes out on the back of the approval, but it
+            | is not part of it. A mail server having a bad afternoon leaves
+            | the employee approved and the screen saying so — only the
+            | second toast reports that the email did not make it, and HR
+            | can send the credentials another way.
+            */
+            await notifyApproved(result?.employee);
+
             navigate("/OnboardDashboard/OnBoardRequest");
         } catch (error) {
             console.error(error);

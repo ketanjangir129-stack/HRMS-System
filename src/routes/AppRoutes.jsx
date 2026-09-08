@@ -34,6 +34,7 @@ import SalaryForm from "../pages/salary/SalaryForm";
 import SalaryHistory from "../pages/salary/SalaryHistory";
 import PayrolllDashboard from "../pages/payroll/PayrollDashboard";
 import PaySlip from "../pages/payroll/PaySlip";
+import MyPayroll from "../pages/payroll/MyPayroll";
 import HRPolicy from "../pages/hrPolicy/HRPolicy";
 import AllTasks from "../pages/tasks/AllTasks";
 import Settings from "../pages/settings/Settings";
@@ -351,6 +352,33 @@ function AppRoutes(){
                     path="/payrolldashboard/payslip/:employeeId"
                     element={
                         <PermissionRoute permission="payroll.payslip">
+                            <PaySlip />
+                        </PermissionRoute>
+                    }
+                />
+
+                {/*
+                  My Payroll - the employee's own salary, behind its own
+                  permission rather than the payroll one. Holding that page
+                  would hand them the whole company's pay.
+
+                  Its payslip route carries no employee id. The id is the
+                  signed in user's, so taking one from the address would be an
+                  invitation to read somebody else's by editing the URL.
+                */}
+                <Route
+                    path="/my-payroll"
+                    element={
+                        <PermissionRoute permission="myPayroll">
+                            <MyPayroll />
+                        </PermissionRoute>
+                    }
+                />
+
+                <Route
+                    path="/my-payroll/payslip"
+                    element={
+                        <PermissionRoute permission="myPayroll.payslip">
                             <PaySlip />
                         </PermissionRoute>
                     }

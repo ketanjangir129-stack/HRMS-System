@@ -59,6 +59,28 @@ const toEmployeeRecord = (request, employeeId) => {
   };
 };
 
+// What the approval email needs, pulled off the request while it is still
+// here to read: the record itself is deleted a few lines later, and the
+// account's password is only worth quoting while it is still the one the
+// employee was given.
+const toEmailRecipient = (request, employeeId) => {
+  const employment = request.employmentInfo || {};
+  const account = request.account || {};
+
+  return {
+    employeeId,
+    name: employment.name || "",
+    email: employment.email || "",
+    designation: employment.designation || "",
+    department: employment.department || "",
+    joiningDate: employment.joiningDate || "",
+    username: account.username || employeeId,
+    temporaryPassword: account.isPasswordChanged
+      ? ""
+      : account.password || "",
+  };
+};
+
 export const approveOnboarding = async (
   companyCode,
   employeeId,
@@ -119,6 +141,7 @@ export const approveOnboarding = async (
     return {
       success: true,
       message: "Employee onboarded successfully.",
+      employee: toEmailRecipient(request, employeeId),
     };
 
   } catch (error) {
@@ -129,6 +152,46 @@ export const approveOnboarding = async (
       success: false,
       message: "Failed to approve onboarding.",
     };
+
+  }
+};
+
+// Stamped after the approval email has already left, which is why it
+// swallows its own failures: the email is gone either way, and a screen told
+// "not sent" because a timestamp would not write would send it a second time.
+//
+// The employee is read first so a stamp for a record that has since been
+// deleted cannot recreate it as a stub.
+export const markApprovalEmailSent = async (companyCode, employeeId) => {
+
+  if (!companyCode || !employeeId) {
+    return false;
+  }
+
+  try {
+
+    const employeeRef = ref(
+      db,
+      `companies/${companyCode}/employees/${employeeId}`
+    );
+
+    const snapshot = await get(employeeRef);
+
+    if (!snapshot.exists()) {
+      return false;
+    }
+
+    await update(employeeRef, {
+      approvalEmailSentAt: Date.now(),
+    });
+
+    return true;
+
+  } catch (error) {
+
+    console.error("Could not stamp the approval email as sent:", error);
+
+    return false;
 
   }
 };

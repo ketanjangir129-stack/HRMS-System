@@ -36,6 +36,7 @@ const SERVICE_KEY = (import.meta.env.VITE_EMAIL_SERVICE_KEY || "").trim();
 */
 export const EMAIL_TEMPLATES = {
     ONBOARDING_INVITATION: "onboarding-invitation",
+    ONBOARDING_APPROVED: "onboarding-approved",
 };
 
 /*
