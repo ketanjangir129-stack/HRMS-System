@@ -1,6 +1,7 @@
 import {
   FiBarChart2,
   FiCalendar,
+  FiCheckSquare,
   FiFileText,
   FiSettings,
   FiUser,
@@ -37,6 +38,19 @@ const ACTIONS = [
     color: "bg-blue-50 text-blue-600",
     path: "/attendance/daily",
     permission: "attendance.daily",
+  },
+  /*
+  | Directly after the daily list, because that is the page it was taken off:
+  | signing a day off used to be an extra column beside today's punches, which
+  | meant it could only ever be done for today and one row at a time.
+  */
+  {
+    title: "Attendance Approval",
+    description: "Approve or reject recorded days",
+    icon: FiCheckSquare,
+    color: "bg-emerald-50 text-emerald-600",
+    path: "/attendance/approvals",
+    permission: "attendance.approvals",
   },
   // {
   //   title: "Monthly Attendance",

@@ -72,7 +72,22 @@ function DataTable({
   paginationLabel = "records",
   minWidthClass = "min-w-[900px]",
   mobileCard = null,
+  /*
+  | Extra classes for one row, as a string or as `(row, index) => string`.
+  |
+  | Opt in and empty by default, so every existing table renders exactly as it
+  | did. It exists for the tables where a row carries a state of its own that
+  | the cells cannot show on their own - a selected row on the approval queue
+  | being the first - and a selection nobody can see is a selection nobody
+  | trusts.
+  */
+  rowClassName = "",
 }) {
+
+  const resolveRowClass = (row, index) =>
+    typeof rowClassName === "function"
+      ? rowClassName(row, index) || ""
+      : rowClassName;
 
   const [sortBy, setSortBy] = useState(defaultSortBy);
   const [sortOrder, setSortOrder] = useState(defaultSortOrder);
@@ -208,7 +223,7 @@ function DataTable({
 
               <div
                 key={rowKey ? rowKey(row, index) : index}
-                className="px-4 py-4 transition-colors active:bg-surface-muted"
+                className={`px-4 py-4 transition-colors active:bg-surface-muted ${resolveRowClass(row, index)}`}
               >
                 {mobileCard(row, index)}
               </div>
@@ -267,7 +282,7 @@ function DataTable({
 
               <tr
                 key={rowKey ? rowKey(row, index) : index}
-                className="group transition-colors hover:bg-surface-muted"
+                className={`group transition-colors hover:bg-surface-muted ${resolveRowClass(row, index)}`}
               >
 
                 {columns.map((column) => (

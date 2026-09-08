@@ -239,6 +239,28 @@ export const PERMISSION_PAGES = [
         defaults: { hr: true, manager: true, employee: false },
       },
       {
+        /*
+        | The approval desk: every recorded day of a period, with the queue,
+        | the bulk sign off and the decision trail.
+        |
+        | It is a section of its own rather than part of Daily Attendance
+        | because reading a day and deciding it are two different rights. A
+        | role can be given the daily list to watch the floor without being
+        | given the authority to say what a month of attendance is worth, and
+        | before this the two arrived together.
+        |
+        | Withheld from an employee, and given to a manager - who is narrowed
+        | again at runtime to the departments they run. This switch decides
+        | whether the role has the desk at all; the department scope decides
+        | whose days are on it.
+        */
+        key: "approvals",
+        label: "Attendance Approval",
+        description: "Approve or reject recorded days",
+        path: "/attendance/approvals",
+        defaults: { hr: true, manager: true, employee: false },
+      },
+      {
         key: "monthly",
         label: "Monthly Attendance",
         description: "Every employee across a month",

@@ -22,6 +22,7 @@ import DailyAttendance from "../pages/attendance/DailyAttendance";
 import MonthlyAttendance from "../pages/attendance/MonthlyAttendance";
 import MyAttendance from "../pages/attendance/MyAttendance";
 import AttendanceRequests from "../pages/attendance/AttendanceRequests";
+import AttendanceApprovals from "../pages/attendance/AttendanceApprovals";
 import Regularization from "../pages/attendance/Regularization";
 import AttendanceReports from "../pages/attendance/AttendanceReports";
 import AttendanceSettings from "../pages/attendance/AttendanceSettings";
@@ -190,6 +191,21 @@ function AppRoutes(){
                     element={
                         <PermissionRoute permission="attendance.daily">
                             <DailyAttendance />
+                        </PermissionRoute>
+                    }
+                />
+
+                {/*
+                  The approval desk. Guarded by its own permission rather than
+                  by `attendance.daily`: reading a day and deciding it are two
+                  different rights, and the page also re-asks the department
+                  scope before it writes anything.
+                */}
+                <Route
+                    path="/attendance/approvals"
+                    element={
+                        <PermissionRoute permission="attendance.approvals">
+                            <AttendanceApprovals />
                         </PermissionRoute>
                     }
                 />
