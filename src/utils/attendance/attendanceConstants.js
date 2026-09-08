@@ -73,13 +73,26 @@ export const FALLBACK_DOT = "bg-slate-500";
 | Working Day Rules
 |--------------------------------------------------------------------------
 | A punch in later than `startTime` plus the grace period counts as Late, and
-| `fullDayMinutes` is the working day used for the working hours progress bar.
+| the span from `startTime` to `endTime` is the full working day the hours
+| progress bar is measured against.
+|
+| These are the *defaults*, not the rules. Every company configures its own
+| under `companies/{companyCode}/attendance/settings`, and a company that has
+| never opened the Attendance Settings screen falls back to exactly these -
+| which is why the values below are the ones the module has always used, and
+| why nothing in the business logic reads this constant directly. It is the
+| fallback the settings are merged over, and `utils/attendance/attendanceSettings`
+| is what does the merging.
+|
+| There is deliberately no `fullDayMinutes` here. A working day that is stated
+| separately from the two times that bound it is a third number free to
+| disagree with them, so it is derived instead - see `getWorkDayMinutes`.
 */
 
-export const WORK_RULES = {
+export const DEFAULT_WORK_RULES = {
   startTime: "09:30",
-  graceMinutes: 15,
-  fullDayMinutes: 540,
+  endTime: "18:30",
+  gracePeriodMinutes: 15,
 };
 
 /*

@@ -21,13 +21,16 @@ import { BrowserRouter } from 'react-router-dom';
 | for different reasons, and only one of them is loaded at all for the roles
 | that are never narrowed.
 |
-| Theme sits outside both: it is a device preference rather than a company
-| one, and the login screen is painted before there is a user to have it.
+| Theme is a device preference rather than a company one, so it does not need
+| a company - but it does need to know whether anybody is signed in, because
+| the toggle that controls it lives in the navbar and the navbar only exists
+| behind a login. Hence inside authentication, and outside both role access
+| and manager scope, neither of which it has anything to ask.
 */
 
 ReactDOM.createRoot(document.getElementById("root")).render(
-  <ThemeProvider>
-    <AuthProvider>
+  <AuthProvider>
+    <ThemeProvider>
       <RoleAccessProvider>
         <ManagerScopeProvider>
           <BrowserRouter>
@@ -36,6 +39,6 @@ ReactDOM.createRoot(document.getElementById("root")).render(
           </BrowserRouter>
         </ManagerScopeProvider>
       </RoleAccessProvider>
-    </AuthProvider>
-  </ThemeProvider>
+    </ThemeProvider>
+  </AuthProvider>
 );

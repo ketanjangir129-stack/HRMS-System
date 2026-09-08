@@ -14,7 +14,7 @@ function Field({
   fullWidth = false,
 }) {
   const baseClass =
-    "border p-3 rounded-lg w-full outline-none focus:ring-2 focus:ring-blue-500";
+    "border p-3 rounded-lg w-full bg-surface outline-none focus:ring-2 focus:ring-blue-500";
 
   const stateClass = readOnly
     ? "bg-gray-100 text-gray-600 cursor-not-allowed"

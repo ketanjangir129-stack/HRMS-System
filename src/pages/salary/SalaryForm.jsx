@@ -576,11 +576,11 @@ function SalaryForm() {
                     readOnly={readOnly}
                     placeholder="0"
                     /*
-                    | `pl-8` after the kit class, not instead of it: the utility
-                    | is emitted later in the cascade, so it only moves the text
-                    | clear of the ₹ and leaves the rest of the field alone.
+                    | The currency class after the kit class, not instead of it:
+                    | it only moves the text clear of the ₹ and leaves the rest
+                    | of the field alone.
                     */
-                    className="ui-field pl-8"
+                    className="ui-field ui-field-currency"
                 />
 
             </div>

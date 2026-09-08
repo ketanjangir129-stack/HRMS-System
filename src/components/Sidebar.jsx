@@ -115,7 +115,7 @@ const menuGroups = [
         label: "HR Policy",
         path: "/hr-policy",
         icon: ShieldUser ,
-        permission: "tasks",
+        permission: "hrPolicy",
       },
     ],
   },

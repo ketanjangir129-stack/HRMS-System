@@ -8,6 +8,7 @@ import {
 } from "../../services/companyService";
 import { toast } from "react-toastify";
 import { useNavigate } from "react-router-dom";
+import { Eye, EyeOff } from "lucide-react"; 
 
 
 const Register = () => {
@@ -22,6 +23,7 @@ const Register = () => {
         phone: "",
         address: "",
     });
+    const [showPassword, setShowPassword] = useState(false);
     const [errors, setErrors] = useState({});
 
     const handleChange = (e) => {
@@ -112,20 +114,20 @@ const handleSubmit = async (e) => {
       
 
     return (
-        <div className="h-screen bg-slate-100 flex items-center justify-center p-4 overflow-hidden">
-            <div className="w-full max-w-5xl h-[92vh] bg-white rounded-3xl shadow-xl border border-slate-200 flex flex-col">
+        <div className="h-screen bg-canvas flex items-center justify-center p-4 overflow-hidden">
+            <div className="w-full max-w-5xl h-[92vh] bg-surface rounded-3xl shadow-xl border border-line flex flex-col">
 
                 {/* Header */}
-                <div className="px-8 py-6 border-b border-slate-200 flex-shrink-0">
+                <div className="px-8 py-6 border-b border-line flex-shrink-0">
                     <div className="inline-flex items-center px-3 py-1 rounded-full bg-blue-50 text-blue-600 text-sm font-medium">
                         HRMS
                     </div>
 
-                    <h1 className="mt-4 text-3xl font-bold text-slate-900">
+                    <h1 className="mt-4 text-3xl font-bold text-ink">
                         Company Registration
                     </h1>
 
-                    <p className="mt-2 text-slate-500">
+                    <p className="mt-2 text-ink-subtle">
                         Register your company to access the Human Resource Management System.
                     </p>
                 </div>
@@ -139,7 +141,7 @@ const handleSubmit = async (e) => {
 
                             {/* Company Name */}
                             <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-2">
+                                <label className="block text-sm font-medium text-ink-muted mb-2">
                                     Company Name
                                 </label>
 
@@ -150,8 +152,7 @@ const handleSubmit = async (e) => {
                                     onChange={handleChange}
                                     onBlur={handleBlur}
                                     placeholder="Wevois Labs Pvt Ltd"
-                                    className="w-full h-12 px-4 rounded-xl border border-slate-300 bg-white focus:outline-none focus:ring-4 focus:ring-blue-100 focus:border-blue-500 transition"
-                                    onBlur={handleBlur}
+                                    className="w-full h-12 px-4 rounded-xl border border-line bg-surface focus:outline-none focus:ring-4 focus:ring-blue-100 focus:border-blue-500 transition"
                                 />
 
                                 {errors.companyName && (
@@ -163,7 +164,7 @@ const handleSubmit = async (e) => {
 
                             {/* Company Code */}
                             <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-2">
+                                <label className="block text-sm font-medium text-ink-muted mb-2">
                                     Company Code
                                 </label>
 
@@ -174,7 +175,7 @@ const handleSubmit = async (e) => {
                                     onChange={handleChange}
                                     onBlur={handleBlur}
                                     placeholder="CMP001"
-                                    className="w-full h-12 px-4 rounded-xl border border-slate-300 bg-white focus:outline-none focus:ring-4 focus:ring-blue-100 focus:border-blue-500 transition"
+                                    className="w-full h-12 px-4 rounded-xl border border-line bg-surface focus:outline-none focus:ring-4 focus:ring-blue-100 focus:border-blue-500 transition"
                                 />
 
                                 {errors.companyCode && (
@@ -186,7 +187,7 @@ const handleSubmit = async (e) => {
 
                             {/* Owner Name */}
                             <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-2">
+                                <label className="block text-sm font-medium text-ink-muted mb-2">
                                     Owner Name
                                 </label>
 
@@ -197,7 +198,7 @@ const handleSubmit = async (e) => {
                                     onChange={handleChange}
                                     onBlur={handleBlur}
                                     placeholder="John Doe"
-                                    className="w-full h-12 px-4 rounded-xl border border-slate-300 bg-white focus:outline-none focus:ring-4 focus:ring-blue-100 focus:border-blue-500 transition"
+                                    className="w-full h-12 px-4 rounded-xl border border-line bg-surface focus:outline-none focus:ring-4 focus:ring-blue-100 focus:border-blue-500 transition"
                                 />
 
                                 {errors.ownerName && (
@@ -209,7 +210,7 @@ const handleSubmit = async (e) => {
 
                             {/* Email */}
                             <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-2">
+                                <label className="block text-sm font-medium text-ink-muted mb-2">
                                     Email Address
                                 </label>
 
@@ -220,7 +221,7 @@ const handleSubmit = async (e) => {
                                     onChange={handleChange}
                                     onBlur={handleBlur}
                                     placeholder="company@email.com"
-                                    className="w-full h-12 px-4 rounded-xl border border-slate-300 bg-white focus:outline-none focus:ring-4 focus:ring-blue-100 focus:border-blue-500 transition"
+                                    className="w-full h-12 px-4 rounded-xl border border-line bg-surface focus:outline-none focus:ring-4 focus:ring-blue-100 focus:border-blue-500 transition"
                                 />
 
                                 {errors.email && (
@@ -232,20 +233,35 @@ const handleSubmit = async (e) => {
 
                             {/* Password */}
                             <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-2">
+                                <label className="block text-sm font-medium text-ink-muted mb-2">
                                     Password
                                 </label>
 
-                                <input
-                                    type="password"
-                                    name="password"
-                                    value={formData.password}
-                                    onChange={handleChange}
-                                    onBlur={handleBlur}
-                                    placeholder="********"
-                                    className="w-full h-12 px-4 rounded-xl border border-slate-300 bg-white focus:outline-none focus:ring-4 focus:ring-blue-100 focus:border-blue-500 transition"
-                                />
+                                <div className="relative">
+                                    <input
+                                        type={showPassword ? "text" : "password"}
+                                        name="password"
+                                        value={formData.password}
+                                        onChange={handleChange}
+                                        onBlur={handleBlur}
+                                        placeholder="********"
+                                        className="w-full h-12 pl-4 pr-12 rounded-xl border border-line bg-surface focus:outline-none focus:ring-4 focus:ring-blue-100 focus:border-blue-500 transition"
+                                    />
 
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowPassword((prev) => !prev)}
+                                        aria-label={showPassword ? "Hide password" : "Show password"}
+                                        aria-pressed={showPassword}
+                                        className="absolute inset-y-0 right-0 flex w-12 items-center justify-center text-ink-subtle transition-colors hover:text-brand cursor-pointer rounded-r-xl"
+                                    >
+                                        {showPassword ? (
+                                            <EyeOff className="h-5 w-5" aria-hidden="true" />
+                                        ) : (
+                                            <Eye className="h-5 w-5" aria-hidden="true" />
+                                        )}
+                                    </button>
+                                </div>
                                 {errors.password && (
                                     <p className="mt-1 text-sm text-red-500">
                                         {errors.password}
@@ -255,7 +271,7 @@ const handleSubmit = async (e) => {
 
                             {/* Phone */}
                             <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-2">
+                                <label className="block text-sm font-medium text-ink-muted mb-2">
                                     Phone Number
                                 </label>
 
@@ -266,7 +282,7 @@ const handleSubmit = async (e) => {
                                     onChange={handleChange}
                                     onBlur={handleBlur}
                                     placeholder="9876543210"
-                                    className="w-full h-12 px-4 rounded-xl border border-slate-300 bg-white focus:outline-none focus:ring-4 focus:ring-blue-100 focus:border-blue-500 transition"
+                                    className="w-full h-12 px-4 rounded-xl border border-line bg-surface focus:outline-none focus:ring-4 focus:ring-blue-100 focus:border-blue-500 transition"
                                 />
 
                                 {errors.phone && (
@@ -278,7 +294,7 @@ const handleSubmit = async (e) => {
 
                             {/* Address */}
                             <div className="md:col-span-2">
-                                <label className="block text-sm font-medium text-slate-700 mb-2">
+                                <label className="block text-sm font-medium text-ink-muted mb-2">
                                     Company Address
                                 </label>
 
@@ -289,7 +305,7 @@ const handleSubmit = async (e) => {
                                     onChange={handleChange}
                                     onBlur={handleBlur}
                                     placeholder="Enter company address"
-                                    className="w-full p-4 rounded-xl border border-slate-300 bg-white resize-none focus:outline-none focus:ring-4 focus:ring-blue-100 focus:border-blue-500 transition"
+                                    className="w-full p-4 rounded-xl border border-line bg-surface resize-none focus:outline-none focus:ring-4 focus:ring-blue-100 focus:border-blue-500 transition"
                                 />
 
                                 {errors.address && (
@@ -349,7 +365,7 @@ const handleSubmit = async (e) => {
                     </form>
 
                     <div className="flex justify-center mt-3">
-                        <h1 className="font-semibold text-md">Already have an account ?</h1>
+                        <h1 className="font-semibold text-md text-ink-muted">Already have an account ?</h1>
                         <button
                             onClick={() => navigate("/login")}
                             className="text-blue-600 hover:text-blue-700 font-bold transition cursor-pointer"

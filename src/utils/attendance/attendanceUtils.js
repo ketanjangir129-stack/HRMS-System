@@ -1,8 +1,12 @@
 import {
     APPROVAL_STATUS,
     ATTENDANCE_STATUS,
-    WORK_RULES,
+    DEFAULT_WORK_RULES,
 } from "./attendanceConstants";
+import {
+    getLateCutoffMinutes,
+    getWorkDayMinutes,
+} from "./attendanceSettings";
 import { getDateKey } from "./attendanceDate";
 import {
     getDayName,
@@ -57,28 +61,41 @@ export const calculateWorkingHours = (punchIn, punchOut) => {
 | Punch In Status
 |--------------------------------------------------------------------------
 | Anything past the working day start plus the grace period is Late.
+|
+| Both come from the company's configured working day, which the attendance
+| service reads once per operation and passes in. It is an argument rather than
+| something fetched here because this file is pure: the same punch has to
+| resolve the same way in the service that writes it and anywhere it is ever
+| recalculated, and a function that fetched its own rules could not promise
+| that.
+|
+| Omitting the rules falls back to the defaults, which is what keeps a caller
+| that has no company code in hand - and every company that has never opened
+| the Attendance Settings screen - behaving exactly as before.
+|
+| The cut off is built on the punch's own day in local time, the way the rest
+| of the module reads a date, so a punch is judged against the working day it
+| actually happened on. Setting the minutes past 59 is deliberate: a start of
+| 23:50 with ten minutes of grace rolls into midnight on its own rather than
+| needing the hours worked out separately.
 */
 
-export const resolvePunchInStatus = (punchIn) => {
+export const resolvePunchInStatus = (
+    punchIn,
+    workRules = DEFAULT_WORK_RULES
+) => {
 
-    const [hours, minutes] = String(WORK_RULES.startTime)
-        .split(":")
-        .map(Number);
+    const punched = new Date(punchIn);
 
-    if (Number.isNaN(hours) || Number.isNaN(minutes)) {
+    if (Number.isNaN(punched.getTime())) {
         return ATTENDANCE_STATUS.PRESENT;
     }
 
-    const cutoff = new Date(punchIn);
+    const cutoff = new Date(punched);
 
-    cutoff.setHours(
-        hours,
-        minutes + WORK_RULES.graceMinutes,
-        0,
-        0
-    );
+    cutoff.setHours(0, getLateCutoffMinutes(workRules), 0, 0);
 
-    return new Date(punchIn) > cutoff
+    return punched > cutoff
         ? ATTENDANCE_STATUS.LATE
         : ATTENDANCE_STATUS.PRESENT;
 
@@ -512,6 +529,13 @@ const averagePunchInTime = (punchIns = []) => {
 |--------------------------------------------------------------------------
 */
 
+/*
+| `options.workRules` is the company's configured working day. It is only used
+| for the hours progress bar below - what counts as a full day is the span from
+| the configured start to the configured end - and is passed straight through
+| to the summary, which ignores it.
+*/
+
 export const getAttendanceAnalytics = (
     attendance = [],
     totalEmployees = null,
@@ -523,6 +547,8 @@ export const getAttendanceAnalytics = (
         totalEmployees,
         options
     );
+
+    const fullDayMinutes = getWorkDayMinutes(options.workRules);
 
     const punchIns = attendance
         .filter((employee) => employee.punchIn)
@@ -566,7 +592,7 @@ export const getAttendanceAnalytics = (
         lateEmployees,
 
         workingHoursProgress: Math.min(
-            (averageMinutes / WORK_RULES.fullDayMinutes) * 100,
+            (averageMinutes / fullDayMinutes) * 100,
             100
         ),
 

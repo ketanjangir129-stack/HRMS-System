@@ -1,7 +1,5 @@
-import {
-  ATTENDANCE_STATUS,
-  WORK_RULES,
-} from "./attendanceConstants";
+import { ATTENDANCE_STATUS } from "./attendanceConstants";
+import { DEFAULT_WORK_DAY_MINUTES } from "./attendanceSettings";
 import {
   getDateKey,
   getMonthDateKeys,
@@ -74,10 +72,18 @@ const isPaidLeave = (record, manualLeaveIsPaid) =>
 /*
 | Hours worked past a full day. Only whole minutes are counted, because that
 | is all a punch pair records.
+|
+| Measured against the default working day rather than the company's configured
+| one, deliberately. This number is priced by payroll, and overtime is a policy
+| a company sets rather than something that follows from its office hours -
+| moving the threshold with the configured end time would silently change what
+| every already generated month was worth. Making overtime configurable is its
+| own decision and its own setting; until it is taken, this stays exactly the
+| threshold it has always been.
 */
 
 const overtimeMinutesOf = (workedMinutes) =>
-  Math.max(0, workedMinutes - WORK_RULES.fullDayMinutes);
+  Math.max(0, workedMinutes - DEFAULT_WORK_DAY_MINUTES);
 
 export const buildMonthlyAttendanceSummary = ({
   employeeId,
