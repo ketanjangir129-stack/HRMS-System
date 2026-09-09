@@ -28,7 +28,8 @@ const LINKS = [
         path: "/employees",
         permission: "employees",
         tile: "bg-indigo-100 text-indigo-600",
-        hover: "hover:border-indigo-200 hover:bg-indigo-50/60",
+        // hover: "hover:border-indigo-200 hover:bg-indigo-50/60",
+        hover: "hover:border-indigo-200 hover:bg-indigo-50/60 dark:hover:bg-indigo-500/12",
         text: "group-hover:text-indigo-600",
     },
     {
@@ -37,7 +38,8 @@ const LINKS = [
         path: "/payrolldashboard",
         permission: "payroll",
         tile: "bg-emerald-100 text-emerald-600",
-        hover: "hover:border-emerald-200 hover:bg-emerald-50/60",
+        hover: "hover:border-emerald-200 hover:bg-emerald-50/60 dark:hover:bg-emerald-500/12",
+        // hover: "hover:border-emerald-200 hover:bg-emerald-50/60",
         text: "group-hover:text-emerald-600",
     },
     {
@@ -46,7 +48,8 @@ const LINKS = [
         path: "/departments",
         permission: "departments",
         tile: "bg-amber-100 text-amber-600",
-        hover: "hover:border-amber-200 hover:bg-amber-50/60",
+        // hover: "hover:border-amber-200 hover:bg-amber-50/60",
+        hover: "hover:border-amber-200 hover:bg-amber-50/60 dark:hover:bg-amber-500/12",
         text: "group-hover:text-amber-600",
     },
     {
@@ -55,7 +58,8 @@ const LINKS = [
         path: "/OnboardDashboard",
         permission: "onboarding",
         tile: "bg-rose-100 text-rose-600",
-        hover: "hover:border-rose-200 hover:bg-rose-50/60",
+        // hover: "hover:border-rose-200 hover:bg-rose-50/60",
+        hover: "hover:border-rose-200 hover:bg-rose-50/60 dark:hover:bg-rose-500/12",
         text: "group-hover:text-rose-600",
     },
     {
@@ -64,7 +68,8 @@ const LINKS = [
         path: "/tasks",
         permission: "tasks",
         tile: "bg-teal-100 text-teal-600",
-        hover: "hover:border-teal-200 hover:bg-teal-50/60",
+        // hover: "hover:border-teal-200 hover:bg-teal-50/60",
+        hover: "hover:border-teal-200 hover:bg-teal-50/60 dark:hover:bg-teal-500/12",
         text: "group-hover:text-teal-600",
     },
     {
@@ -73,7 +78,8 @@ const LINKS = [
         path: "/attendance",
         permission: "attendance",
         tile: "bg-pink-100 text-pink-600",
-        hover: "hover:border-pink-200 hover:bg-pink-50/60",
+        // hover: "hover:border-pink-200 hover:bg-pink-50/60",
+        hover: "hover:border-pink-200 hover:bg-pink-50/60 dark:hover:bg-pink-500/12",
         text: "group-hover:text-pink-600",
     },
     {
@@ -82,7 +88,8 @@ const LINKS = [
         path: "/salarydashboard",
         permission: "salary",
         tile: "bg-violet-100 text-violet-600",
-        hover: "hover:border-violet-200 hover:bg-violet-50/60",
+        // hover: "hover:border-violet-200 hover:bg-violet-50/60",
+        hover: "hover:border-violet-200 hover:bg-violet-50/60 dark:hover:bg-violet-500/12",
         text: "group-hover:text-violet-600",
     },
 ];
