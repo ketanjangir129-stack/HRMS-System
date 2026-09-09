@@ -25,6 +25,7 @@ import AttendanceRequests from "../pages/attendance/AttendanceRequests";
 import AttendanceApprovals from "../pages/attendance/AttendanceApprovals";
 import Regularization from "../pages/attendance/Regularization";
 import AttendanceReports from "../pages/attendance/AttendanceReports";
+import AttendanceImport from "../pages/attendance/AttendanceImport";
 import AttendanceSettings from "../pages/attendance/AttendanceSettings";
 import LeaveDashboard from "../pages/leave/LeaveDashboard";
 import LeaveApprovals from "../pages/leave/LeaveApprovals";
@@ -251,6 +252,21 @@ function AppRoutes(){
                     element={
                         <PermissionRoute permission="attendance.reports">
                             <AttendanceReports />
+                        </PermissionRoute>
+                    }
+                />
+
+                {/*
+                  Importing a company's attendance history. Guarded by its own
+                  permission, which is off by default for every managed role:
+                  it is the only attendance screen that creates months of
+                  records in one action.
+                */}
+                <Route
+                    path="/attendance/import"
+                    element={
+                        <PermissionRoute permission="attendance.import">
+                            <AttendanceImport />
                         </PermissionRoute>
                     }
                 />

@@ -4,6 +4,7 @@ import {
   FiCheckSquare,
   FiFileText,
   FiSettings,
+  FiUploadCloud,
   FiUser,
 } from "react-icons/fi";
 import useRoleAccess from "./useRoleAccess";
@@ -75,6 +76,19 @@ const ACTIONS = [
     color: "bg-pink-50 text-pink-600",
     path: "/attendance/reports",
     permission: "attendance.reports",
+  },
+  /*
+  | Next to Settings rather than next to the daily screens: importing a year of
+  | history is something a company does when it arrives, alongside configuring
+  | the working day, and not part of running a week of attendance.
+  */
+  {
+    title: "Import Attendance",
+    description: "Migrate historical data",
+    icon: FiUploadCloud,
+    color: "bg-violet-50 text-violet-600",
+    path: "/attendance/import",
+    permission: "attendance.import",
   },
   {
     title: "Settings",
