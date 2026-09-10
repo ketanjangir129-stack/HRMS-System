@@ -1,8 +1,10 @@
 import {
   FiBarChart2,
   FiCalendar,
+  FiCheckSquare,
   FiFileText,
   FiSettings,
+  FiUploadCloud,
   FiUser,
 } from "react-icons/fi";
 import useRoleAccess from "./useRoleAccess";
@@ -38,6 +40,19 @@ const ACTIONS = [
     path: "/attendance/daily",
     permission: "attendance.daily",
   },
+  /*
+  | Directly after the daily list, because that is the page it was taken off:
+  | signing a day off used to be an extra column beside today's punches, which
+  | meant it could only ever be done for today and one row at a time.
+  */
+  {
+    title: "Attendance Approval",
+    description: "Approve or reject recorded days",
+    icon: FiCheckSquare,
+    color: "bg-emerald-50 text-emerald-600",
+    path: "/attendance/approvals",
+    permission: "attendance.approvals",
+  },
   // {
   //   title: "Monthly Attendance",
   //   description: "Every employee's month",
@@ -61,6 +76,19 @@ const ACTIONS = [
     color: "bg-pink-50 text-pink-600",
     path: "/attendance/reports",
     permission: "attendance.reports",
+  },
+  /*
+  | Next to Settings rather than next to the daily screens: importing a year of
+  | history is something a company does when it arrives, alongside configuring
+  | the working day, and not part of running a week of attendance.
+  */
+  {
+    title: "Import Attendance",
+    description: "Migrate historical data",
+    icon: FiUploadCloud,
+    color: "bg-violet-50 text-violet-600",
+    path: "/attendance/import",
+    permission: "attendance.import",
   },
   {
     title: "Settings",

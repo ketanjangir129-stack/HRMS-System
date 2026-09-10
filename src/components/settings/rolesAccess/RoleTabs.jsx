@@ -47,7 +47,7 @@ function RoleTabs({ activeRole, onChange, dirty = false }) {
             aria-pressed={active}
             className={`group flex w-full cursor-pointer items-center gap-3 rounded-2xl border p-3.5 text-left transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 sm:gap-4 sm:p-4 ${
               active
-                ? "border-blue-600 bg-blue-50/60 shadow-sm shadow-blue-600/10"
+                ? "border-blue-600 bg-blue-50/60 shadow-sm shadow-blue-600/10 dark:bg-blue-500/12"
                 : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50"
             }`}
           >

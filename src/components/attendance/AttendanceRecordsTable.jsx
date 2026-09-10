@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useState } from "react";
 import { FiCalendar, FiCheck, FiMapPin, FiX } from "react-icons/fi";
+import { Link } from "react-router-dom";
 import {
   APPROVAL_STATUS,
   APPROVAL_STATUS_OPTIONS,
@@ -20,7 +21,6 @@ import {
 import AttendanceStatusBadge from "./common/AttendanceStatusBadge";
 import DataTable from "./common/DataTable";
 import EmployeeCell from "./common/EmployeeCell";
-import LocationModal from "./LocationModal";
 
 /*
 |--------------------------------------------------------------------------
@@ -61,7 +61,7 @@ const hideBelow = (breakpoint) => ({
 /*
 | A day can carry a punch in location, a punch out location or both. The
 | location is offered on the node existing rather than on which punch
-| recorded it - the modal is where that is told apart.
+| recorded it - the location page is where that is told apart.
 */
 const hasLocation = (record) =>
   Boolean(record.location?.punchIn) || Boolean(record.location?.punchOut);
@@ -225,32 +225,29 @@ function AttendanceRecordsTable({
   const [approvalFilter, setApprovalFilter] = useState("");
 
   /*
-  | The row whose location is being shown. The record itself is held rather
-  | than an id: it already carries both punch locations and the employee
-  | name, so nothing has to be looked up again.
-  */
-  const [locationRecord, setLocationRecord] = useState(null);
-
-  /*
   | Shared by the column and the mobile card. Below `md` the table is not
-  | rendered at all - only the card is - so a button that lives solely in a
-  | column is a button a phone never gets, and the location modal has no way
-  | to be opened there.
+  | rendered at all - only the card is - so a link that lives solely in a
+  | column is a link a phone never gets, and the location page has no way to
+  | be reached there.
   |
   | Offered on the location node existing rather than on which punch recorded
   | it: a day can carry a punch in location, a punch out location or both, and
-  | the modal is where that is told apart.
+  | the page is where that is told apart.
+  |
+  | A `Link` rather than a button, and addressed by day and employee rather
+  | than by handing the record over. The page reads the day itself, which is
+  | what lets it survive a refresh and a pasted link - and a link is also the
+  | thing a reader can open in a new tab, which a dialog never was.
   */
   const viewLocationButton = useCallback(
     (record) => (
-      <button
-        type="button"
-        onClick={() => setLocationRecord(record)}
+      <Link
+        to={`/attendance/location/${record.date}/${record.employeeId}`}
         className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-line px-2.5 py-1.5 text-xs font-semibold text-ink-muted transition-colors hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-200"
       >
         <FiMapPin />
         View
-      </button>
+      </Link>
     ),
     []
   );
@@ -450,8 +447,8 @@ function AttendanceRecordsTable({
 
       {/*
       | The table is not rendered below `md` at all, so the Location column
-      | never reaches a phone and the button has to be offered here too -
-      | otherwise the location modal is unreachable on the screen where the
+      | never reaches a phone and the link has to be offered here too -
+      | otherwise the location page is unreachable on the screen where the
       | punches were actually made.
       |
       | A row of its own, the same shape as the approval row below: a label
@@ -617,12 +614,6 @@ function AttendanceRecordsTable({
       />
 
       {footer}
-
-      <LocationModal
-        open={Boolean(locationRecord)}
-        record={locationRecord}
-        onClose={() => setLocationRecord(null)}
-      />
 
     </AttendancePanel>
   );

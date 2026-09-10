@@ -143,7 +143,7 @@ function EditRoleModal({
                 key={role}
                 className={`flex cursor-pointer items-start gap-3 rounded-xl border p-3.5 transition-all duration-200 ${
                   isSelected
-                    ? "border-blue-400 bg-blue-50/60 ring-2 ring-blue-200"
+                    ? "border-blue-400 bg-blue-50/60 ring-2 ring-blue-200 dark:bg-blue-500/12"
                     : "border-slate-200 hover:border-slate-300 hover:bg-slate-50"
                 } ${saving ? "cursor-not-allowed opacity-60" : ""}`}
               >

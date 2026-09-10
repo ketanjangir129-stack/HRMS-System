@@ -239,6 +239,28 @@ export const PERMISSION_PAGES = [
         defaults: { hr: true, manager: true, employee: false },
       },
       {
+        /*
+        | The approval desk: every recorded day of a period, with the queue,
+        | the bulk sign off and the decision trail.
+        |
+        | It is a section of its own rather than part of Daily Attendance
+        | because reading a day and deciding it are two different rights. A
+        | role can be given the daily list to watch the floor without being
+        | given the authority to say what a month of attendance is worth, and
+        | before this the two arrived together.
+        |
+        | Withheld from an employee, and given to a manager - who is narrowed
+        | again at runtime to the departments they run. This switch decides
+        | whether the role has the desk at all; the department scope decides
+        | whose days are on it.
+        */
+        key: "approvals",
+        label: "Attendance Approval",
+        description: "Approve or reject recorded days",
+        path: "/attendance/approvals",
+        defaults: { hr: true, manager: true, employee: false },
+      },
+      {
         key: "monthly",
         label: "Monthly Attendance",
         description: "Every employee across a month",
@@ -258,6 +280,28 @@ export const PERMISSION_PAGES = [
         description: "Daily, monthly and department reports",
         path: "/attendance/reports",
         defaults: { hr: true, manager: true, employee: false },
+      },
+      {
+        /*
+        | Bringing a company's attendance history in from the system they were
+        | on before.
+        |
+        | Off for every managed role by default, including HR. It is the only
+        | screen in the module that writes months of attendance in one action,
+        | and unlike the approval desk - which decides days that were already
+        | recorded - it creates them. A right that large is one the owner
+        | should hand out deliberately rather than find already granted, which
+        | is the same reason Attendance Settings is off by default above.
+        |
+        | A manager who is given it is narrowed at runtime to the departments
+        | they run: every row for an employee outside their scope is rejected
+        | by the matching step and can never reach a write.
+        */
+        key: "import",
+        label: "Import Attendance",
+        description: "Import historical attendance from another system",
+        path: "/attendance/import",
+        defaults: { hr: false, manager: false, employee: false },
       },
       {
         key: "settings",

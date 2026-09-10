@@ -1,12 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
-import { FiCalendar, FiCheckCircle, FiLoader } from "react-icons/fi";
+import { FiCalendar } from "react-icons/fi";
 import { useOutletContext } from "react-router-dom";
-import { toast } from "react-toastify";
 import AttendancePageHeader from "../../components/attendance/AttendancePageHeader";
 import AttendanceRecordsTable from "../../components/attendance/AttendanceRecordsTable";
 import AttendanceSummaryCards from "../../components/attendance/AttendanceSummaryCards";
 import MarkAttendanceModal from "../../components/attendance/MarkAttendanceModal";
-import RejectRequestModal from "../../components/attendance/requests/RejectRequestModal";
 import DepartmentScopeNotice from "../../components/common/DepartmentScopeNotice";
 import HolidayNotice from "../../components/holiday/HolidayNotice";
 import WeeklyOffNotice from "../../components/holiday/WeeklyOffNotice";
@@ -20,7 +18,6 @@ import { isApprover } from "../../utils/attendance/attendanceRequestUtils";
 import {
   buildDailyReport,
   getAttendanceSummary,
-  getPendingApprovals,
 } from "../../utils/attendance/attendanceUtils";
 import { isWeeklyOff } from "../../utils/holiday/holidayUtils";
 
@@ -31,10 +28,16 @@ import { isWeeklyOff } from "../../utils/holiday/holidayUtils";
 | Today's punch in and punch out records, kept in realtime. Search comes from
 | the header search bar.
 |
-| This is also where the day is signed off. An employee punching in records
-| what they say happened; until HR or the owner approves it the day counts as
-| Pending and not as attendance, so the approving belongs on the page where
-| the punches are already being read.
+| This page reports the day; it no longer decides it. Signing a day off used
+| to be an extra column here, which meant it could only ever be done for
+| today, one row at a time, on a screen that exists to watch a morning rather
+| than to review one - a day missed on Friday was a day nobody could reach on
+| Monday. The whole review now lives on Attendance Approval, which reads a
+| period rather than a day and can decide a set of days at once.
+|
+| The decision is still shown, read only. It is the reason the Present count
+| and the Pending count differ, and a daily list that could not say which days
+| were signed off would be reporting hours nobody has stood behind.
 |
 | On a declared holiday or a weekly off nobody is counted absent: the office
 | was closed, so the roster is not turned into a list of absences and the
@@ -42,8 +45,8 @@ import { isWeeklyOff } from "../../utils/holiday/holidayUtils";
 |
 | A manager opens the same page narrowed to the departments they run. That
 | narrowing is applied to the roster first and everything else is derived from
-| it, so the table, the summary cards, the absent count and the "Approve All"
-| button are all describing one department and cannot disagree with each other.
+| it, so the table, the summary cards and the absent count are all describing
+| one department and cannot disagree with each other.
 |--------------------------------------------------------------------------
 */
 
@@ -56,17 +59,6 @@ function DailyAttendance() {
   const { search, setSearch, setSearchPlaceholder } = useOutletContext();
 
   const [markOpen, setMarkOpen] = useState(false);
-
-  /*
-  | The record being rejected, which is also what opens the remarks box, and
-  | the row currently being written. The key is the row's own key, so only the
-  | buttons of the day being decided are disabled and the rest of the list
-  | stays usable while one write is in flight.
-  */
-  const [rejectRecord, setRejectRecord] = useState(null);
-  const [rejecting, setRejecting] = useState(false);
-  const [busyKey, setBusyKey] = useState("");
-  const [approvingDay, setApprovingDay] = useState(false);
 
   const {
     directory,
@@ -83,7 +75,6 @@ function DailyAttendance() {
   | manager role existed.
   */
   const {
-    canReview: canReviewRecord,
     filterRows,
     filterEmployees,
     isScoped,
@@ -96,9 +87,6 @@ function DailyAttendance() {
     loading,
     error,
     markAttendance,
-    approveAttendance,
-    rejectAttendance,
-    approveDay,
   } = useDailyAttendance(companyCode);
 
   const today = getDateKey();
@@ -165,167 +153,32 @@ function DailyAttendance() {
     [records, scopedEmployees, todayHoliday, todayWeeklyOff]
   );
 
-  const canReview = isApprover(currentUser);
-
   /*
-  | What "Approve All" would actually decide, so the count on the button and
-  | the write behind it are the same set. A manager's own pending day is on
-  | the list above and not in here: it is theirs to see and HR's to sign off.
+  | Marking a day by hand is still offered here: it records what a day was
+  | rather than deciding a day somebody else recorded, and the form is only
+  | opened by the roles that were always allowed to.
   */
-  const pending = useMemo(
-    () => getPendingApprovals(records).filter(canReviewRecord),
-    [records, canReviewRecord]
-  );
+  const canMarkAttendance = isApprover(currentUser);
 
   /*
-  | The name the decision is filed under, resolved the same way the request
+  | The name a manually marked day is filed under, resolved the same way the
   | reviews resolve it so both read the same on a record.
   */
   const actorName =
     currentUser?.personalInfo?.name || currentUser?.name || "Admin";
 
-  const recordKey = (record) =>
-    `${record?.date}-${record?.employeeId}`;
-
-  const handleApprove = async (record) => {
-
-    /*
-    | The button is already withheld on a row that is not this reviewer's, so
-    | this is the second line and not the first. It stays because the answer
-    | must be the same wherever it is asked: a decision reached through a
-    | stale render is still a decision that gets written.
-    */
-    if (!canReviewRecord(record)) {
-      toast.error("This employee is not in a department you manage.");
-      return;
-    }
-
-    setBusyKey(recordKey(record));
-
-    try {
-
-      const result = await approveAttendance(record, actorName);
-
-      if (!result?.success) {
-        toast.error(result?.message || "Failed to approve attendance.");
-        return;
-      }
-
-      toast.success(
-        `${record.employeeName || record.employeeId}'s attendance approved.`
-      );
-
-    } catch (approveError) {
-
-      console.error(approveError);
-      toast.error("Failed to approve attendance.");
-
-    } finally {
-
-      setBusyKey("");
-
-    }
-
-  };
-
-  const handleReject = async (remarks) => {
-
-    if (!rejectRecord) return;
-
-    if (!canReviewRecord(rejectRecord)) {
-      toast.error("This employee is not in a department you manage.");
-      setRejectRecord(null);
-      return;
-    }
-
-    setRejecting(true);
-
-    try {
-
-      const result = await rejectAttendance(
-        rejectRecord,
-        actorName,
-        remarks
-      );
-
-      if (!result?.success) {
-        toast.error(result?.message || "Failed to reject attendance.");
-        return;
-      }
-
-      toast.success("Attendance rejected.");
-      setRejectRecord(null);
-
-    } catch (rejectError) {
-
-      console.error(rejectError);
-      toast.error("Failed to reject attendance.");
-
-    } finally {
-
-      setRejecting(false);
-
-    }
-
-  };
-
   /*
-  | The whole day in one action. The list is realtime, so what is pending is
-  | read at the moment the button is pressed rather than from a count that was
-  | rendered a minute ago, and the service skips anything already decided.
-  */
-  const handleApproveDay = async () => {
-
-    setApprovingDay(true);
-
-    try {
-
-      const result = await approveDay(
-        pending.map((record) => record.employeeId),
-        actorName
-      );
-
-      if (!result?.success) {
-        toast.error(result?.message || "Failed to approve the day.");
-        return;
-      }
-
-      toast.success(
-        result.approved === 0
-          ? "Nothing was left to approve."
-          : `${result.approved} ${result.approved === 1 ? "day" : "days"} of attendance approved.`
-      );
-
-    } catch (dayError) {
-
-      console.error(dayError);
-      toast.error("Failed to approve the day.");
-
-    } finally {
-
-      setApprovingDay(false);
-
-    }
-
-  };
-
-  /*
-  | Handed to the table only for a reviewer. Without it the column is not
-  | rendered at all, so an employee who reaches this page never sees the
-  | buttons rather than seeing them disabled.
+  | The decision, read only.
   |
-  | `canReview` goes down as a predicate rather than a boolean, so the column
-  | is drawn for every row - the decision is worth reading on all of them -
-  | while the two buttons appear only on the rows this reviewer may decide.
+  | `canReview: false` keeps the Approval column and its filter and takes both
+  | buttons off every row, whoever is looking. The column stays because the
+  | decision is worth reading here - it is why the Present count and the
+  | Pending count differ, and a day of hours nobody has signed off should not
+  | look the same as one that has been. Making it is a different act and now
+  | belongs entirely to Attendance Approval, which can reach any day rather
+  | than only today.
   */
-  const approval = canReview
-    ? {
-      canReview: canReviewRecord,
-      busyKey,
-      onApprove: handleApprove,
-      onReject: setRejectRecord,
-    }
-    : { canReview: false };
+  const approval = { canReview: false };
 
   return (
     <div className="p-0 sm:p-2">
@@ -335,46 +188,19 @@ function DailyAttendance() {
         subtitle="Track today's punch in and punch out records"
         icon={<FiCalendar />}
         action={
-          canReview && (
-            /*
-            | Stacked on a phone and side by side from `md`, the same widths
-            | the single button had at each: two full width buttons under each
-            | other is the only way both stay thumb sized on a narrow screen.
-            */
-            <div className="flex w-full flex-col gap-3 sm:flex-row md:w-auto">
-
-              {/*
-              | Only offered when there is something to approve, and it says
-              | how much: a button that reads "Approve All" over an empty
-              | queue is a button that does nothing.
-              */}
-              {pending.length > 0 && (
-                <button
-                  type="button"
-                  onClick={handleApproveDay}
-                  disabled={approvingDay}
-                  className="ui-btn w-full bg-emerald-600 font-semibold text-white shadow-sm hover:bg-emerald-700 md:w-auto"
-                >
-                  {approvingDay ? (
-                    <FiLoader className="animate-spin" />
-                  ) : (
-                    <FiCheckCircle />
-                  )}
-                  {approvingDay
-                    ? "Approving..."
-                    : `Approve All (${pending.length})`}
-                </button>
-              )}
-
-              <button
-                type="button"
-                onClick={() => setMarkOpen(true)}
-                className="ui-btn ui-btn-primary w-full font-semibold md:w-auto"
-              >
-                Mark Attendance
-              </button>
-
-            </div>
+          /*
+          | Back to the single button it was before the day was signed off
+          | from here, at the widths it had: full width on a phone so it stays
+          | thumb sized, its own size from `md`.
+          */
+          canMarkAttendance && (
+            <button
+              type="button"
+              onClick={() => setMarkOpen(true)}
+              className="ui-btn ui-btn-primary w-full font-semibold md:w-auto"
+            >
+              Mark Attendance
+            </button>
           )
         }
       />
@@ -439,18 +265,6 @@ function DailyAttendance() {
         employees={scopedEmployees}
         dayRecords={records}
         recordsDate={today}
-      />
-
-      <RejectRequestModal
-        open={Boolean(rejectRecord)}
-        onClose={() => setRejectRecord(null)}
-        onConfirm={handleReject}
-        loading={rejecting}
-        employeeName={rejectRecord?.employeeName}
-        title="Reject Attendance"
-        subject="attendance for this day"
-        confirmLabel="Reject Attendance"
-        placeholder="Enter the reason for rejecting this day of attendance..."
       />
 
     </div>
