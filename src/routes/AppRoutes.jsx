@@ -1,4 +1,4 @@
-import {Routes,Route,Navigate} from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
 import Register from "../pages/authenticate/Register";
 import Login from "../pages/authenticate/login";
 import ChangePassword from "../pages/authenticate/ChangePassword";
@@ -27,6 +27,7 @@ import Regularization from "../pages/attendance/Regularization";
 import AttendanceReports from "../pages/attendance/AttendanceReports";
 import AttendanceImport from "../pages/attendance/AttendanceImport";
 import AttendanceSettings from "../pages/attendance/AttendanceSettings";
+import AttendanceLocation from "../pages/attendance/AttendanceLocation";
 import LeaveDashboard from "../pages/leave/LeaveDashboard";
 import LeaveApprovals from "../pages/leave/LeaveApprovals";
 import HolidayDashboard from "../pages/holiday/HolidayDashboard";
@@ -51,11 +52,11 @@ import Profile from "../pages/Profile";
 | is a company page, and both are reached before a role means anything.
 */
 
-function AppRoutes(){
-    return(
+function AppRoutes() {
+    return (
         <Routes>
             <Route
-                path = "/"
+                path="/"
                 element={
                     <GuestRoute>
                         <Register />
@@ -63,7 +64,7 @@ function AppRoutes(){
                 }
             />
             <Route
-                path = "/login"
+                path="/login"
                 element={
                     <GuestRoute>
                         <Login />
@@ -141,7 +142,7 @@ function AppRoutes(){
                         </PermissionRoute>
                     }
                 />
-                 <Route
+                <Route
                     path="/OnboardDashboard/BulkOnboard"
                     element={
                         <PermissionRoute permission="onboarding.create">
@@ -169,7 +170,7 @@ function AppRoutes(){
                 />
 
                 <Route
-                    path="/onboarding/:requestId"hr po
+                    path="/onboarding/:requestId" hr po
                     element={
                         <PermissionRoute permission="onboarding.requests">
                             <ReviewOnboarding />
@@ -279,6 +280,16 @@ function AppRoutes(){
                         </PermissionRoute>
                     }
                 />
+
+                <Route
+                    path="/attendance/location/:date/:employeeId"
+                    element={
+                        <PermissionRoute permission="attendance">
+                            <AttendanceLocation />
+                        </PermissionRoute>
+                    }
+                />
+
 
                 {/* Leave Management Routing */}
                 <Route
@@ -428,7 +439,7 @@ function AppRoutes(){
             </Route>
 
             <Route path="/change-password" element={<ChangePassword />} />
-            <Route path="/onboarding/:companyCode/:employeeId" element={<EmployeeOnboarding />}/>
+            <Route path="/onboarding/:companyCode/:employeeId" element={<EmployeeOnboarding />} />
 
         </Routes>
 
