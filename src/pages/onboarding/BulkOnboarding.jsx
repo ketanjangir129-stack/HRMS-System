@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import {
@@ -42,6 +42,8 @@ import {
     validateBulkOnboardRows,
 } from "../../utils/onboarding/validateBulkOnboardRows";
 import { exportInvitationLinks } from "../../utils/onboarding/exportInvitationLinks";
+import Pagination from "../../components/common/pagination/Pagination";
+import usePagination from "../../hooks/usePagination";
 
 /*
 |--------------------------------------------------------------------------
@@ -74,6 +76,12 @@ const STEPS = [
 
 const cardClass =
     "overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm";
+
+/* One shared empty array so an unread report does not hand the pagination
+   hook a fresh `[]` on every render. */
+const NO_ROWS = [];
+
+const ROWS_PER_PAGE = 10;
 
 function BulkOnboarding() {
 
@@ -109,6 +117,45 @@ function BulkOnboarding() {
     const emailReady = isEmailServiceConfigured();
 
     const stepIndex = STEPS.findIndex((item) => item.key === step);
+
+    /*
+    |----------------------------------------------------------------------
+    | Paging the three long tables
+    |----------------------------------------------------------------------
+    | A joining batch is a whole spreadsheet, so each of the three listings
+    | gets its own page state: the errors and the valid rows on the summary
+    | are read side by side and must not drag each other along, and the
+    | invitations arrive on a later step entirely.
+    */
+
+    const errorPagination = usePagination({
+        data: report?.invalid || NO_ROWS,
+        initialPageSize: ROWS_PER_PAGE,
+    });
+
+    const validPagination = usePagination({
+        data: report?.valid || NO_ROWS,
+        initialPageSize: ROWS_PER_PAGE,
+    });
+
+    const resultPagination = usePagination({
+        data: results,
+        initialPageSize: ROWS_PER_PAGE,
+    });
+
+    /* A fresh file is a fresh list — never page 4 of the last one. */
+    useEffect(() => {
+
+        errorPagination.resetPagination();
+        validPagination.resetPagination();
+
+    }, [report]);
+
+    useEffect(() => {
+
+        resultPagination.resetPagination();
+
+    }, [results]);
 
     /*
     | Reading and validating are one action from the user's point of view, so
@@ -779,11 +826,11 @@ function BulkOnboarding() {
 
                             </div>
 
-                            <div className="max-h-96 overflow-auto">
+                            <div className="overflow-x-auto overscroll-x-contain">
 
                                 <table className="w-full min-w-[40rem] text-left text-sm">
 
-                                    <thead className="sticky top-0 bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+                                    <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
 
                                         <tr>
                                             <th className="px-5 py-3 font-semibold sm:px-6">Row</th>
@@ -797,7 +844,7 @@ function BulkOnboarding() {
 
                                     <tbody className="divide-y divide-slate-100">
 
-                                        {report.invalid.map((row) => (
+                                        {errorPagination.paginatedData.map((row) => (
 
                                             <tr key={row.rowNumber} className="align-top">
 
@@ -854,6 +901,19 @@ function BulkOnboarding() {
 
                             </div>
 
+                            {/* Outside the scrollport, so the bar stays put
+                                while a wide table slides under it. */}
+                            <Pagination
+                                currentPage={errorPagination.currentPage}
+                                totalPages={errorPagination.totalPages}
+                                totalItems={errorPagination.totalItems}
+                                startItem={errorPagination.startItem}
+                                endItem={errorPagination.endItem}
+                                pageSize={errorPagination.pageSize}
+                                onPageChange={errorPagination.goToPage}
+                                onPageSizeChange={errorPagination.changePageSize}
+                            />
+
                         </div>
 
                     )}
@@ -883,11 +943,11 @@ function BulkOnboarding() {
 
                             </div>
 
-                            <div className="max-h-96 overflow-auto">
+                            <div className="overflow-x-auto overscroll-x-contain">
 
                                 <table className="w-full min-w-[52rem] text-left text-sm">
 
-                                    <thead className="sticky top-0 bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+                                    <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
 
                                         <tr>
                                             <th className="px-5 py-3 font-semibold sm:px-6">Row</th>
@@ -905,7 +965,7 @@ function BulkOnboarding() {
 
                                     <tbody className="divide-y divide-slate-100">
 
-                                        {report.valid.map((row) => (
+                                        {validPagination.paginatedData.map((row) => (
 
                                             <tr key={row.rowNumber} className="whitespace-nowrap">
 
@@ -956,6 +1016,17 @@ function BulkOnboarding() {
                                 </table>
 
                             </div>
+
+                            <Pagination
+                                currentPage={validPagination.currentPage}
+                                totalPages={validPagination.totalPages}
+                                totalItems={validPagination.totalItems}
+                                startItem={validPagination.startItem}
+                                endItem={validPagination.endItem}
+                                pageSize={validPagination.pageSize}
+                                onPageChange={validPagination.goToPage}
+                                onPageSizeChange={validPagination.changePageSize}
+                            />
 
                         </div>
 
@@ -1166,7 +1237,7 @@ function BulkOnboarding() {
 
                                 <tbody className="divide-y divide-slate-100">
 
-                                    {results.map((item) => (
+                                    {resultPagination.paginatedData.map((item) => (
 
                                         <tr key={`${item.employeeId}-${item.rowNumber}`}>
 
@@ -1268,6 +1339,17 @@ function BulkOnboarding() {
                             </table>
 
                         </div>
+
+                        <Pagination
+                            currentPage={resultPagination.currentPage}
+                            totalPages={resultPagination.totalPages}
+                            totalItems={resultPagination.totalItems}
+                            startItem={resultPagination.startItem}
+                            endItem={resultPagination.endItem}
+                            pageSize={resultPagination.pageSize}
+                            onPageChange={resultPagination.goToPage}
+                            onPageSizeChange={resultPagination.changePageSize}
+                        />
 
                         <div className="flex flex-col gap-3 border-t border-slate-100 bg-slate-50 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
 

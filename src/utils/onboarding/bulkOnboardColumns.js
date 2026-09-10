@@ -101,7 +101,7 @@ export const BULK_ONBOARD_COLUMNS = [
 ];
 
 /* The roles the account can be opened with. */
-export const BULK_ONBOARD_ROLES = ["employee", "hr"];
+export const BULK_ONBOARD_ROLES = ["employee", "hr","manager"];
 
 export const REQUIRED_BULK_ONBOARD_COLUMNS =
     BULK_ONBOARD_COLUMNS.filter((column) => column.required);

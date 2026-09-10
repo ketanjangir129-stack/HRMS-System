@@ -382,12 +382,16 @@ function ReviewOnboarding() {
                     {approving ? "Approving..." : "Approve"}
                 </button>
             </div>
-            <RejectModal
-                isOpen={showRejectModal}
-                loading={loadingReject}
-                onClose={() => setShowRejectModal(false)}
-                onConfirm={handleReject}
-            />
+            {/* Mounted only while open, so the remarks box starts empty each
+                time it is raised. */}
+            {showRejectModal && (
+                <RejectModal
+                    isOpen
+                    loading={loadingReject}
+                    onClose={() => setShowRejectModal(false)}
+                    onConfirm={handleReject}
+                />
+            )}
         </div>
 
     );

@@ -265,3 +265,55 @@ export const sendApprovalEmail = async (companyCode, employee) => {
             : result.message,
     };
 };
+
+/*
+|--------------------------------------------------------------------------
+| Many Approvals
+|--------------------------------------------------------------------------
+| The counterpart to the bulk invitation: one company lookup for the whole
+| batch, one outcome per employee id, and nothing here allowed to report a
+| mail failure as an approval failure — every employee handed in is already
+| approved by the time this is called.
+*/
+
+export const sendApprovalEmails = async (companyCode, employees = []) => {
+
+    if (!employees.length) {
+        return {
+            success: false,
+            sent: 0,
+            failed: 0,
+            results: [],
+            message: "There is nobody to send to.",
+        };
+    }
+
+    const company = await loadCompany(companyCode);
+
+    const outcome = await sendBulkEmails({
+        template: EMAIL_TEMPLATES.ONBOARDING_APPROVED,
+        replyTo: company.email,
+        messages: employees.map((employee) => ({
+            ref: employee.employeeId,
+            to: employee.email,
+            data: buildApprovalData(company, employee),
+        })),
+    });
+
+    /* Stamping never sinks the send — the emails are already gone. */
+    const delivered = outcome.results
+        .filter((item) => item.success && item.ref)
+        .map((item) => item.ref);
+
+    if (delivered.length) {
+
+        await Promise.all(
+            delivered.map((employeeId) =>
+                markApprovalEmailSent(companyCode, employeeId)
+            )
+        );
+
+    }
+
+    return outcome;
+};

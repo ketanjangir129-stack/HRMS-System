@@ -31,6 +31,7 @@ import HolidayDashboard from "../pages/holiday/HolidayDashboard";
 import EmployeeOnboarding from "../pages/onboarding/EmployeeOnboarding/EmployeeOnboarding";
 import SalaryCRUD from "../pages/salary/SalaryCRUD";
 import SalaryForm from "../pages/salary/SalaryForm";
+import SalaryImport from "../pages/salary/SalaryImport";
 import SalaryHistory from "../pages/salary/SalaryHistory";
 import PayrolllDashboard from "../pages/payroll/PayrollDashboard";
 import PaySlip from "../pages/payroll/PaySlip";
@@ -320,6 +321,21 @@ function AppRoutes(){
                   One component, two routes, two permissions: assigning a new
                   structure and revising an existing one are separate rights.
                 */}
+                {/*
+                  Bulk assignment, behind the same right as assigning one:
+                  importing a file is the same act as filling the form in, and
+                  the screen refuses to revise an existing structure unless the
+                  update right is held as well.
+                */}
+                <Route
+                    path="/salarydashboard/salary/import"
+                    element={
+                        <PermissionRoute permission="salary.create">
+                            <SalaryImport />
+                        </PermissionRoute>
+                    }
+                />
+
                 <Route
                     path="/salarydashboard/salary/create/:employeeId"
                     element={

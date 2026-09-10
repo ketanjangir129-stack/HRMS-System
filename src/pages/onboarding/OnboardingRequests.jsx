@@ -1,12 +1,29 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useOutletContext } from "react-router-dom";
-import { FiArrowLeft, FiChevronRight, FiUserCheck } from "react-icons/fi";
+import {
+    FiArrowLeft,
+    FiCheckCircle,
+    FiChevronRight,
+    FiUserCheck,
+    FiXCircle,
+} from "react-icons/fi";
+import { toast } from "react-toastify";
 
 import { getOnboardingRequests } from "../../services/OnboardingService";
+import {
+    approveOnboardingRequests,
+    rejectOnboardingRequests,
+} from "../../services/ApprovalService";
+import {
+    isEmailServiceConfigured,
+    sendApprovalEmails,
+} from "../../services/email/onboardingEmailService";
 import { filterData } from "../../utils/search/filterData";
 import Loader from "../../components/common/Loader"
 import usePagination from "../../hooks/usePagination";
 import Pagination from "../../components/common/pagination/Pagination";
+import ConfirmApproveModal from "./ConfirmApproveModal";
+import RejectModal from "./RejectModal";
 
 /*
 |--------------------------------------------------------------------------
@@ -45,6 +62,19 @@ function OnboardingRequests() {
     const [filteredRequests, setFilteredRequests] = useState([]);
 
     const [loading, setLoading] = useState(true);
+
+    // Which bulk modal is open, if any: "approve", "reject" or nothing.
+    const [bulkAction, setBulkAction] = useState(null);
+
+    const [bulkRunning, setBulkRunning] = useState(false);
+
+    // Stamped onto every record the batch touches, exactly as the single
+    // review screen stamps its own approvals.
+    const approvedBy =
+        localStorage.getItem("username") ||
+        localStorage.getItem("userName") ||
+        localStorage.getItem("name") ||
+        "Admin";
 
     const loadRequests = async () => {
 
@@ -156,6 +186,181 @@ function OnboardingRequests() {
         resetPagination();
     }, [search]);
 
+    /*
+    |--------------------------------------------------------------------------
+    | Approve all / Reject all
+    |--------------------------------------------------------------------------
+    | Only the requests waiting on a decision are eligible. An invitation that
+    | has not come back yet has no submitted form to approve, and one already
+    | approved or rejected has been decided — so both buttons work on the
+    | "Pending Approval" rows and nothing else.
+    |
+    | They also work on what is on screen: with a search term typed, the batch
+    | is the pending requests that match it, which is what the count on the
+    | button and the line in the modal both say.
+    */
+    const pendingRequests = filteredRequests.filter(
+        (request) => request.status === "Pending Approval"
+    );
+
+    const pendingCount = pendingRequests.length;
+
+    const pendingIds = pendingRequests.map((request) => request.id);
+
+    const requestWord = (count) => (count === 1 ? "request" : "requests");
+
+    const scopeNote = search
+        ? " matching your search"
+        : "";
+
+    /*
+    | The welcome emails go out on the back of the approvals but are no part
+    | of them: one summary toast of their own, and an approval already
+    | reported as done stays done whatever the mail server says.
+    */
+    const notifyApproved = async (approved) => {
+
+        const recipients = approved
+            .map((item) => item.employee)
+            .filter((employee) => employee?.email);
+
+        if (!recipients.length || !isEmailServiceConfigured()) {
+            return;
+        }
+
+        try {
+
+            const outcome = await sendApprovalEmails(companyCode, recipients);
+
+            if (!outcome.failed) {
+                toast.success(
+                    `Approval emailed to ${outcome.sent} ${outcome.sent === 1 ? "employee" : "employees"}.`
+                );
+                return;
+            }
+
+            toast.warning(
+                `${outcome.sent} approval ${outcome.sent === 1 ? "email" : "emails"} sent, ${outcome.failed} could not be sent.`
+            );
+
+        } catch (error) {
+
+            console.error(error);
+
+            toast.warning(
+                "The employees were approved, but the approval emails could not be sent."
+            );
+
+        }
+    };
+
+    const handleApproveAll = async () => {
+
+        if (!pendingCount || bulkRunning) return;
+
+        setBulkRunning(true);
+
+        try {
+
+            const { approved, failed } = await approveOnboardingRequests(
+                companyCode,
+                pendingIds,
+                approvedBy
+            );
+
+            if (approved.length && !failed.length) {
+
+                toast.success(
+                    `${approved.length} ${requestWord(approved.length)} approved.`
+                );
+
+            } else if (approved.length) {
+
+                toast.warning(
+                    `${approved.length} ${requestWord(approved.length)} approved, ${failed.length} could not be approved.`
+                );
+
+            } else {
+
+                toast.error("None of the requests could be approved.");
+
+            }
+
+            setBulkAction(null);
+
+            await loadRequests();
+
+            await notifyApproved(approved);
+
+        } catch (error) {
+
+            console.error(error);
+
+            toast.error("Failed to approve the requests.");
+
+        } finally {
+
+            setBulkRunning(false);
+
+        }
+    };
+
+    const handleRejectAll = async (remarks) => {
+
+        if (!pendingCount || bulkRunning) return;
+
+        setBulkRunning(true);
+
+        try {
+
+            const { rejected, failed } = await rejectOnboardingRequests(
+                companyCode,
+                pendingIds,
+                remarks,
+                approvedBy
+            );
+
+            if (rejected.length && !failed.length) {
+
+                toast.success(
+                    `${rejected.length} ${requestWord(rejected.length)} rejected.`
+                );
+
+            } else if (rejected.length) {
+
+                toast.warning(
+                    `${rejected.length} ${requestWord(rejected.length)} rejected, ${failed.length} could not be rejected.`
+                );
+
+            } else {
+
+                toast.error("None of the requests could be rejected.");
+
+            }
+
+            setBulkAction(null);
+
+            await loadRequests();
+
+        } catch (error) {
+
+            console.error(error);
+
+            toast.error("Failed to reject the requests.");
+
+        } finally {
+
+            setBulkRunning(false);
+
+        }
+    };
+
+    const closeBulkModal = () => {
+        if (!bulkRunning) {
+            setBulkAction(null);
+        }
+    };
+
     const placeholder = <span className="text-slate-300">—</span>;
 
     const statusPill =
@@ -220,6 +425,42 @@ function OnboardingRequests() {
                         </p>
 
                     </div>
+
+                    {/*
+                    | The two batch actions, shown only while there is something
+                    | pending for them to act on — a dead pair of buttons over a
+                    | list of already decided requests says nothing useful. They
+                    | stack full width on a phone and sit inline from `sm` up.
+                    */}
+                    {!loading && pendingCount > 0 && (
+
+                        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+
+                            <button
+                                type="button"
+                                onClick={() => setBulkAction("reject")}
+                                disabled={bulkRunning}
+                                title={`Reject the ${pendingCount} ${requestWord(pendingCount)} pending approval${scopeNote}`}
+                                className="inline-flex cursor-pointer items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-rose-200 bg-white px-4 py-2.5 text-sm font-semibold text-rose-600 shadow-sm transition-all duration-200 hover:border-rose-300 hover:bg-rose-50 focus:outline-none focus:ring-2 focus:ring-rose-400 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                                <FiXCircle size={16} />
+                                Reject All ({pendingCount})
+                            </button>
+
+                            <button
+                                type="button"
+                                onClick={() => setBulkAction("approve")}
+                                disabled={bulkRunning}
+                                title={`Approve the ${pendingCount} ${requestWord(pendingCount)} pending approval${scopeNote}`}
+                                className="inline-flex cursor-pointer items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm shadow-emerald-600/20 transition-all duration-200 hover:bg-emerald-700 hover:shadow-md hover:shadow-emerald-600/30 focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                                <FiCheckCircle size={16} />
+                                Approve All ({pendingCount})
+                            </button>
+
+                        </div>
+
+                    )}
 
                 </div>
 
@@ -472,6 +713,32 @@ function OnboardingRequests() {
                 )}
 
             </div>
+
+            <ConfirmApproveModal
+                open={bulkAction === "approve"}
+                loading={bulkRunning}
+                title="Approve All Requests"
+                message={`${pendingCount} onboarding ${requestWord(pendingCount)} pending approval${scopeNote} will be approved.`}
+                note="Each one becomes an employee record and leaves this list. This cannot be undone."
+                confirmText={`Approve ${pendingCount}`}
+                onConfirm={handleApproveAll}
+                onClose={closeBulkModal}
+            />
+
+            {/* The same remarks box the single review uses — here the reason is
+                written onto every request in the batch. Mounted only while it
+                is open, so each run starts with an empty box. */}
+            {bulkAction === "reject" && (
+                <RejectModal
+                    isOpen
+                    loading={bulkRunning}
+                    title="Reject All Requests"
+                    description={`${pendingCount} onboarding ${requestWord(pendingCount)} pending approval${scopeNote} will be rejected with these remarks.`}
+                    confirmText={`Reject ${pendingCount}`}
+                    onConfirm={handleRejectAll}
+                    onClose={closeBulkModal}
+                />
+            )}
 
         </div>
     )

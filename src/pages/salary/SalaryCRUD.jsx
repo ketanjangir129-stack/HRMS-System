@@ -2,7 +2,13 @@ import { useState, useEffect, useMemo } from "react";
 import { useNavigate, useOutletContext } from "react-router-dom";
 import { BsClockHistory } from "react-icons/bs";
 import { TbMoneybagEdit } from "react-icons/tb";
-import { FiPlus, FiUsers, FiCheckCircle, FiAlertCircle } from "react-icons/fi";
+import {
+    FiPlus,
+    FiUsers,
+    FiCheckCircle,
+    FiAlertCircle,
+    FiUploadCloud,
+} from "react-icons/fi";
 import { toast } from "react-toastify";
 import { getEmployeeWithSalaryStatus, getAllSalary } from "../../services/SalaryService";
 import { filterData } from "../../utils/search/filterData";
@@ -527,13 +533,40 @@ function SalaryCRUD() {
 
                         </div>
 
-                        {canExport && (
-                            <ExportButton
-                                onClick={handleExport}
-                                disabled={exporting}
-                                label={exporting ? "Exporting..." : "Export Salary"}
-                            />
-                        )}
+                        {/*
+                        | Offered beside the export, which is where somebody
+                        | already comes to move salary data in and out. It is
+                        | the same right as assigning a structure by hand -
+                        | importing a file does the same thing to more people.
+                        */}
+                       <div className="w-full sm:w-52 lg:w-auto p-[10px]">
+
+                            {canCreate && (
+
+                                <button
+                                    type="button"
+                                    
+                                    onClick={() =>
+                                        navigate("/salarydashboard/salary/import")
+                                    }
+                                    title="Assign salaries to many employees from a spreadsheet"
+                                    className="ui-btn ui-btn-secondary w-full font-semibold sm:w-auto lg:mr-[10px] "
+                                >
+                                    <FiUploadCloud />
+                                    Import Salary
+                                </button>
+
+                            )}
+
+                       
+                            {canExport && (
+                                <ExportButton
+                                    onClick={handleExport}
+                                    disabled={exporting}
+                                    label={exporting ? "Exporting..." : "Export Salary"}
+                                />
+                            )}
+                        </div>
 
                     </>
                 }

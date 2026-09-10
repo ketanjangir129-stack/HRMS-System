@@ -156,6 +156,51 @@ export const approveOnboarding = async (
   }
 };
 
+/*
+| Many approvals, one at a time.
+|
+| Each request is its own read, write and delete, so the run is deliberately
+| sequential rather than a Promise.all: a batch that half fails leaves every
+| record it did reach fully approved, and the ones it did not exactly as they
+| were. The caller gets both lists back and reports on them itself.
+*/
+export const approveOnboardingRequests = async (
+  companyCode,
+  employeeIds = [],
+  approvedBy
+) => {
+
+  const approved = [];
+  const failed = [];
+
+  for (const employeeId of employeeIds) {
+
+    const result = await approveOnboarding(
+      companyCode,
+      employeeId,
+      approvedBy
+    );
+
+    if (result.success) {
+
+      approved.push({
+        employeeId,
+        employee: result.employee,
+      });
+
+      continue;
+    }
+
+    failed.push({
+      employeeId,
+      message: result.message,
+    });
+
+  }
+
+  return { approved, failed };
+};
+
 // Stamped after the approval email has already left, which is why it
 // swallows its own failures: the email is gone either way, and a screen told
 // "not sent" because a timestamp would not write would send it a second time.
@@ -254,4 +299,44 @@ export const rejectOnboarding = async (
     };
 
   }
+};
+
+/*
+| Many rejections, under one set of remarks — the same reason is written onto
+| every request the run touches. Sequential and partial for the same reason
+| the bulk approval is: what was rejected stays rejected, what failed is
+| handed back so the screen can name it.
+*/
+export const rejectOnboardingRequests = async (
+  companyCode,
+  employeeIds = [],
+  remarks,
+  rejectedBy
+) => {
+
+  const rejected = [];
+  const failed = [];
+
+  for (const employeeId of employeeIds) {
+
+    const result = await rejectOnboarding(
+      companyCode,
+      employeeId,
+      remarks,
+      rejectedBy
+    );
+
+    if (result.success) {
+      rejected.push({ employeeId });
+      continue;
+    }
+
+    failed.push({
+      employeeId,
+      message: result.message,
+    });
+
+  }
+
+  return { rejected, failed };
 };

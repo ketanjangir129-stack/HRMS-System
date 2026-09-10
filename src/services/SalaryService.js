@@ -3,8 +3,6 @@ import {
     ref, set, get, update, remove
 } from "firebase/database";
 import {getEmployees} from "./EmployeeService"
-import { compile } from "tailwindcss";
-import { add } from "firebase/firestore/pipelines";
 export const addSalary = async (
     companyCode, 
     salary
@@ -132,6 +130,128 @@ export const createSalary = async (
         message: "Salary assigned successfully."
 
     };
+
+};
+
+/*
+|--------------------------------------------------------------------------
+| Bulk Import
+|--------------------------------------------------------------------------
+| Writes the rows an import has already checked.
+|
+| Nothing is validated here. By the time a row reaches this point it has been
+| read, priced against the HR Policy and shown to somebody who pressed the
+| button, so the only things that can still go wrong are the write itself and
+| the structure having appeared since the file was checked.
+|
+| The rows are written one at a time rather than in a single multi-path
+| update. An employee who already has a structure needs their current one
+| copied into history before it is replaced, which is a read and two writes
+| that cannot be folded into one call - and doing them in turn is what lets
+| the screen count the rows off as they land.
+|
+| One row failing does not stop the rest. A run that gave up half way would
+| leave somebody guessing which half, so every row is attempted and reported.
+*/
+export const importSalaries = async (
+    companyCode,
+    rows = [],
+    {
+        updateExisting = false,
+        updatedBy = null,
+        onProgress = null,
+    } = {}
+) => {
+
+    const results = [];
+
+    for (let position = 0; position < rows.length; position += 1) {
+
+        const row = rows[position];
+
+        const salary = {
+            employeeId: row.employeeId,
+            earnings: row.earnings,
+            deductions: row.deductions,
+            grossSalary: row.grossSalary,
+            totalDeduction: row.totalDeduction,
+            netSalary: row.netSalary,
+            effectiveFrom: row.effectiveFrom,
+            status: row.status,
+        };
+
+        try {
+
+            /*
+            | Asked again here rather than trusted from the preview: the file
+            | may have been checked minutes ago, and somebody else assigning a
+            | salary in between must not have it overwritten by an import that
+            | still believes the employee has none.
+            */
+            const exists = await checkSalaryExists(
+                companyCode,
+                row.employeeId
+            );
+
+            if (exists && !updateExisting) {
+
+                results.push({
+                    ...row,
+                    outcome: "skipped",
+                    message: "Already has a salary structure.",
+                });
+
+            }
+
+            else if (exists) {
+
+                const result = await editSalary(
+                    companyCode,
+                    row.employeeId,
+                    salary,
+                    updatedBy
+                );
+
+                results.push({
+                    ...row,
+                    outcome: result.success ? "updated" : "failed",
+                    message: result.message,
+                });
+
+            }
+
+            else {
+
+                await addSalary(companyCode, salary);
+
+                results.push({
+                    ...row,
+                    outcome: "created",
+                    message: "Salary assigned.",
+                });
+
+            }
+
+        }
+        catch (error) {
+
+            console.error(error);
+
+            results.push({
+                ...row,
+                outcome: "failed",
+                message:
+                    error?.message ||
+                    "Could not save this salary.",
+            });
+
+        }
+
+        onProgress?.(position + 1, rows.length);
+
+    }
+
+    return results;
 
 };
 

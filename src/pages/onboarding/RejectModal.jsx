@@ -1,25 +1,38 @@
 import { useState } from "react";
 
+/*
+| One remarks box, used for a single request and for a whole batch. The batch
+| passes its own heading and the line that says how many requests the remarks
+| are about to be written onto; everything else is identical, which is why
+| there is one modal rather than two.
+*/
 function RejectModal({
     isOpen,
     onClose,
     onConfirm,
     loading,
+    title = "Reject Onboarding Request",
+    description = "",
+    confirmText = "Reject",
+    loadingText = "Rejecting...",
 }) {
     const [remarks, setRemarks] = useState("");
 
+    /*
+    | The remarks are not cleared when Reject is pressed: the box stays
+    | readable for as long as the request is in flight, and a rejection that
+    | failed leaves the reason still typed to try again. Both callers mount
+    | this only while it is open, so a fresh one starts empty.
+    */
     if (!isOpen) return null;
 
     const handleReject = () => {
         if (!remarks.trim()) return;
 
         onConfirm(remarks);
-
-        setRemarks("");
     };
 
     const handleClose = () => {
-        setRemarks("");
         onClose();
     };
 
@@ -29,8 +42,14 @@ function RejectModal({
             <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6">
 
                 <h2 className="text-xl font-bold mb-4">
-                    Reject Onboarding Request
+                    {title}
                 </h2>
+
+                {description && (
+                    <p className="mb-4 rounded-lg border border-red-100 bg-red-50 px-3 py-2 text-sm text-red-600">
+                        {description}
+                    </p>
+                )}
 
                 <label className="block mb-2 font-medium">
                     Remarks
@@ -65,7 +84,7 @@ function RejectModal({
                         disabled={!remarks.trim() || loading}
                         className="px-5 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:bg-gray-400"
                     >
-                        {loading ? "Rejecting..." : "Reject"}
+                        {loading ? loadingText : confirmText}
                     </button>
 
                 </div>
