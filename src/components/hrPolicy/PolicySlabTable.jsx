@@ -229,7 +229,7 @@ function PolicySlabTable({
                     onClick={() => onRemoveRow?.(index)}
                     disabled={disabled}
                     aria-label={`Remove slab ${index + 1}`}
-                    className="inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-400 transition-all hover:border-red-200 hover:bg-red-50 hover:text-red-500 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-slate-200 disabled:hover:bg-white disabled:hover:text-slate-400"
+                    className="inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-400 transition-all hover:border-red-200 hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-500/10 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-slate-200 disabled:hover:bg-white disabled:hover:text-slate-400"
                   >
                     <FiTrash2 size={16} />
                   </button>
@@ -265,7 +265,7 @@ function PolicySlabTable({
         type="button"
         onClick={onAddRow}
         disabled={disabled}
-        className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-dashed border-slate-300 px-4 py-2 text-sm font-semibold text-slate-600 transition-all hover:border-blue-400 hover:bg-blue-50/50 hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-slate-300 disabled:hover:bg-transparent disabled:hover:text-slate-600"
+        className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-dashed border-slate-300 px-4 py-2 text-sm font-semibold text-slate-600 transition-all hover:border-blue-400 hover:bg-blue-50/50 hover:text-blue-700 dark:hover:bg-blue-500/10 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-slate-300 disabled:hover:bg-transparent disabled:hover:text-slate-600"
       >
 
         <FiPlus size={16} />

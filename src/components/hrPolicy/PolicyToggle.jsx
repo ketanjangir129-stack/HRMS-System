@@ -45,7 +45,7 @@ function PolicyToggle({
           className={`flex h-6 w-11 items-center rounded-full p-0.5 transition-all duration-200 peer-focus-visible:ring-2 peer-focus-visible:ring-blue-400 peer-focus-visible:ring-offset-2 ${
             checked
               ? "bg-blue-600 shadow-sm shadow-blue-600/30"
-              : "bg-slate-300 peer-hover:bg-slate-400"
+              : "bg-slate-300 peer-hover:bg-slate-400 dark:bg-slate-600 dark:peer-hover:bg-slate-500"
           } ${disabled ? "opacity-40" : ""}`}
         >
 

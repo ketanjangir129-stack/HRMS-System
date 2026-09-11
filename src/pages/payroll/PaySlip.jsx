@@ -688,7 +688,7 @@ const PaySlip = () => {
                 <h2 className={styles.companyName}>
                   {company?.companyName || "Company"}
                 </h2>
-                <p className={styles.companyLine}>{company?.phone || ""}</p>
+                <p className={styles.companyLine}>{company?.mobile || ""}</p>
 
                 <div className={styles.triangle} />
               </div>
@@ -775,7 +775,7 @@ const PaySlip = () => {
                 <div className={styles.footerBlock}>
                   <span className={styles.footerLabel}>Mobile</span>
                   <span className={styles.footerValue}>
-                    {company?.phone || "--"}
+                    {company?.mobile || "--"}
                   </span>
                 </div>
 

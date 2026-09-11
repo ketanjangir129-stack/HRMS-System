@@ -29,7 +29,7 @@ export const createCompany   = async (companyData) => {
                     companyName: companyData.companyName,
                     ownerName: companyData.ownerName,
                     email: companyData.email,
-                    phone: companyData.phone,
+                    mobile: companyData.mobile,
                     address: companyData.address,
                     status: "active",
                     createdAt: Date.now(),

@@ -41,7 +41,7 @@ function PolicyRadioGroup({
               key={option.value}
               className={`flex items-start gap-3 rounded-xl border p-3.5 transition-all ${
                 selected
-                  ? "border-blue-500 bg-blue-50/60 shadow-sm"
+                  ? "border-blue-500 bg-blue-50/60 shadow-sm dark:bg-blue-500/12"
                   : "border-slate-200 bg-white hover:border-slate-300"
               } ${
                 disabled

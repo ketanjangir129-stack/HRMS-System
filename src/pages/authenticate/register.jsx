@@ -20,7 +20,7 @@ const Register = () => {
         ownerName: "",
         email: "",
         password: "",
-        phone: "",
+        mobile: "",
         address: "",
     });
     const [showPassword, setShowPassword] = useState(false);
@@ -87,7 +87,7 @@ const handleSubmit = async (e) => {
         companyCode,
         ownerName: formData.ownerName.trim(),
         email: formData.email.trim(),
-        phone: formData.phone.trim(),
+        mobile: formData.mobile.trim(),
         address: formData.address.trim(),
       };
 
@@ -269,25 +269,25 @@ const handleSubmit = async (e) => {
                                 )}
                             </div>
 
-                            {/* Phone */}
+                            {/* Mobile Number */}
                             <div>
                                 <label className="block text-sm font-medium text-ink-muted mb-2">
-                                    Phone Number
+                                    Mobile Number
                                 </label>
 
                                 <input
                                     type="text"
-                                    name="phone"
-                                    value={formData.phone}
+                                    name="mobile"
+                                    value={formData.mobile}
                                     onChange={handleChange}
                                     onBlur={handleBlur}
                                     placeholder="9876543210"
                                     className="w-full h-12 px-4 rounded-xl border border-line bg-surface focus:outline-none focus:ring-4 focus:ring-blue-100 focus:border-blue-500 transition"
                                 />
 
-                                {errors.phone && (
+                                {errors.mobile && (
                                     <p className="mt-1 text-sm text-red-500">
-                                        {errors.phone}
+                                        {errors.mobile}
                                     </p>
                                 )}
                             </div>

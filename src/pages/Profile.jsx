@@ -215,7 +215,15 @@ function Profile() {
   const initials = getInitials(employee || currentUser);
 
   const email = employee?.personalInfo?.email || currentUser?.email || "";
-  const mobile = employee?.personalInfo?.mobile || currentUser?.phone || "";
+  /*
+  | Owner ka employee record hota hi nahi, aur login wala currentUser sirf
+  | { role, name, email } rakhta hai — isliye uska mobile company details se
+  | aata hai, jo registration ke waqt usi ne bhara tha. company har session
+  | restore par DB se fresh padha jaata hai, currentUser localStorage ka
+  | snapshot hai — isliye fallback company ka.
+  */
+  const mobile =
+    employee?.personalInfo?.mobile || currentUser?.mobile || company?.mobile || "";
 
   const status = employee?.account?.status || (company?.status === "active" ? "Active" : "");
   const isActive = status.toLowerCase() === "active";
