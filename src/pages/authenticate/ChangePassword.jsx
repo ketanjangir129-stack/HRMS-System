@@ -2,6 +2,7 @@ import { useState } from "react";
 import useAuth from "../../hooks/useAuth";
 import { Navigate, useNavigate } from "react-router-dom";
 import { toast } from 'react-toastify';
+import { Eye, EyeOff } from "lucide-react";
 import {
   validatePasswordChangeField,
   validatePasswordChangeForm,
@@ -17,6 +18,20 @@ const ChangePassword = () => {
   const { changePassword } = useAuth();
   const navigate = useNavigate();
   const [errors, setErrors] = useState({});
+
+  /*
+  | One flag per field rather than one for the form: the current password and
+  | the new one are answers to different questions, and revealing the one you
+  | are checking should not put the other two on screen as well.
+  */
+  const [visible, setVisible] = useState({
+    currentPassword: false,
+    newPassword: false,
+    confirmPassword: false,
+  });
+
+  const toggleVisible = (field) =>
+    setVisible((prev) => ({ ...prev, [field]: !prev[field] }));
 
   // Guards: only a logged-in HR/Employee whose password is still the default
   // may reach this page. Owner and already-updated users are sent to dashboard.
@@ -105,15 +120,36 @@ const ChangePassword = () => {
                 Current Password
               </label>
 
-              <input
-                type="password"
-                name="currentPassword"
-                value={formData.currentPassword}
-                onChange={handleChange}
-                onBlur={handleBlur}
-                placeholder="********"
-                className="w-full border rounded-lg p-3"
-              />
+              <div className="relative">
+                <input
+                  type={visible.currentPassword ? "text" : "password"}
+                  name="currentPassword"
+                  value={formData.currentPassword}
+                  onChange={handleChange}
+                  onBlur={handleBlur}
+                  placeholder="********"
+                  className="w-full border rounded-lg p-3 pr-12"
+                />
+
+                <button
+                  type="button"
+                  onClick={() => toggleVisible("currentPassword")}
+                  aria-label={
+                    visible.currentPassword
+                      ? "Hide current password"
+                      : "Show current password"
+                  }
+                  aria-pressed={visible.currentPassword}
+                  className="absolute inset-y-0 right-0 flex w-12 cursor-pointer items-center justify-center rounded-r-lg text-slate-400 transition-colors hover:text-blue-600"
+                >
+                  {visible.currentPassword ? (
+                    <EyeOff className="h-5 w-5" aria-hidden="true" />
+                  ) : (
+                    <Eye className="h-5 w-5" aria-hidden="true" />
+                  )}
+                </button>
+              </div>
+
               {errors.currentPassword && (
                 <p className="text-red-500 text-sm mt-1">
                   {errors.currentPassword}
@@ -127,15 +163,35 @@ const ChangePassword = () => {
                 New Password
               </label>
 
-              <input
-                type="password"
-                name="newPassword"
-                value={formData.newPassword}
-                onChange={handleChange}
-                onBlur={handleBlur}
-                placeholder="********"
-                className="w-full border rounded-lg p-3"
-              />
+              <div className="relative">
+                <input
+                  type={visible.newPassword ? "text" : "password"}
+                  name="newPassword"
+                  value={formData.newPassword}
+                  onChange={handleChange}
+                  onBlur={handleBlur}
+                  placeholder="********"
+                  className="w-full border rounded-lg p-3 pr-12"
+                />
+
+                <button
+                  type="button"
+                  onClick={() => toggleVisible("newPassword")}
+                  aria-label={
+                    visible.newPassword
+                      ? "Hide new password"
+                      : "Show new password"
+                  }
+                  aria-pressed={visible.newPassword}
+                  className="absolute inset-y-0 right-0 flex w-12 cursor-pointer items-center justify-center rounded-r-lg text-slate-400 transition-colors hover:text-blue-600"
+                >
+                  {visible.newPassword ? (
+                    <EyeOff className="h-5 w-5" aria-hidden="true" />
+                  ) : (
+                    <Eye className="h-5 w-5" aria-hidden="true" />
+                  )}
+                </button>
+              </div>
 
               {errors.newPassword && (
                 <p className="text-red-500 text-sm mt-1">
@@ -150,15 +206,36 @@ const ChangePassword = () => {
                 Confirm Password
               </label>
 
-              <input
-                type="password"
-                name="confirmPassword"
-                value={formData.confirmPassword}
-                onChange={handleChange}
-                onBlur={handleBlur}
-                placeholder="********"
-                className="w-full border rounded-lg p-3"
-              />
+              <div className="relative">
+                <input
+                  type={visible.confirmPassword ? "text" : "password"}
+                  name="confirmPassword"
+                  value={formData.confirmPassword}
+                  onChange={handleChange}
+                  onBlur={handleBlur}
+                  placeholder="********"
+                  className="w-full border rounded-lg p-3 pr-12"
+                />
+
+                <button
+                  type="button"
+                  onClick={() => toggleVisible("confirmPassword")}
+                  aria-label={
+                    visible.confirmPassword
+                      ? "Hide confirm password"
+                      : "Show confirm password"
+                  }
+                  aria-pressed={visible.confirmPassword}
+                  className="absolute inset-y-0 right-0 flex w-12 cursor-pointer items-center justify-center rounded-r-lg text-slate-400 transition-colors hover:text-blue-600"
+                >
+                  {visible.confirmPassword ? (
+                    <EyeOff className="h-5 w-5" aria-hidden="true" />
+                  ) : (
+                    <Eye className="h-5 w-5" aria-hidden="true" />
+                  )}
+                </button>
+              </div>
+
               {errors.confirmPassword && (
                 <p className="text-red-500 text-sm mt-1">
                   {errors.confirmPassword}

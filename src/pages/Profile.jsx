@@ -54,12 +54,16 @@ import { validateField } from "../utils/validation/validateField";
 | without that permission could never reach its own information through it.
 | Every role can open its own profile, so this route carries no permission.
 |
-| The owner has no employee record at all — only a name, an email and the
-| company — so the sections that have nothing to show are simply dropped.
+| The owner has no employee record at all — their name, mobile and address
+| live on the company itself, so they get their own two cards (Owner and
+| Company information) instead of the employee ones, and both are editable.
+| Two fields there stay read only for structural reasons, not HR ones: the
+| email is the Firebase Auth login and the company code is the database path
+| every record in this company hangs off.
 |
 | Look EmployeesDetails se liya gaya hai — dono ek hi cheez dikhate hain
 | (ek record, section-wise), isliye card, hero, field row aur edit form wahi
-| hain. Farq sirf itna: yahan sirf ek card edit hota hai.
+| hain. Farq sirf itna: yahan ek waqt me ek hi card edit hota hai.
 |--------------------------------------------------------------------------
 */
 
@@ -74,10 +78,16 @@ const maskValue = (value) => {
 /*
 | Lambe cards do-column main area me, chhote right column me — bilkul
 | EmployeesDetails ke overview jaisa. Dono taraf kuch na ho to layout
-| apne aap single column ho jata hai (owner ke paas sirf account+company
-| hota hai).
+| apne aap single column ho jata hai (owner ke dono card yahin hain,
+| isliye uska page poori chaudai me ek column banta hai).
 */
-const MAIN_SECTIONS = ["personalInfo", "bankInfo", "documents"];
+const MAIN_SECTIONS = [
+  "personalInfo",
+  "bankInfo",
+  "documents",
+  "ownerInfo",
+  "companyInfo",
+];
 
 /*
 | Personal Information card — yahi ek section user khud badal sakta hai,
@@ -116,7 +126,7 @@ const PERSONAL_FIELDS = [
 ];
 
 function Profile() {
-  const { currentUser, company } = useAuth();
+  const { currentUser, company, updateCompanyProfile } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -128,8 +138,12 @@ function Profile() {
 
   const [revealed, setRevealed] = useState({});
 
-  // Personal Information card ka edit mode + uski working copy
-  const [editing, setEditing] = useState(false);
+  /*
+  | Ek waqt me ek hi card edit hota hai, isliye edit state ek boolean ki jagah
+  | us card ki id rakhti hai — owner ke paas do editable card hain (owner aur
+  | company information) aur dono ek hi form machinery use karte hain.
+  */
+  const [editingSection, setEditingSection] = useState(null);
   const [formData, setFormData] = useState({});
   const [errors, setErrors] = useState({});
   const [saving, setSaving] = useState(false);
@@ -140,6 +154,9 @@ function Profile() {
   const companyCode = company?.companyCode || localStorage.getItem("companyCode");
 
   const role = getUserRole(currentUser);
+
+  // Owner ka data company details me hai, employees node me nahi
+  const isOwner = role === "owner";
 
   // Login ke waqt record isi key (uppercase employee id) se aaya tha
   const employeeId =
@@ -211,22 +228,44 @@ function Profile() {
     );
   }
 
-  const name = getUserName(employee || currentUser);
-  const initials = getInitials(employee || currentUser);
-
-  const email = employee?.personalInfo?.email || currentUser?.email || "";
   /*
-  | Owner ka employee record hota hi nahi, aur login wala currentUser sirf
-  | { role, name, email } rakhta hai — isliye uska mobile company details se
-  | aata hai, jo registration ke waqt usi ne bhara tha. company har session
-  | restore par DB se fresh padha jaata hai, currentUser localStorage ka
-  | snapshot hai — isliye fallback company ka.
+  | Owner ke liye company hamesha pehle: company har session restore par DB se
+  | fresh padhi jaati hai, jabki currentUser localStorage ka login-time
+  | snapshot hai. Save ke turant baad naya naam bhi yahin se dikhta hai.
   */
-  const mobile =
-    employee?.personalInfo?.mobile || currentUser?.mobile || company?.mobile || "";
+  const name = isOwner
+    ? company?.ownerName || getUserName(currentUser)
+    : getUserName(employee || currentUser);
 
-  const status = employee?.account?.status || (company?.status === "active" ? "Active" : "");
+  const initials = getInitials(isOwner ? { name } : employee || currentUser);
+
+  const email = isOwner
+    ? company?.email || currentUser?.email || ""
+    : employee?.personalInfo?.email || currentUser?.email || "";
+
+  // Owner ka mobile registration ke waqt company details me gaya tha
+  const mobile = isOwner
+    ? company?.mobile || currentUser?.mobile || ""
+    : employee?.personalInfo?.mobile || currentUser?.mobile || "";
+
+  const status = isOwner
+    ? company?.status
+      ? company.status === "active"
+        ? "Active"
+        : "Inactive"
+      : ""
+    : employee?.account?.status || "";
+
   const isActive = status.toLowerCase() === "active";
+
+  // createdAt epoch milliseconds me store hota hai (createCompany → Date.now())
+  const registeredOn = company?.createdAt
+    ? new Date(company.createdAt).toLocaleDateString("en-IN", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+      })
+    : "";
 
   // Purane records me kuch fields dusre naam se save hue the — dono padho
   const bank = employee?.bankInfo || {};
@@ -247,17 +286,109 @@ function Profile() {
     address: personal.address || currentUser?.address || "",
   };
 
-  // Owner ka koi employee record nahi hota — uske paas save karne ko kuch hai hi nahi
-  const canEdit = Boolean(employee && employeeId && companyCode);
+  // Employee/HR apna personalInfo card edit karte hain
+  const canEditPersonal = Boolean(employee && employeeId && companyCode);
 
-  const sections = [
+  // Owner apne dono card edit karta hai — dono company details par likhte hain
+  const canEditCompany = Boolean(isOwner && companyCode);
+
+  /*
+  | Owner ke cards. Jis field me `key` hai wahi edit mode me input banti hai;
+  | bina key wali field har haal me sirf padhne ke liye hai:
+  |
+  |   Email        — Firebase Auth ka login email hai. Sirf DB me badal dene se
+  |                  login match karna band kar deta (loginUser dono compare
+  |                  karta hai), isliye yahan lock hai.
+  |   Company Code — har record ka DB path (companies/<code>/...) isi se banta
+  |                  hai, badalna matlab poora data anath ho jaana.
+  |   Status       — company active/inactive hona owner ka faisla nahi.
+  |   Registered On— registration ka waqt hai, koi setting nahi.
+  */
+  const ownerSections = [
+    {
+      id: "ownerInfo",
+      icon: UserRound,
+      title: "Owner Information",
+      subtitle: "Your name and contact details.",
+      accent: "bg-blue-50 text-blue-600",
+      editable: canEditCompany,
+      fields: [
+        {
+          key: "ownerName",
+          label: "Owner Name",
+          value: company?.ownerName,
+          icon: UserRound,
+        },
+        {
+          key: "mobile",
+          label: "Mobile",
+          value: company?.phone || company?.mobile,
+          icon: Phone,
+        },
+        {
+          label: "Email",
+          value: company?.email,
+          icon: Mail,
+          hint: "Used to sign in — cannot be changed here.",
+        },
+        {
+          label: "Role",
+          value: role,
+          icon: ShieldCheck,
+          capitalize: true,
+        },
+      ],
+    },
+    {
+      id: "companyInfo",
+      icon: Building2,
+      title: "Company Information",
+      subtitle: "Registered company profile and address.",
+      accent: "bg-violet-50 text-violet-600",
+      editable: canEditCompany,
+      fields: [
+        {
+          key: "companyName",
+          label: "Company Name",
+          value: company?.companyName,
+          icon: Building2,
+        },
+        {
+          label: "Company Code",
+          value: company?.companyCode,
+          icon: Hash,
+          hint: "Employees use this to sign in — it is permanent.",
+        },
+        {
+          label: "Status",
+          value: status,
+          icon: BadgeCheck,
+          pill: true,
+        },
+        {
+          label: "Registered On",
+          value: registeredOn,
+          icon: CalendarDays,
+        },
+        {
+          key: "address",
+          label: "Address",
+          value: company?.address,
+          icon: MapPin,
+          full: true,
+        },
+      ],
+    },
+  ];
+
+  const employeeSections = [
     {
       id: "personalInfo",
       icon: UserRound,
       title: "Personal Information",
       subtitle: "Identity, contact and address details.",
       accent: "bg-blue-50 text-blue-600",
-      editable: canEdit,
+      editable: canEditPersonal,
       fields: PERSONAL_FIELDS.map((field) => ({
         ...field,
         value: personalValues[field.key],
@@ -371,16 +502,22 @@ function Profile() {
         { label: "Resume", value: documents.resume, icon: FileText, type: "file" },
       ],
     },
-    
-  ]
-    // Khaali field dash ki tarah dikhane se behtar hai use hata dena — owner ke
-    // liye bank/documents jaise poore section apne aap gayab ho jaate hain.
+
+  ];
+
+  // Bina filter wali list — startEdit isi se draft banata hai, warna jo field
+  // abhi khaali hai (aur isliye card se hat gayi hai) woh form me hi nahi aati
+  const allSections = isOwner ? ownerSections : employeeSections;
+
+  const sections = allSections
+    // Khaali field dash ki tarah dikhane se behtar hai use hata dena — jis
+    // employee ka bank/documents bhara hi nahi, uske liye poora section gayab.
     // Edit mode alag baat hai: wahan khaali fields dikhne hi chahiye, warna jo
     // abhi bhare hi nahi hain unhe user kabhi bhar hi nahi payega.
     .map((section) => ({
       ...section,
       fields:
-        section.editable && editing
+        section.editable && editingSection === section.id
           ? section.fields
           : section.fields.filter(
               (field) => String(field.value ?? "").trim() !== ""
@@ -401,29 +538,45 @@ function Profile() {
   // Ek taraf khaali ho to do column ka matlab hi nahi
   const splitLayout = mainSections.length > 0 && sideSections.length > 0;
 
-  // Naam ke neeche chips — khaali value wala chip banta hi nahi
-  const headerChips = [
-    {
-      label: employee?.employmentInfo?.employeeId,
-      className: "bg-blue-50 text-blue-700",
-    },
-    {
-      label: employee?.employmentInfo?.designation,
-      className: "bg-slate-100 text-slate-600",
-    },
-    {
-      label: employee?.employmentInfo?.department,
-      className: "bg-slate-100 text-slate-600",
-    },
-    {
-      label: role,
-      className: "bg-slate-100 capitalize text-slate-600",
-    },
-  ].filter((chip) => chip.label);
+  /*
+  | Naam ke neeche chips — khaali value wala chip banta hi nahi. Owner ke paas
+  | employee id/department hote hi nahi, uski pehchan company code hai.
+  */
+  const headerChips = (
+    isOwner
+      ? [
+          {
+            label: company?.companyCode,
+            className: "bg-blue-50 text-blue-700",
+          },
+          {
+            label: role,
+            className: "bg-slate-100 capitalize text-slate-600",
+          },
+        ]
+      : [
+          {
+            label: employee?.employmentInfo?.employeeId,
+            className: "bg-blue-50 text-blue-700",
+          },
+          {
+            label: employee?.employmentInfo?.designation,
+            className: "bg-slate-100 text-slate-600",
+          },
+          {
+            label: employee?.employmentInfo?.department,
+            className: "bg-slate-100 text-slate-600",
+          },
+          {
+            label: role,
+            className: "bg-slate-100 capitalize text-slate-600",
+          },
+        ]
+  ).filter((chip) => chip.label);
 
   // Header ke right side ki quick info — icon tile + value + label
   const metaItems = [
-    { icon: Phone, label: "Mobile", value: mobile },
+    { icon: Phone, label: "Mobile", value: mobile || company?.phone },
     { icon: Mail, label: "Email", value: email },
     { icon: Building2, label: "Company", value: company?.companyName },
   ];
@@ -443,10 +596,10 @@ function Profile() {
           Back
         </button>
 
-        {/* Owner ka koi record hi nahi hota, uske liye yahan kuch edit nahi hota —
-            ye batana zaroori hai, warna wo Edit button dhoondta rehta hai.
-            Employee/HR ko Edit button Personal Information card par milta hai. */}
-        {!canEdit && (
+        {/* Edit button har editable card ke apne header me hai. Ye badge tab
+            dikhta hai jab kuch bhi edit karne ko nahi bacha — tabhi user ko
+            pata chalta hai ki Edit button dhoondna bekaar hai. */}
+        {!canEditPersonal && !canEditCompany && (
           <span className="inline-flex shrink-0 items-center gap-1.5 rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-500">
             <Lock className="h-3.5 w-3.5" />
             View Only
@@ -595,7 +748,8 @@ function Profile() {
   function renderSection(section, variant) {
     const Icon = section.icon;
 
-    const isEditing = Boolean(section.editable) && editing;
+    const isEditing =
+      Boolean(section.editable) && editingSection === section.id;
 
     const gridCols = variant === "side" ? "" : "sm:grid-cols-2";
     const fullSpan = variant === "side" ? "" : "sm:col-span-2";
@@ -633,10 +787,12 @@ function Profile() {
 
           </div>
 
-          {section.editable && !isEditing && (
+          {/* Dusra card edit ho raha ho to yahan Edit nahi dikhta — do form
+              ek saath khulne se user ka pehla draft chupchap chala jaata. */}
+          {section.editable && !editingSection && (
             <button
               type="button"
-              onClick={startEdit}
+              onClick={() => startEdit(section.id)}
               className="inline-flex shrink-0 cursor-pointer items-center gap-1.5 rounded-xl border border-blue-200 px-3.5 py-2 text-sm font-semibold text-blue-600 transition-all hover:border-blue-500 hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2"
             >
               <Pencil className="h-3.5 w-3.5" />
@@ -656,6 +812,15 @@ function Profile() {
             const fieldId = `${section.id}.${field.label}`;
             const isHidden = field.masked && !revealed[fieldId];
             const FieldIcon = field.icon;
+
+            /*
+            | `key` hi decide karta hai ki field badli ja sakti hai ya nahi.
+            | Owner ke cards me kuch fields jaan-boojh kar bina key ke hain
+            | (email = login, company code = DB path) — edit mode me wo input
+            | nahi, ek locked box banti hain taaki dikhein to sahi, par user
+            | unhe badal na sake.
+            */
+            const isFieldEditing = isEditing && Boolean(field.key);
 
             return (
               <div
@@ -679,7 +844,7 @@ function Profile() {
                     {field.label}
                   </p>
 
-                  {isEditing ? (
+                  {isFieldEditing ? (
                     <>
                       {field.type === "select" ? (
                         <select
@@ -722,13 +887,25 @@ function Profile() {
                         </p>
                       )}
                     </>
+                  ) : isEditing ? (
+                    // Editable card ka wo field jise badla nahi ja sakta —
+                    // input jaisi hi jagah leta hai taaki grid tedhi na ho
+                    <div className="flex w-full min-w-0 items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-semibold text-slate-500">
+
+                      <Lock className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+
+                      <span className="min-w-0 truncate">
+                        {field.value || "—"}
+                      </span>
+
+                    </div>
                   ) : (
                   <div className="flex min-h-6 min-w-0 items-center justify-between gap-2">
 
                     <p
                       className={`min-w-0 wrap-break-word text-sm font-semibold text-slate-900 ${
                         isHidden ? "tracking-widest" : ""
-                      }`}
+                      } ${field.capitalize ? "capitalize" : ""}`}
                     >
                       {field.type === "file" && /^https?:\/\//.test(field.value) ? (
                         <a
@@ -775,6 +952,14 @@ function Profile() {
                   </div>
                   )}
 
+                  {/* Hint sirf edit mode me — wahi jagah hai jahan user ye
+                      poochta hai ki is field par input kyun nahi hai */}
+                  {isEditing && field.hint && (
+                    <p className="text-[11px] text-slate-400">
+                      {field.hint}
+                    </p>
+                  )}
+
                 </div>
 
               </div>
@@ -811,29 +996,44 @@ function Profile() {
     );
   }
 
-  // Edit mode ka form employee ke apne record se bharta hai. Purane records me
-  // naam/email/mobile employmentInfo me the — form me wahi fallback chahiye,
-  // warna save par ye teeno khaali chale jaate.
-  function startEdit() {
-    const draft = {
-      ...personalValues,
-      name: personal.name || employee?.employmentInfo?.name || "",
-    };
+  /*
+  | Edit mode ka form us card ke apne data se bharta hai.
+  |
+  | personalInfo ek exception hai: uska poora node replace hota hai, isliye
+  | draft me card ke bahar wali keys bhi saath jaati hain (warna save par woh
+  | DB se ud jaatin). Purane records me naam/email/mobile employmentInfo me
+  | the — name ka fallback isliye hai.
+  */
+  function startEdit(sectionId) {
+    // Bina filter wali definition — card par se hat chuki khaali fields bhi
+    // form me aani chahiye, warna user unhe pehli baar bhar hi nahi payega
+    const section = allSections.find((item) => item.id === sectionId);
+
+    if (!section) return;
+
+    const draft =
+      section.id === "personalInfo"
+        ? {
+            ...personalValues,
+            name: personal.name || employee?.employmentInfo?.name || "",
+          }
+        : {};
 
     // Har editable key form me honi chahiye — jo key hi na ho uski required
     // validation kabhi chalti nahi aur khaali field chupke se save ho jaata.
-    PERSONAL_FIELDS.forEach((field) => {
-      draft[field.key] = draft[field.key] ?? "";
+    section.fields.forEach((field) => {
+      if (!field.key) return; // read only field — iska koi input hi nahi
+      draft[field.key] = draft[field.key] ?? field.value ?? "";
     });
 
     setFormData(draft);
     setErrors({});
     setActionError("");
-    setEditing(true);
+    setEditingSection(section.id);
   }
 
   function cancelEdit() {
-    setEditing(false);
+    setEditingSection(null);
     setFormData({});
     setErrors({});
   }
@@ -845,6 +1045,10 @@ function Profile() {
   }
 
   async function saveProfile() {
+    // Owner ke dono card company details par likhte hain, employee record par nahi
+    const isCompanySection =
+      editingSection === "ownerInfo" || editingSection === "companyInfo";
+
     const validationErrors = {};
 
     Object.keys(formData).forEach((key) => {
@@ -856,10 +1060,12 @@ function Profile() {
       // Optional field (rule required nahi) khaali ho to validate mat karo
       if (isEmpty && !rules[key].required) return;
 
-      const error = validateField(key, value, {
-        ...employee,
-        personalInfo: formData,
-      });
+      const error = validateField(
+        key,
+        value,
+        // Teesra argument sirf un rules ke liye hai jo doosri field dekhte hain
+        isCompanySection ? formData : { ...employee, personalInfo: formData }
+      );
 
       if (error) validationErrors[key] = error;
     });
@@ -873,6 +1079,26 @@ function Profile() {
     setActionError("");
 
     try {
+      if (isCompanySection) {
+        /*
+        | Context wala helper isliye, service nahi: save ke baad company state
+        | aur owner ka naam (navbar/drawer dono currentUser se aate hain) ek
+        | saath refresh hone chahiye.
+        */
+        const result = await updateCompanyProfile(formData);
+
+        if (!result.success) {
+          setActionError(
+            result.message || "Failed to save changes. Please try again."
+          );
+          return;
+        }
+
+        setEditingSection(null);
+        setErrors({});
+        return;
+      }
+
       // personalInfo node poora replace hota hai, isliye formData me record ki
       // baaki keys bhi rehti hain (startEdit poora personalInfo copy karta hai).
       const result = await updateEmployeeSection(
@@ -889,7 +1115,7 @@ function Profile() {
       }
 
       setEmployee((prev) => ({ ...prev, personalInfo: result.data }));
-      setEditing(false);
+      setEditingSection(null);
       setErrors({});
     } catch (error) {
       console.error("Failed to save profile:", error);
