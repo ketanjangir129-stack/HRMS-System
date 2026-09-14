@@ -35,7 +35,6 @@ import RouteErrorBoundary from "../components/common/RouteErrorBoundary";
 | already had one.
 */
 
-const ResetPassword = lazy(() => import("../pages/authenticate/ResetPassword"));
 const Dashboard = lazy(() => import("../pages/Dashboard"));
 const Departments = lazy(() => import("../pages/departments/Departments"));
 const DepartmentImport = lazy(() => import("../pages/departments/DepartmentImport"));
