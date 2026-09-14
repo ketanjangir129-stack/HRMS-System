@@ -181,7 +181,13 @@
     | inbox, where it belongs.
     */
     function actionLink_(data) {
-        return data.invitationLink || data.loginLink || "";
+        return (
+            data.invitationLink ||
+            data.equipmentLink ||
+            data.certificateLink ||
+            data.loginLink ||
+            ""
+        );
     }
 
     /*
@@ -343,6 +349,16 @@
         "password-reset": {
             label: "Password reset",
             render: passwordReset_,
+        },
+
+        "equipment-submission": {
+            label: "Equipment submission",
+            render: equipmentSubmission_,
+        },
+
+        "exit-noc": {
+            label: "No Objection Certificate",
+            render: exitNoc_,
         },
     };
 
@@ -544,6 +560,146 @@
 
                 "If you did not ask for this, you can ignore this email — your " +
                 "password stays as it is until the link above is used.",
+            ],
+        });
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | The equipment submission form
+    |--------------------------------------------------------------------------
+    | Sent the moment HR approves somebody's resignation. It is the one email
+    | in this file that asks the recipient to do something before a date rather
+    | than simply telling them where to click, so the last working day is on
+    | the card and named again in the closing paragraph.
+    |
+    | It goes to the work address, while they still have one. The certificate
+    | below is the opposite case and says so.
+    */
+    function equipmentSubmission_(data) {
+
+        var companyName = data.companyName || "Your Company";
+
+        return message_({
+            companyName: companyName,
+
+            subject: "Return of company equipment — " + companyName,
+
+            preheader:
+                "Please confirm the company equipment you are returning before your last working day.",
+
+            heading: "A last step before you go, " + (data.name || "there"),
+
+            intro: [
+                "Your resignation has been approved. Before your last working " +
+                "day we need you to confirm what company equipment you hold and " +
+                "what you are handing back.",
+
+                data.equipmentList
+                    ? "The items we usually issue are: " + data.equipmentList +
+                    ". Please account for each one, including anything you were " +
+                    "never given."
+                    : "",
+            ],
+
+            cards: [
+                {
+                    title: "Your exit details",
+                    rows: [
+                        { label: "Employee ID", value: data.employeeId },
+                        { label: "Designation", value: data.designation },
+                        { label: "Department", value: data.department },
+                        { label: "Last Working Day", value: data.lastWorkingDay },
+                    ],
+                },
+            ],
+
+            action: {
+                label: "Complete the Equipment Form",
+                href: data.equipmentLink || "",
+            },
+
+            closing: [
+                "Sign in with your usual company credentials to open the form.",
+
+                "Your full and final settlement is worked out once this form is " +
+                "submitted, so completing it on time is what keeps your " +
+                "settlement moving. Anything not returned may be recovered from it.",
+            ],
+        });
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | The No Objection Certificate
+    |--------------------------------------------------------------------------
+    | The last message of the whole relationship, sent once finance has signed
+    | off the settlement.
+    |
+    | It is addressed to a former employee rather than a current one, which is
+    | what shapes the wording: no instructions, nothing to action, and a tone
+    | that reads as a testimonial instead of a transaction. It is also the only
+    | email here likely to be forwarded to somebody else — a future employer
+    | asking for proof of a clean exit — so the facts it certifies are stated
+    | plainly on the card rather than being implied.
+    |
+    | It goes to the personal address on purpose. The company mailbox is being
+    | closed at exactly this moment, and a certificate delivered there is one
+    | nobody receives.
+    */
+    function exitNoc_(data) {
+
+        var companyName = data.companyName || "Your Company";
+
+        return message_({
+            companyName: companyName,
+
+            subject: "No Objection Certificate — " + companyName,
+
+            preheader:
+                "Your exit from " + companyName + " is complete. Your certificate is attached below.",
+
+            heading: "Thank you, " + (data.name || "there"),
+
+            intro: [
+                "This is to certify that " + (data.name || "the employee") +
+                " was employed with " + companyName +
+                (data.designation ? " as " + data.designation : "") +
+                " and was relieved from their duties on " +
+                (data.lastWorkingDay || "their last working day") + ".",
+
+                "All dues between " + companyName + " and the employee have been " +
+                "settled in full, and the company has no objection to their " +
+                "future employment elsewhere.",
+            ],
+
+            cards: [
+                {
+                    title: "Certified details",
+                    rows: [
+                        { label: "Employee ID", value: data.employeeId },
+                        { label: "Designation", value: data.designation },
+                        { label: "Department", value: data.department },
+                        { label: "Date of Joining", value: data.joiningDate },
+                        { label: "Last Working Day", value: data.lastWorkingDay },
+                        {
+                            label: data.settlementLabel || "Amount Settled",
+                            value: data.settlementAmount,
+                        },
+                    ],
+                },
+            ],
+
+            action: {
+                label: "View & Print Your Certificate",
+                href: data.certificateLink || "",
+            },
+
+            closing: [
+                "A printable copy of this certificate is available at the link " +
+                "above. Please keep it for your records.",
+
+                "We wish you every success in what comes next.",
             ],
         });
     }

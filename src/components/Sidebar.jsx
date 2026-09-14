@@ -6,6 +6,7 @@ import {
   ChevronRight,
   LayoutDashboard,
   ListChecks,
+  LogOut,
   PartyPopper,
   ReceiptIndianRupee,
   Settings,
@@ -81,6 +82,16 @@ const menuGroups = [
         path: "/OnboardDashboard",
         icon: UserRoundPlus,
         permission: "onboarding",
+      },
+      /*
+      | Directly under On-boarding, because it is the other end of the same
+      | thing: one module brings somebody in and this one sees them out.
+      */
+      {
+        label: "Resignation",
+        path: "/resignation",
+        icon: LogOut,
+        permission: "resignation",
       },
     ],
   },

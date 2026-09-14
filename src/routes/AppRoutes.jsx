@@ -44,6 +44,11 @@ import HRPolicy from "../pages/hrPolicy/HRPolicy";
 import AllTasks from "../pages/tasks/AllTasks";
 import Settings from "../pages/settings/Settings";
 import Profile from "../pages/Profile";
+import ResignationDashboard from "../pages/resignation/ResignationDashboard";
+import ResignationApprovals from "../pages/resignation/ResignationApprovals";
+import EquipmentSubmission from "../pages/resignation/EquipmentSubmission";
+import FnFSettlement from "../pages/resignation/FnFSettlement";
+import NoObjectionCertificate from "../pages/resignation/NoObjectionCertificate";
 
 /*
 | Every page inside the dashboard is mounted behind `PermissionRoute` with the
@@ -179,6 +184,65 @@ function AppRoutes() {
                     element={
                         <PermissionRoute permission="onboarding.requests">
                             <ReviewOnboarding />
+                        </PermissionRoute>
+                    }
+                />
+
+                {/*
+                  Resignation & Exit Routing
+
+                  The three id-carrying routes are guarded twice over. The
+                  permission here decides whether the role has the screen at
+                  all; the page itself then asks `canViewResignation` against
+                  the record it loaded, because a permission cannot know whose
+                  resignation the id in the address belongs to.
+
+                  That second check is the one that matters on these three:
+                  the equipment form and the certificate are on by default for
+                  every employee, so without it an employee could read a
+                  colleague's settlement by editing the URL.
+                */}
+                <Route
+                    path="/resignation"
+                    element={
+                        <PermissionRoute permission="resignation">
+                            <ResignationDashboard />
+                        </PermissionRoute>
+                    }
+                />
+
+                <Route
+                    path="/resignation/approvals"
+                    element={
+                        <PermissionRoute permission="resignation.approvals">
+                            <ResignationApprovals />
+                        </PermissionRoute>
+                    }
+                />
+
+                <Route
+                    path="/resignation/equipment/:resignationId"
+                    element={
+                        <PermissionRoute permission="resignation.equipment">
+                            <EquipmentSubmission />
+                        </PermissionRoute>
+                    }
+                />
+
+                <Route
+                    path="/resignation/settlement/:resignationId"
+                    element={
+                        <PermissionRoute permission="resignation.settlement">
+                            <FnFSettlement />
+                        </PermissionRoute>
+                    }
+                />
+
+                <Route
+                    path="/resignation/noc/:resignationId"
+                    element={
+                        <PermissionRoute permission="resignation.certificate">
+                            <NoObjectionCertificate />
                         </PermissionRoute>
                     }
                 />

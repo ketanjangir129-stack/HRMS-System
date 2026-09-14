@@ -38,6 +38,10 @@ export const EMAIL_TEMPLATES = {
     ONBOARDING_INVITATION: "onboarding-invitation",
     ONBOARDING_APPROVED: "onboarding-approved",
     PASSWORD_RESET: "password-reset",
+    /* The two ends of an exit: the form that has to come back before anybody
+       can be paid off, and the certificate that says the exit is clean. */
+    EQUIPMENT_SUBMISSION: "equipment-submission",
+    EXIT_NOC: "exit-noc",
 };
 
 /*

@@ -220,6 +220,103 @@ export const getLeaveApproverIds = async (
 
 /*
 |--------------------------------------------------------------------------
+| Routing One Step Of An Exit
+|--------------------------------------------------------------------------
+| `getLeaveApproverIds` above answers "who should hear about this", and for
+| leave that is everybody who could act on it at once - HR, the owner and the
+| department's managers all see the request land together.
+|
+| A resignation is not like that. It is a queue: the manager decides, then HR
+| decides, then the employee returns their equipment, then finance signs off.
+| Telling all of them at every step would make the notification worthless -
+| six people would be told six times about a decision only one of them can
+| take.
+|
+| So the two below hand back one group each, and the resignation service
+| picks whichever the step belongs to.
+|--------------------------------------------------------------------------
+*/
+
+/*
+| The managers who run this employee's department, and nobody else.
+|
+| A manager reviewing their own resignation is excluded for the same reason
+| they are excluded from their own leave: it falls to HR instead, and being
+| asked to approve your own exit is not an approval.
+|
+| An empty result is a real answer and means the department has no manager
+| appointed. The service reads it that way and sends the resignation straight
+| to HR rather than leaving it in a queue nobody owns.
+*/
+
+export const getResignationManagerIds = async (
+  companyCode,
+  employeeId
+) => {
+
+  const snapshot = await get(
+    ref(db, `companies/${companyCode}/employees`)
+  );
+
+  if (!snapshot.exists()) return [];
+
+  const requesterId = String(employeeId ?? "").trim().toUpperCase();
+
+  try {
+
+    return (
+      await getDepartmentManagerIds(
+        companyCode,
+        snapshot.val(),
+        employeeId
+      )
+    ).filter((managerId) => managerId !== requesterId);
+
+  } catch (error) {
+
+    console.error("Failed to resolve department managers:", error);
+
+    return [];
+
+  }
+
+};
+
+/*
+| HR and the owner, for the steps that belong to them.
+|
+| The owner is added here rather than looked for in the directory for the
+| reason given above: owners sign in through Firebase Auth, have no employee
+| record, and no filter over `employees` can ever return one.
+*/
+
+export const getHrRecipientIds = async (companyCode) => {
+
+  const snapshot = await get(
+    ref(db, `companies/${companyCode}/employees`)
+  );
+
+  if (!snapshot.exists()) return [OWNER_ROLE];
+
+  const hrIds = Object.entries(snapshot.val())
+    .filter(([, employee]) => {
+
+      const role = employee?.account?.role?.toLowerCase();
+
+      const status = employee?.account?.status?.toLowerCase();
+
+      return status === "active" && (role === "hr" || role === "owner");
+
+    })
+    .map(([id]) => id);
+
+  return Array.from(new Set([OWNER_ROLE, ...hrIds]));
+
+};
+
+
+/*
+|--------------------------------------------------------------------------
 | Get Every Employee Id
 |--------------------------------------------------------------------------
 | The recipient list for something announced to the whole company rather than

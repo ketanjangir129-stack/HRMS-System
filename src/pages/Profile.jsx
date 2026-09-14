@@ -20,6 +20,7 @@ import {
   IdCard,
   Landmark,
   Lock,
+  LogOut,
   Mail,
   MapPin,
   Pencil,
@@ -31,8 +32,15 @@ import {
   X,
 } from "lucide-react";
 
+import { toast } from "react-toastify";
+
 import useAuth from "../hooks/useAuth";
+import useRoleAccess from "../hooks/useRoleAccess";
+import useResignations from "../hooks/useResignations";
 import Loader from "../components/common/Loader";
+import ResignationModal from "../components/resignation/ResignationModal";
+import { createResignation } from "../services/resignation/resignationService";
+import { toEmployeeSnapshot } from "../utils/resignation/resignationUtils";
 import {
   getEmployeeById,
   updateEmployeeSection,
@@ -136,6 +144,23 @@ function Profile() {
 
   // Save fail hone par upar dikhne wala banner (alert ki jagah)
   const [actionError, setActionError] = useState("");
+
+  /*
+  | Resignation. The button lives here rather than only on the exit module's
+  | own page because this is where somebody goes to look at their own record,
+  | and giving notice is a thing you do about yourself.
+  |
+  | The modal is opened in place rather than navigating away: the form is
+  | filled almost entirely from the record already on this screen, so sending
+  | the user to another page first would be a step that shows them nothing
+  | new.
+  */
+  const [resignOpen, setResignOpen] = useState(false);
+  const [resigning, setResigning] = useState(false);
+
+  const { canAccessSection } = useRoleAccess();
+
+  const { activeResignation, reload: reloadResignations } = useResignations();
 
   const companyCode = company?.companyCode || localStorage.getItem("companyCode");
 
@@ -443,15 +468,57 @@ function Profile() {
           Back
         </button>
 
-        {/* Owner ka koi record hi nahi hota, uske liye yahan kuch edit nahi hota —
-            ye batana zaroori hai, warna wo Edit button dhoondta rehta hai.
-            Employee/HR ko Edit button Personal Information card par milta hai. */}
-        {!canEdit && (
-          <span className="inline-flex shrink-0 items-center gap-1.5 rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-500">
-            <Lock className="h-3.5 w-3.5" />
-            View Only
-          </span>
-        )}
+        <div className="flex flex-wrap items-center gap-2.5">
+
+          {/* Owner ka koi record hi nahi hota, uske liye yahan kuch edit nahi hota —
+              ye batana zaroori hai, warna wo Edit button dhoondta rehta hai.
+              Employee/HR ko Edit button Personal Information card par milta hai. */}
+          {!canEdit && (
+            <span className="inline-flex shrink-0 items-center gap-1.5 rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-500">
+              <Lock className="h-3.5 w-3.5" />
+              View Only
+            </span>
+          )}
+
+          {/*
+          | Resign — offered only to somebody who has an employee record to
+          | resign from, so the owner never sees it, and only while they have
+          | nothing already in flight.
+          |
+          | Once one exists the button becomes the way back to it. An employee
+          | who has resigned and returns to this page is looking for "where has
+          | it got to", and a second Resign button would answer a question
+          | nobody asked while hiding the one they did.
+          */}
+          {canEdit && canAccessSection("resignation.apply") && (
+
+            activeResignation ? (
+
+              <button
+                type="button"
+                onClick={() => navigate("/resignation")}
+                className="inline-flex shrink-0 cursor-pointer items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-2 text-sm font-semibold text-amber-700 transition-all hover:bg-amber-100 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:ring-offset-2"
+              >
+                <LogOut className="h-3.5 w-3.5" />
+                Exit in Progress
+              </button>
+
+            ) : (
+
+              <button
+                type="button"
+                onClick={() => setResignOpen(true)}
+                className="inline-flex shrink-0 cursor-pointer items-center gap-2 rounded-xl border border-red-200 px-3.5 py-2 text-sm font-semibold text-red-600 transition-all hover:border-red-500 hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-400 focus:ring-offset-2"
+              >
+                <LogOut className="h-3.5 w-3.5" />
+                Resignation
+              </button>
+
+            )
+
+          )}
+
+        </div>
 
       </div>
 
@@ -586,6 +653,21 @@ function Profile() {
         </div>
 
       )}
+
+      {/*
+      | The form is filled from `employee` rather than from `currentUser`: the
+      | record on this page was re-read from the database on mount, and the
+      | signed in user is a snapshot taken at login that HR may have changed
+      | since. A resignation routed on a stale department would go to the
+      | wrong manager.
+      */}
+      <ResignationModal
+        open={resignOpen}
+        employee={toEmployeeSnapshot(employee, currentUser)}
+        submitting={resigning}
+        onClose={() => setResignOpen(false)}
+        onSubmit={submitResignation}
+      />
 
     </div>
   );
@@ -836,6 +918,57 @@ function Profile() {
     setEditing(false);
     setFormData({});
     setErrors({});
+  }
+
+  /*
+  | Filing the resignation. On success the user is sent to the exit page
+  | rather than left on their profile: the thing they want to see next is the
+  | tracker, and this screen has nothing to show about a resignation at all.
+  |
+  | A refusal is returned to the modal instead of being thrown, so the form
+  | stays open with the typed reason intact and the message beside the
+  | button.
+  */
+  async function submitResignation(form) {
+
+    setResigning(true);
+
+    try {
+
+      const result = await createResignation(companyCode, {
+        employee: toEmployeeSnapshot(employee, currentUser),
+        ...form,
+      });
+
+      if (result.success) {
+
+        setResignOpen(false);
+
+        reloadResignations();
+
+        toast.success("Your resignation has been submitted for approval.");
+
+        navigate("/resignation");
+
+      }
+
+      return result;
+
+    } catch (error) {
+
+      console.error("Failed to submit the resignation:", error);
+
+      return {
+        success: false,
+        message: "The resignation could not be submitted. Please try again.",
+      };
+
+    } finally {
+
+      setResigning(false);
+
+    }
+
   }
 
   function handleFieldChange(key, value) {

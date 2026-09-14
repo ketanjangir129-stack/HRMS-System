@@ -180,6 +180,110 @@ export const PERMISSION_PAGES = [
     ],
   },
 
+  /*
+  | Resignation & Exit - the counterpart to on-boarding, and placed next to it
+  | for that reason: one module brings somebody in and this one sees them out.
+  |
+  | The page itself is on for everybody, because it is where an employee
+  | raises their own resignation and watches it move. What they can do inside
+  | it is decided by the sections, and those are what actually separate the
+  | four roles here - an employee gets `apply`, `equipment` and `certificate`
+  | and none of the desks.
+  */
+  {
+    key: "resignation",
+    label: "Resignation & Exit",
+    description: "Resignations, exit clearance and full & final settlement",
+    path: "/resignation",
+    defaults: { hr: true, manager: true, employee: true },
+    sections: [
+      {
+        /*
+        | The Resign button on the employee's own profile.
+        |
+        | On for everybody, and deliberately so: resigning is not a privilege
+        | the company grants, and a portal that can be configured to take the
+        | button away would leave somebody with no way to give notice through
+        | the system they are told to use. It remains a switch only because an
+        | owner running a pilot may want to keep the module closed at first.
+        */
+        key: "apply",
+        label: "Raise Resignation",
+        description: "Submit their own resignation from their profile",
+        defaults: { hr: true, manager: true, employee: true },
+      },
+      {
+        /*
+        | The approval desk: the manager's step and HR's step, on one screen
+        | that shows each role only the rows it is their turn to decide.
+        |
+        | Given to a manager, who is narrowed again at runtime to the
+        | departments they run - and never to their own resignation, which
+        | falls to HR exactly as their own leave does. This switch decides
+        | whether the role has the desk; the department scope decides whose
+        | resignations are on it.
+        */
+        key: "approvals",
+        label: "Resignation Approvals",
+        description: "Approve or reject resignations",
+        path: "/resignation/approvals",
+        defaults: { hr: true, manager: true, employee: false },
+      },
+      {
+        /*
+        | The employee's own equipment declaration. Not an HR screen: HR reads
+        | what was declared on the settlement page, and this is the form the
+        | person leaving fills in.
+        */
+        key: "equipment",
+        label: "Equipment Submission",
+        description: "Declare and return company equipment before leaving",
+        path: "/resignation/equipment",
+        defaults: { hr: true, manager: true, employee: true },
+      },
+      {
+        /*
+        | Pricing the exit. Withheld from a manager along with every other
+        | money screen in this registry - running a department and deciding
+        | what somebody is owed on the way out are not the same right.
+        */
+        key: "settlement",
+        label: "Full & Final Settlement",
+        description: "Work out and review the final settlement",
+        path: "/resignation/settlement",
+        defaults: { hr: true, manager: false, employee: false },
+      },
+      {
+        /*
+        | The last signature, which releases the money and completes the exit.
+        |
+        | Off for every managed role by default, including HR - the same
+        | position `payroll.approve` and `payroll.lock` take, and for the same
+        | reason. The person who works out a settlement should not also be the
+        | one who approves paying it, and an owner who wants those to be the
+        | same person can say so here deliberately rather than find it already
+        | arranged. Until they do, the owner is the only one who holds it.
+        */
+        key: "financeApprove",
+        label: "Finance Approval",
+        description: "Sign off the settlement and complete the exit",
+        defaults: { hr: false, manager: false, employee: false },
+      },
+      {
+        /*
+        | The certificate. On for an employee because it is theirs - it is the
+        | document they will be asked for by whoever hires them next, and
+        | needing to email HR for a copy of it is the situation this avoids.
+        */
+        key: "certificate",
+        label: "No Objection Certificate",
+        description: "View and print the exit certificate",
+        path: "/resignation/noc",
+        defaults: { hr: true, manager: true, employee: true },
+      },
+    ],
+  },
+
   {
     key: "attendance",
     label: "Attendance",

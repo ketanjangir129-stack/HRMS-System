@@ -1,0 +1,282 @@
+/*
+|--------------------------------------------------------------------------
+| No Objection Certificate
+|--------------------------------------------------------------------------
+| An A4 document rather than a page of the app. It is printed, saved as a PDF
+| and handed to a future employer, so it is laid out at a fixed width and
+| paints its own colours instead of inheriting the theme.
+|
+| That last part is deliberate. Every other screen here answers the viewer's
+| light or dark preference; a certificate must not. It is ink on paper, and a
+| dark-mode certificate would either print as a black rectangle or print
+| differently from the one on screen — and a document whose printed form is a
+| surprise is not a document anybody should be signing.
+|--------------------------------------------------------------------------
+*/
+
+.page {
+  padding: 1.5rem 0.75rem;
+  background: var(--color-canvas, #f8fafc);
+}
+
+@media (min-width: 640px) {
+  .page {
+    padding: 2rem 1.5rem;
+  }
+}
+
+.frame {
+  margin-inline: auto;
+  width: 100%;
+  max-width: 820px;
+}
+
+/*
+| The sheet. A max-width rather than a fixed one, so it is readable on a
+| phone without a transform — this document is a column of text, and text
+| reflows perfectly well. The payslip beside it is scaled instead because it
+| is a table whose columns must not move.
+*/
+.sheet {
+  width: 100%;
+  border-radius: 1rem;
+  background: #ffffff;
+  color: #334155;
+  box-shadow:
+    0 10px 15px -3px rgb(0 0 0 / 0.1),
+    0 4px 6px -4px rgb(0 0 0 / 0.1);
+  overflow: hidden;
+}
+
+.header {
+  padding: 2rem 2.5rem;
+  background: #4f46e5;
+  color: #ffffff;
+}
+
+@media (max-width: 640px) {
+  .header {
+    padding: 1.5rem 1.25rem;
+  }
+}
+
+.companyName {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.companyMeta {
+  margin: 0.375rem 0 0;
+  font-size: 0.8125rem;
+  opacity: 0.85;
+}
+
+.body {
+  padding: 2.5rem;
+}
+
+@media (max-width: 640px) {
+  .body {
+    padding: 1.5rem 1.25rem;
+  }
+}
+
+.docTitle {
+  margin: 0 0 0.25rem;
+  text-align: center;
+  font-size: 1.25rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #0f172a;
+}
+
+.rule {
+  margin: 0 auto 2rem;
+  height: 3px;
+  width: 5rem;
+  border-radius: 9999px;
+  background: #4f46e5;
+}
+
+.reference {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 2rem;
+  font-size: 0.75rem;
+  color: #64748b;
+}
+
+.paragraph {
+  margin: 0 0 1.25rem;
+  font-size: 0.9375rem;
+  line-height: 1.75;
+  color: #334155;
+}
+
+.strong {
+  font-weight: 700;
+  color: #0f172a;
+}
+
+/* The facts being certified, as a bordered table so they read as a record
+   rather than as more prose. */
+.details {
+  width: 100%;
+  margin: 0 0 1.75rem;
+  border-collapse: collapse;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.75rem;
+  overflow: hidden;
+}
+
+.details th,
+.details td {
+  padding: 0.625rem 1rem;
+  border-bottom: 1px solid #e2e8f0;
+  font-size: 0.875rem;
+  text-align: left;
+}
+
+.details tr:last-child th,
+.details tr:last-child td {
+  border-bottom: 0;
+}
+
+.details th {
+  width: 42%;
+  background: #f8fafc;
+  font-weight: 500;
+  color: #64748b;
+}
+
+.details td {
+  font-weight: 600;
+  color: #0f172a;
+}
+
+/* The signature block, pinned to the foot of the document. */
+.signature {
+  margin-top: 3rem;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 2rem;
+}
+
+.signatureBlock {
+  min-width: 12rem;
+}
+
+.signatureLine {
+  margin-bottom: 0.5rem;
+  height: 2.5rem;
+  border-bottom: 1px solid #94a3b8;
+}
+
+.signatureLabel {
+  margin: 0;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.signatureMeta {
+  margin: 0.125rem 0 0;
+  font-size: 0.75rem;
+  color: #64748b;
+}
+
+.footer {
+  padding: 1rem 2.5rem;
+  border-top: 1px solid #e2e8f0;
+  background: #f8fafc;
+  font-size: 0.6875rem;
+  line-height: 1.6;
+  color: #94a3b8;
+}
+
+@media (max-width: 640px) {
+  .footer {
+    padding: 1rem 1.25rem;
+  }
+}
+
+/*
+|--------------------------------------------------------------------------
+| Print
+|--------------------------------------------------------------------------
+| Everything that is not the certificate is dropped — the sidebar, the
+| navbar, the toolbar above the sheet — and the sheet itself loses the
+| rounding and the shadow that only make sense on a screen.
+|
+| The `:has()` chain is the same one the payslip uses: it walks from `body`
+| down to the sheet, hiding every sibling on the way, so the document prints
+| on its own without the layout needing a print-only copy of itself.
+|--------------------------------------------------------------------------
+*/
+
+@media print {
+
+  @page {
+    size: A4 portrait;
+    margin: 16mm;
+  }
+
+  html,
+  body {
+    height: auto !important;
+    overflow: visible !important;
+    background: #fff !important;
+  }
+
+  body:has(.sheet) > *:not(:has(.sheet)):not(.sheet),
+  body :has(.sheet) > *:not(:has(.sheet)):not(.sheet) {
+    display: none !important;
+  }
+
+  body :has(.sheet) {
+    display: block !important;
+    width: auto !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow: visible !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #fff !important;
+  }
+
+  .page,
+  .frame {
+    padding: 0 !important;
+    max-width: none !important;
+    background: #fff !important;
+  }
+
+  .sheet {
+    border-radius: 0 !important;
+    box-shadow: none !important;
+  }
+
+  /* Browsers drop background fills when printing unless asked not to, and
+     the header is a solid block of colour that carries the letterhead. */
+  .header,
+  .details th,
+  .footer {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* A certificate that breaks across two pages between the facts and the
+     signature is one nobody would accept. */
+  .details,
+  .signature {
+    break-inside: avoid;
+  }
+
+}
