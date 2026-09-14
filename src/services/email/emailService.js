@@ -80,6 +80,28 @@ const wrongUrlShape = () => {
 };
 
 /*
+| A template this file knows about but the script does not means one thing in
+| practice: the deployed web app is an older copy of `Code.gs`. Saving in the
+| Apps Script editor does not change what `/exec` serves — only deploying a
+| new version does — so the two drift apart the first time a template is
+| added and nobody is told why. The script cannot say this itself; the copy
+| answering is the one that predates the fix. So it is said here.
+*/
+const explain = (message) => {
+
+    if (!/^Unknown email template/i.test(String(message || ""))) {
+        return message;
+    }
+
+    return (
+        message +
+        " The deployed Apps Script is an older version of Code.gs. In the" +
+        " script editor use Deploy ▸ Manage deployments ▸ ✏️ ▸ Version: New" +
+        " version ▸ Deploy — the /exec URL stays the same."
+    );
+};
+
+/*
 | One request, one place. Every network and parsing failure is turned into
 | the same `{ success: false, message }` the script returns on purpose, so a
 | caller has one shape to read rather than a response, an exception and a
@@ -142,7 +164,16 @@ const post = async (payload) => {
             };
         }
 
-        return result;
+        return {
+            ...result,
+            message: explain(result.message),
+            results: Array.isArray(result.results)
+                ? result.results.map((item) => ({
+                    ...item,
+                    message: explain(item.message),
+                }))
+                : result.results,
+        };
 
     } catch (error) {
 

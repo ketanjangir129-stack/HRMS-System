@@ -38,6 +38,14 @@ import RejectModal from "./RejectModal";
 |--------------------------------------------------------------------------
 */
 
+/*
+| What "Approve All" reaches. An invitation that has not come back yet is
+| approved on the details already on file, alongside the ones whose form has
+| been submitted — both are still open requests waiting on a decision. The
+| decided statuses, "Approved" and "Rejected", are not here.
+*/
+const APPROVABLE_STATUSES = ["Pending Approval", "Invitation Sent"];
+
 // The initials keep a half filled request reading as a person.
 const getInitials = (value = "") =>
     String(value)
@@ -190,15 +198,26 @@ function OnboardingRequests() {
     |--------------------------------------------------------------------------
     | Approve all / Reject all
     |--------------------------------------------------------------------------
-    | Only the requests waiting on a decision are eligible. An invitation that
-    | has not come back yet has no submitted form to approve, and one already
-    | approved or rejected has been decided — so both buttons work on the
-    | "Pending Approval" rows and nothing else.
+    | Only the requests still waiting on a decision are eligible — one already
+    | approved or rejected has been decided and neither button touches it.
+    |
+    | Approve All takes both open statuses: the submitted forms sitting at
+    | "Pending Approval" and the invitations still out at "Invitation Sent",
+    | so a whole intake can be cleared in one go. Reject All stays on the
+    | submitted forms, since there is nothing yet to reject on an invitation.
     |
     | They also work on what is on screen: with a search term typed, the batch
-    | is the pending requests that match it, which is what the count on the
+    | is the eligible requests that match it, which is what the count on the
     | button and the line in the modal both say.
     */
+    const approvableRequests = filteredRequests.filter((request) =>
+        APPROVABLE_STATUSES.includes(request.status)
+    );
+
+    const approvableCount = approvableRequests.length;
+
+    const approvableIds = approvableRequests.map((request) => request.id);
+
     const pendingRequests = filteredRequests.filter(
         (request) => request.status === "Pending Approval"
     );
@@ -206,6 +225,10 @@ function OnboardingRequests() {
     const pendingCount = pendingRequests.length;
 
     const pendingIds = pendingRequests.map((request) => request.id);
+
+    // The part of the approve batch that has not sent a form back, named on
+    // the confirmation so the run is not a surprise.
+    const invitedCount = approvableCount - pendingCount;
 
     const requestWord = (count) => (count === 1 ? "request" : "requests");
 
@@ -256,7 +279,7 @@ function OnboardingRequests() {
 
     const handleApproveAll = async () => {
 
-        if (!pendingCount || bulkRunning) return;
+        if (!approvableCount || bulkRunning) return;
 
         setBulkRunning(true);
 
@@ -264,7 +287,7 @@ function OnboardingRequests() {
 
             const { approved, failed } = await approveOnboardingRequests(
                 companyCode,
-                pendingIds,
+                approvableIds,
                 approvedBy
             );
 
@@ -427,35 +450,39 @@ function OnboardingRequests() {
                     </div>
 
                     {/*
-                    | The two batch actions, shown only while there is something
-                    | pending for them to act on — a dead pair of buttons over a
-                    | list of already decided requests says nothing useful. They
-                    | stack full width on a phone and sit inline from `sm` up.
+                    | The two batch actions, each shown only while there is
+                    | something for it to act on — a dead button over a list of
+                    | already decided requests says nothing useful. Reject All
+                    | can therefore drop away while Approve All stays, on a list
+                    | that is all invitations still out. They stack full width
+                    | on a phone and sit inline from `sm` up.
                     */}
-                    {!loading && pendingCount > 0 && (
+                    {!loading && approvableCount > 0 && (
 
                         <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
 
-                            <button
-                                type="button"
-                                onClick={() => setBulkAction("reject")}
-                                disabled={bulkRunning}
-                                title={`Reject the ${pendingCount} ${requestWord(pendingCount)} pending approval${scopeNote}`}
-                                className="inline-flex cursor-pointer items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-rose-200 bg-white px-4 py-2.5 text-sm font-semibold text-rose-600 shadow-sm transition-all duration-200 hover:border-rose-300 hover:bg-rose-50 focus:outline-none focus:ring-2 focus:ring-rose-400 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
-                            >
-                                <FiXCircle size={16} />
-                                Reject All ({pendingCount})
-                            </button>
+                            {pendingCount > 0 && (
+                                <button
+                                    type="button"
+                                    onClick={() => setBulkAction("reject")}
+                                    disabled={bulkRunning}
+                                    title={`Reject the ${pendingCount} ${requestWord(pendingCount)} pending approval${scopeNote}`}
+                                    className="inline-flex cursor-pointer items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-rose-200 bg-white px-4 py-2.5 text-sm font-semibold text-rose-600 shadow-sm transition-all duration-200 hover:border-rose-300 hover:bg-rose-50 focus:outline-none focus:ring-2 focus:ring-rose-400 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
+                                >
+                                    <FiXCircle size={16} />
+                                    Reject All ({pendingCount})
+                                </button>
+                            )}
 
                             <button
                                 type="button"
                                 onClick={() => setBulkAction("approve")}
                                 disabled={bulkRunning}
-                                title={`Approve the ${pendingCount} ${requestWord(pendingCount)} pending approval${scopeNote}`}
+                                title={`Approve the ${approvableCount} open ${requestWord(approvableCount)}${scopeNote} — pending approval and invitation sent`}
                                 className="inline-flex cursor-pointer items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm shadow-emerald-600/20 transition-all duration-200 hover:bg-emerald-700 hover:shadow-md hover:shadow-emerald-600/30 focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
                             >
                                 <FiCheckCircle size={16} />
-                                Approve All ({pendingCount})
+                                Approve All ({approvableCount})
                             </button>
 
                         </div>
@@ -718,9 +745,13 @@ function OnboardingRequests() {
                 open={bulkAction === "approve"}
                 loading={bulkRunning}
                 title="Approve All Requests"
-                message={`${pendingCount} onboarding ${requestWord(pendingCount)} pending approval${scopeNote} will be approved.`}
-                note="Each one becomes an employee record and leaves this list. This cannot be undone."
-                confirmText={`Approve ${pendingCount}`}
+                message={`${approvableCount} open onboarding ${requestWord(approvableCount)}${scopeNote} will be approved — ${pendingCount} pending approval and ${invitedCount} still at invitation sent.`}
+                note={
+                    invitedCount > 0
+                        ? `Each one becomes an employee record and leaves this list. This cannot be undone. The ${invitedCount} invited ${requestWord(invitedCount)} ${invitedCount === 1 ? "has" : "have"} not submitted a form yet, so ${invitedCount === 1 ? "it is" : "they are"} approved on the details already on file.`
+                        : "Each one becomes an employee record and leaves this list. This cannot be undone."
+                }
+                confirmText={`Approve ${approvableCount}`}
                 onConfirm={handleApproveAll}
                 onClose={closeBulkModal}
             />
