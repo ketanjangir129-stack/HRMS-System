@@ -513,6 +513,55 @@ export const PERMISSION_PAGES = [
     ],
   },
 
+  /*
+  | The employee's own salary, which is a different right from the payroll
+  | above and not a section of it. That page runs the company's month and
+  | shows every employee's pay; this one shows the signed in employee theirs.
+  |
+  | So it is on by default for everybody. It is the one money screen a person
+  | is entitled to without being trusted with anybody else's - and an employee
+  | who cannot see what they were paid has to ask HR for a payslip every month.
+  */
+  {
+    key: "myPayroll",
+    label: "My Payroll",
+    description: "The signed in employee's own salary and payslips",
+    path: "/my-payroll",
+    defaults: { hr: true, manager: true, employee: true },
+    sections: [
+      {
+        key: "summary",
+        label: "Yearly Summary",
+        description: "Gross, deductions, net and annual CTC for the year",
+        defaults: { hr: true, manager: true, employee: true },
+      },
+      {
+        key: "currentMonth",
+        label: "Current Month Salary",
+        description: "The latest month's pay, in full",
+        defaults: { hr: true, manager: true, employee: true },
+      },
+      {
+        key: "history",
+        label: "Payroll History",
+        description: "Every month of the financial year",
+        defaults: { hr: true, manager: true, employee: true },
+      },
+      /*
+      | Reading what you were paid and taking a copy of the payslip away are
+      | separate rights: without this the figures are still on screen, with
+      | every download button closed.
+      */
+      {
+        key: "payslip",
+        label: "Download Payslip",
+        description: "Open and print their own payslip",
+        path: "/my-payroll/payslip",
+        defaults: { hr: true, manager: true, employee: true },
+      },
+    ],
+  },
+
   {
     key: "hrPolicy",
     label: "HR Policy",

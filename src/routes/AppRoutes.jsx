@@ -1,7 +1,8 @@
-import {Routes,Route,Navigate} from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
 import Register from "../pages/authenticate/Register";
 import Login from "../pages/authenticate/login";
 import ChangePassword from "../pages/authenticate/ChangePassword";
+import ResetPassword from "../pages/authenticate/ResetPassword";
 import DashboardLayout from "../layouts/DashboardLayout";
 import Dashboard from "../pages/Dashboard";
 import Departments from "../pages/Departments";
@@ -28,15 +29,18 @@ import Regularization from "../pages/attendance/Regularization";
 import AttendanceReports from "../pages/attendance/AttendanceReports";
 import AttendanceImport from "../pages/attendance/AttendanceImport";
 import AttendanceSettings from "../pages/attendance/AttendanceSettings";
+import AttendanceLocation from "../pages/attendance/AttendanceLocation";
 import LeaveDashboard from "../pages/leave/LeaveDashboard";
 import LeaveApprovals from "../pages/leave/LeaveApprovals";
 import HolidayDashboard from "../pages/holiday/HolidayDashboard";
 import EmployeeOnboarding from "../pages/onboarding/EmployeeOnboarding/EmployeeOnboarding";
 import SalaryCRUD from "../pages/salary/SalaryCRUD";
 import SalaryForm from "../pages/salary/SalaryForm";
+import SalaryImport from "../pages/salary/SalaryImport";
 import SalaryHistory from "../pages/salary/SalaryHistory";
 import PayrolllDashboard from "../pages/payroll/PayrollDashboard";
 import PaySlip from "../pages/payroll/PaySlip";
+import MyPayroll from "../pages/payroll/MyPayroll";
 import HRPolicy from "../pages/hrPolicy/HRPolicy";
 import AllTasks from "../pages/tasks/AllTasks";
 import Settings from "../pages/settings/Settings";
@@ -48,15 +52,17 @@ import Profile from "../pages/Profile";
 | even when the sidebar has stopped offering it. The permission strings are
 | the ones declared in the permission registry.
 |
-| `/change-password` and the public on-boarding link stay unguarded: neither
-| is a company page, and both are reached before a role means anything.
+| `/change-password`, `/reset-password` and the public on-boarding link stay
+| unguarded: none is a company page, and all are reached before a role means
+| anything. The reset link carries its own proof in the address, which is why
+| it can be opened by somebody with no session at all.
 */
 
-function AppRoutes(){
-    return(
+function AppRoutes() {
+    return (
         <Routes>
             <Route
-                path = "/"
+                path="/"
                 element={
                     <GuestRoute>
                         <Register />
@@ -64,7 +70,7 @@ function AppRoutes(){
                 }
             />
             <Route
-                path = "/login"
+                path="/login"
                 element={
                     <GuestRoute>
                         <Login />
@@ -156,7 +162,7 @@ function AppRoutes(){
                         </PermissionRoute>
                     }
                 />
-                 <Route
+                <Route
                     path="/OnboardDashboard/BulkOnboard"
                     element={
                         <PermissionRoute permission="onboarding.create">
@@ -184,7 +190,7 @@ function AppRoutes(){
                 />
 
                 <Route
-                    path="/onboarding/:requestId"hr po
+                    path="/onboarding/:requestId" hr po
                     element={
                         <PermissionRoute permission="onboarding.requests">
                             <ReviewOnboarding />
@@ -295,6 +301,16 @@ function AppRoutes(){
                     }
                 />
 
+                <Route
+                    path="/attendance/location/:date/:employeeId"
+                    element={
+                        <PermissionRoute permission="attendance">
+                            <AttendanceLocation />
+                        </PermissionRoute>
+                    }
+                />
+
+
                 {/* Leave Management Routing */}
                 <Route
                     path="/leave"
@@ -366,6 +382,21 @@ function AppRoutes(){
                   One component, two routes, two permissions: assigning a new
                   structure and revising an existing one are separate rights.
                 */}
+                {/*
+                  Bulk assignment, behind the same right as assigning one:
+                  importing a file is the same act as filling the form in, and
+                  the screen refuses to revise an existing structure unless the
+                  update right is held as well.
+                */}
+                <Route
+                    path="/salarydashboard/salary/import"
+                    element={
+                        <PermissionRoute permission="salary.create">
+                            <SalaryImport />
+                        </PermissionRoute>
+                    }
+                />
+
                 <Route
                     path="/salarydashboard/salary/create/:employeeId"
                     element={
@@ -398,6 +429,33 @@ function AppRoutes(){
                     path="/payrolldashboard/payslip/:employeeId"
                     element={
                         <PermissionRoute permission="payroll.payslip">
+                            <PaySlip />
+                        </PermissionRoute>
+                    }
+                />
+
+                {/*
+                  My Payroll - the employee's own salary, behind its own
+                  permission rather than the payroll one. Holding that page
+                  would hand them the whole company's pay.
+
+                  Its payslip route carries no employee id. The id is the
+                  signed in user's, so taking one from the address would be an
+                  invitation to read somebody else's by editing the URL.
+                */}
+                <Route
+                    path="/my-payroll"
+                    element={
+                        <PermissionRoute permission="myPayroll">
+                            <MyPayroll />
+                        </PermissionRoute>
+                    }
+                />
+
+                <Route
+                    path="/my-payroll/payslip"
+                    element={
+                        <PermissionRoute permission="myPayroll.payslip">
                             <PaySlip />
                         </PermissionRoute>
                     }
@@ -443,7 +501,19 @@ function AppRoutes(){
             </Route>
 
             <Route path="/change-password" element={<ChangePassword />} />
-            <Route path="/onboarding/:companyCode/:employeeId" element={<EmployeeOnboarding />}/>
+
+            {/*
+              The reset link from a forgotten-password email. Unguarded like
+              the on-boarding form beneath it and for the same reason: whoever
+              opens it has no session, and the link itself is what stands in
+              for one. The page checks it before showing anything.
+            */}
+            <Route
+                path="/reset-password/:companyCode/:employeeId/:token"
+                element={<ResetPassword />}
+            />
+
+            <Route path="/onboarding/:companyCode/:employeeId" element={<EmployeeOnboarding />} />
 
         </Routes>
 

@@ -237,13 +237,16 @@ const readRunState = async (companyCode, payrollMonth) => {
 };
 
 /*
-| The last few months of one employee's payroll, newest first, and only the
-| months that were actually generated.
+| One employee's payroll across a span of months, and only the months that
+| were actually generated.
 |
-| This is what the payslip page is built on: it asks for the three months
-| ending at the one being viewed, and gets back however many of them exist.
-| The months are read in parallel because they are separate nodes, and there
-| are only ever a handful of them.
+| Two screens are built on this. The payslip page asks for the three months
+| ending at the one being viewed; My Payroll asks for the twelve months of a
+| financial year. Both are the same read, so the span is the caller's to
+| choose and `getPayrollHistory` below is the payslip page's spelling of it.
+|
+| The months are read in parallel because they are separate nodes, and a span
+| is a dozen of them at the very most.
 |
 | Each month arrives with its run attached. A payslip is only released once
 | its month is locked, and the page cannot tell whether it is without the run
@@ -256,21 +259,20 @@ const readRunState = async (companyCode, payrollMonth) => {
 | the whole point of reading them together is one round trip rather than two.
 */
 
-export const getPayrollHistory = async (
+export const getEmployeePayrollMonths = async (
     companyCode,
     employeeId,
-    payrollMonth,
-    months = PAYSLIP_MONTHS
+    payrollMonths = []
 ) => {
 
-    const payrollMonths = getRecentPayrollMonths(payrollMonth, months);
+    const months = (payrollMonths || []).filter(isPayrollMonth);
 
-    if (!companyCode || !employeeId || payrollMonths.length === 0) {
+    if (!companyCode || !employeeId || months.length === 0) {
         return [];
     }
 
     const entries = await Promise.all(
-        payrollMonths.map(async (month) => {
+        months.map(async (month) => {
 
             const [payroll, run] = await Promise.all([
                 getPayroll(companyCode, month, employeeId),
@@ -284,9 +286,27 @@ export const getPayrollHistory = async (
         })
     );
 
+    /*
+    | In the order the months were asked for. The caller chose that order -
+    | the payslip page wants newest first and the financial year wants April
+    | first - and re-sorting here would take the choice away from both.
+    */
+
     return entries.filter(Boolean);
 
 };
+
+export const getPayrollHistory = (
+    companyCode,
+    employeeId,
+    payrollMonth,
+    months = PAYSLIP_MONTHS
+) =>
+    getEmployeePayrollMonths(
+        companyCode,
+        employeeId,
+        getRecentPayrollMonths(payrollMonth, months)
+    );
 
 /*
 |--------------------------------------------------------------------------

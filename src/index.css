@@ -941,6 +941,17 @@ h3 {
 | Text. The badge label is the half that would fail first - `text-red-700`
 | on a dark red wash is unreadable - so it is taken from the light end of
 | the same hue instead.
+|
+| The ladder runs to `-900`, the same as violet and indigo further down: an
+| icon at `-500/-600`, a badge label at `-700/-800`, and banner prose at
+| `-900` - each brighter than the last, because each sits on more colour
+| than the one before it.
+|
+| `-900` is the one that fails hardest. It is body copy written on a tinted
+| wash - the import confirmation's summary lines, the department scope
+| notices, the mapping warnings - so the wash going dark leaves near-black
+| text on near-black ground and the sentence disappears rather than merely
+| dimming.
 */
 .dark .text-red-500,
 .dark .text-red-600 {
@@ -950,6 +961,10 @@ h3 {
 .dark .text-red-700,
 .dark .text-red-800 {
   color: var(--color-red-300);
+}
+
+.dark .text-red-900 {
+  color: var(--color-red-200);
 }
 
 .dark .text-amber-500,
@@ -962,6 +977,10 @@ h3 {
   color: var(--color-amber-300);
 }
 
+.dark .text-amber-900 {
+  color: var(--color-amber-200);
+}
+
 .dark .text-emerald-500,
 .dark .text-emerald-600 {
   color: var(--color-emerald-400);
@@ -972,6 +991,10 @@ h3 {
   color: var(--color-emerald-300);
 }
 
+.dark .text-emerald-900 {
+  color: var(--color-emerald-200);
+}
+
 .dark .text-blue-500,
 .dark .text-blue-600 {
   color: var(--color-blue-400);
@@ -980,6 +1003,10 @@ h3 {
 .dark .text-blue-700,
 .dark .text-blue-800 {
   color: var(--color-blue-300);
+}
+
+.dark .text-blue-900 {
+  color: var(--color-blue-200);
 }
 
 /* Borders. */

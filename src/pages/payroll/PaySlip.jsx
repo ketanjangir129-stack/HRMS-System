@@ -25,6 +25,7 @@ import {
   EARNING_FIELDS,
 } from "../../utils/salary/salaryFields";
 import { formatAmount } from "../../utils/salary/formatCurrency";
+import { getCurrentEmployeeId } from "../../utils/attendance/attendanceRequestUtils";
 import styles from "./PaySlip.module.css";
 
 /*
@@ -256,12 +257,25 @@ const buildCalculationRows = (calculation = {}) => [
 ];
 
 const PaySlip = () => {
-  const { employeeId } = useParams();
+  /*
+  | Two routes, one sheet. `/payrolldashboard/payslip/:employeeId` is somebody
+  | else's payslip, opened from the payroll dashboard; `/my-payroll/payslip`
+  | is the reader's own and carries no id in the address.
+  |
+  | The own route deliberately takes nothing from the URL. An id in the path
+  | would be an invitation to read a colleague's pay by editing it, and the
+  | route guard behind it only asks whether this user may open *a* payslip.
+  */
+  const { employeeId: routeEmployeeId } = useParams();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
 
-  const { company } = useAuth();
+  const { company, currentUser } = useAuth();
   const companyCode = company?.companyCode;
+
+  const isOwnPayslip = !routeEmployeeId;
+
+  const employeeId = routeEmployeeId || getCurrentEmployeeId(currentUser);
 
   const { canAccessSection, canAccessPage, fallbackPath } = useRoleAccess();
 
@@ -512,6 +526,30 @@ const PaySlip = () => {
     }
   };
 
+  /*
+  | Where Back goes, for both the toolbar above the sheet and the empty state
+  | below. Worked out once so the two can never send the reader to different
+  | places.
+  |
+  | Own payslips return to My Payroll, which is the page they were opened
+  | from. For anybody else's it is the payroll dashboard - except that an
+  | employee sent there lands on a page they cannot open and is bounced
+  | somewhere else again, which reads as the app losing them, so they go
+  | wherever their role can actually go instead.
+  */
+  const backPath = isOwnPayslip
+    ? "/my-payroll"
+    : canAccessPage("payroll")
+      ? "/payrolldashboard"
+      : fallbackPath || "/dashboard";
+
+  const backLabel =
+    backPath === "/my-payroll"
+      ? "Back to My Payroll"
+      : backPath === "/payrolldashboard"
+        ? "Back to Payroll"
+        : "Go Back";
+
   if (loading) {
     return (
       <div className="p-8 text-sm text-ink-subtle">Loading Payslip...</div>
@@ -527,13 +565,14 @@ const PaySlip = () => {
     const isWaiting = !error && Boolean(withheld);
 
     /*
-    | An employee sent back to the payroll dashboard lands on a page they
-    | cannot open and is bounced somewhere else again, which reads as the app
-    | losing them. They go wherever their role can actually go instead.
+    | An account with no employee record - the owner signs in through Firebase
+    | Auth and carries no employee id - has no payslip of its own. Saying so
+    | is better than "no payroll has been generated for " with a blank where
+    | the employee should be.
     */
-    const backPath = canAccessPage("payroll")
-      ? "/payrolldashboard"
-      : fallbackPath || "/dashboard";
+    const missing = employeeId
+      ? `No payroll has been generated for ${employeeId} in the last ${PAYSLIP_MONTHS} months.`
+      : "This account is not linked to an employee, so it has no payslips of its own.";
 
     return (
       <div className="mx-auto max-w-[1600px] space-y-4 p-4 sm:p-8">
@@ -544,9 +583,7 @@ const PaySlip = () => {
               : "border-red-200 bg-red-50 text-red-600"
           }`}
         >
-          {error ||
-            withheld ||
-            `No payroll has been generated for ${employeeId} in the last ${PAYSLIP_MONTHS} months.`}
+          {error || withheld || missing}
         </div>
 
         <button
@@ -555,7 +592,7 @@ const PaySlip = () => {
           className="ui-btn ui-btn-primary font-semibold"
         >
           <FiArrowLeft />
-          {backPath === "/payrolldashboard" ? "Back to Payroll" : "Go Back"}
+          {backLabel}
         </button>
       </div>
     );
@@ -583,7 +620,8 @@ const PaySlip = () => {
         >
           <button
             type="button"
-            onClick={() => navigate("/payrolldashboard")}
+            onClick={() => navigate(backPath)}
+            title={backLabel}
             className={`ui-btn ui-btn-secondary font-semibold ${styles.back}`}
           >
             <FiArrowLeft className="shrink-0" />
@@ -650,7 +688,7 @@ const PaySlip = () => {
                 <h2 className={styles.companyName}>
                   {company?.companyName || "Company"}
                 </h2>
-                <p className={styles.companyLine}>{company?.phone || ""}</p>
+                <p className={styles.companyLine}>{company?.mobile || ""}</p>
 
                 <div className={styles.triangle} />
               </div>
@@ -737,7 +775,7 @@ const PaySlip = () => {
                 <div className={styles.footerBlock}>
                   <span className={styles.footerLabel}>Mobile</span>
                   <span className={styles.footerValue}>
-                    {company?.phone || "--"}
+                    {company?.mobile || "--"}
                   </span>
                 </div>
 

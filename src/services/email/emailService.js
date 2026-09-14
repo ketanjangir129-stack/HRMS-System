@@ -36,6 +36,8 @@ const SERVICE_KEY = (import.meta.env.VITE_EMAIL_SERVICE_KEY || "").trim();
 */
 export const EMAIL_TEMPLATES = {
     ONBOARDING_INVITATION: "onboarding-invitation",
+    ONBOARDING_APPROVED: "onboarding-approved",
+    PASSWORD_RESET: "password-reset",
 };
 
 /*
@@ -75,6 +77,28 @@ const wrongUrlShape = () => {
     }
 
     return "VITE_EMAIL_SERVICE_URL does not look like an Apps Script web app. It should end in /exec.";
+};
+
+/*
+| A template this file knows about but the script does not means one thing in
+| practice: the deployed web app is an older copy of `Code.gs`. Saving in the
+| Apps Script editor does not change what `/exec` serves — only deploying a
+| new version does — so the two drift apart the first time a template is
+| added and nobody is told why. The script cannot say this itself; the copy
+| answering is the one that predates the fix. So it is said here.
+*/
+const explain = (message) => {
+
+    if (!/^Unknown email template/i.test(String(message || ""))) {
+        return message;
+    }
+
+    return (
+        message +
+        " The deployed Apps Script is an older version of Code.gs. In the" +
+        " script editor use Deploy ▸ Manage deployments ▸ ✏️ ▸ Version: New" +
+        " version ▸ Deploy — the /exec URL stays the same."
+    );
 };
 
 /*
@@ -140,7 +164,16 @@ const post = async (payload) => {
             };
         }
 
-        return result;
+        return {
+            ...result,
+            message: explain(result.message),
+            results: Array.isArray(result.results)
+                ? result.results.map((item) => ({
+                    ...item,
+                    message: explain(item.message),
+                }))
+                : result.results,
+        };
 
     } catch (error) {
 

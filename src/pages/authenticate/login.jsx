@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { validateField } from "../../utils/validation/validateField";
 import useAuth from "../../hooks/useAuth";
+import ForgotPasswordModal from "../../components/authenticate/ForgotPasswordModal";
 import { useNavigate } from "react-router-dom";
 import { toast } from 'react-toastify';
 import { Building2, Eye, EyeOff, Lock, ShieldCheck, User } from "lucide-react";
@@ -17,6 +18,8 @@ const Login = () => {
   const { login } = useAuth();
   const navigate = useNavigate();
   const [errors, setErrors] = useState({});
+
+  const [forgotOpen, setForgotOpen] = useState(false);
 
   // Shared input styling: the error state only swaps the border/ring colour so
   // every field keeps the same shape as the rest of the app's forms.
@@ -266,6 +269,21 @@ const Login = () => {
                   {errors.password}
                 </p>
               )}
+
+              {/*
+                Under the password field, where somebody realises they have
+                forgotten it. The company code already typed above is handed
+                to the dialog so it is not asked for twice.
+              */}
+              <div className="mt-2 flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => setForgotOpen(true)}
+                  className="text-sm font-medium text-blue-600 transition hover:text-blue-700 cursor-pointer"
+                >
+                  Forgot Password?
+                </button>
+              </div>
             </div>
 
             <button
@@ -328,6 +346,19 @@ const Login = () => {
 
         </div>
       </div>
+
+      {/*
+        Keyed on the company code so the dialog remounts when it changes, and
+        its seeded field follows what was typed rather than whatever the code
+        was the first time it opened.
+      */}
+      <ForgotPasswordModal
+        key={formData.companyCode}
+        open={forgotOpen}
+        companyCode={formData.companyCode}
+        onClose={() => setForgotOpen(false)}
+      />
+
     </div>
   );
 };

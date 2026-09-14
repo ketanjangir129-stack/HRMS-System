@@ -67,12 +67,48 @@ import Loader from "../../components/common/Loader";
 |--------------------------------------------------------------------------
 */
 
+/*
+|--------------------------------------------------------------------------
+| Kaun kisko task de sakta hai
+|--------------------------------------------------------------------------
+| Har role ke saamne wo roles jinke logon ko wo task NAHI de sakta. Jo yahan
+| nahi likha wo de sakta hai, aur apne aap ko har koi de sakta hai - self
+| wali chhoot filter mein alag se lagti hai.
+|
+|   Owner    - is list mein hai hi nahi, matlab kisi par rok nahi. Poori
+|              company uski hai.
+|
+|   Manager  - HR aur Employee dono ko de sakta hai; doosre Manager ko nahi.
+|              Manager yahan department-wise hai, to ek Manager doosre
+|              Manager ka kaam tay nahi karta - wo faisla unke upar wale ka
+|              hai.
+|
+|   HR       - sirf Employee ko. Doosra HR uska peer hai, aur Manager apne
+|              department ka malik hai - dono ka kaam tay karna HR ke apne
+|              level se upar ka faisla hai, to wo Owner ke paas rehta hai.
+|
+|   Employee - jaisa pehle tha, waisa hi. Waise bhi yahan tak pahunchta
+|              nahi: uske paas `tasks.create` nahi hota, `tasks.createOwn`
+|              hota hai, aur wo raasta dropdown chhode bina seedha khud ko
+|              assign karta hai.
+|
+| Roken ki list rakhi hai, de-sakta-hai ki nahi - kyunki jis employee ka
+| account role blank hai (`role: ""`) wo kisi bhi allow-list se bahar reh
+| jaata aur dropdown se gayab ho jaata. Rok ki list mein blank kabhi match
+| hi nahi karta, to aisa record pehle ki tarah dikhta rehta hai.
+*/
+const BLOCKED_ASSIGNEE_ROLES = {
+  [ROLE.HR]: [ROLE.HR, ROLE.MANAGER],
+  [ROLE.MANAGER]: [ROLE.MANAGER],
+  [ROLE.EMPLOYEE]: [ROLE.HR],
+};
+
 function AllTasks() {
   const companyCode = localStorage.getItem("companyCode");
   const { currentUser } = useAuth();
 
   // Owner Settings se ye sab on/off karta hai. Owner ke liye hamesha true.
-  const { canAccessSection, isOwner } = useRoleAccess();
+  const { canAccessSection, role } = useRoleAccess();
 
   const canViewAll = canAccessSection("tasks.viewAll");
   const showProgress = canAccessSection("tasks.progress");
@@ -216,26 +252,27 @@ function AllTasks() {
   /*
   | Assign dropdown ki list. Assignee column aur workload poori list se
   | chalte hain (naam to sabke dikhne chahiye), par dena kisko hai — wo
-  | role par tika hai:
+  | dekhne wale ke role par tika hai, aur wo table upar likhi hai.
   |
-  |   Owner  → HR aur Employee, dono
-  |   HR     → sirf Employee, aur khud
+  | Khud hamesha list mein rehta hai, apne role ki rok se pehle. Isi se HR
+  | apne liye task bana leta hai jabki doosre HR uski list se hat jaate
+  | hain, aur Manager ke saath bhi wahi hota hai.
   |
   | Owner is list mein aata hi nahi — uska employee record hota hi nahi,
   | isliye "Assign to Owner" ka sawaal hi nahi uthta.
-  |
-  | HR khud list mein rehta hai taaki apne liye task bana sake; doosre HR
-  | hat jaate hain.
   */
-  const assignableEmployees = useMemo(
-    () =>
-      isOwner
-        ? employees
-        : employees.filter(
-            (employee) => employee.role !== ROLE.HR || employee.id === myEmployeeId
-          ),
-    [employees, isOwner, myEmployeeId]
-  );
+  const assignableEmployees = useMemo(() => {
+
+    const blocked = BLOCKED_ASSIGNEE_ROLES[role] || [];
+
+    if (!blocked.length) return employees;
+
+    return employees.filter(
+      (employee) =>
+        employee.id === myEmployeeId || !blocked.includes(employee.role)
+    );
+
+  }, [employees, role, myEmployeeId]);
 
   // tasks.viewAll na ho to hamesha sirf apne tasks. Ho to sab, jab tak khud
   // "My tasks" na chune. Filter browser mein hota hai — attendance requests

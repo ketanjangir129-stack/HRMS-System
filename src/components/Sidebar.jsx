@@ -1,4 +1,5 @@
 import {
+  BadgeIndianRupee,
   Building2,
   CalendarCheck,
   ChevronLeft,
@@ -132,6 +133,16 @@ const menuGroups = [
         path: "/payrolldashboard",
         icon: ReceiptIndianRupee,
         permission: "payroll",
+      },
+      /*
+      | Last in Finance, and the only item in the group most people will see:
+      | the two above are the company's money and this is the reader's own.
+      */
+      {
+        label: "My Payroll",
+        path: "/my-payroll",
+        icon: BadgeIndianRupee,
+        permission: "myPayroll",
       },
     ],
   },

@@ -62,27 +62,13 @@ export const getPunchLocation = () =>
 
 const EARTH_RADIUS_METRES = 6371000;
 
-/*
-| Ordered narrowest first, so the first row a reading fits is its level.
-| Anything past the last row is Poor - typically a Wi-Fi or IP derived fix
-| rather than a satellite one, which is ordinary on a desktop.
-*/
-const QUALITY_LEVELS = [
-  { level: "excellent", label: "Excellent", limit: 20 },
-  { level: "good", label: "Good", limit: 50 },
-  { level: "fair", label: "Fair", limit: 100 },
-];
-
-const POOR_LEVEL = { level: "poor", label: "Poor" };
-
 // Coordinates the map and the maths can both use. A record can carry a
 // location node whose numbers never arrived, so this is checked every time.
 const hasCoordinates = (location) =>
   Number.isFinite(location?.latitude) &&
   Number.isFinite(location?.longitude);
 
-// Metres below a kilometre, kilometres above it - the same reading is used
-// for an accuracy radius and for a distance, so both stay in one place.
+// Metres below a kilometre, kilometres above it.
 const formatMetres = (metres) => {
   if (!Number.isFinite(metres)) return null;
 
@@ -94,47 +80,17 @@ const formatMetres = (metres) => {
 const toRadians = (degrees) => (degrees * Math.PI) / 180;
 
 /*
-| How tightly a punch was pinned down.
+| Straight line metres between two points, by the haversine formula.
 |
-| accuracy is optional in storage - it is written as null when the device
-| does not report one - so an unreadable value is a real case rather than a
-| guard, and it resolves to Unknown instead of to a level it did not earn.
-*/
-export const locationQuality = (location) => {
-  const accuracy = location?.accuracy;
-
-  if (!Number.isFinite(accuracy) || accuracy <= 0) {
-    return {
-      level: "unknown",
-      label: "Unknown",
-      accuracy: null,
-      accuracyLabel: null,
-      // Not knowing how precise a reading is deserves saying, the same as
-      // knowing it is loose.
-      warn: true,
-    };
-  }
-
-  const match =
-    QUALITY_LEVELS.find((quality) => accuracy <= quality.limit) || POOR_LEVEL;
-
-  return {
-    level: match.level,
-    label: match.label,
-    accuracy,
-    accuracyLabel: `± ${formatMetres(accuracy)}`,
-    warn: match.level === "poor",
-  };
-};
-
-/*
-| Straight line metres between two punches, by the haversine formula.
+| Not exported: `officeComparison` below is the only caller, and a distance
+| on its own is not something any screen shows. It stays a separate function
+| because the formula is worth reading apart from what is done with it.
 |
 | Returns null rather than throwing for anything it cannot measure, because
 | a half recorded day is normal: a punch in without a punch out, or a
 | location node whose numbers never arrived.
 */
-export const distanceBetween = (from, to) => {
+const distanceBetween = (from, to) => {
   if (!hasCoordinates(from) || !hasCoordinates(to)) return null;
 
   const deltaLat = toRadians(to.latitude - from.latitude);
@@ -156,54 +112,18 @@ export const distanceBetween = (from, to) => {
 };
 
 /*
-| The distance, and whether it is large enough to mean anything.
-|
-| Two readings each loose to a kilometre can sit a few hundred metres apart
-| without the device having gone anywhere - the gap is the uncertainty, not
-| a journey. So the distance is weighed against both accuracy radii added
-| together, and below that it is reported as margin rather than as movement.
-|
-| withinMargin is deliberately three valued. true and false are answers;
-| null means the comparison could not be made at all, because one of the
-| readings never carried an accuracy to compare against. Saying so is more
-| honest than treating a missing radius as a radius of zero, which would
-| turn every old record into confident movement.
-*/
-export const movementBetween = (from, to) => {
-  const metres = distanceBetween(from, to);
-
-  if (metres === null) return null;
-
-  const fromAccuracy = Number.isFinite(from?.accuracy) ? from.accuracy : null;
-  const toAccuracy = Number.isFinite(to?.accuracy) ? to.accuracy : null;
-
-  const comparable = fromAccuracy !== null && toAccuracy !== null;
-  const margin = comparable ? fromAccuracy + toAccuracy : null;
-
-  return {
-    metres,
-    label: formatMetres(metres),
-    margin,
-    marginLabel: comparable ? formatMetres(margin) : null,
-    withinMargin: comparable ? metres <= margin : null,
-  };
-};
-
-/*
 | A punch held against the company's configured office.
 |
-| The distance is the same haversine the two punches are measured with -
-| `officeLocation` stores latitude and longitude under exactly those names,
-| so the existing helper takes it unchanged.
+| The distance is the haversine above - `officeLocation` stores latitude and
+| longitude under exactly those names, so the helper takes it unchanged.
 |
-| What differs is the uncertainty. `movementBetween` adds two accuracy radii
-| because both of its points were measured; here only one was. The office is
-| a point somebody typed into Settings - declared rather than observed - so
-| it carries no error of its own, and the margin is the punch's accuracy
-| alone. Radius is policy and accuracy is measurement; adding them together
-| would blur a boundary the company chose with a number the device reported.
+| Only one of the two points was measured. The office is a point somebody
+| typed into Settings - declared rather than observed - so it carries no
+| error of its own, and the margin is the punch's accuracy alone. Radius is
+| policy and accuracy is measurement; adding them together would blur a
+| boundary the company chose with a number the device reported.
 |
-| Three verdicts, for the same reason `withinMargin` has three values:
+| Three verdicts, because two would have to lie about one of the cases:
 |
 |   inside   the accuracy circle fits entirely within the radius
 |   outside  the accuracy circle falls entirely beyond it
