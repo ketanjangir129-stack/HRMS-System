@@ -347,7 +347,7 @@ function Profile() {
         {
           key: "mobile",
           label: "Mobile",
-          value: company?.phone || company?.mobile,
+          value: company?.mobile,
           icon: Phone,
         },
         {
@@ -601,7 +601,7 @@ function Profile() {
 
   // Header ke right side ki quick info — icon tile + value + label
   const metaItems = [
-    { icon: Phone, label: "Mobile", value: mobile || company?.phone },
+    { icon: Phone, label: "Mobile", value: mobile },
     { icon: Mail, label: "Email", value: email },
     { icon: Building2, label: "Company", value: company?.companyName },
   ];

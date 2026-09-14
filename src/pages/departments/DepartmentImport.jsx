@@ -3,15 +3,15 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import { FiArrowLeft, FiUploadCloud } from "react-icons/fi";
 
-import ImportDropZone from "../components/departments/import/ImportDropZone";
-import ImportPlanPanel from "../components/departments/import/ImportPlanPanel";
-import ImportResultPanel from "../components/departments/import/ImportResultPanel";
-import ImportHistoryPanel from "../components/departments/import/ImportHistoryPanel";
+import ImportDropZone from "../../components/departments/import/ImportDropZone";
+import ImportPlanPanel from "../../components/departments/import/ImportPlanPanel";
+import ImportResultPanel from "../../components/departments/import/ImportResultPanel";
+import ImportHistoryPanel from "../../components/departments/import/ImportHistoryPanel";
 
 import useDepartmentImport, {
   IMPORT_PHASE,
-} from "../hooks/useDepartmentImport";
-import { IMPORT_STATUS } from "../utils/departments/departmentImportConstants";
+} from "../../hooks/useDepartmentImport";
+import { IMPORT_STATUS } from "../../utils/departments/departmentImportConstants";
 
 /*
 |--------------------------------------------------------------------------

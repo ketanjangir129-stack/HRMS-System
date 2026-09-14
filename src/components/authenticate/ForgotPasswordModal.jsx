@@ -19,10 +19,12 @@ import { requestPasswordReset } from "../../services/passwordResetService";
 | in the database. The screen behind this one already asks for it, so it is
 | not a new thing to remember.
 |
-| Two states, not three. There is no "no account with that email": the dialog
-| either could not send, or says the same sentence for an address it found and
-| one it did not. Anything else would turn a screen that asks nothing of the
-| visitor into a way of finding out who is registered.
+| An address it cannot find is refused in place, beside the field that holds
+| it, rather than accepted with a sentence that only sounds like success. The
+| usual advice for a sign-in page is the opposite - see `passwordResetService`
+| for why this one goes the other way - and the short of it is that the common
+| case here is a typo, and somebody watching an empty inbox has no way of
+| telling a mistyped letter from a slow mail server.
 |--------------------------------------------------------------------------
 */
 
@@ -180,14 +182,20 @@ function ForgotPasswordModal({ open, companyCode = "", onClose }) {
 
           <>
 
+            {/*
+              Said plainly, because by this point the account has been found.
+              The screen refuses an address it does not know rather than
+              accepting it quietly, so "on its way" here is a fact rather than
+              the hedge it would have to be if this sentence also had to cover
+              an address that does not exist.
+            */}
             <p className="text-sm leading-relaxed text-slate-600">
-              If <span className="font-semibold text-slate-900">{sentTo}</span>{" "}
-              has an account, a password reset link is on its way.
+              A password reset link is on its way to{" "}
+              <span className="font-semibold text-slate-900">{sentTo}</span>.
             </p>
 
             <p className="mt-3 text-sm leading-relaxed text-slate-500">
-              Nothing after a few minutes? Check your spam folder, or try again
-              with a different address.
+              Nothing after a few minutes? Check your spam folder.
             </p>
 
             <div className="mt-6 flex justify-end">
