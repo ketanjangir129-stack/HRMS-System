@@ -29,9 +29,12 @@ import {
 | Firebase, which sends its own mail and hosts its own page.
 |
 | The person asking sees no difference: the same link on the sign-in screen,
-| the same dialog, the same sentence afterwards. That sentence is the same for
-| an address with no account, too, which is the reason for most of the shape
-| of `requestPasswordReset` below.
+| the same dialog, the same sentence afterwards.
+|
+| What they are told when it does not work is deliberately specific - a wrong
+| company code, an unknown address and an account that has never been signed
+| into each get their own answer. See `NOT_FOUND` for why this screen names
+| what it could not find rather than hedging.
 |
 | What is stored is never the token. `account.resetTokenHash` holds a SHA-256
 | of it and the link carries the original, so somebody reading the employee
@@ -55,22 +58,36 @@ const normalize = (value) => String(value ?? "").trim().toLowerCase();
 const buildResetLink = (companyCode, employeeId, token) =>
     `${window.location.origin}/reset-password/${companyCode}/${employeeId}/${token}`;
 
-/*
-| What every caller of `requestPasswordReset` is told, whatever happened.
-|
-| An honest "no account with that email" would turn the sign-in screen into a
-| way of asking which addresses are registered with a company - which is worth
-| knowing to somebody preparing a more convincing email later. So a missing
-| account, an inactive one and a mail that was sent all end here.
-|
-| Genuine failures - the mail service being unreachable, the database being
-| down - are reported, because a person who is told to go and wait for an
-| email that was never sent has been left with nothing to do.
-*/
+/* Said only once a mail has actually left. */
 const SENT = {
     success: true,
+    message: "A password reset link is on its way. Please check your inbox.",
+};
+
+/*
+| The screen tells the truth about what it found, rather than answering every
+| case with the same sentence.
+|
+| The usual advice is the opposite, and for a public sign-in page it is right:
+| a screen that says "no account with that address" is a screen anybody can
+| use to find out who is registered. It is a deliberate trade here, made for
+| two reasons.
+|
+| A typo is the common case and silence is the wrong answer to it. Somebody
+| who mistypes their own address would otherwise be told a link was sent,
+| watch an empty inbox, and have no way of telling a slow mail server from a
+| wrong letter - and the person this app is for cannot try another provider,
+| they have exactly one address on their employee record.
+|
+| And the reach is narrower than a public page's. This is one company's
+| internal system: an answer here is only had by somebody who already knows
+| that company's code, and it only ever says whether an address belongs to
+| that one company.
+*/
+const NOT_FOUND = {
+    success: false,
     message:
-        "If that email has an account, a password reset link is on its way. Please check your inbox.",
+        "No account found with this email. Please check the email and company code, or ask your HR.",
 };
 
 /*
@@ -137,12 +154,26 @@ export const requestPasswordReset = async (companyCode, email) => {
         const company = await getCompanyByCode(code);
 
         /*
-        | A company that does not exist is answered like an address that does
-        | not: saying so would let somebody probe for valid company codes from
-        | a screen that asks nothing of them.
+        | Named separately from a missing address. The two are different
+        | mistakes and only the person making one can tell which they made -
+        | an employee whose address is fine but whose company code is a digit
+        | out would otherwise be sent looking at their own email for a fault
+        | that is not there.
         */
-        if (!company || company.status !== "active") {
-            return SENT;
+        if (!company) {
+            return {
+                success: false,
+                message:
+                    "No company found with this code. Please check it and try again.",
+            };
+        }
+
+        if (company.status !== "active") {
+            return {
+                success: false,
+                message:
+                    "This company account is inactive. Please contact your administrator.",
+            };
         }
 
         const companyName = company.companyName || "Your Company";
@@ -163,19 +194,50 @@ export const requestPasswordReset = async (companyCode, email) => {
         const found = await findEmployeeByEmail(code, address);
 
         if (!found) {
-            return SENT;
+            return NOT_FOUND;
         }
 
         const { employeeId, employee } = found;
 
         /*
         | A deactivated account cannot sign in even with the right password,
-        | so a link would only lead somewhere that refuses them. Answered like
-        | an unknown address rather than explained, for the same reason as the
-        | rest: this screen tells a stranger nothing about who exists.
+        | so a link would only lead somewhere that refuses them. Said plainly,
+        | and pointing at the one person who can undo it: an ex-employee needs
+        | to know their access is gone rather than that their email is wrong,
+        | and somebody deactivated by mistake needs HR, not another attempt.
         */
         if (employee.account?.status !== "Active") {
-            return SENT;
+            return {
+                success: false,
+                message:
+                    "This account is inactive and cannot be used to sign in. Please contact your HR.",
+            };
+        }
+
+        /*
+        | Somebody who has never signed in is sent back to the front door
+        | rather than given a link.
+        |
+        | They are not locked out - they are holding the password already, it
+        | is their employee id, and the forced change screen is waiting for
+        | them behind it. A reset here would be a second way of arriving at
+        | that same screen, and the more expensive one: it needs an inbox they
+        | may not have set up yet on a work account that is a day old.
+        |
+        | So the message names the password rather than only refusing. The
+        | person reading it has usually forgotten what the joining email told
+        | them, which is the whole reason they are on this screen.
+        |
+        | The sign-in page cannot make this decision for itself. Nobody has
+        | identified themselves to it yet, so the button stays where it is and
+        | the answer is given here, where there is a record to read.
+        */
+        if (employee.account?.isPasswordChanged === false) {
+            return {
+                success: false,
+                message:
+                    `You have not set your own password yet. Sign in with your Employee ID (${employeeId}) as both the User ID and the password, and you will be asked to choose one.`,
+            };
         }
 
         const token = generateResetToken();

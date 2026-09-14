@@ -545,15 +545,26 @@ function AppRoutes() {
             <Route path="/change-password" element={<ChangePassword />} />
 
             {/*
-              The reset link from a forgotten-password email. Unguarded like
-              the on-boarding form beneath it and for the same reason: whoever
-              opens it has no session, and the link itself is what stands in
-              for one. The page checks it before showing anything.
+              The two reset links, both answered by the screen above it.
+              `ChangePassword` reads the address to know which it is, and drops
+              its current-password field for either - not having that password
+              is why the link exists.
+
+              The first carries our own token, for an employee. The second
+              carries none: Firebase puts an `oobCode` in the query string when
+              its action URL is pointed here, which is how the owner lands on
+              this page rather than on one of Google's.
+
+              Unguarded, like the on-boarding form beneath them and for the same
+              reason: whoever opens one has no session, and the link is what
+              stands in for it.
             */}
             <Route
                 path="/reset-password/:companyCode/:employeeId/:token"
-                element={<ResetPassword />}
+                element={<ChangePassword />}
             />
+
+            <Route path="/reset-password" element={<ChangePassword />} />
 
             <Route path="/onboarding/:companyCode/:employeeId" element={<EmployeeOnboarding />} />
 

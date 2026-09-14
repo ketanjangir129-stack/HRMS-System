@@ -2,6 +2,8 @@ import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   sendPasswordResetEmail,
+  verifyPasswordResetCode,
+  confirmPasswordReset,
   signOut,
 } from "firebase/auth";
 import { auth } from "../firebase/firebase";
@@ -67,14 +69,23 @@ export const logoutCompany = async () => {
 |
 | That is why there is no company code here and no template of ours. An
 | employee's reset is ours end to end because their password is a value in
-| our database; the owner's is not ours to write, and a browser cannot change
-| a Firebase password for somebody who is not signed in - which is exactly
-| the person asking.
+| our database; the owner's is not ours to write directly, and a browser
+| cannot change a Firebase password for somebody who is not signed in.
 |
-| It resolves the same way whether or not the address has an account. The
-| screen that calls this says the same sentence either way on purpose: it is
-| reached without signing in, so an honest "no such account" would turn it
-| into a way of asking which addresses are registered.
+| What the two functions beneath this one buy back is the screen. Firebase
+| puts an `oobCode` in the link it mails, and that code is a one-use licence
+| to set this account's password - so with the Console's action URL pointed
+| at our own `/reset-password`, the owner lands on the same page everybody
+| else does and only the email is still Firebase's.
+|
+| A missing account is reported rather than swallowed, matching the employee
+| side: the screen that calls this names what it could not find so a mistyped
+| address is a correctable mistake instead of an inbox watched for nothing.
+|
+| Reaching this at all means the address already matched the one on the
+| company record, so the only way Firebase can answer "no such user" is if
+| that account was deleted out from under the company - a broken state worth
+| saying out loud rather than papering over with a link that never comes.
 */
 export const sendOwnerPasswordReset = async (email) => {
 
@@ -86,20 +97,18 @@ export const sendOwnerPasswordReset = async (email) => {
 
   } catch (error) {
 
-    /*
-    | These two are "no such account" wearing different hats, and are
-    | swallowed for the reason above. Everything else is a real failure the
-    | user has to see - an offline browser, a rate limit - because claiming
-    | the mail was sent would leave them waiting for nothing.
-    */
+    console.error("Failed to send owner password reset:", error);
+
     if (
       error.code === "auth/user-not-found" ||
       error.code === "auth/invalid-email"
     ) {
-      return { success: true };
+      return {
+        success: false,
+        message:
+          "No sign-in account found for this email. Please contact your administrator.",
+      };
     }
-
-    console.error("Failed to send owner password reset:", error);
 
     return {
       success: false,
@@ -108,6 +117,82 @@ export const sendOwnerPasswordReset = async (email) => {
           ? "Too many attempts. Please wait a few minutes and try again."
           : "Could not send the reset email. Please try again.",
       code: error.code,
+    };
+
+  }
+
+};
+
+/*
+| Whether the code in a link is still good, asked before the form is drawn.
+|
+| Firebase answers with the address the code belongs to, which is what lets
+| the page name the account it is about to change - the same line the employee
+| side prints from its own record.
+|
+| Every refusal comes back as one message. Expired, already used and tampered
+| with are the same thing to the person reading it, and there is nothing they
+| could do differently on being told which.
+*/
+export const verifyOwnerResetCode = async (oobCode) => {
+
+  try {
+
+    const email = await verifyPasswordResetCode(auth, oobCode);
+
+    return { valid: true, email };
+
+  } catch (error) {
+
+    console.error("Invalid owner reset code:", error);
+
+    return {
+      valid: false,
+      message:
+        "This password reset link is no longer valid. It may have expired or already been used.",
+    };
+
+  }
+
+};
+
+/*
+| Spending the code. Firebase invalidates it as it writes, so the link is
+| single use without anything here having to remember that it was used - the
+| same property the employee side gets by clearing the stored hash.
+|
+| The owner is not signed in afterwards. That is Firebase's behaviour and it
+| is the right one: the page sends them to sign in with the password they
+| have just chosen, which is also the first proof that it took.
+*/
+export const confirmOwnerPasswordReset = async (oobCode, newPassword) => {
+
+  try {
+
+    await confirmPasswordReset(auth, oobCode, newPassword);
+
+    return { success: true };
+
+  } catch (error) {
+
+    if (error.code === "auth/weak-password") {
+      return {
+        success: false,
+        message: "That password is too weak. Please choose a stronger one.",
+      };
+    }
+
+    console.error("Failed to reset owner password:", error);
+
+    /*
+    | Anything else is the code having gone stale between the page opening and
+    | the form being submitted - most often because it was used in another tab
+    | while this one sat waiting.
+    */
+    return {
+      success: false,
+      message:
+        "This password reset link is no longer valid. It may have expired or already been used.",
     };
 
   }
