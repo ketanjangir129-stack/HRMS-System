@@ -1,0 +1,267 @@
+import * as XLSX from "xlsx";
+
+import {
+  ACCEPTED_IMPORT_EXTENSIONS,
+  MAX_FILE_SIZE_BYTES,
+  MAX_FILE_SIZE_MB,
+  MAX_IMPORT_ROWS,
+} from "./departmentImportConstants";
+
+/*
+|--------------------------------------------------------------------------
+| Department Import - Parsing
+|--------------------------------------------------------------------------
+| Turns the file the user picked into a heading row and a list of raw rows.
+|
+| Nothing is judged here beyond the shape of the file itself. No column means
+| anything yet and no department is looked for: this step only answers "what
+| columns are in it and what is in each cell", because the mapping step has to
+| be able to show the user a column before anybody can say what that column is.
+|
+| `xlsx` does the reading rather than a `split(",")` of our own. It is already
+| a dependency - both the bulk on-boarding importer and the attendance importer
+| read their workbooks with it - and it already handles the four things a hand
+| written splitter gets wrong: quoted fields, commas inside a quoted field,
+| embedded newlines, and the three line endings a file can arrive with.
+|
+| It is also what lets a CSV and an `.xlsx` be the same feature rather than
+| two. Both are read into the same grid of cells here, so the mapping, the
+| validation and the writing underneath never learn which format the rows came
+| out of.
+|
+| Every cell is flattened to a trimmed string, with no exception. The
+| attendance reader keeps a number as a number because a date or a time cell
+| arrives as a serial and has to stay one; a department and a designation are
+| names, and there is nothing a spreadsheet can encode in one that survives
+| being read as text.
+|
+| Row numbers are the ones printed down the side of a spreadsheet, so an error
+| message points at a row the user can actually find in their own file.
+|--------------------------------------------------------------------------
+*/
+
+const toCell = (value) => {
+
+  if (value === null || value === undefined) return "";
+
+  return String(value).trim();
+
+};
+
+const isEmptyRow = (row = []) => row.every((cell) => !toCell(cell));
+
+/*
+| A heading turned into the key the auto-detection compares on: lower cased
+| with everything but letters and digits removed.
+|
+| "Department Name", "department_name", "DEPARTMENT-NAME" and "Department  Name"
+| all reduce to "departmentname", so the aliases in the constants only have to
+| list one spelling of each name rather than every way it could be punctuated.
+*/
+
+export const normalizeHeader = (value = "") =>
+  String(value ?? "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, "");
+
+/*
+|--------------------------------------------------------------------------
+| File Checks
+|--------------------------------------------------------------------------
+| Answered before the file is read at all, so a file that was never going to
+| work is refused instantly instead of after a parse.
+*/
+
+export const validateImportFile = (file) => {
+
+  if (!file) {
+    return "Please choose a file to import.";
+  }
+
+  const name = String(file.name || "").toLowerCase();
+
+  /*
+  | Checked here as well as on the file input. The picker's `accept` filter is
+  | a convenience and not a guarantee: a file dragged onto the drop zone never
+  | passes through it.
+  */
+  const accepted = ACCEPTED_IMPORT_EXTENSIONS.some((extension) =>
+    name.endsWith(extension)
+  );
+
+  if (!accepted) {
+    return `Only ${ACCEPTED_IMPORT_EXTENSIONS.join(", ")} files can be imported. Export your departments as a CSV or Excel file and try again.`;
+  }
+
+  if (file.size === 0) {
+    return "This file is empty.";
+  }
+
+  if (file.size > MAX_FILE_SIZE_BYTES) {
+    return `This file is larger than ${MAX_FILE_SIZE_MB} MB. A department list should be far smaller than that - check you have not picked an employee export by mistake.`;
+  }
+
+  return "";
+
+};
+
+export const formatFileSize = (bytes = 0) => {
+
+  if (!bytes) return "0 KB";
+
+  if (bytes < 1024) return `${bytes} B`;
+
+  const kb = bytes / 1024;
+
+  if (kb < 1024) return `${Math.round(kb)} KB`;
+
+  return `${(kb / 1024).toFixed(1)} MB`;
+
+};
+
+/*
+|--------------------------------------------------------------------------
+| Read
+|--------------------------------------------------------------------------
+| Returns `{ success, headers, rows }` where a row is
+| `{ rowNumber, cells: [] }` - the cells still in the file's own column order,
+| because nothing has been mapped yet.
+|
+| `header: 1` keeps the sheet as a grid instead of letting `xlsx` guess at
+| headings. That is what lets the heading row be found by looking for the first
+| row with anything in it, and what lets every row keep the number it has in
+| the file rather than an array index.
+*/
+
+export const readDepartmentImportFile = async (file) => {
+
+  const fileError = validateImportFile(file);
+
+  if (fileError) {
+    return { success: false, message: fileError };
+  }
+
+  let grid;
+
+  try {
+
+    const buffer = await file.arrayBuffer();
+
+    const workbook = XLSX.read(buffer, { type: "array" });
+
+    /*
+    | The first sheet, and only the first sheet.
+    |
+    | A workbook can hold one per division, which is a common way for an old
+    | system to export a structure, and picking one for the user would be
+    | guessing at which. So the rule is stated on the upload screen instead.
+    |
+    | A CSV always has exactly one, so this decision is invisible for CSV.
+    */
+    const sheetName = workbook.SheetNames[0];
+
+    if (!sheetName) {
+      return {
+        success: false,
+        message: "This file has no sheets in it to read.",
+      };
+    }
+
+    grid = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], {
+      header: 1,
+      defval: "",
+      blankrows: true,
+      raw: false,
+    });
+
+  } catch (error) {
+
+    console.error("Department import parse error:", error);
+
+    return {
+      success: false,
+      message:
+        "This file could not be read. Make sure it is a valid CSV or Excel file and is not password protected, then try again.",
+    };
+
+  }
+
+  const headingIndex = grid.findIndex(
+    (row) => Array.isArray(row) && !isEmptyRow(row)
+  );
+
+  if (headingIndex === -1) {
+    return {
+      success: false,
+      message: "This file is empty.",
+    };
+  }
+
+  /*
+  | A heading that is blank still holds its place in the array, because the
+  | cells underneath it are addressed by column position. It is given a name so
+  | the mapping step can render it as something rather than as a gap.
+  */
+
+  const headers = grid[headingIndex].map((heading, index) => {
+
+    const label = String(heading ?? "").trim();
+
+    return {
+      index,
+      label: label || `Column ${index + 1}`,
+      key: normalizeHeader(label),
+      blank: !label,
+    };
+
+  });
+
+  const rows = [];
+
+  for (
+    let index = headingIndex + 1;
+    index < grid.length && rows.length <= MAX_IMPORT_ROWS;
+    index += 1
+  ) {
+
+    const row = grid[index] || [];
+
+    /*
+    | A blank line in the middle of a file is a formatting artefact, not a row
+    | somebody meant to import, so it is dropped here rather than carried all
+    | the way to the preview as an empty row with an error on it.
+    */
+    if (isEmptyRow(row)) continue;
+
+    rows.push({
+      rowNumber: index + 1,
+      cells: headers.map((header) => toCell(row[header.index])),
+    });
+
+  }
+
+  if (rows.length === 0) {
+    return {
+      success: false,
+      message:
+        "This file has column headings but no departments underneath them.",
+    };
+  }
+
+  if (rows.length > MAX_IMPORT_ROWS) {
+    return {
+      success: false,
+      message: `This file has more than ${MAX_IMPORT_ROWS.toLocaleString()} rows. A department list is normally tens of rows - check you have not picked an employee export by mistake.`,
+      rowCount: rows.length,
+    };
+  }
+
+  return {
+    success: true,
+    headers,
+    rows,
+  };
+
+};
+
+export default readDepartmentImportFile;

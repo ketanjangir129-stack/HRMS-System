@@ -11,6 +11,7 @@ import {
 
 import {
   getCompanyByCode,
+  updateCompanyDetails,
 } from "../services/companyService";
 import { updateEmployee } from "../services/EmployeeService";
 import { onAuthStateChanged } from "firebase/auth";
@@ -153,6 +154,57 @@ export const AuthProvider = ({ children }) => {
     };
   };
 
+  /*
+  | Owner ki apni profile edit — company details me jaati hai, kyunki owner ka
+  | koi employee record hota hi nahi.
+  |
+  | Naam yahan currentUser me bhi copy hota hai: login ne `name` company ke
+  | ownerName se banaya tha, aur navbar/profile drawer wahi currentUser padhte
+  | hain. Sirf company state badalte to owner apna naam save karke bhi navbar
+  | me purana naam dekhta rehta — agle login tak.
+  */
+  const updateCompanyProfile = async (updates) => {
+    try {
+      const companyCode =
+        company?.companyCode || localStorage.getItem("companyCode");
+      const role = localStorage.getItem("role");
+
+      // Sirf owner. HR/Employee apni details employee record me badalte hain.
+      if (role !== "owner" || !companyCode) {
+        return {
+          success: false,
+          message: "Not allowed.",
+        };
+      }
+
+      const result = await updateCompanyDetails(companyCode, updates);
+
+      if (!result.success) {
+        return result;
+      }
+
+      setCompany(result.data);
+
+      const updatedUser = {
+        ...(currentUser || {}),
+        role: "owner",
+        name: result.data.ownerName,
+        email: result.data.email,
+      };
+
+      setCurrentUser(updatedUser);
+      localStorage.setItem("currentUser", JSON.stringify(updatedUser));
+
+      return result;
+    } catch (error) {
+      console.error(error);
+      return {
+        success: false,
+        message: "Failed to update profile.",
+      };
+    }
+  };
+
   // Mandatory first-time password change for HR / Employee users.
   const changePassword = async (currentPassword, newPassword) => {
     try {
@@ -230,6 +282,7 @@ export const AuthProvider = ({ children }) => {
         login,
         logout,
         changePassword,
+        updateCompanyProfile,
       }}
     >
       {children}

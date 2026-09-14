@@ -6,6 +6,7 @@ import ResetPassword from "../pages/authenticate/ResetPassword";
 import DashboardLayout from "../layouts/DashboardLayout";
 import Dashboard from "../pages/Dashboard";
 import Departments from "../pages/Departments";
+import DepartmentImport from "../pages/DepartmentImport";
 import Employees from "../pages/Employees";
 import EmployeeForm from "../pages/EmployeeForm";
 import ProtectedRoute from "./ProtectedRoute";
@@ -103,6 +104,20 @@ function AppRoutes() {
                     element={
                         <PermissionRoute permission="departments">
                             <Departments />
+                        </PermissionRoute>
+                    }
+                />
+
+                {/*
+                  Importing a company's organisation chart. Guarded by its own
+                  permission, which is off by default for every managed role:
+                  it is the only screen that creates departments in bulk.
+                */}
+                <Route
+                    path="/departments/import"
+                    element={
+                        <PermissionRoute permission="departments.import">
+                            <DepartmentImport />
                         </PermissionRoute>
                     }
                 />

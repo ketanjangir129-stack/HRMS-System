@@ -99,7 +99,31 @@ export const PERMISSION_PAGES = [
     | and deciding which departments exist are not the same right.
     */
     defaults: { hr: true, manager: false, employee: false },
-    sections: [],
+    sections: [
+      {
+        /*
+        | Bringing a company's organisation chart in from a spreadsheet.
+        |
+        | Off for every managed role by default, including HR, for the same
+        | reason Import Attendance is: it is the only screen that creates
+        | departments in bulk, and every department it creates becomes a
+        | choice on the employee form, a group a manager can be appointed to
+        | and a heading in every report grouped by department. A right that
+        | large is one the owner should hand out deliberately rather than find
+        | already granted.
+        |
+        | The import itself only ever adds - it never renames or deletes a
+        | department, a designation or a manager - so the risk this switch
+        | guards is a chart cluttered with departments nobody meant to create,
+        | not one with anything missing from it.
+        */
+        key: "import",
+        label: "Import Departments",
+        description: "Import departments and designations from a spreadsheet",
+        path: "/departments/import",
+        defaults: { hr: false, manager: false, employee: false },
+      },
+    ],
   },
 
   {
