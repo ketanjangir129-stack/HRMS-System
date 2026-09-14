@@ -99,13 +99,15 @@ const handleSubmit = async (e) => {
         return;
       }
 
-      alert("Company Registered Successfully.");
+    //   alert("Company Registered Successfully.");
+      toast.success("Company Registered Successfully.");
 
       await new Promise((resolve) => setTimeout(resolve, 700));
       navigate("/login");
     } catch (error) {
       console.error(error);
-      alert(error.message);
+    //   alert(error.message);
+      toast.error(error.message || "An error occurred during registration.");
     } finally {
       setLoading(false);
     }

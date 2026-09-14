@@ -6,8 +6,9 @@ import DepartmentModal from "../components/departments/DepartmentModal";
 import DesignationModal from "../components/departments/DesignationModal";
 import { validateField } from "../utils/validation/validateField";
 import {searchDepartments,} from "../utils/search/searchDepartments";
-import { useOutletContext } from "react-router-dom";
-import { FiLayers, FiPlus, FiGrid, FiBriefcase, FiUserCheck } from "react-icons/fi";
+import { useNavigate, useOutletContext } from "react-router-dom";
+import { FiLayers, FiPlus, FiGrid, FiBriefcase, FiUserCheck, FiUploadCloud } from "react-icons/fi";
+import useRoleAccess from "../hooks/useRoleAccess";
 
 import {
     addDepartment,
@@ -39,6 +40,18 @@ function Departments() {
     const [departmentError, setDepartmentError] = useState("");
     const [designationError, setDesignationError] = useState("");
     const {search,setSearch,setSearchPlaceholder} = useOutletContext();
+
+    const navigate = useNavigate();
+
+    /*
+        The importer is a separate right from this screen, and is off by
+        default for every managed role. Offering a button that only ever leads
+        to a refusal is worse than not offering it, so the header asks before
+        it draws one - the route is still guarded either way.
+    */
+    const { canAccessSection } = useRoleAccess();
+
+    const canImport = canAccessSection("departments.import");
 
     /*
         Manager assignment. The department being appointed to is held whole
@@ -374,20 +387,34 @@ function Departments() {
 
                 </div>
 
-                <button
-                    onClick={() => {
-                        setEditingDepartmentId(null);
-                        setDepartmentName("");
-                        setDepartmentModal(true);
-                    }}
-                    className="ui-btn ui-btn-primary group font-semibold"
-                >
-                    <FiPlus
-                        size={18}
-                        className="transition-transform duration-200 group-hover:rotate-90"
-                    />
-                    Add Department
-                </button>
+                <div className="flex flex-wrap items-center gap-3">
+
+                    {canImport && (
+                        <button
+                            onClick={() => navigate("/departments/import")}
+                            className="ui-btn ui-btn-secondary font-semibold"
+                        >
+                            <FiUploadCloud size={18} />
+                            Import
+                        </button>
+                    )}
+
+                    <button
+                        onClick={() => {
+                            setEditingDepartmentId(null);
+                            setDepartmentName("");
+                            setDepartmentModal(true);
+                        }}
+                        className="ui-btn ui-btn-primary group font-semibold"
+                    >
+                        <FiPlus
+                            size={18}
+                            className="transition-transform duration-200 group-hover:rotate-90"
+                        />
+                        Add Department
+                    </button>
+
+                </div>
 
             </div>
 
