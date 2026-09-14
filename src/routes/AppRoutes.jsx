@@ -2,6 +2,7 @@ import { Routes, Route, Navigate } from "react-router-dom";
 import Register from "../pages/authenticate/Register";
 import Login from "../pages/authenticate/login";
 import ChangePassword from "../pages/authenticate/ChangePassword";
+import ResetPassword from "../pages/authenticate/ResetPassword";
 import DashboardLayout from "../layouts/DashboardLayout";
 import Dashboard from "../pages/Dashboard";
 import Departments from "../pages/Departments";
@@ -50,8 +51,10 @@ import Profile from "../pages/Profile";
 | even when the sidebar has stopped offering it. The permission strings are
 | the ones declared in the permission registry.
 |
-| `/change-password` and the public on-boarding link stay unguarded: neither
-| is a company page, and both are reached before a role means anything.
+| `/change-password`, `/reset-password` and the public on-boarding link stay
+| unguarded: none is a company page, and all are reached before a role means
+| anything. The reset link carries its own proof in the address, which is why
+| it can be opened by somebody with no session at all.
 */
 
 function AppRoutes() {
@@ -483,6 +486,18 @@ function AppRoutes() {
             </Route>
 
             <Route path="/change-password" element={<ChangePassword />} />
+
+            {/*
+              The reset link from a forgotten-password email. Unguarded like
+              the on-boarding form beneath it and for the same reason: whoever
+              opens it has no session, and the link itself is what stands in
+              for one. The page checks it before showing anything.
+            */}
+            <Route
+                path="/reset-password/:companyCode/:employeeId/:token"
+                element={<ResetPassword />}
+            />
+
             <Route path="/onboarding/:companyCode/:employeeId" element={<EmployeeOnboarding />} />
 
         </Routes>

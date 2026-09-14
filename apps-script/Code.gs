@@ -172,6 +172,13 @@
     /*
     | Every template is built around one link the recipient is meant to follow,
     | and it is that link the sheet logs — whichever of them this email carried.
+    |
+    | With one deliberate exception: `resetLink` is NOT listed here and must not
+    | be added. A password reset link is a credential — anybody holding it can
+    | set that account's password — and the sheet is shared with everybody in
+    | HR. The row still records that a reset was sent, to whom and when, which
+    | is what an audit trail is for; the link itself stays in the recipient's
+    | inbox, where it belongs.
     */
     function actionLink_(data) {
         return data.invitationLink || data.loginLink || "";
@@ -332,6 +339,11 @@
             label: "Onboarding approval",
             render: onboardingApproved_,
         },
+
+        "password-reset": {
+            label: "Password reset",
+            render: passwordReset_,
+        },
     };
 
     /*
@@ -472,6 +484,66 @@
                 "You can view your profile, apply for leave and see your " +
                 "attendance from your account. If anything in the details above " +
                 "looks wrong, reply to this email and our HR team will correct it.",
+            ],
+        });
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | The password reset
+    |--------------------------------------------------------------------------
+    | Sent when somebody asks for a reset link from the sign-in screen. Unlike
+    | the two onboarding mails, this one is asked for rather than sent on
+    | somebody's behalf, and it is the only mail here that a stranger can cause
+    | to be sent - anybody who knows an address can type it into that screen.
+    |
+    | That shapes the wording. It says how long the link lasts and what to do
+    | if the request was not theirs, because a person who did not ask for this
+    | is one of its expected readers. It carries no employment details for the
+    | same reason: an address typed by the wrong person must not be answered
+    | with a summary of somebody's job.
+    */
+    function passwordReset_(data) {
+
+        var companyName = data.companyName || "Your Company";
+
+        return message_({
+            companyName: companyName,
+
+            subject: "Reset your " + companyName + " password",
+
+            preheader:
+                "A link to choose a new password for your " + companyName + " account.",
+
+            heading: "Reset your password",
+
+            intro: [
+                "We received a request to reset the password for your " +
+                companyName + " account. Choose a new one using the link below.",
+            ],
+
+            cards: [
+                {
+                    title: "Your account",
+                    rows: [
+                        { label: "Company Code", value: data.companyCode },
+                        { label: "User ID", value: data.userId },
+                    ],
+                },
+            ],
+
+            action: {
+                label: "Choose a New Password",
+                href: data.resetLink || "",
+            },
+
+            closing: [
+                "This link works once and expires in " +
+                (data.expiresInHours || 1) + " hour" +
+                ((data.expiresInHours || 1) === 1 ? "" : "s") + ".",
+
+                "If you did not ask for this, you can ignore this email — your " +
+                "password stays as it is until the link above is used.",
             ],
         });
     }

@@ -2,6 +2,10 @@ import { useState } from "react";
 import useAuth from "../../hooks/useAuth";
 import { Navigate, useNavigate } from "react-router-dom";
 import { toast } from 'react-toastify';
+import {
+  validatePasswordChangeField,
+  validatePasswordChangeForm,
+} from "../../utils/validation/passwordChange";
 
 const ChangePassword = () => {
   const [formData, setFormData] = useState({
@@ -36,56 +40,19 @@ const ChangePassword = () => {
     }));
   };
 
-  const validateChangeField = (name, value) => {
-    if (name === "currentPassword") {
-      return String(value ?? "").trim() ? "" : "This field is required.";
-    }
-
-    if (name === "newPassword") {
-      if (!String(value ?? "").trim()) {
-        return "This field is required.";
-      }
-      if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/.test(value)) {
-        return "Password must be at least 8 characters and contain uppercase, lowercase and number.";
-      }
-      if (value === formData.currentPassword) {
-        return "New password cannot be the same as current password.";
-      }
-      return "";
-    }
-
-    if (name === "confirmPassword") {
-      if (!String(value ?? "").trim()) {
-        return "This field is required.";
-      }
-      if (value !== formData.newPassword) {
-        return "Passwords do not match.";
-      }
-      return "";
-    }
-
-    return "";
-  };
-
   const handleBlur = (e) => {
     const { name, value } = e.target;
 
     setErrors((prev) => ({
       ...prev,
-      [name]: validateChangeField(name, value),
+      [name]: validatePasswordChangeField(name, value, formData),
     }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    const validationErrors = {};
-    Object.entries(formData).forEach(([name, value]) => {
-      const error = validateChangeField(name, value);
-      if (error) {
-        validationErrors[name] = error;
-      }
-    });
+    const validationErrors = validatePasswordChangeForm(formData);
 
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors);
