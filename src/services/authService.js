@@ -205,23 +205,36 @@ export const loginUser = async (
             return authResult;
         }
 
-        // Find company by companyCode
-        const companySnapshot = await get(
+        /*
+        | Find the company by its code.
+        |
+        | `details` is read on its own rather than the company node it sits in.
+        | Only the email on it is compared here, but `companies/{code}` is the
+        | root of everything the company owns - every employee, every month of
+        | attendance, every payroll run - and Realtime Database hands back the
+        | whole subtree under whatever path is asked for. Reading the parent to
+        | reach one field downloaded the entire database on every owner login,
+        | and the amount grew with every day the company used the product.
+        |
+        | `details` is written by `createCompany` alongside the node itself, so
+        | a company that exists always has one: the "not found" branch is
+        | reached in exactly the cases it was reached in before.
+        */
+        const detailsSnapshot = await get(
             ref(
                 db,
-                `companies/${companyCode}`
+                `companies/${companyCode}/details`
             )
         );
 
-        if (!companySnapshot.exists()) {
+        if (!detailsSnapshot.exists()) {
             return {
                 success: false,
                 message: "Company not found.",
             };
         }
 
-        const company = companySnapshot.val();
-        const details = company.details;
+        const details = detailsSnapshot.val();
 
         if (
             details.email.toLowerCase() !==

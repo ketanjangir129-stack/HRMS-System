@@ -1,50 +1,79 @@
+import { lazy, Suspense } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import Register from "../pages/authenticate/Register";
 import Login from "../pages/authenticate/login";
 import ChangePassword from "../pages/authenticate/ChangePassword";
-import ResetPassword from "../pages/authenticate/ResetPassword";
 import DashboardLayout from "../layouts/DashboardLayout";
-import Dashboard from "../pages/Dashboard";
-import Departments from "../pages/Departments";
-import DepartmentImport from "../pages/DepartmentImport";
-import Employees from "../pages/Employees";
-import EmployeeForm from "../pages/EmployeeForm";
 import ProtectedRoute from "./ProtectedRoute";
 import PermissionRoute from "./PermissionRoute";
 import GuestRoute from "./GuestRoute";
-import EmployeesDetails from "../pages/EmployeesDetails";
-import OnboardingDashboard from "../pages/onboarding/OnboardingDashboard"
-import BulkOnboarding from "../pages/onboarding/BulkOnboarding"
-import OnBoardForm from "../pages/onboarding/CreateOnboarding"
-import OnboardingRequests from "../pages/onboarding/OnboardingRequests"
-import Onboardinghistory from "../pages/onboarding/OnBoardhistory"
-import ReviewOnboarding from "../pages/onboarding/ReviewOnboarding"
-import AttendanceDashboard from "../pages/attendance/AttendanceDashboard";
-import DailyAttendance from "../pages/attendance/DailyAttendance";
-import MonthlyAttendance from "../pages/attendance/MonthlyAttendance";
-import MyAttendance from "../pages/attendance/MyAttendance";
-import AttendanceRequests from "../pages/attendance/AttendanceRequests";
-import AttendanceApprovals from "../pages/attendance/AttendanceApprovals";
-import Regularization from "../pages/attendance/Regularization";
-import AttendanceReports from "../pages/attendance/AttendanceReports";
-import AttendanceImport from "../pages/attendance/AttendanceImport";
-import AttendanceSettings from "../pages/attendance/AttendanceSettings";
-import AttendanceLocation from "../pages/attendance/AttendanceLocation";
-import LeaveDashboard from "../pages/leave/LeaveDashboard";
-import LeaveApprovals from "../pages/leave/LeaveApprovals";
-import HolidayDashboard from "../pages/holiday/HolidayDashboard";
-import EmployeeOnboarding from "../pages/onboarding/EmployeeOnboarding/EmployeeOnboarding";
-import SalaryCRUD from "../pages/salary/SalaryCRUD";
-import SalaryForm from "../pages/salary/SalaryForm";
-import SalaryImport from "../pages/salary/SalaryImport";
-import SalaryHistory from "../pages/salary/SalaryHistory";
-import PayrolllDashboard from "../pages/payroll/PayrollDashboard";
-import PaySlip from "../pages/payroll/PaySlip";
-import MyPayroll from "../pages/payroll/MyPayroll";
-import HRPolicy from "../pages/hrPolicy/HRPolicy";
-import AllTasks from "../pages/tasks/AllTasks";
-import Settings from "../pages/settings/Settings";
-import Profile from "../pages/Profile";
+import Loader from "../components/common/Loader";
+import RouteErrorBoundary from "../components/common/RouteErrorBoundary";
+
+/*
+|--------------------------------------------------------------------------
+| Route Splitting
+|--------------------------------------------------------------------------
+| Every page below is fetched the first time its route is opened rather than
+| being built into the one file the browser downloads before it can show
+| anything.
+|
+| Importing them all at the top meant every user carried every screen. The
+| cost was not the pages themselves but what they pull in behind them: `xlsx`
+| sits behind the four import screens and the salary export, `leaflet` behind
+| the attendance map, and none of them is reachable from anywhere else - so
+| the bundler now files each one with the routes that actually use it. An
+| employee who only ever punches in stops paying for the payroll module, the
+| spreadsheet parser and the mapping library.
+|
+| What stays eager is what is needed before any route is chosen: the two
+| sign-in screens, the dashboard shell the pages are drawn inside, and the
+| three guards that decide which of them may be reached. Splitting those
+| would only add a round trip in front of the first paint.
+|
+| The pages are unchanged. `lazy` needs a default export and each of them
+| already had one.
+*/
+
+const ResetPassword = lazy(() => import("../pages/authenticate/ResetPassword"));
+const Dashboard = lazy(() => import("../pages/Dashboard"));
+const Departments = lazy(() => import("../pages/departments/Departments"));
+const DepartmentImport = lazy(() => import("../pages/departments/DepartmentImport"));
+const Employees = lazy(() => import("../pages/Employees"));
+const EmployeeForm = lazy(() => import("../pages/EmployeeForm"));
+const EmployeesDetails = lazy(() => import("../pages/EmployeesDetails"));
+const OnboardingDashboard = lazy(() => import("../pages/onboarding/OnboardingDashboard"));
+const BulkOnboarding = lazy(() => import("../pages/onboarding/BulkOnboarding"));
+const OnBoardForm = lazy(() => import("../pages/onboarding/CreateOnboarding"));
+const OnboardingRequests = lazy(() => import("../pages/onboarding/OnboardingRequests"));
+const Onboardinghistory = lazy(() => import("../pages/onboarding/OnBoardhistory"));
+const ReviewOnboarding = lazy(() => import("../pages/onboarding/ReviewOnboarding"));
+const AttendanceDashboard = lazy(() => import("../pages/attendance/AttendanceDashboard"));
+const DailyAttendance = lazy(() => import("../pages/attendance/DailyAttendance"));
+const MonthlyAttendance = lazy(() => import("../pages/attendance/MonthlyAttendance"));
+const MyAttendance = lazy(() => import("../pages/attendance/MyAttendance"));
+const AttendanceRequests = lazy(() => import("../pages/attendance/AttendanceRequests"));
+const AttendanceApprovals = lazy(() => import("../pages/attendance/AttendanceApprovals"));
+const Regularization = lazy(() => import("../pages/attendance/Regularization"));
+const AttendanceReports = lazy(() => import("../pages/attendance/AttendanceReports"));
+const AttendanceImport = lazy(() => import("../pages/attendance/AttendanceImport"));
+const AttendanceSettings = lazy(() => import("../pages/attendance/AttendanceSettings"));
+const AttendanceLocation = lazy(() => import("../pages/attendance/AttendanceLocation"));
+const LeaveDashboard = lazy(() => import("../pages/leave/LeaveDashboard"));
+const LeaveApprovals = lazy(() => import("../pages/leave/LeaveApprovals"));
+const HolidayDashboard = lazy(() => import("../pages/holiday/HolidayDashboard"));
+const EmployeeOnboarding = lazy(() => import("../pages/onboarding/EmployeeOnboarding/EmployeeOnboarding"));
+const SalaryCRUD = lazy(() => import("../pages/salary/SalaryCRUD"));
+const SalaryForm = lazy(() => import("../pages/salary/SalaryForm"));
+const SalaryImport = lazy(() => import("../pages/salary/SalaryImport"));
+const SalaryHistory = lazy(() => import("../pages/salary/SalaryHistory"));
+const PayrolllDashboard = lazy(() => import("../pages/payroll/PayrollDashboard"));
+const PaySlip = lazy(() => import("../pages/payroll/PaySlip"));
+const MyPayroll = lazy(() => import("../pages/payroll/MyPayroll"));
+const HRPolicy = lazy(() => import("../pages/hrPolicy/HRPolicy"));
+const AllTasks = lazy(() => import("../pages/tasks/AllTasks"));
+const Settings = lazy(() => import("../pages/settings/Settings"));
+const Profile = lazy(() => import("../pages/Profile"));
 
 /*
 | Every page inside the dashboard is mounted behind `PermissionRoute` with the
@@ -60,6 +89,19 @@ import Profile from "../pages/Profile";
 
 function AppRoutes() {
     return (
+        /*
+        | `Suspense` is the boundary a split page suspends against while its
+        | chunk is on the way. `Loader` is the same spinner the pages already
+        | show while they are fetching their own data, so a page that has to be
+        | downloaded first looks like a page that is loading - which is what it
+        | is.
+        |
+        | `RouteErrorBoundary` sits outside it for the case where the chunk
+        | never arrives. Suspense waits; it has no opinion about a fetch that
+        | failed, and without something to catch that the screen goes blank.
+        */
+        <RouteErrorBoundary>
+        <Suspense fallback={<Loader />}>
         <Routes>
             <Route
                 path="/"
@@ -190,7 +232,7 @@ function AppRoutes() {
                 />
 
                 <Route
-                    path="/onboarding/:requestId" hr po
+                    path="/onboarding/:requestId"
                     element={
                         <PermissionRoute permission="onboarding.requests">
                             <ReviewOnboarding />
@@ -516,6 +558,8 @@ function AppRoutes() {
             <Route path="/onboarding/:companyCode/:employeeId" element={<EmployeeOnboarding />} />
 
         </Routes>
+        </Suspense>
+        </RouteErrorBoundary>
 
     )
 }

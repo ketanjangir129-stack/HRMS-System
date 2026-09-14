@@ -2,10 +2,21 @@ import { ref, set, get, update } from "firebase/database";
 import { db } from "../firebase/firebase";
 
 //  Register Company
+/*
+| Whether a company code is already taken.
+|
+| The question is answered from one field inside `details` rather than from
+| the company node, because Realtime Database returns everything under the
+| path it is given: asking `companies/{code}` downloaded that company's whole
+| database - employees, attendance, payroll - only to throw all of it away and
+| return a boolean. `details/companyCode` is written by `createCompany` and is
+| never editable (see EDITABLE_COMPANY_FIELDS below), so it is present for
+| exactly the codes that are taken.
+*/
 export const checkCompanyCodeExists = async (companyCode) => {
     try {
         const snapshot = await get(
-            ref(db, `companies/${companyCode}`)
+            ref(db, `companies/${companyCode}/details/companyCode`)
         );
 
         return snapshot.exists();

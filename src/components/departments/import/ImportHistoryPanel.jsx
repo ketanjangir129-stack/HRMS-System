@@ -92,6 +92,17 @@ function ImportHistoryPanel({ companyCode, refreshKey = 0 }) {
 
   }, []);
 
+  /*
+  | Loading is only true while there is actually a read to wait for.
+  |
+  | `loading` starts true and is cleared in the `finally` above, which is the
+  | read's own callback - so with no company yet the effect returns before the
+  | read starts and nothing would ever clear it. The panel would sit on its
+  | skeleton for good, with the Refresh button disabled behind it. Derived here
+  | rather than set in the effect, which would be a render to undo a render.
+  */
+  const busy = Boolean(companyCode) && loading;
+
   return (
     <div className="ui-card overflow-hidden">
 
@@ -121,18 +132,18 @@ function ImportHistoryPanel({ companyCode, refreshKey = 0 }) {
         <button
           type="button"
           onClick={reload}
-          disabled={loading}
+          disabled={busy}
           className="ui-btn ui-btn-secondary shrink-0"
         >
-          <FiRefreshCw className={loading ? "animate-spin" : ""} />
+          <FiRefreshCw className={busy ? "animate-spin" : ""} />
           Refresh
         </button>
 
       </div>
 
-      {loading && <TableSkeleton rows={3} />}
+      {busy && <TableSkeleton rows={3} />}
 
-      {!loading && error && (
+      {!busy && error && (
         <ErrorState
           title="Could not load history"
           message={error}
@@ -140,7 +151,7 @@ function ImportHistoryPanel({ companyCode, refreshKey = 0 }) {
         />
       )}
 
-      {!loading && !error && runs.length === 0 && (
+      {!busy && !error && runs.length === 0 && (
         <EmptyState
           icon={<FiFileText size={28} />}
           title="No imports yet"
@@ -148,7 +159,7 @@ function ImportHistoryPanel({ companyCode, refreshKey = 0 }) {
         />
       )}
 
-      {!loading && !error && runs.length > 0 && (
+      {!busy && !error && runs.length > 0 && (
 
         <div className="ui-scroll overflow-x-auto">
 

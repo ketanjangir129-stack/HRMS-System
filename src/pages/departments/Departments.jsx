@@ -1,14 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "react-toastify";
-import AssignManagerModal from "../components/departments/AssignManagerModal";
-import DepartmentList from "../components/departments/DepartmentList";
-import DepartmentModal from "../components/departments/DepartmentModal";
-import DesignationModal from "../components/departments/DesignationModal";
-import { validateField } from "../utils/validation/validateField";
-import {searchDepartments,} from "../utils/search/searchDepartments";
+import AssignManagerModal from "../../components/departments/AssignManagerModal";
+import DepartmentList from "../../components/departments/DepartmentList";
+import DepartmentModal from "../../components/departments/DepartmentModal";
+import DesignationModal from "../../components/departments/DesignationModal";
+import { validateField } from "../../utils/validation/validateField";
+import {searchDepartments,} from "../../utils/search/searchDepartments";
 import { useNavigate, useOutletContext } from "react-router-dom";
 import { FiLayers, FiPlus, FiGrid, FiBriefcase, FiUserCheck, FiUploadCloud } from "react-icons/fi";
-import useRoleAccess from "../hooks/useRoleAccess";
+import useRoleAccess from "../../hooks/useRoleAccess";
 
 import {
     addDepartment,
@@ -18,10 +18,10 @@ import {
     subscribeDepartments,
     setDepartmentManager,
     clearDepartmentManager,
-} from "../services/departmentService";
-import { getEmployees } from "../services/EmployeeService";
-import { ROLE } from "../utils/attendance/attendanceConstants";
-import { getDepartmentManager } from "../utils/permissions/departmentScope";
+} from "../../services/departmentService";
+import { getEmployees } from "../../services/EmployeeService";
+import { ROLE } from "../../utils/attendance/attendanceConstants";
+import { getDepartmentManager } from "../../utils/permissions/departmentScope";
 
 function Departments() {
 
