@@ -13,6 +13,7 @@ import {
     findIdentityConflict,
 } from "./ValidationService";
 import { notifyOnboardingSubmitted } from "./notifications/onboardingNotificationService";
+import { OWNER_ROLE } from "../utils/permissions/permissionConstants";
 
 /*
 | The link the joiner is sent, and the only way into their form. It is built
@@ -309,24 +310,120 @@ export const markInvitationEmailSent = async (companyCode, employeeId) => {
 
     }
 };
+/*
+|--------------------------------------------------------------------------
+| Onboarding History
+|--------------------------------------------------------------------------
+| A history entry holds only the decision: employee id, status, who made it
+| and when. The person's name, department and designation are read from
+| wherever the record now lives — the employee node for an approval, the
+| request (which a rejection leaves in place) for a rejection.
+|
+| Only the `personalInfo/name` and `employmentInfo` branches are read, one
+| pair per entry and all in parallel, so the whole employees node is never
+| downloaded to fill a few columns.
+|
+| Entries written before this change still carry `action` and a full
+| `request` copy; those are used as they are.
+*/
+
+const readValue = async (path) => {
+    const snapshot = await get(ref(db, path));
+    return snapshot.exists() ? snapshot.val() : null;
+};
+
+const loadHistoryDetails = async (companyCode, employeeId, status) => {
+
+    if (status === "Approved") {
+
+        const [name, employment] = await Promise.all([
+            readValue(`companies/${companyCode}/employees/${employeeId}/personalInfo/name`),
+            readValue(`companies/${companyCode}/employees/${employeeId}/employmentInfo`),
+        ]);
+
+        return {
+            name: name || "",
+            department: employment?.department || "",
+            designation: employment?.designation || "",
+        };
+    }
+
+    const employment = await readValue(
+        `companies/${companyCode}/onboardingRequests/${employeeId}/employmentInfo`
+    );
+
+    return {
+        name: employment?.name || "",
+        department: employment?.department || "",
+        designation: employment?.designation || "",
+    };
+};
+
 export const getOnboardingHistory = async (companyCode) => {
 
-    const requestRef = ref(
-        db,
+    const data = await readValue(
         `companies/${companyCode}/onboardingHistory`
     );
 
-    const snapshot = await get(requestRef);
-
-    if (!snapshot.exists()) {
+    if (!data) {
         return [];
     }
 
-    const data = snapshot.val();
+    const entries = await Promise.all(
+        Object.keys(data).map(async (id) => {
 
-    return Object.keys(data).map((id) => ({
-        id,
-        ...data[id],
+            const entry = data[id] || {};
+
+            const employeeId = entry.employeeId || id;
+
+            const status = entry.status || entry.action || "";
+
+            const legacy = entry.request?.employmentInfo;
+
+            const details = legacy
+                ? {
+                    name: legacy.name || "",
+                    department: legacy.department || "",
+                    designation: legacy.designation || "",
+                }
+                : await loadHistoryDetails(companyCode, employeeId, status);
+
+            return {
+                id,
+                employeeId,
+                status,
+                decidedBy: entry.approvedBy || entry.rejectedBy || "",
+                decidedAt: entry.approvedAt || entry.rejectedAt || null,
+                ...details,
+            };
+        })
+    );
+
+    /*
+    | Approvers are looked up once each, however many entries they decided.
+    | Entries written before approvers were stored by id hold a name such as
+    | "Admin"; with no employee under that key, it is shown as it was stored.
+    */
+    const approverIds = [
+        ...new Set(entries.map((entry) => entry.decidedBy).filter(Boolean)),
+    ];
+
+    const approverNames = Object.fromEntries(
+        await Promise.all(
+            approverIds.map(async (approverId) => {
+
+                const name = approverId === OWNER_ROLE
+                    ? await readValue(`companies/${companyCode}/details/ownerName`)
+                    : await readValue(`companies/${companyCode}/employees/${approverId}/personalInfo/name`);
+
+                return [approverId, name || ""];
+            })
+        )
+    );
+
+    return entries.map((entry) => ({
+        ...entry,
+        decidedByName: approverNames[entry.decidedBy] || "",
     }));
 };
 

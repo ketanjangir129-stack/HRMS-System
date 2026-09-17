@@ -12,8 +12,10 @@ import { toast } from "react-toastify";
 import { getOnboardingRequests } from "../../services/OnboardingService";
 import {
     approveOnboardingRequests,
+    getApproverId,
     rejectOnboardingRequests,
 } from "../../services/ApprovalService";
+import useAuth from "../../hooks/useAuth";
 import {
     isEmailServiceConfigured,
     sendApprovalEmails,
@@ -78,11 +80,9 @@ function OnboardingRequests() {
 
     // Stamped onto every record the batch touches, exactly as the single
     // review screen stamps its own approvals.
-    const approvedBy =
-        localStorage.getItem("username") ||
-        localStorage.getItem("userName") ||
-        localStorage.getItem("name") ||
-        "Admin";
+    const { currentUser } = useAuth();
+
+    const approvedBy = getApproverId(currentUser);
 
     const loadRequests = async () => {
 

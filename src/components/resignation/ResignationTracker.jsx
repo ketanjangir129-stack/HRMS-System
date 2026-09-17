@@ -92,10 +92,10 @@ function ResignationTracker({ status, className = "" }) {
           return (
             <li
               key={stage.status}
-              className={`flex min-w-0 flex-col items-center ${
-                isLast ? "" : "flex-1"
-              }`}
+              className={`flex min-w-0 flex-col items-center ${isLast ? "" : "flex-1"
+                }`}
             >
+
 
               <div className="flex w-full items-center">
 
@@ -104,7 +104,8 @@ function ResignationTracker({ status, className = "" }) {
                 | dot sits over the centre of its own label instead of drifting
                 | left on every step but the last.
                 */}
-                <span className={isLast ? "hidden" : "h-0.5 flex-1 bg-transparent"} />
+                <span className={`isLast ? hidden : h-0.5 flex-1 transition-colors ${isConnectorFilled(index) ? "bg-emerald-500" : "bg-line"
+                  }`} />
 
                 <span
                   className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 text-xs font-bold transition-colors ${DOT_STYLES[state]}`}
@@ -120,9 +121,8 @@ function ResignationTracker({ status, className = "" }) {
 
                 {!isLast && (
                   <span
-                    className={`h-0.5 flex-1 transition-colors ${
-                      isConnectorFilled(index) ? "bg-emerald-500" : "bg-line"
-                    }`}
+                    className={`h-0.5 flex-1 transition-colors ${isConnectorFilled(index) ? "bg-emerald-500" : "bg-line"
+                      }`}
                   />
                 )}
 
@@ -133,6 +133,8 @@ function ResignationTracker({ status, className = "" }) {
               >
                 {stage.label}
               </p>
+
+
 
             </li>
           );
@@ -169,9 +171,8 @@ function ResignationTracker({ status, className = "" }) {
 
                 {!isLast && (
                   <span
-                    className={`w-0.5 flex-1 ${
-                      isConnectorFilled(index) ? "bg-emerald-500" : "bg-line"
-                    }`}
+                    className={`w-0.5 flex-1 ${isConnectorFilled(index) ? "bg-emerald-500" : "bg-line"
+                      }`}
                   />
                 )}
 

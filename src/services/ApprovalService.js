@@ -1,5 +1,18 @@
 import {db} from "../firebase/firebase"
-import {ref , get , set,remove , update} from  "firebase/database";
+import {ref , get , update} from  "firebase/database";
+import { getUserRole } from "../utils/attendance/attendanceRequestUtils";
+import { OWNER_ROLE } from "../utils/permissions/permissionConstants";
+import { isOwnerRole } from "../utils/permissions/permissionUtils";
+
+// Who is deciding, as an id the history screen can trace back. The owner has
+// no employee record, so they are stamped with the fixed owner key — the same
+// identity notifications use for them.
+export const getApproverId = (currentUser) =>
+  isOwnerRole(getUserRole(currentUser))
+    ? OWNER_ROLE
+    : currentUser?.employmentInfo?.employeeId ||
+      currentUser?.account?.username ||
+      "";
 
 // Onboarding requests store contact details in employmentInfo, but the
 // employees node uses the personalInfo/employmentInfo/bankInfo shape that
@@ -105,38 +118,34 @@ export const approveOnboarding = async (
 
     const request = snapshot.val();
 
+    const approvedAt = Date.now();
+
     const employee = {
       ...toEmployeeRecord(request, employeeId),
-      approvedAt: Date.now(),
+      approvedAt,
       approvedBy,
-      createdAt: request.createdAt || Date.now(),
+      createdAt: request.createdAt || approvedAt,
     };
 
-    await set(
-      ref(
-        db,
-        `companies/${companyCode}/employees/${employeeId}`
-      ),
-      employee
-    );
-
-    const history = {
-      employeeId,
-      action: "Approved",
-      approvedBy,
-      approvedAt: Date.now(),
-      request,
-    };
-
-    await set(
-      ref(
-        db,
-        `companies/${companyCode}/onboardingHistory/${employeeId}`
-      ),
-      history
-    );
-
-    await remove(requestRef);
+    /*
+    | The history entry is only the decision. The person's details now live
+    | on the employee record written alongside it, and the history screen
+    | reads them from there — copying the whole request in here made every
+    | approval upload the same record twice.
+    |
+    | One multi-path update, so the employee, the history entry and the
+    | removed request land together in a single round trip instead of three.
+    */
+    await update(ref(db, `companies/${companyCode}`), {
+      [`employees/${employeeId}`]: employee,
+      [`onboardingHistory/${employeeId}`]: {
+        employeeId,
+        status: "Approved",
+        approvedBy,
+        approvedAt,
+      },
+      [`onboardingRequests/${employeeId}`]: null,
+    });
 
     return {
       success: true,
@@ -265,23 +274,35 @@ export const rejectOnboarding = async (
 
     const request = snapshot.val();
 
+    const rejectedAt = Date.now();
+
     // Existing history
     const history = request.history || {};
 
     // Add new history event
-    history[Date.now()] = {
+    history[rejectedAt] = {
       action: "Rejected",
       by: rejectedBy,
       remarks,
-      time: Date.now(),
+      time: rejectedAt,
     };
 
-    await update(requestRef, {
-      status: "Rejected",
-      remarks,
-      rejectedBy,
-      rejectedAt: Date.now(),
-      history,
+    /*
+    | A rejected request stays where it is, so the history entry again holds
+    | only the decision and the screen reads the details off the request.
+    */
+    await update(ref(db, `companies/${companyCode}`), {
+      [`onboardingRequests/${employeeId}/status`]: "Rejected",
+      [`onboardingRequests/${employeeId}/remarks`]: remarks,
+      [`onboardingRequests/${employeeId}/rejectedBy`]: rejectedBy,
+      [`onboardingRequests/${employeeId}/rejectedAt`]: rejectedAt,
+      [`onboardingRequests/${employeeId}/history`]: history,
+      [`onboardingHistory/${employeeId}`]: {
+        employeeId,
+        status: "Rejected",
+        rejectedBy,
+        rejectedAt,
+      },
     });
 
     return {

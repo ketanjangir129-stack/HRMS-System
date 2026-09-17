@@ -379,6 +379,7 @@ h3 {
 .ui-btn:focus-visible {
   outline: 2px solid var(--color-brand);
   outline-offset: 2px;
+  
 }
 
 .ui-btn:disabled {
