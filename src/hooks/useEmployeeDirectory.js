@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { getEmployees } from "../services/EmployeeService";
+import { useMemo } from "react";
+import useEmployees from "./useEmployees";
 import {
   buildEmployeeDirectory,
   getActiveEmployees,
@@ -16,66 +16,18 @@ import {
 | It also carries the active roster size, which attendance summaries need as
 | the denominator: without it the present rate is measured against "everyone
 | who showed up" and is always ~100%.
+|
+| The list itself comes from the shared store (useEmployees) rather than a
+| fetch of its own. Eight attendance and leave screens use this hook, and
+| each used to download the whole employee node again on open; now they
+| share one live listener. The return shape is unchanged, so none of those
+| screens had to change with it.
 |--------------------------------------------------------------------------
 */
 
 const useEmployeeDirectory = (companyCode) => {
 
-  const [employees, setEmployees] = useState({});
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [reloadKey, setReloadKey] = useState(0);
-
-  useEffect(() => {
-
-    let cancelled = false;
-
-    const load = async () => {
-
-      if (!companyCode) {
-        setEmployees({});
-        setLoading(false);
-        return;
-      }
-
-      setLoading(true);
-
-      try {
-
-        const data = await getEmployees(companyCode);
-
-        if (cancelled) return;
-
-        setEmployees(data);
-        setError("");
-
-      } catch (loadError) {
-
-        if (cancelled) return;
-
-        console.error("Failed to load employees:", loadError);
-
-        setEmployees({});
-
-        setError(loadError.message || "Failed to load employees.");
-
-      } finally {
-
-        if (!cancelled) {
-          setLoading(false);
-        }
-
-      }
-
-    };
-
-    load();
-
-    return () => {
-      cancelled = true;
-    };
-
-  }, [companyCode, reloadKey]);
+  const { employees, loading, error, reload } = useEmployees(companyCode);
 
   const directory = useMemo(
     () => buildEmployeeDirectory(employees),
@@ -91,10 +43,6 @@ const useEmployeeDirectory = (companyCode) => {
     () => getDepartments(directory),
     [directory]
   );
-
-  const reload = useCallback(() => {
-    setReloadKey((key) => key + 1);
-  }, []);
 
   return {
     directory,

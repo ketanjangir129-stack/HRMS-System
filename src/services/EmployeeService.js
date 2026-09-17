@@ -1,5 +1,5 @@
 import { db, storage } from "../firebase/firebase";
-import { ref, get, set, update } from "firebase/database";
+import { ref, get, set, update, onValue } from "firebase/database";
 import {
   ref as storageRef,
   uploadBytes,
@@ -56,7 +56,24 @@ export const getEmployees = async (companyCode) => {
   );
   return snapshot.exists() ? snapshot.val() : {};
 };
- 
+
+/*
+| Wahi node, realtime. getEmployees ek baar padhta hai; ye tab tak sunta hai
+| jab tak lautaya hua function chala kar band na kiya jaye.
+|
+| Shape getEmployees jaisi hi — { EMP001: {...} }, khaali ho to {} — taaki
+| jo bhi dono mein se kisi ko use kare use data alag na lage.
+|
+| Isko seedha component se nahi bulana hai: store/employeesSlice ek hi
+| listener rakhta hai aur saare screens usi ko share karte hain.
+*/
+export const subscribeEmployees = (companyCode, onData, onError) =>
+  onValue(
+    ref(db, `companies/${companyCode}/employees`),
+    (snapshot) => onData(snapshot.exists() ? snapshot.val() : {}),
+    (error) => onError?.(error)
+  );
+
 // Get Employee By ID
 export const getEmployeeById = async (
   companyCode,
@@ -71,6 +88,32 @@ export const getEmployeeById = async (
  
   return snapshot.exists() ? snapshot.val() : null;
 };
+
+/*
+| getEmployeeById ka realtime jodidaar — ek hi employee, poori list nahi.
+|
+| Detail aur Profile page ko sirf ek record chahiye. Unhe subscribeEmployees
+| (poori company) dena galat hota: Employee role apni Profile kholte hi
+| saari company ka data browser mein utaar leta. Is path par sirf wahi ek
+| record aata hai jo getEmployeeById pehle se laata tha.
+|
+| Shape bhi wahi — record, ya na mile to null — aur key wahi uppercase,
+| taaki dono mein se kisi ko bhi use karne wale ko farq na pade.
+*/
+export const subscribeEmployeeById = (
+  companyCode,
+  employeeId,
+  onData,
+  onError
+) =>
+  onValue(
+    ref(
+      db,
+      `companies/${companyCode}/employees/${employeeId.toUpperCase()}`
+    ),
+    (snapshot) => onData(snapshot.exists() ? snapshot.val() : null),
+    (error) => onError?.(error)
+  );
  
  
 // Update one section of an employee (e.g. { personalInfo: {...} })
