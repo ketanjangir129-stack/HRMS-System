@@ -10,7 +10,7 @@ import {
   updateTask,
   updateTaskStatus,
 } from "../../services/taskService";
-import { getEmployees } from "../../services/EmployeeService";
+import useEmployees from "../../hooks/useEmployees";
 import { ROLE } from "../../utils/attendance/attendanceConstants";
 import { validateField } from "../../utils/validation/validateField";
 import useAuth from "../../hooks/useAuth";
@@ -164,7 +164,6 @@ function AllTasks() {
   const canSeeOwnTasks = canViewAll && Boolean(myEmployeeId);
 
   const [tasks, setTasks] = useState([]);
-  const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(""); // page-level error
   const [errors, setErrors] = useState({}); // form ke field-wise errors
@@ -226,28 +225,32 @@ function AllTasks() {
     return unsubscribe;
   }, [companyCode]);
 
-  // Employees dropdown, Assignee column aur workload ke liye — ek hi baar.
-  // Jise inme se kuch nahi dikhta uske liye ye call chalti hi nahi.
-  // Fail ho to page-level error nahi — task list to theek hai.
-  useEffect(() => {
-    if (!companyCode || !needsEmployees) return;
+  /*
+  | Employees dropdown, Assignee column aur workload ke liye — shared store
+  | se, apna download nahi. Jise inme se kuch nahi dikhta uske liye
+  | enabled: false, to listener lagta hi nahi — Employee role ke paas poori
+  | company ki list pehle bhi nahi aati thi, ab bhi nahi aati.
+  |
+  | Fail ho to page-level error nahi — task list to theek hai. Error store
+  | khud console par likh deta hai.
+  */
+  const { employees: employeeRecords } = useEmployees(companyCode, {
+    enabled: needsEmployees,
+  });
 
-    getEmployees(companyCode)
-      .then((data) => {
-        // Firebase ki key hi employeeId hai. role saath aata hai kyunki
-        // "kisko assign kar sakte ho" usi par tika hai — HR doosre HR ko
-        // nahi de sakta.
-        const list = Object.entries(data).map(([id, employee]) => ({
+  // Firebase ki key hi employeeId hai. role saath aata hai kyunki "kisko
+  // assign kar sakte ho" usi par tika hai — HR doosre HR ko nahi de sakta.
+  const employees = useMemo(
+    () =>
+      Object.entries(employeeRecords)
+        .map(([id, employee]) => ({
           id,
           name: employee.personalInfo?.name || id,
           role: employee.account?.role || "",
-        }));
-        setEmployees(list.sort((a, b) => a.name.localeCompare(b.name)));
-      })
-      .catch((err) => {
-        console.error("Failed to load employees:", err);
-      });
-  }, [companyCode, needsEmployees]);
+        }))
+        .sort((a, b) => a.name.localeCompare(b.name)),
+    [employeeRecords]
+  );
 
   /*
   | Assign dropdown ki list. Assignee column aur workload poori list se

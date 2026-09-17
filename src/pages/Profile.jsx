@@ -42,7 +42,7 @@ import ResignationModal from "../components/resignation/ResignationModal";
 import { createResignation } from "../services/resignation/resignationService";
 import { toEmployeeSnapshot } from "../utils/resignation/resignationUtils";
 import {
-  getEmployeeById,
+  subscribeEmployeeById,
   updateEmployeeSection,
 } from "../services/EmployeeService";
 import { getUserRole } from "../utils/attendance/attendanceRequestUtils";
@@ -191,38 +191,51 @@ function Profile() {
 
   /*
   | localStorage ka currentUser login ke waqt ka snapshot hai. HR koi detail
-  | badle to woh yahan purani dikhegi, isliye record dobara padha jaata hai —
-  | read fail ho to snapshot hi dikha do, page khaali chhodne se behtar hai.
+  | badle to woh yahan purani dikhegi, isliye record Firebase se padha jaata
+  | hai — read fail ho to snapshot hi dikha do, page khaali chhodne se behtar
+  | hai.
+  |
+  | Ab ek baar ka read nahi, listener hai: HR doosre tab ya doosre device par
+  | is employee ki detail badle to Profile bina refresh ke badal jaata hai.
+  | Sirf apna record suna jaata hai (subscribeEmployeeById) — Employee role
+  | ke browser mein poori company ki list kabhi nahi aati.
+  |
+  | Edit chal raha ho tab bhi safe hai: startEdit form ki alag copy banata
+  | hai, isliye live update adhoora type kiya hua nahi mitata.
   */
   useEffect(() => {
     let cancelled = false;
 
-    const load = async () => {
-      if (!employeeId || !companyCode) {
-        // Owner — uska koi employee record hota hi nahi
-        if (!cancelled) {
-          setEmployee(null);
-          setLoading(false);
-        }
-        return;
-      }
+    if (!employeeId || !companyCode) {
+      // Owner — uska koi employee record hota hi nahi. Microtask mein, taaki
+      // effect ke andar seedha setState na ho — pehle bhi ye async load()
+      // ke andar hi hota tha.
+      Promise.resolve().then(() => {
+        if (cancelled) return;
+        setEmployee(null);
+        setLoading(false);
+      });
 
-      try {
-        const data = await getEmployeeById(companyCode, employeeId);
-        if (!cancelled) setEmployee(data || currentUser);
-      } catch (error) {
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    const unsubscribe = subscribeEmployeeById(
+      companyCode,
+      employeeId,
+      (data) => {
+        setEmployee(data || currentUser);
+        setLoading(false);
+      },
+      (error) => {
         console.error("Failed to load profile:", error);
-        if (!cancelled) setEmployee(currentUser);
-      } finally {
-        if (!cancelled) setLoading(false);
+        setEmployee(currentUser);
+        setLoading(false);
       }
-    };
+    );
 
-    load();
-
-    return () => {
-      cancelled = true;
-    };
+    return unsubscribe;
   }, [companyCode, employeeId, currentUser]);
 
   const toggleReveal = (fieldId) =>

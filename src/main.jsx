@@ -8,6 +8,8 @@ import { ManagerScopeProvider } from "./context/ManagerScopeContext";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { BrowserRouter } from 'react-router-dom';
+import { Provider } from "react-redux";
+import store from "./store";
 
 /*
 | Role access sits inside authentication because it is loaded for the signed
@@ -26,19 +28,25 @@ import { BrowserRouter } from 'react-router-dom';
 | the toggle that controls it lives in the navbar and the navbar only exists
 | behind a login. Hence inside authentication, and outside both role access
 | and manager scope, neither of which it has anything to ask.
+|
+| The Redux store sits outside all of them. It holds data several screens
+| share (the employee list), and nothing in it depends on a provider - while
+| authentication does need it, to clear that data on logout.
 */
 
 ReactDOM.createRoot(document.getElementById("root")).render(
-  <AuthProvider>
-    <ThemeProvider>
-      <RoleAccessProvider>
-        <ManagerScopeProvider>
-          <BrowserRouter>
-            <App />
-            <ToastContainer position="bottom-right" />
-          </BrowserRouter>
-        </ManagerScopeProvider>
-      </RoleAccessProvider>
-    </ThemeProvider>
-  </AuthProvider>
+  <Provider store={store}>
+    <AuthProvider>
+      <ThemeProvider>
+        <RoleAccessProvider>
+          <ManagerScopeProvider>
+            <BrowserRouter>
+              <App />
+              <ToastContainer position="bottom-right" />
+            </BrowserRouter>
+          </ManagerScopeProvider>
+        </RoleAccessProvider>
+      </ThemeProvider>
+    </AuthProvider>
+  </Provider>
 );

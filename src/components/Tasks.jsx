@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from "react";
+﻿import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { CheckCircle2 } from "lucide-react";
 import { toast } from "react-toastify";
@@ -7,7 +7,7 @@ import {
   subscribeTasks,
   updateTaskStatus,
 } from "../services/taskService";
-import { getEmployees } from "../services/EmployeeService";
+import useEmployees from "../hooks/useEmployees";
 import useAuth from "../hooks/useAuth";
 import useRoleAccess from "../hooks/useRoleAccess";
 import useTaskDueNotifications from "../hooks/useTaskDueNotifications";
@@ -74,7 +74,6 @@ function EmployeeTasks() {
     canAccessSection("tasks.create") || canAccessSection("tasks.createOwn");
 
   const [tasks, setTasks] = useState([]);
-  const [employees, setEmployees] = useState([]);
   // Session hi nahi hai to na loader dikhana hai, na koi call karni hai
   const [loading, setLoading] = useState(Boolean(companyCode));
   const [error, setError] = useState("");
@@ -118,24 +117,27 @@ function EmployeeTasks() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [companyCode, canViewAll]);
 
-  // Naam dikhane ke liye — task mein sirf employee ki id hoti hai.
-  // Employee ko naam dikhta hi nahi (sab uske apne hain), isliye uske liye skip.
-  useEffect(() => {
-    if (!companyCode || !canViewAll) return;
+  /*
+  | Naam dikhane ke liye — task mein sirf employee ki id hoti hai. Shared
+  | store se aata hai, apna download nahi: Dashboard se /tasks ya Employees
+  | par jao to list dobara nahi utarti.
+  |
+  | Employee ko naam dikhta hi nahi (sab uske apne hain), isliye uske liye
+  | enabled: false — listener lagta hi nahi, poori company ki list uske
+  | browser mein pehle bhi nahi aati thi, ab bhi nahi aati.
+  */
+  const { employees: employeeRecords } = useEmployees(companyCode, {
+    enabled: canViewAll,
+  });
 
-    getEmployees(companyCode)
-      .then((data) => {
-        setEmployees(
-          Object.entries(data).map(([id, employee]) => ({
-            id,
-            name: employee.personalInfo?.name || id,
-          }))
-        );
-      })
-      .catch((err) => {
-        console.error("Failed to load employees:", err);
-      });
-  }, [companyCode, canViewAll]);
+  const employees = useMemo(
+    () =>
+      Object.entries(employeeRecords).map(([id, employee]) => ({
+        id,
+        name: employee.personalInfo?.name || id,
+      })),
+    [employeeRecords]
+  );
 
   /*
   | Due/overdue ka sweep yahan bhi — Dashboard hi wo screen hai jo sabse

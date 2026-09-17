@@ -16,6 +16,8 @@ import {
 import { updateEmployee } from "../services/EmployeeService";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "../firebase/firebase";
+import store from "../store";
+import { stopEmployees } from "../store/employeesSlice";
 
 export const AuthContext = createContext();
 
@@ -261,6 +263,14 @@ export const AuthProvider = ({ children }) => {
   };
 
   const logout = async () => {
+    /*
+    | Shared employee list sabse pehle saaf — Firebase sign-out se bhi
+    | pehle. Ulta karte to band hota hua listener permission error bhejta
+    | aur wo store mein likha rehta; aur usi tab mein agla login pichhle
+    | user ki poori list memory mein pata.
+    */
+    store.dispatch(stopEmployees());
+
     const role = localStorage.getItem("role");
     // Only owner is authenticated with Firebase Auth
     if (role === "owner") {
