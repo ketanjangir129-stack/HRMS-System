@@ -4,7 +4,6 @@ import {
   FiCalendar,
   FiCheck,
   FiCheckCircle,
-  FiDownload,
   FiEye,
   FiInbox,
   FiLoader,
@@ -20,12 +19,7 @@ import {
   formatTime,
   parseDateKey,
 } from "../../../utils/attendance/attendanceDate";
-import {
-  APPROVAL_EXPORT_HEADER,
-  getRecordKey,
-  toApprovalExportRow,
-} from "../../../utils/attendance/attendanceApproval";
-import { downloadCsv } from "../../../utils/attendance/attendanceTable";
+import { getRecordKey } from "../../../utils/attendance/attendanceApproval";
 import {
   getApprovalLabel,
   getApprovalStatus,
@@ -75,6 +69,9 @@ const hideBelow = (breakpoint) => ({
 
 const ACTION_BUTTON =
   "inline-flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-xl border transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-40";
+
+const DECISION_BUTTON =
+  "inline-flex h-9 shrink-0 cursor-pointer items-center justify-center gap-1.5 rounded-xl border px-2.5 text-xs font-semibold transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-40";
 
 const CHECKBOX =
   "h-4 w-4 cursor-pointer rounded border-line accent-brand disabled:cursor-not-allowed disabled:opacity-40";
@@ -236,7 +233,6 @@ function ApprovalTable({
   onApproveSelected,
   onRejectSelected,
 
-  periodLabel = "",
 }) {
 
   /*
@@ -253,16 +249,6 @@ function ApprovalTable({
     selectedRows.length === selectableRows.length;
 
   const showSelection = selectableRows.length > 0 || selected.size > 0;
-
-  const handleExport = () => {
-
-    downloadCsv(
-      `attendance-approvals${periodLabel ? `-${periodLabel}` : ""}.csv`,
-      APPROVAL_EXPORT_HEADER,
-      records.map(toApprovalExportRow)
-    );
-
-  };
 
   /*
   | Three buttons, no menu. Approve and reject are what the screen is for and
@@ -295,13 +281,14 @@ function ApprovalTable({
               disabled={busy || status === APPROVAL_STATUS.APPROVED}
               aria-label="Approve this day"
               title="Approve this day"
-              className={`${ACTION_BUTTON} border-emerald-200 text-emerald-600 hover:border-emerald-500 hover:bg-emerald-50 focus:ring-emerald-300`}
+              className={`${DECISION_BUTTON} border-emerald-200 text-emerald-700 hover:border-emerald-500 hover:bg-emerald-50 focus:ring-emerald-300`}
             >
               {busy ? (
                 <FiLoader className="animate-spin" size={15} />
               ) : (
                 <FiCheck size={16} />
               )}
+              <span className="hidden 2xl:inline">Approve</span>
             </button>
 
             <button
@@ -310,9 +297,10 @@ function ApprovalTable({
               disabled={busy || status === APPROVAL_STATUS.REJECTED}
               aria-label="Reject this day"
               title="Reject this day"
-              className={`${ACTION_BUTTON} border-red-200 text-red-600 hover:border-red-500 hover:bg-red-50 focus:ring-red-300`}
+              className={`${DECISION_BUTTON} border-red-200 text-red-700 hover:border-red-500 hover:bg-red-50 focus:ring-red-300`}
             >
               <FiX size={16} />
+              <span className="hidden 2xl:inline">Reject</span>
             </button>
 
           </>
@@ -553,7 +541,7 @@ function ApprovalTable({
     <div className="ui-card overflow-hidden">
 
       {/* Header */}
-      <div className="flex flex-col gap-4 px-4 py-4 sm:px-6 sm:py-5 lg:flex-row lg:items-center lg:justify-between">
+      <div className="flex items-center justify-between gap-4 px-4 py-4 sm:px-6 sm:py-5">
 
         <div className="min-w-0">
 
@@ -569,7 +557,7 @@ function ApprovalTable({
 
         </div>
 
-        <div className="flex w-full shrink-0 items-center gap-3 lg:w-auto">
+        <div className="shrink-0">
 
           {/*
           | The month is a one shot read rather than a live subscription, so
@@ -580,20 +568,10 @@ function ApprovalTable({
             type="button"
             onClick={onRetry}
             disabled={loading}
-            className="ui-btn ui-btn-secondary flex-1 font-semibold lg:flex-none"
+            className="ui-btn ui-btn-secondary font-semibold"
           >
             <FiRefreshCw className={loading ? "animate-spin" : ""} />
             Refresh
-          </button>
-
-          <button
-            type="button"
-            onClick={handleExport}
-            disabled={records.length === 0}
-            className="ui-btn ui-btn-primary flex-1 font-semibold lg:flex-none"
-          >
-            <FiDownload />
-            Export
           </button>
 
         </div>

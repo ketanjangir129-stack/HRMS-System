@@ -10,12 +10,10 @@ import {
   FiLogIn,
   FiLogOut,
   FiMapPin,
-  FiUserCheck,
   FiX,
 } from "react-icons/fi";
 import {
   formatDate,
-  formatDateTime,
   formatTime,
 } from "../../../utils/attendance/attendanceDate";
 import {
@@ -155,22 +153,6 @@ function StatusPicker({ record, value, disabled, onChange }) {
 
 }
 
-function DetailRow({ label, value }) {
-  return (
-    <div className="flex flex-col gap-0.5 border-t border-line-subtle py-2.5 sm:flex-row sm:items-baseline sm:justify-between sm:gap-4">
-
-      <p className="ui-eyebrow shrink-0">
-        {label}
-      </p>
-
-      <p className="min-w-0 text-sm font-medium text-ink-muted sm:text-right">
-        {value || "--"}
-      </p>
-
-    </div>
-  );
-}
-
 function ApprovalDetail({
   record,
   canReview = false,
@@ -208,8 +190,8 @@ function ApprovalDetail({
 
   return (
     /*
-    | A sheet off the bottom edge on a phone and a centred dialog from `sm`,
-    | the same shape every other modal in the module uses.
+    | A sheet off the bottom edge on a phone and a centred review dialog on
+    | larger screens, so the approval table remains full width behind it.
     */
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-900/50 backdrop-blur-sm sm:items-center sm:p-4">
 
@@ -379,70 +361,6 @@ function ApprovalDetail({
               </div>
 
             </div>
-
-          </section>
-
-          {/* The record */}
-          <section>
-
-            <h3 className="mb-1 text-sm font-semibold text-ink">
-              Record
-            </h3>
-
-            <DetailRow
-              label="Designation"
-              value={record.designation}
-            />
-
-            <DetailRow
-              label="Recorded"
-              value={formatDateTime(record.createdAt)}
-            />
-
-            <DetailRow
-              label="Employee Remarks"
-              value={record.remarks}
-            />
-
-          </section>
-
-          {/*
-          | The trail, and the reason it is a section of its own: a day can be
-          | decided more than once - approved in the morning and rejected at
-          | lunch when it turns out nobody came in - so who decided it, when,
-          | and what they wrote is the part a second reviewer needs before
-          | changing it.
-          */}
-          <section>
-
-            <h3 className="mb-1 flex items-center gap-2 text-sm font-semibold text-ink">
-              <FiUserCheck className="text-ink-subtle" size={15} />
-              Decision
-            </h3>
-
-            <DetailRow
-              label="Status"
-              value={label || "Not recorded"}
-            />
-
-            <DetailRow
-              label="Decided By"
-              value={record.approvedBy}
-            />
-
-            <DetailRow
-              label="Decided At"
-              value={
-                record.approvedAt
-                  ? formatDateTime(record.approvedAt)
-                  : ""
-              }
-            />
-
-            <DetailRow
-              label="Remarks"
-              value={record.approvalRemarks}
-            />
 
           </section>
 

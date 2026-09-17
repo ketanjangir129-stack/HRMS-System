@@ -5,7 +5,6 @@ import { toast } from "react-toastify";
 import AttendancePageHeader from "../../components/attendance/AttendancePageHeader";
 import { MonthNavigator } from "../../components/attendance/common/AttendancePanel";
 import ApprovalDetailModal from "../../components/attendance/approvals/ApprovalDetailModal";
-import ApprovalStatCards from "../../components/attendance/approvals/ApprovalStatCards";
 import ApprovalTable from "../../components/attendance/approvals/ApprovalTable";
 import ChangeStatusModal from "../../components/attendance/approvals/ChangeStatusModal";
 import RejectRequestModal from "../../components/attendance/requests/RejectRequestModal";
@@ -754,31 +753,6 @@ function AttendanceApprovals() {
               disableNext={isCurrentMonth}
             />
 
-            {/*
-            | The whole queue in one action, and it says how much: a button
-            | reading "Approve All" over an empty queue is a button that does
-            | nothing, so it is only offered when there is something in it.
-            |
-            | It decides exactly the pending days currently in view - the same
-            | set the tab counts - so a filtered queue is cleared to what the
-            | reviewer is actually looking at and never past it.
-            */}
-            {selectableRows.length > 0 && (
-              <button
-                type="button"
-                onClick={() => {
-                  setSelected(
-                    new Set(selectableRows.map(getRecordKey))
-                  );
-                }}
-                disabled={bulkBusy}
-                className="ui-btn ui-btn-secondary w-full font-semibold md:w-auto"
-              >
-                <FiCheckSquare />
-                Select All Pending ({selectableRows.length})
-              </button>
-            )}
-
           </div>
         }
       />
@@ -791,8 +765,6 @@ function AttendanceApprovals() {
         | nothing else on screen would otherwise say so.
         */}
         <DepartmentScopeNotice subject="attendance" />
-
-        <ApprovalStatCards summary={summary} loading={loading} />
 
         <ApprovalTable
           records={queueRows}
@@ -830,8 +802,6 @@ function AttendanceApprovals() {
           onView={setDetailRecord}
           onApproveSelected={handleApproveSelected}
           onRejectSelected={() => setBulkRejectOpen(true)}
-
-          periodLabel={`${period.from}-to-${period.to}`}
         />
 
       </div>

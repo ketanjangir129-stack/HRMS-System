@@ -168,15 +168,19 @@ function ApprovalNotice({ record }) {
 
 }
 
-function Stat({ label, value }) {
+function Stat({ label, value, icon, tone = "text-brand" }) {
   return (
-    <div className="rounded-xl border border-line-subtle bg-surface-muted px-3 py-2.5 sm:px-4 sm:py-3">
+    <div className="rounded-xl border border-line-subtle bg-surface-muted/70 p-3 transition-colors hover:border-line hover:bg-surface-muted sm:p-3.5">
 
-      <p className="ui-eyebrow truncate">
-        {label}
-      </p>
+      <div className="flex items-center gap-2">
+        <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-surface text-xs shadow-sm ring-1 ring-line-subtle ${tone}`}>
+          {icon}
+        </span>
 
-      <div className="mt-1.5 flex h-7 items-center whitespace-nowrap text-base font-semibold text-ink sm:mt-2 sm:text-lg">
+        <p className="ui-eyebrow truncate">{label}</p>
+      </div>
+
+      <div className="mt-2 flex h-6 items-center whitespace-nowrap text-base font-bold text-ink sm:text-lg">
         {value}
       </div>
 
@@ -272,7 +276,7 @@ function TodayAttendanceCard({ className = "" }) {
   const showWeeklyOffNotice =
     onWeeklyOff && !onApprovedLeave && !attendance?.punchIn;
 
-  const cardClass = `ui-card ui-card-body flex flex-col justify-center ${className}`;
+  const cardClass = `ui-card ui-card-body flex flex-col ${className}`;
 
   if (loading) {
     return (
@@ -296,28 +300,38 @@ function TodayAttendanceCard({ className = "" }) {
 
       <div className="flex items-start justify-between gap-3 sm:gap-4">
 
-        <div className="min-w-0">
+        <div className="flex min-w-0 items-center gap-3">
 
-          <h2 className="ui-card-title">
-            My Attendance
-          </h2>
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-brand/10 text-brand">
+            <FiCalendar size={20} />
+          </span>
 
-          <p className="ui-card-subtitle truncate">
-            {currentUser?.personalInfo?.name ||
-              currentUser?.name ||
-              "Signed in user"}
-          </p>
+          <div className="min-w-0">
+
+            <h2 className="ui-card-title">My Attendance</h2>
+
+            <p className="ui-card-subtitle truncate">
+              {currentUser?.personalInfo?.name ||
+                currentUser?.name ||
+                "Signed in user"}
+            </p>
+
+          </div>
 
         </div>
 
-        <div className="flex shrink-0 items-center gap-2 rounded-lg bg-surface-muted px-2.5 py-2 text-xs font-medium text-ink-subtle sm:px-3 sm:text-sm">
-          <FiClock />
-          {formatTime(now)}
+        <div className="flex shrink-0 flex-col items-end rounded-xl border border-line-subtle bg-surface-muted px-3 py-2 text-right">
+          <span className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide text-ink-faint">
+            <FiClock size={12} /> Live time
+          </span>
+          <span className="mt-0.5 text-sm font-bold text-ink sm:text-base">
+            {formatTime(now)}
+          </span>
         </div>
 
       </div>
 
-      <div className="mt-5 grid grid-cols-2 gap-2.5 sm:mt-6 sm:gap-3">
+      <div className="mt-5 grid grid-cols-2 gap-2.5 sm:gap-3">
 
         {/*
         | The badge renders a dash on its own when the day is not marked yet.
@@ -327,6 +341,8 @@ function TodayAttendanceCard({ className = "" }) {
         */}
         <Stat
           label="Status"
+          icon={<FiCheckCircle />}
+          tone="text-emerald-600"
           value={
             <AttendanceStatusBadge
               status={
@@ -337,12 +353,24 @@ function TodayAttendanceCard({ className = "" }) {
           }
         />
 
-        <Stat label="Punch In" value={formatTime(attendance?.punchIn)} />
+        <Stat
+          label="Punch In"
+          icon={<FiLogIn />}
+          tone="text-blue-600"
+          value={formatTime(attendance?.punchIn)}
+        />
 
-        <Stat label="Punch Out" value={formatTime(attendance?.punchOut)} />
+        <Stat
+          label="Punch Out"
+          icon={<FiLogOut />}
+          tone="text-amber-600"
+          value={formatTime(attendance?.punchOut)}
+        />
 
         <Stat
           label="Working Hours"
+          icon={<FiClock />}
+          tone="text-violet-600"
           value={attendance?.workingHours || "--"}
         />
 
@@ -355,7 +383,7 @@ function TodayAttendanceCard({ className = "" }) {
       */}
       {!onApprovedLeave && <ApprovalNotice record={attendance} />}
 
-      <div className="mt-5 border-t border-line-subtle pt-4 sm:mt-6 sm:pt-5">
+      <div className="mt-5 border-t border-line-subtle pt-4">
 
         {error && (
           <p className="text-sm font-medium text-red-600">{error}</p>
@@ -386,7 +414,7 @@ function TodayAttendanceCard({ className = "" }) {
             type="button"
             onClick={() => handlePunch(punchIn, "Punched in successfully.")}
             disabled={submitting}
-            className="ui-btn w-full bg-emerald-600 font-semibold text-white shadow-sm hover:bg-emerald-700 sm:w-auto"
+            className="ui-btn min-h-11 w-full bg-emerald-600 font-semibold text-white shadow-sm hover:bg-emerald-700"
           >
             {submitting ? <FiLoader className="animate-spin" /> : <FiLogIn />}
             Punch In
@@ -398,7 +426,7 @@ function TodayAttendanceCard({ className = "" }) {
             type="button"
             onClick={() => handlePunch(punchOut, "Punched out successfully.")}
             disabled={submitting}
-            className="ui-btn w-full bg-amber-600 font-semibold text-white shadow-sm hover:bg-amber-700 sm:w-auto"
+            className="ui-btn min-h-11 w-full bg-amber-600 font-semibold text-white shadow-sm hover:bg-amber-700"
           >
             {submitting ? <FiLoader className="animate-spin" /> : <FiLogOut />}
             Punch Out

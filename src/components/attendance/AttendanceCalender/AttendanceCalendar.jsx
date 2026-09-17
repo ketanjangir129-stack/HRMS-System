@@ -144,7 +144,7 @@ function AttendanceCalendar({
       )}
 
       {/* Legend */}
-      <div className="mt-auto grid grid-cols-2 gap-2 pt-5 sm:grid-cols-3 sm:pt-6 xl:grid-cols-2">
+      <div className="mt-5 grid grid-cols-2 gap-2 pt-0 sm:grid-cols-3 xl:grid-cols-4">
 
         {LEGEND.map((item) => (
 

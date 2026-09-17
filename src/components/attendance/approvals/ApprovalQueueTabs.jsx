@@ -1,4 +1,10 @@
 import { APPROVAL_STATUS } from "../../../utils/attendance/attendanceConstants";
+import {
+  FiCheckCircle,
+  FiClock,
+  FiInbox,
+  FiXCircle,
+} from "react-icons/fi";
 
 /*
 |--------------------------------------------------------------------------
@@ -23,6 +29,7 @@ const TABS = [
   {
     value: APPROVAL_STATUS.PENDING,
     label: "Pending",
+    icon: FiClock,
     countKey: "pending",
     activeClass: "border-amber-500 text-amber-700",
     badgeClass: "bg-amber-50 text-amber-700 ring-amber-200",
@@ -30,6 +37,7 @@ const TABS = [
   {
     value: APPROVAL_STATUS.APPROVED,
     label: "Approved",
+    icon: FiCheckCircle,
     countKey: "approved",
     activeClass: "border-emerald-500 text-emerald-700",
     badgeClass: "bg-emerald-50 text-emerald-700 ring-emerald-200",
@@ -37,6 +45,7 @@ const TABS = [
   {
     value: APPROVAL_STATUS.REJECTED,
     label: "Rejected",
+    icon: FiXCircle,
     countKey: "rejected",
     activeClass: "border-red-500 text-red-700",
     badgeClass: "bg-red-50 text-red-700 ring-red-200",
@@ -44,6 +53,7 @@ const TABS = [
   {
     value: "",
     label: "All Days",
+    icon: FiInbox,
     countKey: "total",
     activeClass: "border-brand text-brand",
     badgeClass: "bg-surface-muted text-ink-muted ring-line",
@@ -53,19 +63,21 @@ const TABS = [
 function ApprovalQueueTabs({ value, onChange, summary }) {
   return (
     /*
-    | Scrolls sideways on a phone rather than wrapping onto two lines. Four
-    | tabs at 360px do not fit, and a second row of them under the first reads
-    | as two separate controls.
+    | A compact segmented control makes the current queue state obvious before
+    | a reviewer scans the table. It scrolls on narrow screens rather than
+    | wrapping the four states onto two ambiguous rows.
     */
     <div
       role="tablist"
       aria-label="Approval queue"
-      className="ui-scroll flex gap-1 overflow-x-auto border-b border-line px-2 sm:px-4"
+      className="ui-scroll flex gap-2 overflow-x-auto border-b border-line bg-surface-muted/40 px-4 py-3 sm:px-6"
     >
 
       {TABS.map((tab) => {
 
         const active = value === tab.value;
+
+        const Icon = tab.icon;
 
         const count = summary?.[tab.countKey] || 0;
 
@@ -76,12 +88,14 @@ function ApprovalQueueTabs({ value, onChange, summary }) {
             role="tab"
             aria-selected={active}
             onClick={() => onChange(tab.value)}
-            className={`flex shrink-0 cursor-pointer items-center gap-2 border-b-2 px-3 py-3.5 text-sm font-semibold transition-colors sm:px-4 ${
+            className={`flex shrink-0 cursor-pointer items-center gap-2 rounded-xl border px-3 py-2.5 text-sm font-semibold transition-all sm:px-4 ${
               active
-                ? tab.activeClass
-                : "border-transparent text-ink-subtle hover:text-ink"
+                ? `${tab.activeClass} bg-surface shadow-sm`
+                : "border-transparent bg-transparent text-ink-subtle hover:border-line hover:bg-surface hover:text-ink"
             }`}
           >
+
+            <Icon size={15} aria-hidden="true" />
 
             {tab.label}
 
