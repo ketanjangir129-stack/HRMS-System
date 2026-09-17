@@ -54,7 +54,6 @@ export const getEmployees = async (companyCode) => {
   const snapshot = await get(
     ref(db, `companies/${companyCode}/employees`)
   );
- 
   return snapshot.exists() ? snapshot.val() : {};
 };
  
