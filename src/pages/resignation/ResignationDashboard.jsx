@@ -20,7 +20,6 @@ import useResignations from "../../hooks/useResignations";
 import Loader from "../../components/common/Loader";
 import ResignationModal from "../../components/resignation/ResignationModal";
 import ResignationTracker from "../../components/resignation/ResignationTracker";
-import ResignationStatCards from "../../components/resignation/ResignationStatCards";
 import ResignationStatusBadge from "../../components/resignation/common/ResignationStatusBadge";
 
 import { createResignation } from "../../services/resignation/resignationService";
@@ -267,7 +266,7 @@ function ResignationDashboard() {
     <div className="space-y-5 p-2">
 
       {/* Page header */}
-      <div className="ui-card flex flex-col gap-4 px-5 py-4 sm:px-6 sm:py-5 lg:flex-row lg:items-center lg:justify-between">
+      <div className="ui-card flex flex-col gap-4 px-5 py-4 sm:px-6 sm:py-5 md:flex-row md:items-center  md:justify-between lg:flex-row  lg:items-center lg:justify-between">
 
         <div className="flex min-w-0 items-center gap-3">
 
@@ -310,7 +309,7 @@ function ResignationDashboard() {
           | Resign button would be refused by the service anyway, and offering
           | an action that cannot succeed is worse than not offering it.
           */}
-          {canApply && !activeResignation && (
+          {/* {canApply && !activeResignation && (
             <button
               type="button"
               onClick={() => setModalOpen(true)}
@@ -319,7 +318,7 @@ function ResignationDashboard() {
               <LogOut className="h-4 w-4" />
               Resign
             </button>
-          )}
+          )} */}
 
         </div>
 
@@ -393,21 +392,19 @@ function ResignationDashboard() {
             ) : step && (
 
               <div
-                className={`flex flex-col gap-4 rounded-2xl border p-5 sm:flex-row sm:items-center sm:justify-between ${
-                  step.urgent
+                className={`flex flex-col gap-4 rounded-2xl border p-5 sm:flex-row sm:items-center sm:justify-between ${step.urgent
                     ? "border-amber-200 bg-amber-50"
                     : "border-line bg-surface-muted"
-                }`}
+                  }`}
               >
 
                 <div className="flex min-w-0 items-start gap-3">
 
                   <span
-                    className={`ui-tile-sm flex ${
-                      step.urgent
+                    className={`ui-tile-sm flex ${step.urgent
                         ? "bg-amber-100 text-amber-700"
                         : "bg-surface text-ink-subtle"
-                    }`}
+                      }`}
                   >
                     <StepIcon className="h-4 w-4" />
                   </span>
@@ -415,17 +412,15 @@ function ResignationDashboard() {
                   <div className="min-w-0">
 
                     <p
-                      className={`text-sm font-bold ${
-                        step.urgent ? "text-amber-900" : "text-ink"
-                      }`}
+                      className={`text-sm font-bold ${step.urgent ? "text-amber-900" : "text-ink"
+                        }`}
                     >
                       {step.title}
                     </p>
 
                     <p
-                      className={`mt-1 text-sm ${
-                        step.urgent ? "text-amber-800" : "text-ink-subtle"
-                      }`}
+                      className={`mt-1 text-sm ${step.urgent ? "text-amber-800" : "text-ink-subtle"
+                        }`}
                     >
                       {step.message}
                     </p>
@@ -440,11 +435,10 @@ function ResignationDashboard() {
                     onClick={() =>
                       navigate(step.actionPath(latest.resignationId))
                     }
-                    className={`ui-btn shrink-0 font-semibold ${
-                      step.urgent
+                    className={`ui-btn shrink-0 font-semibold ${step.urgent
                         ? "bg-amber-600 text-white hover:bg-amber-700"
                         : "ui-btn-primary"
-                    }`}
+                      }`}
                   >
                     {step.actionLabel}
                     <ArrowRight className="h-4 w-4" />
@@ -517,7 +511,7 @@ function ResignationDashboard() {
       | reader's own exit rather than over it: whatever their role, the thing
       | they came to this page about is more likely to be theirs.
       */}
-      {canReview && resignations.length > 0 && (
+      {/* {canReview && resignations.length > 0 && (
 
         <div className="space-y-4">
 
@@ -539,7 +533,7 @@ function ResignationDashboard() {
 
         </div>
 
-      )}
+      )} */}
 
       <ResignationModal
         open={modalOpen}

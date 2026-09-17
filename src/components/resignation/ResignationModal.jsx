@@ -229,7 +229,7 @@ function ResignationForm({ employee, onClose, onSubmit, submitting = false }) {
 
           <div className="flex min-w-0 items-center gap-3">
 
-            <div className="ui-tile-sm flex bg-red-50 text-red-600">
+            <div className="ui-tile-sm flex items-center justify-center bg-red-50 text-red-600">
               <LogOut className="h-5 w-5" />
             </div>
 

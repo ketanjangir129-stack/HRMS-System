@@ -3,7 +3,8 @@ import { useParams, useNavigate } from "react-router-dom";
 import { FiArrowLeft } from "react-icons/fi";
 import { getOnboardingRequestById } from "../../services/OnboardingService";
 import Loader from "../../components/common/Loader";
-import { approveOnboarding, rejectOnboarding } from "../../services/ApprovalService";
+import { approveOnboarding, getApproverId, rejectOnboarding } from "../../services/ApprovalService";
+import useAuth from "../../hooks/useAuth";
 import {
     isEmailServiceConfigured,
     sendApprovalEmail,
@@ -21,11 +22,9 @@ function ReviewOnboarding() {
 
     const companyCode = localStorage.getItem("companyCode");
 
-    const approvedBy =
-        localStorage.getItem("username") ||
-        localStorage.getItem("userName") ||
-        localStorage.getItem("name") ||
-        "Admin";
+    const { currentUser } = useAuth();
+
+    const approvedBy = getApproverId(currentUser);
     const [showRejectModal, setShowRejectModal] = useState(false);
 
     const [loadingReject, setLoadingReject] = useState(false);

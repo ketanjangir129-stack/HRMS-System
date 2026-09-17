@@ -115,11 +115,12 @@ function Onboardinghistory() {
                 search,
                 [
                     "id",
-                    "request.employmentInfo.name",
-                    "request.employmentInfo.department",
-                    "request.employmentInfo.designation",
-                    "action",
-                    "approvedBy",
+                    "name",
+                    "department",
+                    "designation",
+                    "status",
+                    "decidedBy",
+                    "decidedByName",
                 ]
             )
         );
@@ -282,7 +283,7 @@ function Onboardinghistory() {
                                     <div className="flex items-start gap-3">
 
                                         <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-blue-50 text-sm font-semibold text-blue-700">
-                                            {getInitials(request.request?.employmentInfo?.name || request.id) || "--"}
+                                            {getInitials(request.name || request.id) || "--"}
                                         </div>
 
                                         {/* `min-w-0` is what lets the long lines
@@ -293,11 +294,11 @@ function Onboardinghistory() {
                                             <div className="flex items-start justify-between gap-2">
 
                                                 <p className="min-w-0 truncate text-sm font-semibold text-slate-900">
-                                                    {request.request?.employmentInfo?.name || placeholder}
+                                                    {request.name || placeholder}
                                                 </p>
 
-                                                <span className={`${statusPill} px-2.5 py-1 text-[11px] ${getStatusStyle(request.action)}`}>
-                                                    {request.action}
+                                                <span className={`${statusPill} px-2.5 py-1 text-[11px] ${getStatusStyle(request.status)}`}>
+                                                    {request.status}
                                                 </span>
 
                                             </div>
@@ -307,7 +308,7 @@ function Onboardinghistory() {
                                             </p>
 
                                             <p className="mt-0.5 truncate text-xs text-slate-400">
-                                                {[request.request?.employmentInfo?.department, request.request?.employmentInfo?.designation]
+                                                {[request.department, request.designation]
                                                     .filter(Boolean)
                                                     .join(" · ") || "--"}
                                             </p>
@@ -321,11 +322,11 @@ function Onboardinghistory() {
                                     <div className="mt-3 flex items-center justify-between gap-2 border-t border-slate-100 pt-3">
 
                                         <span className="text-xs font-medium text-slate-400">
-                                            Approved By
+                                            Approved / Rejected By
                                         </span>
 
                                         <span className="min-w-0 truncate text-xs font-semibold text-slate-700">
-                                            {request.approvedBy || "--"}
+                                            {request.decidedByName || request.decidedBy || "--"}
                                         </span>
 
                                     </div>
@@ -357,7 +358,7 @@ function Onboardinghistory() {
                                         <th className="hidden px-4 py-3 text-left font-semibold sm:px-6 lg:table-cell">Department</th>
                                         <th className="hidden px-4 py-3 text-left font-semibold sm:px-6 lg:table-cell">Designation</th>
                                         <th className="px-4 py-3 text-left font-semibold sm:px-6">Status</th>
-                                        <th className="px-4 py-3 text-left font-semibold sm:px-6">Approved By</th>
+                                        <th className="px-4 py-3 text-left font-semibold sm:px-6">Approved / Rejected By</th>
 
                                     </tr>
 
@@ -380,13 +381,13 @@ function Onboardinghistory() {
                                                 <div className="flex min-w-0 items-center gap-3 text-left">
 
                                                     <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-50 text-xs font-semibold text-blue-700">
-                                                        {getInitials(request.request?.employmentInfo?.name || request.id) || "--"}
+                                                        {getInitials(request.name || request.id) || "--"}
                                                     </div>
 
                                                     <div className="min-w-0">
 
                                                         <p className="truncate font-semibold text-slate-800">
-                                                            {request.request?.employmentInfo?.name || placeholder}
+                                                            {request.name || placeholder}
                                                         </p>
 
                                                         {/*
@@ -396,7 +397,7 @@ function Onboardinghistory() {
                                                         | nothing is shown twice.
                                                         */}
                                                         <p className="mt-0.5 truncate text-xs text-slate-400 lg:hidden">
-                                                            {[request.request?.employmentInfo?.department, request.request?.employmentInfo?.designation]
+                                                            {[request.department, request.designation]
                                                                 .filter(Boolean)
                                                                 .join(" · ") || "--"}
                                                         </p>
@@ -412,9 +413,9 @@ function Onboardinghistory() {
                                             </td>
 
                                             <td className="hidden px-4 py-4 text-left text-sm text-slate-700 sm:px-6 lg:table-cell">
-                                                {request.request?.employmentInfo?.department ? (
+                                                {request.department ? (
                                                     <span className="inline-flex items-center rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
-                                                        {request.request.employmentInfo.department}
+                                                        {request.department}
                                                     </span>
                                                 ) : (
                                                     placeholder
@@ -422,17 +423,28 @@ function Onboardinghistory() {
                                             </td>
 
                                             <td className="hidden px-4 py-4 text-left text-sm text-slate-700 sm:px-6 lg:table-cell">
-                                                {request.request?.employmentInfo?.designation || placeholder}
+                                                {request.designation || placeholder}
                                             </td>
 
                                             <td className="px-4 py-4 text-left text-sm text-slate-700 sm:px-6">
-                                                <span className={`${statusPill} px-3 py-1 text-xs ${getStatusStyle(request.action)}`}>
-                                                    {request.action}
+                                                <span className={`${statusPill} px-3 py-1 text-xs ${getStatusStyle(request.status)}`}>
+                                                    {request.status}
                                                 </span>
                                             </td>
 
                                             <td className="px-4 py-4 text-left text-sm text-slate-700 sm:px-6">
-                                                {request.approvedBy || placeholder}
+                                                {request.decidedByName ? (
+                                                    <div className="min-w-0">
+                                                        <p className="truncate font-semibold text-slate-800">
+                                                            {request.decidedByName}
+                                                        </p>
+                                                        <p className="mt-0.5 truncate text-xs text-slate-400">
+                                                            {request.decidedBy}
+                                                        </p>
+                                                    </div>
+                                                ) : (
+                                                    request.decidedBy || placeholder
+                                                )}
                                             </td>
 
                                         </tr>
