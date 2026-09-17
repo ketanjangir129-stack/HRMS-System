@@ -15,13 +15,19 @@ import {
 |   sibling  — current page ke aas paas kitne padosi dikhein
 |
 | Total slots = boundary*2 + sibling*2 + 3 (current + do ellipsis ki jagah)
-| = 7. Ye har page par same rehta hai, isliye 3 se 4 par jaate waqt bar apni
+| = 5. Ye har page par same rehta hai, isliye 3 se 4 par jaate waqt bar apni
 | jagah se hilti nahi.
+|
+| Shuruaat mein bar aise dikhti hai:  1  2  3  …  201
+| Beech ke kisi page par aise:        1  …  87  …  201
 */
 
 const BOUNDARY_COUNT = 1;
 
-const SIBLING_COUNT = 1;
+// 0 = current page ke padosi nahi dikhte, sirf wahi page dikhta hai jis par
+// hum hain. Isse ladder chhoti rehti hai aur "kaunse page par hain" saaf
+// padhne mein aata hai.
+const SIBLING_COUNT = 0;
 
 // start se end tak ke numbers, dono included. Ulta range khaali aata hai.
 const range = (start, end) =>
@@ -238,7 +244,7 @@ function Pagination({
                     disabled={currentPage === 1}
                     className={`${buttonBase} ${
                         currentPage === 1
-                            ? " border-slate-200 text-slate-300"
+                            ? "border-slate-200 text-slate-300"
                             : "border-slate-300 text-slate-600 hover:bg-slate-50"
                     }`}
                     aria-label="Previous page"

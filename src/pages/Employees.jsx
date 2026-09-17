@@ -14,6 +14,7 @@ import useManagerScope from "../hooks/useManagerScope";
 import usePagination from "../hooks/usePagination";
 import Pagination from "../components/common/pagination/Pagination";
 import DepartmentScopeNotice from "../components/common/DepartmentScopeNotice";
+import SearchableSelect from "../components/common/SearchableSelect";
 import EmployeeCard, {
     EmployeeStatusBadge,
 } from "../components/employees/EmployeeCard";
@@ -43,6 +44,7 @@ function Employees() {
     const [allEmployees, setAllEmployees] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
+    const [department, setDepartment] = useState("all");
     const { search, setSearch, setSearchPlaceholder } = useOutletContext();
 
     /*
@@ -115,7 +117,30 @@ function Employees() {
         loadEmployees();
     }, []);
 
-    const filteredEmployees = searchEmployees(employees, search);
+    /*
+    | The dropdown is built from the rows actually on screen, so a manager only
+    | ever sees the departments inside their own scope and no option can point
+    | at an empty list.
+    */
+    const departmentOptions = useMemo(
+        () => [
+            { value: "all", label: "All Departments" },
+            ...[...new Set(employees.map((emp) => emp.department).filter(Boolean))]
+                .sort((a, b) => a.localeCompare(b))
+                .map((name) => ({ value: name, label: name })),
+        ],
+        [employees]
+    );
+
+    const scopedEmployees = useMemo(
+        () =>
+            department === "all"
+                ? employees
+                : employees.filter((emp) => emp.department === department),
+        [employees, department]
+    );
+
+    const filteredEmployees = searchEmployees(scopedEmployees, search);
     const {
         paginatedData: paginatedEmployees,
         currentPage,
@@ -146,7 +171,7 @@ function Employees() {
     }, []);
     useEffect(() => {
         resetPagination();
-    }, [search]);
+    }, [search, department]);
 
     const placeholder = <span className="text-ink-faint">—</span>;
 
@@ -176,7 +201,8 @@ function Employees() {
                     </h1>
 
                     <p className="mt-1 text-sm text-ink-subtle">
-                        {search ? `${filteredEmployees.length} of ${employees.length} employees`
+                        {search || department !== "all"
+                            ? `${filteredEmployees.length} of ${employees.length} employees`
                             : `${employees.length} total employee${employees.length === 1 ? "" : "s"}`}
                     </p>
 
@@ -220,6 +246,22 @@ function Employees() {
                         </p>
 
                     </div>
+
+                    {/*
+                    | Department filter. Not `.ui-field` — the kit's field fills
+                    | its line, and this control is a panel action that sits at
+                    | its own width on the right of the title.
+                    */}
+                    <SearchableSelect
+                        options={departmentOptions}
+                        value={department}
+                        onChange={setDepartment}
+                        placeholder="All Departments"
+                        searchPlaceholder="Search departments..."
+                        emptyMessage="No departments found"
+                        ariaLabel="Filter by department"
+                        className="w-full shrink-0 cursor-pointer rounded-xl border border-line bg-surface px-4 py-2.5 text-sm font-semibold text-ink-muted outline-none transition-all focus:border-brand focus:ring-2 focus:ring-brand-ring lg:w-64"
+                    />
 
                 </div>
 
@@ -266,11 +308,13 @@ function Employees() {
                         </div>
 
                         <h3 className="mt-5 text-lg font-bold text-ink sm:text-xl">
-                            {search ? "No Matches Found" : "No Employees Yet"}
+                            {search || department !== "all"
+                                ? "No Matches Found"
+                                : "No Employees Yet"}
                         </h3>
 
                         <p className="mt-2 max-w-sm text-sm text-ink-subtle">
-                            {search
+                            {search || department !== "all"
                                 ? "No employees match your search."
                                 : "No employees yet."}
                         </p>
@@ -320,8 +364,8 @@ function Employees() {
 
                                     <tr className="border-b border-line-subtle bg-surface-muted text-[11px] uppercase tracking-wider text-ink-faint">
 
-                                        <th className="px-4 py-3 text-left font-semibold sm:px-6">Employee</th>
                                         <th className="px-4 py-3 text-left font-semibold sm:px-6">Employee ID</th>
+                                        <th className="px-4 py-3 text-left font-semibold sm:px-6">Employee Name</th>
                                         <th className="hidden px-4 py-3 text-left font-semibold sm:px-6 lg:table-cell">Email</th>
                                         <th className="hidden px-4 py-3 text-left font-semibold sm:px-6 xl:table-cell">Department</th>
                                         <th className="hidden px-4 py-3 text-left font-semibold sm:px-6 xl:table-cell">Designation</th>
@@ -351,58 +395,22 @@ function Employees() {
                                             className={`group transition-colors hover:bg-surface-muted ${canOpenDetails ? "cursor-pointer" : ""
                                                 }`}
                                         >
-
-                                            <td className="px-4 py-4 text-left text-sm text-ink-muted sm:px-6">
-
-                                                <div className="flex min-w-0 items-center gap-3">
-
-                                                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-50 text-xs font-bold text-blue-600">
-                                                        {getInitials(emp.name || emp.employeeId) || "--"}
-                                                    </div>
-
-                                                    <div className="min-w-0">
-
-                                                        <p className="truncate font-semibold text-ink">
-                                                            {emp.name || placeholder}
-                                                        </p>
-
-                                                        {/*
-                                                        | The columns hidden at this width, folded back in. Each
-                                                        | line disappears at exactly the breakpoint where its own
-                                                        | column appears, so nothing is shown twice.
-                                                        */}
-                                                        <p className="mt-0.5 truncate text-xs text-ink-subtle lg:hidden">
-                                                            {emp.email || "--"}
-                                                        </p>
-
-                                                        <p className="mt-0.5 truncate text-xs text-ink-faint xl:hidden">
-                                                            {[emp.department, emp.designation]
-                                                                .filter(Boolean)
-                                                                .join(" · ") || "--"}
-                                                        </p>
-
-                                                    </div>
-
-                                                </div>
-
-                                            </td>
-
+                                            
                                             <td className="px-4 py-4 text-left text-sm font-semibold text-ink-muted sm:px-6">
                                                 {emp.employeeId || placeholder}
                                             </td>
+
+                                            <td className="px-4 py-4 text-left text-sm text-ink-muted sm:px-6 font-bold">
+                                                {emp.name || placeholder}
+                                            </td>
+
 
                                             <td className="hidden px-4 py-4 text-left text-sm text-ink-subtle sm:px-6 lg:table-cell">
                                                 {emp.email || placeholder}
                                             </td>
 
                                             <td className="hidden px-4 py-4 text-left text-sm text-ink-muted sm:px-6 xl:table-cell">
-                                                {emp.department ? (
-                                                    <span className="inline-flex items-center rounded-full bg-surface-raised px-3 py-1 text-xs font-semibold text-ink-muted">
-                                                        {emp.department}
-                                                    </span>
-                                                ) : (
-                                                    placeholder
-                                                )}
+                                                {emp.department || placeholder}
                                             </td>
 
                                             <td className="hidden px-4 py-4 text-left text-sm text-ink-muted sm:px-6 xl:table-cell">
