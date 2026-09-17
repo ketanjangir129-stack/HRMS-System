@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
-  getEmployeeById,
+  subscribeEmployeeById,
   updateEmployee,
   updateEmployeeRole,
   updateEmployeeSection,
@@ -122,6 +122,8 @@ function EmployeesDetails() {
     const [resumeFile, setResumeFile] = useState(null);
     const [errors, setErrors] = useState({});
     const [loadError, setLoadError] = useState("");
+    // Retry isi ko badhata hai — listener band hokar dobara lagta hai
+    const [reloadKey, setReloadKey] = useState(0);
 
     // Save / status-change fail hone par upar dikhne wala banner (alert ki jagah)
     const [actionError, setActionError] = useState("");
@@ -218,10 +220,16 @@ function EmployeesDetails() {
         setErrors((prev) => ({ ...prev, department: "" }));
     };
 
-    const loadEmployee = async () => {
-        try {
-        const data = await getEmployeeById(companyCode, id);
-
+    /*
+    | Firebase record ko page ki shakal mein dhaalta hai. Pehle ye khud fetch
+    | bhi karta tha (loadEmployee); ab listener har badlaav par isi ko data
+    | deta hai, isliye ye sirf dhaalne ka kaam karta hai.
+    |
+    | Edit chal raha ho tab bhi ye chalna safe hai: startEdit form ki alag
+    | copy (formData) banata hai, aur yahan sirf `employee` badalta hai —
+    | user ka adhoora type kiya hua nahi mitata.
+    */
+    const applyEmployee = (data) => {
         // Employee mila hi nahi (galat id / delete ho gaya)
         if (!data) {
             setLoadError("Employee not found.");
@@ -292,15 +300,34 @@ function EmployeesDetails() {
         };
  
         setEmployee(formattedEmployee);
-        } catch (error) {
-            console.error("Failed to load employee:", error);
-            setLoadError("Failed to load employee. Please try again.");
-        }
     };
 
-    // id badalne par (ek details page se doosre par jaana) sab dobara load ho
+    /*
+    | Employee realtime — kisi aur tab ya kisi aur user ne is employee ko
+    | badla to page bina refresh ke badal jaata hai. Pehle yahan ek baar ka
+    | getEmployeeById tha, aur doosre tab ki edit refresh tak nahi dikhti thi.
+    |
+    | Sirf is ek employee ka path suna jaata hai, poori list nahi.
+    |
+    | id badle (ek details page se doosre par) ya Retry dabe to purana
+    | listener band aur naya lagta hai.
+    */
     useEffect(() => {
-        loadEmployee();
+        const unsubscribe = subscribeEmployeeById(
+            companyCode,
+            id,
+            applyEmployee,
+            (error) => {
+                console.error("Failed to load employee:", error);
+                setLoadError("Failed to load employee. Please try again.");
+            }
+        );
+
+        return unsubscribe;
+    }, [companyCode, id, reloadKey]);
+
+    // Departments dropdown ke liye — pehle jaisa, id badalne par ek baar
+    useEffect(() => {
         loadDepartments();
         // loadSalary();
     }, [id]);
@@ -567,7 +594,7 @@ function EmployeesDetails() {
                         </button>
 
                         <button
-                            onClick={loadEmployee}
+                            onClick={() => setReloadKey((key) => key + 1)}
                             className="cursor-pointer rounded-xl border border-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-700 transition-all hover:border-blue-500 hover:bg-blue-50 hover:text-blue-600"
                         >
                             Retry

@@ -1541,6 +1541,34 @@ h3 {
   border-color: color-mix(in oklab, var(--color-line) 70%, transparent);
 }
 
+/*
+|--------------------------------------------------------------------------
+| THEME COMPATIBILITY - translucent tints
+|--------------------------------------------------------------------------
+| The same miss as the neutrals above, on the coloured washes. The plan a
+| department import is about to write is drawn as one card per department,
+| and the card for a department that does not exist yet is tinted
+| `bg-emerald-50/40` while the one for a department already in the company
+| is `bg-surface-muted` - the tint IS the difference between "this is new"
+| and "you already have this". `.dark .bg-emerald-50` never matched it, so
+| in the dark theme every card in the plan stayed a light panel and the
+| distinction went with it.
+|
+| These stop one step short of the solid tint's 12%. In the light theme the
+| `/40` wash is deliberately fainter than the full `-50` - the plan cards
+| carry a lot of them at once and a full wash each would shout - so the
+| dark side keeps that relationship rather than levelling them.
+|--------------------------------------------------------------------------
+*/
+
+.dark .bg-emerald-50\/40 {
+  background-color: color-mix(in oklab, var(--color-emerald-500) 8%, transparent);
+}
+
+.dark .bg-blue-50\/40 {
+  background-color: color-mix(in oklab, var(--color-blue-500) 8%, transparent);
+}
+
 /* Hover keeps Tailwind's media guard, as everywhere else in this file. */
 @media (hover: hover) {
   .dark .hover\:bg-slate-200\/60:hover {

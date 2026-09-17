@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { getEmployees } from "../services/EmployeeService";
+import useEmployees from "../hooks/useEmployees";
 import { useNavigate, useOutletContext } from "react-router-dom";
 import { searchEmployees } from "../utils/search/searchEmployees";
 import Loader from "../components/common/Loader";
@@ -41,9 +41,17 @@ function Employees() {
     const canAdd = canAccessSection("employees.add");
     const canOpenDetails = canAccessSection("employees.details");
 
-    const [allEmployees, setAllEmployees] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState("");
+    /*
+    | The list comes from the shared store rather than a fetch of its own, so
+    | opening this page after an attendance screen does not download the
+    | employee node again - and it stays live while the page is open.
+    */
+    const {
+        employees: employeeRecords,
+        loading,
+        error,
+        reload,
+    } = useEmployees(companyCode);
     const [department, setDepartment] = useState("all");
     const { search, setSearch, setSearchPlaceholder } = useOutletContext();
 
@@ -55,21 +63,11 @@ function Employees() {
     const { filterEmployees, isScoped, loading: scopeLoading } =
         useManagerScope();
 
-    const employees = useMemo(
-        () => filterEmployees(allEmployees),
-        [filterEmployees, allEmployees]
-    );
-
-
-    const loadEmployees = async () => {
-        setError("");
-
-        try {
-            const data = await getEmployees(companyCode);
-
-
-            const employeeArray = Object.keys(data).map((key) => {
-                const employee = data[key];
+    // Same row shape as before: the store holds the raw Firebase records
+    const allEmployees = useMemo(
+        () =>
+            Object.keys(employeeRecords).map((key) => {
+                const employee = employeeRecords[key];
 
                 return {
                     id: key,
@@ -102,20 +100,14 @@ function Employees() {
                         employee.status ||
                         "Active",
                 };
-            });
-            setAllEmployees(employeeArray);
-        } catch (err) {
-            console.error("Failed to load employees:", err);
-            setAllEmployees([]);
-            setError(err.message || "Failed to load employees.");
-        } finally {
-            setLoading(false);
-        }
-    };
+            }),
+        [employeeRecords]
+    );
 
-    useEffect(() => {
-        loadEmployees();
-    }, []);
+    const employees = useMemo(
+        () => filterEmployees(allEmployees),
+        [filterEmployees, allEmployees]
+    );
 
     /*
     | The dropdown is built from the rows actually on screen, so a manager only
@@ -288,10 +280,7 @@ function Employees() {
                         </p>
 
                         <button
-                            onClick={() => {
-                                setLoading(true);
-                                loadEmployees();
-                            }}
+                            onClick={reload}
                             className="ui-btn ui-btn-secondary mt-6 font-semibold"
                         >
                             Retry
