@@ -2,9 +2,7 @@ import { useState } from "react";
 import {
   FiAlertTriangle,
   FiCheck,
-  FiChevronDown,
   FiClipboard,
-  FiEdit3,
   FiExternalLink,
   FiLoader,
   FiLogIn,
@@ -18,7 +16,8 @@ import {
 } from "../../../utils/attendance/attendanceDate";
 import {
   APPROVAL_STATUS,
-  ATTENDANCE_STATUS_OPTIONS,
+  ATTENDANCE_STATUS,
+  STATUS_BADGES,
   STATUS_DOTS,
 } from "../../../utils/attendance/attendanceConstants";
 import {
@@ -26,7 +25,6 @@ import {
   getApprovalStatus,
   isTimeOptionalStatus,
 } from "../../../utils/attendance/attendanceUtils";
-import TaskSelect from "../../tasks/TaskSelect";
 import AttendanceStatusBadge from "../common/AttendanceStatusBadge";
 import EmployeeCell from "../common/EmployeeCell";
 
@@ -47,10 +45,11 @@ import EmployeeCell from "../common/EmployeeCell";
 | The decision is offered from here as well as from the row, so a reviewer who
 | opened a day to understand it does not have to close it again to act.
 |
-| The status pill is part of that: it is a dropdown, so the day the punches
-| describe correctly but which the reviewer judges differently - the fourth
-| late arrival this week, marked Half Day for it - is settled on the screen
-| where that was worked out, without a second modal on top of this one.
+| That includes what the day counts as. Present, Half Day and Absent sit on
+| the day as one click each, in the colours they are read in everywhere else,
+| so the day the punches describe correctly but which the reviewer judges
+| differently - the fourth late arrival this week, marked Half Day for it - is
+| settled here without a second modal on top of this one.
 |--------------------------------------------------------------------------
 */
 
@@ -98,57 +97,88 @@ function PunchTile({ icon, label, time, location }) {
 
 /*
 |--------------------------------------------------------------------------
-| Status Picker
+| Quick Status
 |--------------------------------------------------------------------------
-| The status pill, opened.
+| What the day counts as, one click each.
 |
 | This is not a correction - the punch times are right and stay exactly as the
-| employee recorded them. It is the reviewer overriding what the day is worth:
+| employee recorded them. It is the reviewer deciding what the day is worth:
 | somebody who arrives late every morning is marked Half Day for it, and the
 | 10:40 punch in stays on the record as the reason.
 |
-| The pill itself is the trigger, so the choice is made against the colour it
-| becomes, and `TaskSelect` portals the open list out of the modal's scrolling
-| body - kept inside, it would be clipped by the overflow.
+| Each button always carries its own status colour, so the choice is made
+| against the badge the day will be read in on every other screen. The one the
+| day already is stays pressed and closed - pressing it would change nothing.
 |
-| A day with no punch in is only offered the statuses that do not need one.
-| `validateAttendanceForm` refuses the others, and there is nowhere here to
-| type the missing time - that is what the Change Status form is for, so a day
-| that needs one is sent there rather than failing on save.
+| Present and Half Day need a punch in. `validateAttendanceForm` refuses them
+| without one, and there is nowhere here to type the missing time, so on a day
+| with no punch in they are closed and say why rather than failing on save.
 */
-function StatusPicker({ record, value, disabled, onChange }) {
+
+const QUICK_STATUSES = [
+  ATTENDANCE_STATUS.PRESENT,
+  ATTENDANCE_STATUS.HALF_DAY,
+  ATTENDANCE_STATUS.ABSENT,
+];
+
+function QuickStatusButtons({ record, saving, savingTo, locked, onSelect }) {
 
   const timed = Boolean(record.punchIn);
 
-  const options = ATTENDANCE_STATUS_OPTIONS.filter(
-    (status) =>
-      timed ||
-      isTimeOptionalStatus(status) ||
-      status === record.status
-  ).map((status) => ({
-    value: status,
-    label: status,
-    dot: STATUS_DOTS[status],
-  }));
-
   return (
-    <TaskSelect
-      options={options}
-      value={value}
-      onChange={onChange}
-      disabled={disabled}
-      ariaLabel="Attendance status"
-      className="cursor-pointer rounded-full"
-      trigger={
-        <span className="inline-flex items-center gap-1">
+    <div
+      role="group"
+      aria-label="Mark attendance as"
+      className="grid grid-cols-3 gap-2"
+    >
 
-          <AttendanceStatusBadge status={value} size="sm" />
+      {QUICK_STATUSES.map((option) => {
 
-          <FiChevronDown size={14} className="text-ink-faint" />
+        const current = record.status === option;
 
-        </span>
-      }
-    />
+        const needsPunchIn = !timed && !isTimeOptionalStatus(option);
+
+        const inFlight = saving && savingTo === option;
+
+        const title = current
+          ? `This day is already marked ${option}`
+          : needsPunchIn
+            ? `No punch in was recorded, so this day cannot be marked ${option}`
+            : `Mark this day ${option} and approve it`;
+
+        return (
+          <button
+            key={option}
+            type="button"
+            onClick={() => onSelect(option)}
+            disabled={locked || current || needsPunchIn}
+            aria-pressed={current}
+            title={title}
+            className={`inline-flex min-h-10 cursor-pointer items-center justify-center gap-1.5 rounded-xl px-2 py-2 text-sm font-semibold transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-ring disabled:cursor-not-allowed ${STATUS_BADGES[option]} ${
+              current
+                ? "shadow-sm ring-2"
+                : "ring-1 hover:brightness-95 hover:shadow-sm disabled:opacity-40"
+            }`}
+          >
+
+            {inFlight ? (
+              <FiLoader className="shrink-0 animate-spin" size={14} />
+            ) : current ? (
+              <FiCheck className="shrink-0" size={14} />
+            ) : (
+              <span
+                className={`h-2 w-2 shrink-0 rounded-full ${STATUS_DOTS[option]}`}
+              />
+            )}
+
+            <span className="truncate">{option}</span>
+
+          </button>
+        );
+
+      })}
+
+    </div>
   );
 
 }
@@ -161,7 +191,6 @@ function ApprovalDetail({
   onApprove,
   onReject,
   onStatusChange,
-  onChangeStatus,
   onClose,
 }) {
 
@@ -170,21 +199,19 @@ function ApprovalDetail({
   const label = getApprovalLabel(record);
 
   /*
-  | The status picked from the pill, before it is written.
-  |
-  | It is held rather than saved on selection: this write rewrites the day and
-  | signs it off under the reviewer's name, which is far too much to happen
-  | because a list was opened by accident and closed on the wrong row. So the
-  | pill shows what the day would become and asks once.
+  | Which of the three was pressed, so only that button spins while the page
+  | writes it.
   */
-  const [draftStatus, setDraftStatus] = useState("");
+  const [savingTo, setSavingTo] = useState("");
 
-  const pendingStatus =
-    Boolean(draftStatus) && draftStatus !== record.status;
+  const handleQuickStatus = (option) => {
+    setSavingTo(option);
+    onStatusChange(record, option);
+  };
 
   /*
   | Every button on the modal is closed while the day is being written, not
-  | only the one that was pressed - all three end up on the same record.
+  | only the one that was pressed - they all end up on the same record.
   */
   const locked = busy || savingStatus;
 
@@ -241,18 +268,12 @@ function ApprovalDetail({
               <div className="flex items-center gap-2">
 
                 {/*
-                | The pill is the control for a reviewer who may decide this
-                | day, and stays a plain badge for everyone else - the same
-                | rule the two decision buttons already follow.
+                | For a reviewer the pressed button below already says what
+                | the day is, so the badge is only drawn when it would not be
+                | said twice: for everyone else, and for a status the three
+                | buttons do not cover - Late, Leave.
                 */}
-                {canReview ? (
-                  <StatusPicker
-                    record={record}
-                    value={draftStatus || record.status}
-                    disabled={locked}
-                    onChange={setDraftStatus}
-                  />
-                ) : (
+                {(!canReview || !QUICK_STATUSES.includes(record.status)) && (
                   <AttendanceStatusBadge
                     status={record.status}
                     size="sm"
@@ -268,68 +289,6 @@ function ApprovalDetail({
               </div>
 
             </div>
-
-            {/*
-            | The ask. It only exists once a different status is picked, so
-            | the day reads exactly as it did before until the reviewer has
-            | actually chosen to change something.
-            */}
-            {pendingStatus && (
-              <div className="mb-3 rounded-xl border border-blue-200 bg-blue-50 px-3.5 py-3">
-
-                <p className="text-xs font-medium text-blue-800">
-                  Mark this day as{" "}
-                  <span className="font-semibold">{draftStatus}</span> instead
-                  of {record.status}. The punch times stay as recorded, and
-                  the day is approved under your name - any earlier decision
-                  on it is replaced.
-                </p>
-
-                {/*
-                | Said here for the same reason the correction form says it:
-                | rewriting the day drops the link to the leave request that
-                | booked it, so deleting that leave later stops giving the day
-                | back.
-                */}
-                {record.leaveRequestId && (
-                  <p className="mt-2 flex items-start gap-2 text-xs font-medium text-amber-800">
-
-                    <FiAlertTriangle
-                      className="mt-0.5 shrink-0 text-amber-600"
-                      size={14}
-                    />
-
-                    This day was booked by an approved leave request. Changing
-                    it detaches the day from that request.
-
-                  </p>
-                )}
-
-                <div className="mt-3 flex flex-wrap gap-2">
-
-                  <button
-                    type="button"
-                    onClick={() => onStatusChange(record, draftStatus)}
-                    disabled={locked}
-                    className="ui-btn ui-btn-primary px-3 py-1.5 text-xs font-semibold"
-                  >
-                    {savingStatus && <FiLoader className="animate-spin" />}
-                    {savingStatus ? "Saving..." : "Save & Approve"}
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setDraftStatus("")}
-                    disabled={locked}
-                    className="ui-btn ui-btn-secondary px-3 py-1.5 text-xs font-semibold"
-                  >
-                    Cancel
-                  </button>
-
-                </div>
-
-              </div>
-            )}
 
             <div className="grid grid-cols-3 gap-2.5">
 
@@ -365,6 +324,52 @@ function ApprovalDetail({
           </section>
 
           {/*
+          | Only for a reviewer who may decide this day - the same rule the
+          | Approve and Reject buttons follow.
+          */}
+          {canReview && (
+            <section>
+
+              <p className="ui-eyebrow mb-2">
+                Mark attendance as
+              </p>
+
+              <QuickStatusButtons
+                record={record}
+                saving={savingStatus}
+                savingTo={savingTo}
+                locked={locked}
+                onSelect={handleQuickStatus}
+              />
+
+              <p className="mt-2 text-xs text-ink-subtle">
+                Saves the status and approves the day under your name. Punch
+                times stay as recorded.
+              </p>
+
+              {/*
+              | Said before the click rather than after it: rewriting the day
+              | drops the link to the leave request that booked it, so
+              | deleting that leave later stops giving the day back.
+              */}
+              {record.leaveRequestId && (
+                <p className="mt-3 flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-3 text-xs font-medium text-amber-800">
+
+                  <FiAlertTriangle
+                    className="mt-0.5 shrink-0 text-amber-600"
+                    size={14}
+                  />
+
+                  This day was booked by an approved leave request. Changing
+                  its status detaches the day from that request.
+
+                </p>
+              )}
+
+            </section>
+          )}
+
+          {/*
           | Said plainly rather than left to be worked out from two missing
           | buttons. A manager reading their own day, or a day from a
           | department they do not run, is not looking at a broken screen.
@@ -389,28 +394,6 @@ function ApprovalDetail({
           >
             Close
           </button>
-
-          {/*
-          | Beside the two decisions rather than behind them, because reading
-          | the day in full is exactly when it turns out the day was not what
-          | the punch said - and having to close this and find the row again
-          | to fix it is how a correction becomes a rejection instead.
-          |
-          | It stays even though the pill now changes the status on its own:
-          | the pill overrides a day whose punches are right, and this is the
-          | form for the day whose punches are not.
-          */}
-          {canReview && (
-            <button
-              type="button"
-              onClick={() => onChangeStatus(record)}
-              disabled={locked}
-              className="ui-btn ui-btn-secondary font-semibold"
-            >
-              <FiEdit3 />
-              Change Status
-            </button>
-          )}
 
           {/*
           | Both offered, each closed on the state the day is already in. A

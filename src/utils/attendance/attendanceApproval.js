@@ -10,7 +10,6 @@ import {
 import {
     getApprovalLabel,
     getApprovalStatus,
-    isPendingApproval,
 } from "./attendanceUtils";
 
 /*
@@ -142,9 +141,6 @@ export const filterByApproval = (rows = [], status = "") =>
     !status
         ? rows
         : rows.filter((row) => getApprovalStatus(row) === status);
-
-export const getPendingRows = (rows = []) =>
-    rows.filter(isPendingApproval);
 
 /*
 |--------------------------------------------------------------------------

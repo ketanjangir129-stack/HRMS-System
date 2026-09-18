@@ -6,7 +6,6 @@ import AttendancePageHeader from "../../components/attendance/AttendancePageHead
 import { MonthNavigator } from "../../components/attendance/common/AttendancePanel";
 import ApprovalDetailModal from "../../components/attendance/approvals/ApprovalDetailModal";
 import ApprovalTable from "../../components/attendance/approvals/ApprovalTable";
-import ChangeStatusModal from "../../components/attendance/approvals/ChangeStatusModal";
 import RejectRequestModal from "../../components/attendance/requests/RejectRequestModal";
 import DepartmentScopeNotice from "../../components/common/DepartmentScopeNotice";
 import useAttendanceApprovals from "../../hooks/useAttendanceApprovals";
@@ -128,8 +127,6 @@ function AttendanceApprovals() {
   */
   const [rejectRecord, setRejectRecord] = useState(null);
 
-  const [statusRecord, setStatusRecord] = useState(null);
-
   const [bulkRejectOpen, setBulkRejectOpen] = useState(false);
 
   const [busyKey, setBusyKey] = useState("");
@@ -137,8 +134,6 @@ function AttendanceApprovals() {
   const [rejecting, setRejecting] = useState(false);
 
   const [savingStatus, setSavingStatus] = useState(false);
-
-  const [quickSaving, setQuickSaving] = useState(false);
 
   const [bulkBusy, setBulkBusy] = useState(false);
 
@@ -450,77 +445,25 @@ function AttendanceApprovals() {
   };
 
   /*
-  | Correcting the day rather than deciding it as recorded. The modal hands
-  | back the whole record it built, so the write is one call and this only
-  | reports the outcome.
+  | Marking what the day counts as, from the Present / Half Day / Absent
+  | buttons on the detail modal.
   |
-  | The scope is re-asked here too: correcting a day is the strongest of the
-  | three writes on this screen - it changes what the day was, not only what
-  | was decided about it.
-  */
-  const handleChangeStatus = async (record) => {
-
-    if (!statusRecord || refuseOutOfScope(statusRecord)) {
-      return { success: false };
-    }
-
-    setSavingStatus(true);
-
-    try {
-
-      const result = await changeStatus(record, actorName);
-
-      if (!result?.success) {
-        toast.error(result?.message || "Failed to update the day.");
-        return result;
-      }
-
-      toast.success(
-        `${statusRecord.employeeName || statusRecord.employeeId}'s day updated to ${record.status} and approved.`
-      );
-
-      setStatusRecord(null);
-      setDetailRecord(null);
-
-      return result;
-
-    } catch (statusError) {
-
-      console.error(statusError);
-      toast.error("Failed to update the day.");
-
-      return { success: false };
-
-    } finally {
-
-      setSavingStatus(false);
-
-    }
-
-  };
-
-  /*
-  | The same write, reached from the status pill on the detail modal.
-  |
-  | This one is not a correction: the punches are right and are passed straight
+  | This is not a correction: the punches are right and are passed straight
   | back as they were recorded, so the day still shows the 10:40 arrival - only
-  | what it is worth changes. That is the whole point of it. An employee who is
-  | late every morning is marked Half Day for it, and the punch in that earned
-  | him that stays on the record as the reason.
+  | what it is worth changes. An employee who is late every morning is marked
+  | Half Day for it, and the punch in that earned it stays on the record as the
+  | reason.
   |
-  | It is a separate handler rather than a second caller of the one above
-  | because that one answers to the correction modal and re-asks the scope of
-  | the row that opened it. Here the row is the record itself, and it is the
-  | full one off the queue - department and all - so the scope question is
-  | asked of the same object the buttons were drawn from.
+  | The scope is re-asked of the full record off the queue - department and
+  | all - which is the same object the buttons were drawn from.
   */
-  const handleQuickStatusChange = async (record, status) => {
+  const handleStatusChange = async (record, status) => {
 
     if (!record || refuseOutOfScope(record)) {
       return { success: false };
     }
 
-    setQuickSaving(true);
+    setSavingStatus(true);
 
     try {
 
@@ -548,7 +491,7 @@ function AttendanceApprovals() {
       }
 
       toast.success(
-        `${record.employeeName || record.employeeId}'s day updated to ${status} and approved.`
+        `${record.employeeName || record.employeeId} marked ${status} and approved.`
       );
 
       setDetailRecord(null);
@@ -564,7 +507,7 @@ function AttendanceApprovals() {
 
     } finally {
 
-      setQuickSaving(false);
+      setSavingStatus(false);
 
     }
 
@@ -811,34 +754,14 @@ function AttendanceApprovals() {
         record={activeDetail}
         canReview={canReviewRecord(activeDetail)}
         busy={busyKey === getRecordKey(activeDetail || {})}
-        savingStatus={quickSaving}
+        savingStatus={savingStatus}
         onApprove={handleApprove}
         onReject={(record) => {
           setRejectRecord(record);
           setDetailRecord(null);
         }}
-        onStatusChange={handleQuickStatusChange}
-        onChangeStatus={setStatusRecord}
+        onStatusChange={handleStatusChange}
         onClose={() => setDetailRecord(null)}
-      />
-
-      {/*
-      | Correcting the day, which is the other half of the question the pill
-      | on the detail modal answers. The pill overrides a day whose punches
-      | are right; this is for the day whose punches are not, and it is still
-      | a form rather than a dropdown because changing when a day started
-      | needs the times and a reason beside the status.
-      |
-      | Neither of them writes on selection. A select that rewrites a record
-      | the moment it loses focus is the wrong weight for a decision that
-      | re-signs somebody's day, so both ask before they save.
-      */}
-      <ChangeStatusModal
-        open={Boolean(statusRecord)}
-        record={statusRecord}
-        saving={savingStatus}
-        onSave={handleChangeStatus}
-        onClose={() => setStatusRecord(null)}
       />
 
       <RejectRequestModal

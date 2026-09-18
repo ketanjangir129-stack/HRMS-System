@@ -89,16 +89,17 @@ const useAttendanceApprovals = (companyCode, year, month) => {
   );
 
   /*
-  | Correcting what the day was, rather than deciding the day as recorded.
+  | Marking what the day counts as - Present, Half Day, Absent - rather than
+  | deciding the day as recorded.
   |
   | It writes through `saveAttendance` - the same call the manual attendance
-  | form makes - rather than a path of its own, so a day corrected on the
+  | form makes - rather than a path of its own, so a day re-marked on the
   | approval queue and a day marked by hand by HR are the same record
   | afterwards, signed off the same way and carrying the same fields. A second
   | writer for the same operation is how the two would eventually disagree
-  | about what a corrected day looks like.
+  | about what a re-marked day looks like.
   |
-  | The correction is the approval: only somebody entitled to decide the day
+  | The new status is the approval: only somebody entitled to decide the day
   | reaches this, and the service files it under their name.
   */
   const changeStatus = useCallback(
