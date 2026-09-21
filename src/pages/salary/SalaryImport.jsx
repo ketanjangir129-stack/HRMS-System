@@ -36,7 +36,9 @@ import { formatCurrency } from "../../utils/salary/formatCurrency";
 import SalaryPageHeader from "../../components/salary/SalaryPageHeader";
 import SalaryImportingOverlay from "../../components/salary/SalaryImportingOverlay";
 import Loader from "../../components/common/Loader";
+import Pagination from "../../components/common/pagination/Pagination";
 import useRoleAccess from "../../hooks/useRoleAccess";
+import usePagination from "../../hooks/usePagination";
 
 /*
 |--------------------------------------------------------------------------
@@ -294,6 +296,8 @@ function SalaryImport() {
             setUnknownHeaders(parsed.unknownHeaders);
             setRows(checked);
             setResults([]);
+            errorPagination.resetPagination();
+            validPagination.resetPagination();
             setStep("review");
 
         }
@@ -371,6 +375,43 @@ function SalaryImport() {
         [validRows, updateExisting, canUpdate]
     );
 
+    /*
+    |----------------------------------------------------------------------
+    | Pagination
+    |----------------------------------------------------------------------
+    | A file can carry up to MAX_IMPORT_ROWS employees, and a table that long
+    | is not something anyone reads. Each of the three tables pages on its
+    | own, and goes back to the first page when a new file (or a new result)
+    | arrives - reset where that happens, in handleFile and handleImport.
+    */
+    const errorPagination = usePagination({
+        data: errorRows,
+        initialPageSize: 10,
+    });
+
+    const validPagination = usePagination({
+        data: validRows,
+        initialPageSize: 10,
+    });
+
+    const resultPagination = usePagination({
+        data: results,
+        initialPageSize: 10,
+    });
+
+    const renderPagination = (pagination) => (
+        <Pagination
+            currentPage={pagination.currentPage}
+            totalPages={pagination.totalPages}
+            totalItems={pagination.totalItems}
+            startItem={pagination.startItem}
+            endItem={pagination.endItem}
+            pageSize={pagination.pageSize}
+            onPageChange={pagination.goToPage}
+            onPageSizeChange={pagination.changePageSize}
+        />
+    );
+
     const handleImport = async () => {
 
         if (!canCreate) {
@@ -400,6 +441,7 @@ function SalaryImport() {
             );
 
             setResults(outcome);
+            resultPagination.resetPagination();
             setStep("done");
 
             const created = outcome.filter(
@@ -968,7 +1010,7 @@ function SalaryImport() {
 
                                     <tbody className="divide-y divide-line-subtle">
 
-                                        {errorRows.map((row) => (
+                                        {errorPagination.paginatedData.map((row) => (
 
                                             <tr key={row.rowNumber}>
 
@@ -1023,6 +1065,8 @@ function SalaryImport() {
                                 </table>
 
                             </div>
+
+                            {renderPagination(errorPagination)}
 
                         </div>
 
@@ -1219,7 +1263,7 @@ function SalaryImport() {
 
                                     <tbody className="divide-y divide-line-subtle">
 
-                                        {validRows.map((row) => (
+                                        {validPagination.paginatedData.map((row) => (
 
                                             <tr
                                                 key={row.rowNumber}
@@ -1305,6 +1349,8 @@ function SalaryImport() {
                                 </table>
 
                             </div>
+
+                            {renderPagination(validPagination)}
 
                         </div>
 
@@ -1454,7 +1500,7 @@ function SalaryImport() {
 
                                 <tbody className="divide-y divide-line-subtle">
 
-                                    {results.map((row) => {
+                                    {resultPagination.paginatedData.map((row) => {
 
                                         const tone =
                                             row.outcome === "created" ||
@@ -1511,6 +1557,8 @@ function SalaryImport() {
                             </table>
 
                         </div>
+
+                        {renderPagination(resultPagination)}
 
                     </div>
 

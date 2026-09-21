@@ -1,0 +1,25 @@
+const firebaseService = require("../services/firebaseService");
+
+const testFirebase = async (req, res) => {
+  try {
+    const result = await firebaseService.checkFirebaseConnection();
+
+    res.status(200).json({
+      success: true,
+      message: "Firebase connection successful",
+      ...result,
+    });
+  } catch (error) {
+    console.error("Firebase error:", error);
+
+    res.status(500).json({
+      success: false,
+      message: "Firebase connection failed",
+      error: error.message,
+    });
+  }
+};
+
+module.exports = {
+  testFirebase,
+};
