@@ -1,5 +1,6 @@
 import { configureStore } from "@reduxjs/toolkit";
 import employeesReducer from "./employeesSlice";
+import departmentsReducer from "./departmentsSlice";
 
 /*
 |--------------------------------------------------------------------------
@@ -23,6 +24,7 @@ const store = configureStore({
   reducer: {
     employees: employeesReducer,
     // name : reducer,
+    departments: departmentsReducer,
   },
   devTools: import.meta.env.DEV,
 });

@@ -36,8 +36,6 @@ import {
   CalendarDays,
   Clock,
   CreditCard,
-  Eye,
-  EyeOff,
   FileText,
   Hash,
   Heart,
@@ -128,16 +126,11 @@ function EmployeesDetails() {
     // Save / status-change fail hone par upar dikhne wala banner (alert ki jagah)
     const [actionError, setActionError] = useState("");
 
-    const [revealed, setRevealed] = useState({});
-
     // Overview sab cards dikhata hai, baaki tabs sirf apna section
     const [activeTab, setActiveTab] = useState("overview");
 
     // DOB picker mein future date select hi na ho
     const today = new Date().toISOString().split("T")[0];
-
-    const toggleReveal = (fieldId) =>
-        setRevealed((prev) => ({ ...prev, [fieldId]: !prev[fieldId] }));
 
     // "2003-10-30" ko "30 Oct 2003" bana do — parse na ho to value jaisi ki waisi
     const formatDate = (value) => {
@@ -1233,8 +1226,7 @@ function EmployeesDetails() {
                                             const value = employee[section.section]?.[field.key];
                                             const editable =
                                                 isEditing && !section.readOnly && !field.readOnly;
-                                            const fieldId = `${section.section}.${field.key}`;
-                                            const isHidden = field.masked && !revealed[fieldId];
+                                            const isHidden = field.masked;
 
                                             // Dropdown options:
                                             const selectOptions =
@@ -1403,19 +1395,6 @@ function EmployeesDetails() {
                                                                     <span className="text-slate-300">—</span>
                                                                 )}
                                                             </p>
-                                                            {field.masked && value && (
-                                                                <button
-                                                                    onClick={() => toggleReveal(fieldId)}
-                                                                    aria-label={isHidden ? "Show value" : "Hide value"}
-                                                                    className="flex h-7 w-7 shrink-0 cursor-pointer items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-100 hover:text-blue-600"
-                                                                >
-                                                                    {isHidden ? (
-                                                                        <Eye className="h-4 w-4" />
-                                                                    ) : (
-                                                                        <EyeOff className="h-4 w-4" />
-                                                                    )}
-                                                                </button>
-                                                            )}
                                                             {/*
                                                             | A field on a view only card that can still be
                                                             | acted on, in the same slot the reveal button

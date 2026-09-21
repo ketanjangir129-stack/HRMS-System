@@ -5,7 +5,6 @@ import {
     update,
     remove,
     onValue,
-    off,
 } from "firebase/database";
 import { db } from "../firebase/firebase";
 
@@ -113,30 +112,27 @@ export const deleteDesignation = async (
     );
 };
 
-//fetching in realtime 
+//fetching in realtime
+// Isko seedha component se nahi bulana hai: store/departmentsSlice ek hi
+// listener rakhta hai aur saare screens usi ko share karte hain.
+// onValue ka apna unsubscribe lautate hain — off(ref) us ref ke saare
+// listeners hata deta, sirf is wale ko nahi.
 export const subscribeDepartments = (
     companyCode,
-    callback
-) => {
-
-    const departmentsRef = ref(
-        db,
-        getDepartmentPath(companyCode)
-    );
-
+    callback,
+    onError
+) =>
     onValue(
-        departmentsRef,
+        ref(db, getDepartmentPath(companyCode)),
         (snapshot) => {
             callback(
                 snapshot.exists()
                     ? snapshot.val()
                     : {}
             );
-        }
+        },
+        (error) => onError?.(error)
     );
-
-    return () => off(departmentsRef);
-};
 
 import { get } from "firebase/database";
 

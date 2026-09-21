@@ -9,13 +9,13 @@ import {searchDepartments,} from "../../utils/search/searchDepartments";
 import { useNavigate, useOutletContext } from "react-router-dom";
 import { FiLayers, FiPlus, FiGrid, FiBriefcase, FiUserCheck, FiUploadCloud } from "react-icons/fi";
 import useRoleAccess from "../../hooks/useRoleAccess";
+import useDepartments from "../../hooks/useDepartments";
 
 import {
     addDepartment,
     updateDepartment,
     addDesignation,
     updateDesignation,
-    subscribeDepartments,
     setDepartmentManager,
     clearDepartmentManager,
 } from "../../services/departmentService";
@@ -27,8 +27,7 @@ function Departments() {
 
     const companyCode = localStorage.getItem("companyCode");
 
-    const [loading, setLoading] = useState(true);
-    const [departments, setDepartments] = useState({});
+    const { departments, loading } = useDepartments(companyCode);
     const [departmentModal, setDepartmentModal] = useState(false);
     const [designationModal, setDesignationModal] = useState(false);
     const [departmentName, setDepartmentName] = useState("");
@@ -61,17 +60,6 @@ function Departments() {
     const [managerTarget, setManagerTarget] = useState(null);
     const [managers, setManagers] = useState([]);
     const [savingManager, setSavingManager] = useState(false);
-
-    useEffect(() => {
-        const unsubscribe = subscribeDepartments(
-            companyCode,
-            (data) => {
-                setDepartments(data);
-                setLoading(false);
-            }
-        );
-        return unsubscribe;
-    }, [companyCode]);
 
     /*
         Only employees who already hold the Manager role can be appointed:

@@ -1,13 +1,11 @@
 import {
   createContext,
   useCallback,
-  useEffect,
   useMemo,
-  useState,
 } from "react";
 
 import useAuth from "../hooks/useAuth";
-import { getDepartments } from "../services/departmentService";
+import useDepartments from "../hooks/useDepartments";
 import {
   getCurrentEmployeeId,
   getUserRole,
@@ -61,98 +59,37 @@ export const ManagerScopeProvider = ({ children }) => {
 
   const scoped = isManagerRole(role);
 
-  const [departments, setDepartments] = useState({});
-
-  const [loading, setLoading] = useState(true);
-
-  const [error, setError] = useState("");
-
-  const [reloadKey, setReloadKey] = useState(0);
-
   /*
   |--------------------------------------------------------------------------
   | Load
   |--------------------------------------------------------------------------
+  | The departments come from the shared store (useDepartments), so a manager
+  | who also opens the Departments screen shares one live listener with it,
+  | and an appointment made anywhere reaches the scope without a reload.
+  |
   | The read waits for authentication, because the role it is conditional on
   | and the company code it needs both come from it.
   |
+  | Owner, HR and employees are never narrowed, so for them the hook is not
+  | enabled at all. The departments tree is not small and this would otherwise
+  | be a listener on every session for a value none of them ever consults.
+  |
   | A failed read is not treated as "manages everything". It is treated as
-  | "manages nothing", which is the opposite of how `RoleAccessContext` falls
-  | back and is deliberate: a permission that cannot be read should not take
-  | away navigation that worked yesterday, but a scope that cannot be read must
-  | not hand somebody the whole company's approvals. The error is published
-  | alongside it so the screen can say why the queue is empty and offer a
-  | retry rather than looking like nobody has anything pending.
+  | "manages nothing" - the store empties the list on error - which is the
+  | opposite of how `RoleAccessContext` falls back and is deliberate: a
+  | permission that cannot be read should not take away navigation that worked
+  | yesterday, but a scope that cannot be read must not hand somebody the whole
+  | company's approvals. The error is published alongside it so the screen can
+  | say why the queue is empty and offer a retry rather than looking like
+  | nobody has anything pending.
   */
 
-  useEffect(() => {
-
-    let cancelled = false;
-
-    const load = async () => {
-
-      if (authLoading) {
-        setLoading(true);
-        return;
-      }
-
-      /*
-      | Owner, HR and employees are never narrowed, so there is nothing to
-      | fetch. The departments tree is not small and this would otherwise be a
-      | read on every session for a value none of them ever consults.
-      */
-      if (!companyCode || !scoped) {
-        setDepartments({});
-        setError("");
-        setLoading(false);
-        return;
-      }
-
-      setLoading(true);
-
-      try {
-
-        const data = await getDepartments(companyCode);
-
-        if (cancelled) return;
-
-        setDepartments(data || {});
-
-        setError("");
-
-      } catch (loadError) {
-
-        if (cancelled) return;
-
-        console.error("Failed to load department scope:", loadError);
-
-        setDepartments({});
-
-        setError(
-          loadError.message || "Failed to load your departments."
-        );
-
-      } finally {
-
-        if (!cancelled) {
-          setLoading(false);
-        }
-
-      }
-
-    };
-
-    load();
-
-    return () => {
-      cancelled = true;
-    };
-
-  }, [companyCode, scoped, authLoading, reloadKey]);
-
-  const reload = useCallback(() => {
-    setReloadKey((key) => key + 1);
-  }, []);
+  const {
+    departments,
+    loading,
+    error,
+    reload,
+  } = useDepartments(companyCode, { enabled: !authLoading && scoped });
 
   const scope = useMemo(
     () =>

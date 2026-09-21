@@ -18,6 +18,7 @@ import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "../firebase/firebase";
 import store from "../store";
 import { stopEmployees } from "../store/employeesSlice";
+import { stopDepartments } from "../store/departmentsSlice.js";
 
 export const AuthContext = createContext();
 
@@ -270,6 +271,7 @@ export const AuthProvider = ({ children }) => {
     | user ki poori list memory mein pata.
     */
     store.dispatch(stopEmployees());
+    store.dispatch(stopDepartments());
 
     const role = localStorage.getItem("role");
     // Only owner is authenticated with Firebase Auth
