@@ -8,11 +8,12 @@ function ProtectedRoute({ children }) {
     }
 
     // HR / Employee cannot access protected pages until they change the
-    // default password. Owner has no account object and bypasses this.
+    // default password. The backend sends the flag at the top level of the
+    // user (not under `account`). Owner has no such flag and bypasses this.
     const role = localStorage.getItem("role");
     const currentUser = JSON.parse(localStorage.getItem("currentUser") || "null");
 
-    if (role !== "owner" && currentUser?.account?.isPasswordChanged === false) {
+    if (role !== "owner" && currentUser?.isPasswordChanged !== true) {
         return <Navigate to="/change-password" replace />;
     }
 

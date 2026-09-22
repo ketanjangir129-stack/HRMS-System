@@ -164,7 +164,7 @@ const ChangePassword = () => {
     if (!companyCode) {
       return <Navigate to="/login" replace />;
     }
-    if (role === "owner" || storedUser?.account?.isPasswordChanged !== false) {
+    if (role === "owner" || storedUser?.isPasswordChanged === true) {
       return <Navigate to="/dashboard" replace />;
     }
 

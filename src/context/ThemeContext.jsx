@@ -81,11 +81,12 @@ const hasStoredSession = () => {
 };
 
 /*
-| Only an explicit `false` holds the theme back. An owner has no account
-| object at all and a settled employee has `true`, so both read as settled
-| and neither needs a role check to say so.
+| Only an explicit `false` holds the theme back. The backend sends the flag
+| at the top level of the user; an owner has no such flag and a settled
+| employee has `true`, so both read as settled and neither needs a role
+| check to say so.
 */
-const passwordSettled = (user) => user?.account?.isPasswordChanged !== false;
+const passwordSettled = (user) => user?.isPasswordChanged !== false;
 
 const storedPasswordSettled = () => {
 

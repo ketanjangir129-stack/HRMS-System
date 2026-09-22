@@ -2,24 +2,16 @@ const passwordService = require("../services/passwordService");
 
 const changePassword = async (req, res) => {
   try {
-    const {
-      companyCode,
-      employeeId,
-      currentPassword,
-      newPassword,
-    } = req.body;
+    // Whose password is changed comes from the verified token, never the
+    // body — otherwise any caller could target another employee's account.
+    const { companyCode, employeeId } = req.user;
+    const { currentPassword, newPassword } = req.body;
 
     // Validate required fields
-    if (
-      !companyCode ||
-      !employeeId ||
-      !currentPassword ||
-      !newPassword
-    ) {
+    if (!currentPassword || !newPassword) {
       return res.status(400).json({
         success: false,
-        message:
-          "Company code, employee ID, current password and new password are required.",
+        message: "Current password and new password are required.",
       });
     }
 

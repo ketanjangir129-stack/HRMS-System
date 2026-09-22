@@ -43,23 +43,17 @@ export const changePasswordApi = async (
 
 ) => {
     try {
-        const response = await fetch(`${API_URL}/auth/change-password`,
-            {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify({
-                    companyCode,
-                    employeeId,
-                    currentPassword,
-                    newPassword,
-                }),
-            }
-        );
-        const data = await response.json();
-        return data;
-
+        // Sent with the auth token; the backend takes the company and
+        // employee from the token, the body ones are only informational.
+        return await apiRequest("/auth/change-password", {
+            method: "POST",
+            body: JSON.stringify({
+                companyCode,
+                employeeId,
+                currentPassword,
+                newPassword,
+            }),
+        });
     }
     catch (error) {
         console.error("Change password API error:", error);
