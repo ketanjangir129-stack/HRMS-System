@@ -5,10 +5,15 @@ import {
 } from "react";
 
 import {
-  loginUser,
+  loginCompany,
   logoutCompany,
 } from "../services/authService.js";
 
+import {
+  loginEmployeeApi,
+  changePasswordApi,
+} from "../services/api/authApi.js";
+import { getCurrentUserApi } from "../services/api/authApi.js";
 import {
   getCompanyByCode,
   updateCompanyDetails,
@@ -31,9 +36,60 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       try {
-        const companyCode = localStorage.getItem("companyCode");
-        const storedUser = JSON.parse(localStorage.getItem("currentUser") || "null");
-        const role = localStorage.getItem("role");
+        let companyCode = localStorage.getItem("companyCode");
+        let storedUser = JSON.parse(localStorage.getItem("currentUser") || "null");
+        let role = localStorage.getItem("role");
+        const token = localStorage.getItem("authToken");
+
+        const clearSession = () => {
+          localStorage.removeItem("authToken");
+          localStorage.removeItem("currentUser");
+          localStorage.removeItem("companyCode");
+          localStorage.removeItem("role");
+          setCurrentUser(null);
+          setCompany(null);
+        };
+
+        // HR / Employee: the token is the session. The backend decides who the
+        // user is, and currentUser / role / companyCode in localStorage are
+        // only a cache rebuilt from its response — so deleting or editing them
+        // doesn't log the user out, and can't impersonate anyone either.
+        if (role !== "owner") {
+          if (!token) {
+            // Role left behind without a token => stale session.
+            if (role) clearSession();
+            else {
+              setCompany(null);
+              setCurrentUser(null);
+            }
+            return;
+          }
+
+          const result = await getCurrentUserApi();
+
+          if (!result.success || !result.user) {
+            clearSession();
+            return;
+          }
+
+          // A companyCode that disagrees with the token was tampered with.
+          if (
+            companyCode &&
+            String(result.user.companyCode).toLowerCase() !==
+              String(companyCode).toLowerCase()
+          ) {
+            clearSession();
+            return;
+          }
+
+          storedUser = result.user;
+          role = result.user.role;
+          companyCode = result.user.companyCode;
+
+          localStorage.setItem("currentUser", JSON.stringify(storedUser));
+          localStorage.setItem("role", role);
+          localStorage.setItem("companyCode", companyCode);
+        }
 
         if (!companyCode) {
           setCompany(null);
@@ -66,7 +122,7 @@ export const AuthProvider = ({ children }) => {
         } else {
           // HR / Employee use custom authentication
           if (storedUser) {
-           setCurrentUser(storedUser);
+            setCurrentUser(storedUser);
           }
         }
       } catch (error) {
@@ -89,12 +145,32 @@ export const AuthProvider = ({ children }) => {
     password
   ) => {
 
-    // Common Login
-    const authResult = await loginUser(
-      companyCode,
-      userId,
-      password
-    );
+
+
+    let authResult;
+
+    // Owner Login
+
+    if (userId.includes("@")) {
+      authResult = await loginCompany(
+        userId,
+        password
+      );
+
+    } else {
+      // Employee / HR / Manager login → Backend API
+      authResult = await loginEmployeeApi(
+        companyCode,
+        userId,
+        password
+      );
+    }
+    if (authResult.role !== "owner" && authResult.token) {
+      localStorage.setItem(
+        "authToken",
+        authResult.token
+      );
+    }
 
     if (!authResult.success) {
       return authResult;
@@ -153,7 +229,7 @@ export const AuthProvider = ({ children }) => {
       isPasswordChanged:
         authResult.role === "owner"
           ? true
-          : loggedInUser?.account?.isPasswordChanged ?? false,
+          : loggedInUser?.isPasswordChanged ?? false,
     };
   };
 
@@ -209,53 +285,76 @@ export const AuthProvider = ({ children }) => {
   };
 
   // Mandatory first-time password change for HR / Employee users.
-  const changePassword = async (currentPassword, newPassword) => {
+  const changePassword = async (
+    currentPassword,
+    newPassword
+  ) => {
     try {
-      const companyCode = localStorage.getItem("companyCode");
-      const role = localStorage.getItem("role");
+      const companyCode =
+        localStorage.getItem("companyCode");
+
       const storedUser = JSON.parse(
         localStorage.getItem("currentUser") || "null"
       );
 
-      // Owner never uses this flow.
-      if (role === "owner" || !storedUser?.account) {
+      if (!companyCode || !storedUser) {
+        return {
+          success: false,
+          message: "User session not found.",
+        };
+      }
+
+      // Owner password change is handled separately
+      if (storedUser.role === "owner") {
         return {
           success: false,
           message: "Not allowed.",
         };
       }
 
-      if (storedUser.account.password !== currentPassword) {
+      const employeeId = storedUser.employeeId;
+
+      if (!employeeId) {
         return {
           success: false,
-          message: "Current password is incorrect.",
+          message: "Employee ID not found.",
         };
       }
 
-      const employeeId = storedUser.account.username;
+      const result = await changePasswordApi(
+        companyCode,
+        employeeId,
+        currentPassword,
+        newPassword
+      );
 
-      // Update ONLY the two account fields, leaving the rest of the
-      // employee object untouched (Firebase multi-path update).
-      await updateEmployee(companyCode, employeeId, {
-        "account/password": newPassword,
-        "account/isPasswordChanged": true,
-      });
+      if (!result.success) {
+        return result;
+      }
 
+      // Update local user information
       const updatedUser = {
         ...storedUser,
-        account: {
-          ...storedUser.account,
-          password: newPassword,
-          isPasswordChanged: true,
-        },
+        isPasswordChanged: true,
       };
 
       setCurrentUser(updatedUser);
-      localStorage.setItem("currentUser", JSON.stringify(updatedUser));
 
-      return { success: true };
+      localStorage.setItem(
+        "currentUser",
+        JSON.stringify(updatedUser)
+      );
+
+      return {
+        success: true,
+        message: result.message,
+      };
     } catch (error) {
-      console.error(error);
+      console.error(
+        "Change password error:",
+        error
+      );
+
       return {
         success: false,
         message: "Failed to update password.",
@@ -281,6 +380,7 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem("companyCode");
     localStorage.removeItem("role");
     localStorage.removeItem("currentUser");
+    localStorage.removeItem("authToken");
     setCompany(null);
     setCurrentUser(null);
   };

@@ -1,4 +1,4 @@
-const firebaseRoutes = require("./src/routes/firebaseRoutes");
+const authRoutes = require("./src/routes/authRoutes")
 require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
@@ -32,7 +32,7 @@ app.get("/",(req,res)=>{
 // server
 // =================
 const PORT = process.env.Port || 5000;
-app.use("/api/firebase", firebaseRoutes);
+app.use("/api/auth", authRoutes);
 app.listen(PORT,()=>{
     console.log(`Hrms Backend running on http://localhost:${PORT}`);
 });
