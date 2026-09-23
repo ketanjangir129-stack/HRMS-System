@@ -31,7 +31,8 @@ app.get("/",(req,res)=>{
 //===========================
 // server
 // =================
-const PORT = process.env.Port || 5000;
+const PORT = process.env.PORT || 5000;
+app.use("/api/employees", require("./src/routes/employeeRoutes"));
 app.use("/api/auth", authRoutes);
 app.listen(PORT,()=>{
     console.log(`Hrms Backend running on http://localhost:${PORT}`);

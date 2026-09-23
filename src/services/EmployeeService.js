@@ -6,6 +6,7 @@ import {
   getDownloadURL,
 } from "firebase/storage";
 import { checkEmployeeUniqueness } from "./ValidationService";
+import { createEmployeeApi } from "./api/employeeApi";
 import { releaseManagerFromDepartments } from "./departmentService";
 import {
   getEmployeeRole,
@@ -270,24 +271,26 @@ export const uploadResume = async (companyCode, employeeId, file) => {
 };
  
 // CREATE THE EMPLOYEES
+// Duplicate check aur DB write ab backend karta hai (POST /api/employees).
+// Response ka shape wahi hai jo form pehle se samajhta hai.
 export const createEmployee = async (companyCode, employee) => {
-  // Onboarding wala hi check use karte hain — wo employees ke saath
-  // pending onboardingRequests bhi dekhta hai, aur email/mobile ko
-  // personalInfo + employmentInfo dono me dhoondhta hai.
-  const result = await checkEmployeeUniqueness(companyCode, {
-    employeeId: employee.employmentInfo?.employeeId,
-    email: employee.personalInfo?.email,
-    mobile: employee.personalInfo?.mobile,
-  });
- 
-  if (!result.success) {
-    return result;
+  let result;
+
+  try {
+    result = await createEmployeeApi(companyCode, employee);
+  } catch (error) {
+    // Backend band ho (fetch fail) ya JSON ke bajaye HTML aaye
+    console.error("Create employee API error:", error);
+    throw new Error("Unable to connect to the server. Please try again.", {
+      cause: error,
+    });
   }
- 
-  await addEmployee(companyCode, employee);
- 
-  return {
-    success: true,
-    message: "Employee created successfully.",
-  };
+
+  // field wala error form input ke neeche dikhta hai; baaki (company nahi
+  // mili, server error) throw — form ka catch toast dikha deta hai.
+  if (!result?.success && !result?.field) {
+    throw new Error(result?.message || "Failed to add employee.");
+  }
+
+  return result;
 };
