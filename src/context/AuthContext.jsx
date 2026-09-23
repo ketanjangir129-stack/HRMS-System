@@ -27,6 +27,22 @@ import { stopDepartments } from "../store/departmentsSlice.js";
 
 export const AuthContext = createContext();
 
+const normalizeCurrentUser = (user) => {
+  if (!user) return user;
+
+  const name =
+    user.name ||
+    user.personalInfo?.name ||
+    user.employmentInfo?.name ||
+    user.account?.username ||
+    "User";
+
+  return {
+    ...user,
+    name,
+  };
+};
+
 export const AuthProvider = ({ children }) => {
   const [company, setCompany] = useState(null);
   const [currentUser, setCurrentUser] = useState(null);
@@ -82,7 +98,7 @@ export const AuthProvider = ({ children }) => {
             return;
           }
 
-          storedUser = result.user;
+          storedUser = normalizeCurrentUser(result.user);
           role = result.user.role;
           companyCode = result.user.companyCode;
 
@@ -157,6 +173,13 @@ export const AuthProvider = ({ children }) => {
         password
       );
 
+      // loginCompany is a bare Firebase sign-in and doesn't label the user.
+      // Everything below keys off authResult.role, so stamp it here — this
+      // branch is where we decided the login is an owner's.
+      if (authResult.success) {
+        authResult.role = "owner";
+      }
+
     } else {
       // Employee / HR / Manager login → Backend API
       authResult = await loginEmployeeApi(
@@ -165,6 +188,12 @@ export const AuthProvider = ({ children }) => {
         password
       );
     }
+    if (!authResult.success) {
+      return authResult;
+    }
+
+    // Only stored once the credentials are known good, so a failed login
+    // can never leave a token behind for the next attempt to pick up.
     if (authResult.role !== "owner" && authResult.token) {
       localStorage.setItem(
         "authToken",
@@ -172,25 +201,34 @@ export const AuthProvider = ({ children }) => {
       );
     }
 
-    if (!authResult.success) {
-      return authResult;
-    }
+    /*
+    | Every way the login can still fail past this point.
+    |
+    | The owner is already signed in to Firebase by now, so returning a
+    | message alone would leave that session alive: onAuthStateChanged would
+    | keep firing for a user this function just rejected. Employees have
+    | nothing to undo — their token is only ever written above on success.
+    */
+    const fail = async (message) => {
+      if (authResult.role === "owner") {
+        await logoutCompany();
+      }
+
+      return {
+        success: false,
+        message,
+      };
+    };
 
     // Load company
     const company = await getCompanyByCode(companyCode);
 
     if (!company) {
-      return {
-        success: false,
-        message: "Company not found.",
-      };
+      return await fail("Company not found.");
     }
 
     if (company.status !== "active") {
-      return {
-        success: false,
-        message: "Company account is inactive.",
-      };
+      return await fail("Company account is inactive.");
     }
 
     // Owner Validation
@@ -198,10 +236,7 @@ export const AuthProvider = ({ children }) => {
       authResult.role === "owner" &&
       company.ownerUid !== authResult.user.uid
     ) {
-      return {
-        success: false,
-        message: "Invalid Company Code.",
-      };
+      return await fail("Invalid Company Code.");
     }
 
     const loggedInUser =
@@ -211,7 +246,7 @@ export const AuthProvider = ({ children }) => {
           name: company.ownerName,
           email: company.email,
         }
-        : authResult.user;
+        : normalizeCurrentUser(authResult.user);
 
     setCompany(company);
     setCurrentUser(loggedInUser);
