@@ -25,7 +25,7 @@ const loginEmployee = async (
   if (!employee.account) {
     return {
       success: false,
-      message: "Employee account is not configured.",
+      message: "Invalid Credentials.",
     };
   }
 
@@ -39,7 +39,7 @@ const loginEmployee = async (
   if (employee.account.password !== password) {
     return {
       success: false,
-      message: "Invalid password.",
+      message: "Invalid Credentials.",
     };
   }
 
