@@ -83,19 +83,25 @@ const getEmployeeProfile = async (companyCode, employeeId) => {
   };
 };
 
-const toSafeUser = (employee, employeeId, companyCode) => ({
-  employeeId: employee.employeeId || employeeId,
-  fullName: employee.fullName,
-  email: employee.email,
-  phone: employee.phone,
-  department: employee.department,
-  designation: employee.designation,
-  companyCode,
-  role: employee.account.role,
+// Record jaisa ka waisa, bas password ke bina. Frontend har jagah
+// personalInfo / employmentInfo / account hi padhta hai (naam, employee id,
+// department, notifications, tasks, payroll), isliye shape wahi rakhi hai.
+const toSafeUser = (employee, employeeId, companyCode) => {
   // Password itself is never returned
-  isPasswordChanged:
-    employee.account.isPasswordChanged ?? false,
-});
+  const { password, ...account } = employee.account || {};
+
+  return {
+    ...employee,
+    employmentInfo: {
+      ...employee.employmentInfo,
+      employeeId: employee.employmentInfo?.employeeId || employeeId,
+    },
+    account,
+    companyCode,
+    role: account.role,
+    isPasswordChanged: account.isPasswordChanged ?? false,
+  };
+};
 
 module.exports = {
   loginEmployee,

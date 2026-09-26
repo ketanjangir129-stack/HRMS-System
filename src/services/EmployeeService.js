@@ -6,7 +6,7 @@ import {
   getDownloadURL,
 } from "firebase/storage";
 import { checkEmployeeUniqueness } from "./ValidationService";
-import { createEmployeeApi } from "./api/employeeApi";
+import { createEmployeeApi, getEmployeesApi } from "./api/employeeApi";
 import { releaseManagerFromDepartments } from "./departmentService";
 import {
   getEmployeeRole,
@@ -51,11 +51,27 @@ export const addEmployee = async (companyCode, employee) => {
  
  
 // Get All Employees
+// Ek baar ka read ab backend se (GET /api/employees/list). Shape wahi —
+// { EMP001: {...} }, khaali ho to {}. Realtime wala subscribeEmployees
+// neeche Firebase par hi hai.
 export const getEmployees = async (companyCode) => {
-  const snapshot = await get(
-    ref(db, `companies/${companyCode}/employees`)
-  );
-  return snapshot.exists() ? snapshot.val() : {};
+  let result;
+
+  try {
+    result = await getEmployeesApi(companyCode);
+  } catch (error) {
+    // Backend band ho (fetch fail) ya JSON ke bajaye HTML aaye
+    console.error("Get employees API error:", error);
+    throw new Error("Unable to connect to the server. Please try again.", {
+      cause: error,
+    });
+  }
+
+  if (!result?.success) {
+    throw new Error(result?.message || "Failed to load employees.");
+  }
+
+  return result.data || {};
 };
 
 /*
@@ -271,7 +287,7 @@ export const uploadResume = async (companyCode, employeeId, file) => {
 };
  
 // CREATE THE EMPLOYEES
-// Duplicate check aur DB write ab backend karta hai (POST /api/employees).
+// Duplicate check aur DB write ab backend karta hai (POST /api/employees/create).
 // Response ka shape wahi hai jo form pehle se samajhta hai.
 export const createEmployee = async (companyCode, employee) => {
   let result;

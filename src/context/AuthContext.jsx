@@ -18,7 +18,6 @@ import {
   getCompanyByCode,
   updateCompanyDetails,
 } from "../services/companyService";
-import { updateEmployee } from "../services/EmployeeService";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "../firebase/firebase";
 import store from "../store";
@@ -347,7 +346,7 @@ export const AuthProvider = ({ children }) => {
         };
       }
 
-      const employeeId = storedUser.employeeId;
+      const employeeId =storedUser.employmentInfo?.employeeId ;
 
       if (!employeeId) {
         return {

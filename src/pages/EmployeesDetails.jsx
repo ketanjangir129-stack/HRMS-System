@@ -1,23 +1,23 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
-  subscribeEmployeeById,
-  updateEmployee,
-  updateEmployeeRole,
-  updateEmployeeSection,
-  uploadResume,
+    subscribeEmployeeById,
+    updateEmployee,
+    updateEmployeeRole,
+    updateEmployeeSection,
+    uploadResume,
 } from "../services/EmployeeService";
 // import { getSalary } from "../services/SalaryService";
 import {
-  getDepartments,
-  releaseManagerFromDepartments,
+    getDepartments,
+    releaseManagerFromDepartments,
 } from "../services/departmentService";
 import { validateField } from "../utils/validation/validateField";
 import { ROLE } from "../utils/attendance/attendanceConstants";
 import { ROLE_LABELS } from "../utils/permissions/permissionConstants";
 import {
-  canEditEmployeeRole,
-  getAssignableRoles,
+    canEditEmployeeRole,
+    getAssignableRoles,
 } from "../utils/permissions/roleAssignment";
 import { rules } from "../utils/validation/rules";
 import useRoleAccess from "../hooks/useRoleAccess";
@@ -25,36 +25,36 @@ import useManagerScope from "../hooks/useManagerScope";
 import Loader from "../components/common/Loader";
 import EditRoleModal from "../components/employees/EditRoleModal";
 import {
-  AlertTriangle,
-  ArrowLeft,
-  AtSign,
-  BadgeCheck,
-  Briefcase,
-  BriefcaseBusiness,
-  Building2,
-  Calendar,
-  CalendarDays,
-  Clock,
-  CreditCard,
-  FileText,
-  Hash,
-  Heart,
-  IdCard,
-  KeyRound,
-  Landmark,
-  LayoutGrid,
-  Lock,
-  Mail,
-  MapPin,
-  Pencil,
-  Phone,
-  Power,
-  ShieldCheck,
-  Smartphone,
-  UserCog,
-  UserRound,
-  Users,
-  X,
+    AlertTriangle,
+    ArrowLeft,
+    AtSign,
+    BadgeCheck,
+    Briefcase,
+    BriefcaseBusiness,
+    Building2,
+    Calendar,
+    CalendarDays,
+    Clock,
+    CreditCard,
+    FileText,
+    Hash,
+    Heart,
+    IdCard,
+    KeyRound,
+    Landmark,
+    LayoutGrid,
+    Lock,
+    Mail,
+    MapPin,
+    Pencil,
+    Phone,
+    Power,
+    ShieldCheck,
+    Smartphone,
+    UserCog,
+    UserRound,
+    Users,
+    X,
 } from "lucide-react";
 
 /*
@@ -68,10 +68,10 @@ import {
 */
 
 const ROLE_BADGES = {
-  [ROLE.OWNER]: "bg-violet-50 text-violet-700",
-  [ROLE.HR]: "bg-indigo-50 text-indigo-700",
-  [ROLE.MANAGER]: "bg-amber-50 text-amber-700",
-  [ROLE.EMPLOYEE]: "bg-slate-100 text-slate-600",
+    [ROLE.OWNER]: "bg-violet-50 text-violet-700",
+    [ROLE.HR]: "bg-indigo-50 text-indigo-700",
+    [ROLE.MANAGER]: "bg-amber-50 text-amber-700",
+    [ROLE.EMPLOYEE]: "bg-slate-100 text-slate-600",
 };
 
 function EmployeesDetails() {
@@ -162,7 +162,7 @@ function EmployeesDetails() {
         const text = String(value);
         return text.length <= 4 ? "X".repeat(text.length) : "X".repeat(text.length - 4) + text.slice(-4);
     };
- 
+
     // const loadSalary = async () => {
     //     try {
     //         setSalary(await getSalary(companyCode, id));
@@ -291,7 +291,7 @@ function EmployeesDetails() {
                 role: data.account?.role || ROLE.EMPLOYEE,
             },
         };
- 
+
         setEmployee(formattedEmployee);
     };
 
@@ -608,7 +608,7 @@ function EmployeesDetails() {
             </div>
         );
     }
- 
+
     // Build the initials for the avatar
     const initials =
         (employee.personalInfo?.name || "?")
@@ -617,7 +617,7 @@ function EmployeesDetails() {
             .slice(0, 2)
             .map((w) => w[0].toUpperCase())
             .join("") || "?";
- 
+
     const status = employee.account?.status || "Unknown";
     const isActive = status.toLowerCase() === "active";
 
@@ -657,8 +657,8 @@ function EmployeesDetails() {
                 { key: "alternateMobile", label: "Alternate Mobile", icon: Smartphone },
                 // Onboarding "Other" bhejta hai, Add Employee form "Prefer not to say" —
                 // dono rakhe hain taaki edit par kisi ki value na ude
-                { key: "gender", label: "Gender", icon: Users, type:"select" , options:["Male", "Female", "Other", "Prefer not to say"] },
-                { key: "dob", label: "Date of Birth", icon: Calendar, type:"date" },
+                { key: "gender", label: "Gender", icon: Users, type: "select", options: ["Male", "Female", "Other", "Prefer not to say"] },
+                { key: "dob", label: "Date of Birth", icon: Calendar, type: "date" },
                 { key: "fatherName", label: "Father Name", icon: UserRound },
                 { key: "motherName", label: "Mother Name", icon: UserRound },
                 { key: "maritalStatus", label: "Marital Status", icon: Heart, type: "select", options: ["Single", "Married", "Divorced", "Widowed"] },
@@ -783,7 +783,7 @@ function EmployeesDetails() {
     const overviewMain = sections.filter(
         (item) => !SIDEBAR_SECTIONS.includes(item.section)
     );
- 
+
 
     // Header ke right side ki quick info — icon tile + label + value
     const metaItems = [
@@ -823,233 +823,229 @@ function EmployeesDetails() {
     return (
         <div className="p-0 space-y-4 sm:p-2 sm:space-y-5">
 
-                {/* Toolbar */}
-                <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white px-3 py-3 shadow-sm sm:px-5">
+            {/* Toolbar */}
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white px-3 py-3 shadow-sm sm:px-5">
 
-                    <button
-                        type="button"
-                        onClick={() => navigate("/employees")}
-                        className="group inline-flex cursor-pointer items-center gap-2 rounded-xl px-2 py-1.5 text-sm font-semibold text-slate-500 transition-all hover:bg-slate-100 hover:text-slate-700"
-                    >
-                        <ArrowLeft className="h-4 w-4 transition-transform duration-200 group-hover:-translate-x-0.5" />
-                        {/* Short label keeps this on the same row as the status
+                <button
+                    type="button"
+                    onClick={() => navigate("/employees")}
+                    className="group inline-flex cursor-pointer items-center gap-2 rounded-xl px-2 py-1.5 text-sm font-semibold text-slate-500 transition-all hover:bg-slate-100 hover:text-slate-700"
+                >
+                    <ArrowLeft className="h-4 w-4 transition-transform duration-200 group-hover:-translate-x-0.5" />
+                    {/* Short label keeps this on the same row as the status
                             button on a phone. */}
-                        <span className="sm:hidden">Back</span>
-                        <span className="hidden sm:inline">Back to Employees</span>
-                    </button>
+                    <span className="sm:hidden">Back</span>
+                    <span className="hidden sm:inline">Back to Employees</span>
+                </button>
 
-                    <button
-                        type="button"
-                        onClick={toggleEmployeeStatus}
-                        disabled={statusUpdating}
-                        className={`inline-flex shrink-0 cursor-pointer items-center justify-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 ${
-                            isActive
-                                ? "border-rose-200 text-rose-600 hover:bg-rose-50 focus:ring-rose-300"
-                                : "border-emerald-200 text-emerald-700 hover:bg-emerald-50 focus:ring-emerald-300"
+                <button
+                    type="button"
+                    onClick={toggleEmployeeStatus}
+                    disabled={statusUpdating}
+                    className={`inline-flex shrink-0 cursor-pointer items-center justify-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 ${isActive
+                            ? "border-rose-200 text-rose-600 hover:bg-rose-50 focus:ring-rose-300"
+                            : "border-emerald-200 text-emerald-700 hover:bg-emerald-50 focus:ring-emerald-300"
                         }`}
-                    >
-                        <Power className="h-4 w-4" />
-                        {statusUpdating
-                            ? "Updating…"
-                            : isActive
+                >
+                    <Power className="h-4 w-4" />
+                    {statusUpdating
+                        ? "Updating…"
+                        : isActive
                             ? "Deactivate"
                             : "Activate"}
+                </button>
+
+            </div>
+
+            {actionError && (
+                <div className="flex items-start justify-between gap-4 rounded-2xl border border-red-200 bg-red-50 px-5 py-4 text-sm text-red-700">
+
+                    <span className="flex min-w-0 items-start gap-3">
+                        <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+                        <span className="font-medium">{actionError}</span>
+                    </span>
+
+                    <button
+                        type="button"
+                        onClick={() => setActionError("")}
+                        aria-label="Dismiss error"
+                        className="shrink-0 cursor-pointer rounded-lg p-1 transition-colors hover:bg-red-100"
+                    >
+                        <X className="h-4 w-4" />
                     </button>
 
                 </div>
+            )}
 
-                {actionError && (
-                    <div className="flex items-start justify-between gap-4 rounded-2xl border border-red-200 bg-red-50 px-5 py-4 text-sm text-red-700">
+            {/* Profile header + tabs */}
+            <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
 
-                        <span className="flex min-w-0 items-start gap-3">
-                            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
-                            <span className="font-medium">{actionError}</span>
-                        </span>
+                <div className="flex flex-col gap-5 p-4 sm:gap-6 sm:p-6 xl:flex-row xl:items-center xl:justify-between">
 
-                        <button
-                            type="button"
-                            onClick={() => setActionError("")}
-                            aria-label="Dismiss error"
-                            className="shrink-0 cursor-pointer rounded-lg p-1 transition-colors hover:bg-red-100"
-                        >
-                            <X className="h-4 w-4" />
-                        </button>
+                    <div className="flex min-w-0 flex-row items-center gap-4 sm:items-center">
 
-                    </div>
-                )}
+                        <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-blue-600 text-xl font-bold text-white shadow-md shadow-blue-600/25 sm:h-20 sm:w-20 sm:text-2xl">
+                            {initials}
+                        </div>
 
-                {/* Profile header + tabs */}
-                <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+                        <div className="min-w-0">
 
-                    <div className="flex flex-col gap-5 p-4 sm:gap-6 sm:p-6 xl:flex-row xl:items-center xl:justify-between">
+                            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
 
-                        <div className="flex min-w-0 flex-row items-center gap-4 sm:items-center">
+                                <h1 className="min-w-0 truncate text-lg font-bold text-slate-900 sm:text-2xl">
+                                    {employee.personalInfo?.name || "Unnamed Employee"}
+                                </h1>
 
-                            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-blue-600 text-xl font-bold text-white shadow-md shadow-blue-600/25 sm:h-20 sm:w-20 sm:text-2xl">
-                                {initials}
+                                <span
+                                    className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ${isActive
+                                            ? "bg-emerald-50 text-emerald-700"
+                                            : "bg-rose-50 text-rose-700"
+                                        }`}
+                                >
+                                    <span
+                                        className={`h-1.5 w-1.5 rounded-full ${isActive ? "bg-emerald-500" : "bg-rose-500"
+                                            }`}
+                                    />
+                                    {status}
+                                </span>
+
                             </div>
 
-                            <div className="min-w-0">
+                            <div className="mt-2.5 flex flex-wrap items-center gap-2">
 
-                                <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-
-                                    <h1 className="min-w-0 truncate text-lg font-bold text-slate-900 sm:text-2xl">
-                                        {employee.personalInfo?.name || "Unnamed Employee"}
-                                    </h1>
-
+                                {headerChips.map((chip) => (
                                     <span
-                                        className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ${
-                                            isActive
-                                                ? "bg-emerald-50 text-emerald-700"
-                                                : "bg-rose-50 text-rose-700"
-                                        }`}
+                                        key={chip.label}
+                                        className={`inline-flex max-w-full items-center truncate rounded-lg px-2.5 py-1 text-xs font-semibold ${chip.className}`}
                                     >
-                                        <span
-                                            className={`h-1.5 w-1.5 rounded-full ${
-                                                isActive ? "bg-emerald-500" : "bg-rose-500"
-                                            }`}
-                                        />
-                                        {status}
+                                        {chip.label}
+                                    </span>
+                                ))}
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                    <div className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:gap-6">
+
+                        {metaItems.map((item) => {
+                            const MetaIcon = item.icon;
+
+                            return (
+                                <div
+                                    key={item.label}
+                                    className="flex min-w-0 items-center gap-3"
+                                >
+
+                                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+                                        <MetaIcon className="h-4 w-4" />
                                     </span>
 
-                                </div>
+                                    <div className="min-w-0">
 
-                                <div className="mt-2.5 flex flex-wrap items-center gap-2">
+                                        <p className="truncate text-sm font-semibold text-slate-800">
+                                            {item.value || (
+                                                <span className="text-slate-300">—</span>
+                                            )}
+                                        </p>
 
-                                    {headerChips.map((chip) => (
-                                        <span
-                                            key={chip.label}
-                                            className={`inline-flex max-w-full items-center truncate rounded-lg px-2.5 py-1 text-xs font-semibold ${chip.className}`}
-                                        >
-                                            {chip.label}
-                                        </span>
-                                    ))}
-
-                                </div>
-
-                            </div>
-
-                        </div>
-
-                        <div className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:gap-6">
-
-                            {metaItems.map((item) => {
-                                const MetaIcon = item.icon;
-
-                                return (
-                                    <div
-                                        key={item.label}
-                                        className="flex min-w-0 items-center gap-3"
-                                    >
-
-                                        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
-                                            <MetaIcon className="h-4 w-4" />
-                                        </span>
-
-                                        <div className="min-w-0">
-
-                                            <p className="truncate text-sm font-semibold text-slate-800">
-                                                {item.value || (
-                                                    <span className="text-slate-300">—</span>
-                                                )}
-                                            </p>
-
-                                            <p className="truncate text-xs text-slate-400">
-                                                {item.label}
-                                            </p>
-
-                                        </div>
+                                        <p className="truncate text-xs text-slate-400">
+                                            {item.label}
+                                        </p>
 
                                     </div>
-                                );
-                            })}
 
-                        </div>
-
-                    </div>
-
-                    {/* Tabs — scrollbar app ke baaki hisson ki tarah chhupa hua hai */}
-                    <div className="hide-scrollbar overflow-x-auto border-t border-slate-200">
-
-                        <nav className="flex min-w-max items-center gap-1 px-3 sm:px-5">
-
-                            {tabs.map((tab) => {
-                                const TabIcon = tab.icon;
-                                const isTabActive = activeTab === tab.id;
-
-                                return (
-                                    <button
-                                        key={tab.id}
-                                        type="button"
-                                        onClick={() => setActiveTab(tab.id)}
-                                        aria-current={isTabActive ? "page" : undefined}
-                                        className={`inline-flex cursor-pointer items-center gap-2 border-b-2 px-3 py-3.5 text-sm font-semibold transition-colors sm:px-4 ${
-                                            isTabActive
-                                                ? "border-blue-600 text-blue-600"
-                                                : "border-transparent text-slate-500 hover:text-slate-800"
-                                        }`}
-                                    >
-                                        <TabIcon className="h-4 w-4" />
-                                        {tab.label}
-                                    </button>
-                                );
-                            })}
-
-                        </nav>
+                                </div>
+                            );
+                        })}
 
                     </div>
 
                 </div>
 
-                {/* Cards */}
-                {activeTab === "overview" ? (
+                {/* Tabs — scrollbar app ke baaki hisson ki tarah chhupa hua hai */}
+                <div className="hide-scrollbar overflow-x-auto border-t border-slate-200">
 
-                    <div className="grid grid-cols-1 gap-5 lg:grid-cols-3 lg:items-start">
+                    <nav className="flex min-w-max items-center gap-1 px-3 sm:px-5">
 
-                        <div className="space-y-5 lg:col-span-2">
-                            {overviewMain.map((item) => renderSectionCard(item, "main"))}
-                        </div>
+                        {tabs.map((tab) => {
+                            const TabIcon = tab.icon;
+                            const isTabActive = activeTab === tab.id;
 
-                        {/* Sticky jaan-boojh kar nahi hai — chhoti screen par pinned
+                            return (
+                                <button
+                                    key={tab.id}
+                                    type="button"
+                                    onClick={() => setActiveTab(tab.id)}
+                                    aria-current={isTabActive ? "page" : undefined}
+                                    className={`inline-flex cursor-pointer items-center gap-2 border-b-2 px-3 py-3.5 text-sm font-semibold transition-colors sm:px-4 ${isTabActive
+                                            ? "border-blue-600 text-blue-600"
+                                            : "border-transparent text-slate-500 hover:text-slate-800"
+                                        }`}
+                                >
+                                    <TabIcon className="h-4 w-4" />
+                                    {tab.label}
+                                </button>
+                            );
+                        })}
+
+                    </nav>
+
+                </div>
+
+            </div>
+
+            {/* Cards */}
+            {activeTab === "overview" ? (
+
+                <div className="grid grid-cols-1 gap-5 lg:grid-cols-3 lg:items-start">
+
+                    <div className="space-y-5 lg:col-span-2">
+                        {overviewMain.map((item) => renderSectionCard(item, "main"))}
+                    </div>
+
+                    {/* Sticky jaan-boojh kar nahi hai — chhoti screen par pinned
                             column scrollport se lamba ho jata tha aur neeche wala
                             card kabhi poora dikhta hi nahi tha. */}
-                        <div className="space-y-5">
-                            {overviewSide.map((item) => renderSectionCard(item, "side"))}
-                        </div>
-
-                    </div>
-
-                ) : (
-
                     <div className="space-y-5">
-                        {visibleSections.map((item) => renderSectionCard(item, "full"))}
+                        {overviewSide.map((item) => renderSectionCard(item, "side"))}
                     </div>
 
-                )}
+                </div>
 
-                {/*
+            ) : (
+
+                <div className="space-y-5">
+                    {visibleSections.map((item) => renderSectionCard(item, "full"))}
+                </div>
+
+            )}
+
+            {/*
                 | Keyed on the stored role, so once a change is saved the
                 | dialog remounts and reopens on what they are now rather than
                 | on the selection it was first mounted with.
                 */}
-                <EditRoleModal
-                    key={employee.account?.role}
-                    open={roleModalOpen}
-                    employee={{
-                        name: employee.personalInfo?.name,
-                        employeeId: employee.employmentInfo?.employeeId || id,
-                        role: employee.account?.role,
-                    }}
-                    actorRole={scope.role}
-                    roles={assignableRoles}
-                    saving={roleSaving}
-                    error={roleError}
-                    onClose={() => {
-                        setRoleModalOpen(false);
-                        setRoleError("");
-                    }}
-                    onSave={saveRole}
-                />
+            <EditRoleModal
+                key={employee.account?.role}
+                open={roleModalOpen}
+                employee={{
+                    name: employee.personalInfo?.name,
+                    employeeId: employee.employmentInfo?.employeeId || id,
+                    role: employee.account?.role,
+                }}
+                actorRole={scope.role}
+                roles={assignableRoles}
+                saving={roleSaving}
+                error={roleError}
+                onClose={() => {
+                    setRoleModalOpen(false);
+                    setRoleError("");
+                }}
+                onSave={saveRole}
+            />
 
         </div>
     );
@@ -1066,68 +1062,68 @@ function EmployeesDetails() {
             variant === "side"
                 ? { cols: "sm:grid-cols-2 lg:grid-cols-1", span: "sm:col-span-2 lg:col-span-1" }
                 : isEditing
-                ? { cols: "sm:grid-cols-2", span: "sm:col-span-2" }
-                : variant === "main"
-                ? { cols: "sm:grid-cols-2 2xl:grid-cols-3", span: "sm:col-span-2 2xl:col-span-3" }
-                : { cols: "sm:grid-cols-2 lg:grid-cols-3", span: "sm:col-span-2 lg:col-span-3" };
+                    ? { cols: "sm:grid-cols-2", span: "sm:col-span-2" }
+                    : variant === "main"
+                        ? { cols: "sm:grid-cols-2 2xl:grid-cols-3", span: "sm:col-span-2 2xl:col-span-3" }
+                        : { cols: "sm:grid-cols-2 lg:grid-cols-3", span: "sm:col-span-2 lg:col-span-3" };
 
         const gridCols = layout.cols;
         const fullSpan = layout.span;
 
         return (
-                            <section
-                                key={section.section}
-                                className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition-shadow duration-200 hover:shadow-md"
+            <section
+                key={section.section}
+                className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition-shadow duration-200 hover:shadow-md"
+            >
+
+                <div className="flex items-center gap-3 border-b border-slate-200 px-4 py-4 sm:px-6">
+
+                    <div className="flex min-w-0 flex-1 items-center gap-3 sm:gap-3.5">
+
+                        <span
+                            className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl sm:h-10 sm:w-10 ${section.accent}`}
+                        >
+                            <Icon className="h-5 w-5" />
+                        </span>
+
+                        <div className="min-w-0">
+
+                            <h2 className="truncate text-base font-semibold text-slate-900">
+                                {section.title}
+                            </h2>
+
+                            {/* Sidebar patla hai — wahan subtitle jagah khaata hai */}
+                            {variant !== "side" && (
+                                <p className="mt-0.5 truncate text-xs text-slate-500">
+                                    {section.subtitle}
+                                </p>
+                            )}
+
+                        </div>
+
+                    </div>
+
+                    {section.readOnly ? (
+                        <span className="inline-flex shrink-0 items-center gap-1.5 rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-500">
+                            <Lock className="h-3.5 w-3.5" />
+                            <span className="hidden sm:inline">View Only</span>
+                        </span>
+                    ) : (
+                        !isEditing && (
+                            <button
+                                type="button"
+                                onClick={() => startEdit(section.section)}
+                                className="inline-flex shrink-0 cursor-pointer items-center gap-1.5 rounded-xl border border-blue-200 px-3.5 py-2 text-sm font-semibold text-blue-600 transition-all hover:border-blue-500 hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2"
                             >
+                                <Pencil className="h-3.5 w-3.5" />
+                                Edit
+                            </button>
+                        )
+                    )}
 
-                                <div className="flex items-center gap-3 border-b border-slate-200 px-4 py-4 sm:px-6">
+                </div>
 
-                                    <div className="flex min-w-0 flex-1 items-center gap-3 sm:gap-3.5">
-
-                                        <span
-                                            className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl sm:h-10 sm:w-10 ${section.accent}`}
-                                        >
-                                            <Icon className="h-5 w-5" />
-                                        </span>
-
-                                        <div className="min-w-0">
-
-                                            <h2 className="truncate text-base font-semibold text-slate-900">
-                                                {section.title}
-                                            </h2>
-
-                                            {/* Sidebar patla hai — wahan subtitle jagah khaata hai */}
-                                            {variant !== "side" && (
-                                                <p className="mt-0.5 truncate text-xs text-slate-500">
-                                                    {section.subtitle}
-                                                </p>
-                                            )}
-
-                                        </div>
-
-                                    </div>
-
-                                    {section.readOnly ? (
-                                        <span className="inline-flex shrink-0 items-center gap-1.5 rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-500">
-                                            <Lock className="h-3.5 w-3.5" />
-                                            <span className="hidden sm:inline">View Only</span>
-                                        </span>
-                                    ) : (
-                                        !isEditing && (
-                                            <button
-                                                type="button"
-                                                onClick={() => startEdit(section.section)}
-                                                className="inline-flex shrink-0 cursor-pointer items-center gap-1.5 rounded-xl border border-blue-200 px-3.5 py-2 text-sm font-semibold text-blue-600 transition-all hover:border-blue-500 hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2"
-                                            >
-                                                <Pencil className="h-3.5 w-3.5" />
-                                                Edit
-                                            </button>
-                                        )
-                                    )}
-
-                                </div>
-
-                                {/* Salary ab sidebar ke apne module se dikhti hai.
+                {/* Salary ab sidebar ke apne module se dikhti hai.
                                     Yahan ka summary card comment kar diya gaya hai —
                                     wapas chahiye to `salary` section (sections array),
                                     salary state, loadSalary aur formatAmount bhi uncomment karna.
@@ -1216,238 +1212,229 @@ function EmployeesDetails() {
                                 )}
                                 */}
 
-                                <div>
-                                        <div
-                                            className={`grid grid-cols-1 gap-x-6 px-4 sm:px-6 ${gridCols} ${
-                                                isEditing ? "gap-y-5 py-6" : "pb-0 pt-1"
-                                            }`}
-                                        >
-                                        {section.fields.map((field) => {
-                                            const value = employee[section.section]?.[field.key];
-                                            const editable =
-                                                isEditing && !section.readOnly && !field.readOnly;
-                                            const isHidden = field.masked;
+                <div>
+                    <div
+                        className={`grid grid-cols-1 gap-x-6 px-4 sm:px-6 ${gridCols} ${isEditing ? "gap-y-5 py-6" : "pb-0 pt-1"
+                            }`}
+                    >
+                        {section.fields.map((field) => {
+                            const value = employee[section.section]?.[field.key];
+                            const editable =
+                                isEditing && !section.readOnly && !field.readOnly;
+                            const isHidden = field.masked;
 
-                                            // Dropdown options:
-                                            const selectOptions =
-                                                field.key === "department"
-                                                    ? departments.map((d) => d.name)
-                                                    : field.key === "designation"
-                                                    ? designations.map((d) => d.name)
-                                                    : field.options || [];
+                            // Dropdown options:
+                            const selectOptions =
+                                field.key === "department"
+                                    ? departments.map((d) => d.name)
+                                    : field.key === "designation"
+                                        ? designations.map((d) => d.name)
+                                        : field.options || [];
 
-                                            
-                                            const handleSelectChange =
-                                                field.key === "department"
-                                                    ? (e) => handleDepartmentChange(e.target.value)
-                                                    : (e) => handleFieldChange(field.key, e.target.value);
-                                            const FieldIcon = field.icon;
 
-                                            return (
-                                                <div
-                                                    key={field.key}
-                                                    className={`flex min-w-0 ${
-                                                        editable
-                                                            ? "flex-col gap-2"
-                                                            : "items-start gap-3 border-b border-slate-100 py-3.5"
-                                                    } ${field.full ? fullSpan : ""}`}
-                                                >
+                            const handleSelectChange =
+                                field.key === "department"
+                                    ? (e) => handleDepartmentChange(e.target.value)
+                                    : (e) => handleFieldChange(field.key, e.target.value);
+                            const FieldIcon = field.icon;
 
-                                                    {!editable && FieldIcon && (
-                                                        <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-slate-50 text-slate-400">
-                                                            <FieldIcon className="h-3.5 w-3.5" />
-                                                        </span>
-                                                    )}
+                            return (
+                                <div
+                                    key={field.key}
+                                    className={`flex min-w-0 ${editable
+                                            ? "flex-col gap-2"
+                                            : "items-start gap-3 border-b border-slate-100 py-3.5"
+                                        } ${field.full ? fullSpan : ""}`}
+                                >
 
-                                                    <div className="flex min-w-0 flex-1 flex-col gap-1">
+                                    {!editable && FieldIcon && (
+                                        <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-slate-50 text-slate-400">
+                                            <FieldIcon className="h-3.5 w-3.5" />
+                                        </span>
+                                    )}
 
-                                                    <p className="truncate text-xs font-medium text-slate-400">
-                                                        {field.label}
-                                                    </p>
+                                    <div className="flex min-w-0 flex-1 flex-col gap-1">
 
-                                                    {editable ? (
-                                                        <>
-                                                            {field.type === "file" ? (
-                                                                <>
-                                                                    {/* accept nahi lagaya — user koi bhi file
+                                        <p className="truncate text-xs font-medium text-slate-400">
+                                            {field.label}
+                                        </p>
+
+                                        {editable ? (
+                                            <>
+                                                {field.type === "file" ? (
+                                                    <>
+                                                        {/* accept nahi lagaya — user koi bhi file
                                                                         chun sake, galti PDF check batayega */}
-                                                                    <input
-                                                                        type="file"
-                                                                        onChange={handleResumeChange}
-                                                                        className={`w-full cursor-pointer rounded-xl border bg-white text-sm text-slate-600 outline-none transition file:mr-3 file:cursor-pointer file:rounded-l-xl file:border-0 file:bg-slate-50 file:px-4 file:py-2.5 file:text-sm file:font-semibold file:text-slate-700 hover:file:bg-blue-50 hover:file:text-blue-600 ${
-                                                                            errors[field.key]
-                                                                                ? "border-red-400"
-                                                                                : "border-slate-200"
-                                                                        }`}
-                                                                    />
-                                                                    <p
-                                                                        className={`truncate text-xs ${
-                                                                            resumeFile && errors[field.key]
-                                                                                ? "text-red-500"
-                                                                                : "text-slate-400"
-                                                                        }`}
-                                                                    >
-                                                                        {resumeFile
-                                                                            ? resumeFile.name
-                                                                            : formData[field.key]
-                                                                            ? "Ek resume pehle se uploaded hai — nayi PDF chunne par wo replace ho jayegi."
-                                                                            : "Sirf PDF, 5 MB tak."}
-                                                                    </p>
-                                                                </>
-                                                            ) : field.type === "select" ? (
-                                                                <select
-                                                                    value={formData[field.key] || ""}
-                                                                    onChange={handleSelectChange}
-                                                                    disabled={
-                                                                        field.key === "designation" &&
-                                                                        !formData.department
-                                                                    }
-                                                                    className={`w-full cursor-pointer rounded-xl border bg-white px-4 py-2.5 text-base text-slate-800 outline-none transition focus:ring-2 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400 sm:text-sm ${
-                                                                        errors[field.key]
-                                                                            ? "border-red-400 focus:border-red-400 focus:ring-red-100"
-                                                                            : "border-slate-200 focus:border-blue-500 focus:ring-blue-100"
-                                                                    }`}
-                                                                >
-                                                                    <option value="">
-                                                                        Select {field.label}
-                                                                    </option>
-                                                                    {selectOptions.map((opt) => (
-                                                                        <option key={opt} value={opt}>
-                                                                            {opt}
-                                                                        </option>
-                                                                    ))}
-                                                                </select>
-                                                            ) : (
-                                                                <input
-                                                                    type={field.type === "date" ? "date" : "text"}
-                                                                    max={field.key === "dob" ? today : undefined}
-                                                                    value={formData[field.key] || ""}
-                                                                    onChange={(e) =>
-                                                                        handleFieldChange(
-                                                                            field.key,
-                                                                            e.target.value
-                                                                        )
-                                                                    }
-                                                                    className={`w-full rounded-xl border bg-white px-4 py-2.5 text-base text-slate-800 outline-none transition placeholder:text-slate-400 focus:ring-2 sm:text-sm ${
-                                                                        errors[field.key]
-                                                                            ? "border-red-400 focus:border-red-400 focus:ring-red-100"
-                                                                            : "border-slate-200 focus:border-blue-500 focus:ring-blue-100"
-                                                                    }`}
-                                                                />
-                                                            )}
-                                                            {errors[field.key] && (
-                                                                <p className="text-xs font-medium text-red-500">
-                                                                    {errors[field.key]}
-                                                                </p>
-                                                            )}
-                                                        </>
-                                                    ) : (
-                                                        <div className="flex min-h-6 min-w-0 items-center justify-between gap-2">
-                                                            <p
-                                                                className={`min-w-0 wrap-break-word text-sm font-semibold text-slate-900 ${
-                                                                    field.masked && value && isHidden
-                                                                        ? "tracking-widest"
-                                                                        : ""
+                                                        <input
+                                                            type="file"
+                                                            onChange={handleResumeChange}
+                                                            className={`w-full cursor-pointer rounded-xl border bg-white text-sm text-slate-600 outline-none transition file:mr-3 file:cursor-pointer file:rounded-l-xl file:border-0 file:bg-slate-50 file:px-4 file:py-2.5 file:text-sm file:font-semibold file:text-slate-700 hover:file:bg-blue-50 hover:file:text-blue-600 ${errors[field.key]
+                                                                    ? "border-red-400"
+                                                                    : "border-slate-200"
                                                                 }`}
+                                                        />
+                                                        <p
+                                                            className={`truncate text-xs ${resumeFile && errors[field.key]
+                                                                    ? "text-red-500"
+                                                                    : "text-slate-400"
+                                                                }`}
+                                                        >
+                                                            {resumeFile
+                                                                ? resumeFile.name
+                                                                : formData[field.key]
+                                                                    ? "Ek resume pehle se uploaded hai — nayi PDF chunne par wo replace ho jayegi."
+                                                                    : "Sirf PDF, 5 MB tak."}
+                                                        </p>
+                                                    </>
+                                                ) : field.type === "select" ? (
+                                                    <select
+                                                        value={formData[field.key] || ""}
+                                                        onChange={handleSelectChange}
+                                                        disabled={
+                                                            field.key === "designation" &&
+                                                            !formData.department
+                                                        }
+                                                        className={`w-full cursor-pointer rounded-xl border bg-white px-4 py-2.5 text-base text-slate-800 outline-none transition focus:ring-2 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400 sm:text-sm ${errors[field.key]
+                                                                ? "border-red-400 focus:border-red-400 focus:ring-red-100"
+                                                                : "border-slate-200 focus:border-blue-500 focus:ring-blue-100"
+                                                            }`}
+                                                    >
+                                                        <option value="">
+                                                            Select {field.label}
+                                                        </option>
+                                                        {selectOptions.map((opt) => (
+                                                            <option key={opt} value={opt}>
+                                                                {opt}
+                                                            </option>
+                                                        ))}
+                                                    </select>
+                                                ) : (
+                                                    <input
+                                                        type={field.type === "date" ? "date" : "text"}
+                                                        max={field.key === "dob" ? today : undefined}
+                                                        value={formData[field.key] || ""}
+                                                        onChange={(e) =>
+                                                            handleFieldChange(
+                                                                field.key,
+                                                                e.target.value
+                                                            )
+                                                        }
+                                                        className={`w-full rounded-xl border bg-white px-4 py-2.5 text-base text-slate-800 outline-none transition placeholder:text-slate-400 focus:ring-2 sm:text-sm ${errors[field.key]
+                                                                ? "border-red-400 focus:border-red-400 focus:ring-red-100"
+                                                                : "border-slate-200 focus:border-blue-500 focus:ring-blue-100"
+                                                            }`}
+                                                    />
+                                                )}
+                                                {errors[field.key] && (
+                                                    <p className="text-xs font-medium text-red-500">
+                                                        {errors[field.key]}
+                                                    </p>
+                                                )}
+                                            </>
+                                        ) : (
+                                            <div className="flex min-h-6 min-w-0 items-center justify-between gap-2">
+                                                <p
+                                                    className={`min-w-0 wrap-break-word text-sm font-semibold text-slate-900 ${field.masked && value && isHidden
+                                                            ? "tracking-widest"
+                                                            : ""
+                                                        }`}
+                                                >
+                                                    {value ? (
+                                                        field.type === "file" &&
+                                                            /^https?:\/\//.test(value) ? (
+                                                            <a
+                                                                href={value}
+                                                                target="_blank"
+                                                                rel="noreferrer"
+                                                                className="inline-flex items-center gap-1.5 rounded-lg bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-600 transition-colors hover:bg-blue-100"
                                                             >
-                                                                {value ? (
-                                                                    field.type === "file" &&
-                                                                    /^https?:\/\//.test(value) ? (
-                                                                        <a
-                                                                            href={value}
-                                                                            target="_blank"
-                                                                            rel="noreferrer"
-                                                                            className="inline-flex items-center gap-1.5 rounded-lg bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-600 transition-colors hover:bg-blue-100"
-                                                                        >
-                                                                            <FileText className="h-3.5 w-3.5" />
-                                                                            View Resume (PDF)
-                                                                        </a>
-                                                                    ) : isHidden ? (
-                                                                        maskValue(value)
-                                                                    ) : field.type === "role" ? (
-                                                                        <span
-                                                                            className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${
-                                                                                ROLE_BADGES[
-                                                                                    String(value).toLowerCase()
-                                                                                ] || ROLE_BADGES[ROLE.EMPLOYEE]
-                                                                            }`}
-                                                                        >
-                                                                            {ROLE_LABELS[
-                                                                                String(value).toLowerCase()
-                                                                            ] || value}
-                                                                        </span>
-                                                                    ) : field.pill ? (
-                                                                        <span
-                                                                            className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${
-                                                                                String(value).toLowerCase() === "active"
-                                                                                    ? "bg-emerald-50 text-emerald-700"
-                                                                                    : "bg-rose-50 text-rose-700"
-                                                                            }`}
-                                                                        >
-                                                                            {value}
-                                                                        </span>
-                                                                    ) : field.type === "date" ? (
-                                                                        formatDate(value)
-                                                                    ) : (
-                                                                        value
-                                                                    )
-                                                                ) : (
-                                                                    <span className="text-slate-300">—</span>
-                                                                )}
-                                                            </p>
-                                                            {/*
+                                                                <FileText className="h-3.5 w-3.5" />
+                                                                View Resume (PDF)
+                                                            </a>
+                                                        ) : isHidden ? (
+                                                            maskValue(value)
+                                                        ) : field.type === "role" ? (
+                                                            <span
+                                                                className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${ROLE_BADGES[
+                                                                    String(value).toLowerCase()
+                                                                    ] || ROLE_BADGES[ROLE.EMPLOYEE]
+                                                                    }`}
+                                                            >
+                                                                {ROLE_LABELS[
+                                                                    String(value).toLowerCase()
+                                                                ] || value}
+                                                            </span>
+                                                        ) : field.pill ? (
+                                                            <span
+                                                                className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${String(value).toLowerCase() === "active"
+                                                                        ? "bg-emerald-50 text-emerald-700"
+                                                                        : "bg-rose-50 text-rose-700"
+                                                                    }`}
+                                                            >
+                                                                {value}
+                                                            </span>
+                                                        ) : field.type === "date" ? (
+                                                            formatDate(value)
+                                                        ) : (
+                                                            value
+                                                        )
+                                                    ) : (
+                                                        <span className="text-slate-300">—</span>
+                                                    )}
+                                                </p>
+                                                {/*
                                                             | A field on a view only card that can still be
                                                             | acted on, in the same slot the reveal button
                                                             | uses. Only the Role field carries one, and only
                                                             | for somebody entitled to change it.
                                                             */}
-                                                            {field.action && (
-                                                                <button
-                                                                    onClick={field.action.onClick}
-                                                                    title={field.action.label}
-                                                                    aria-label={field.action.label}
-                                                                    className="flex h-7 w-7 shrink-0 cursor-pointer items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-blue-50 hover:text-blue-600"
-                                                                >
-                                                                    <Pencil className="h-3.5 w-3.5" />
-                                                                </button>
-                                                            )}
-                                                        </div>
-                                                    )}
-
-                                                    </div>
-
-                                                </div>
-                                            );
-                                        })}
-                                        </div>
-
-                                    
-                                        {!section.readOnly && isEditing && (
-                                        <div className="flex flex-col-reverse gap-2 border-t border-slate-200 bg-slate-50/60 px-4 py-4 sm:flex-row sm:items-center sm:justify-end sm:gap-3 sm:px-6">
-
-                                            <button
-                                                onClick={cancelEdit}
-                                                disabled={saving}
-                                                className="w-full cursor-pointer rounded-xl px-5 py-2.5 text-sm font-semibold text-slate-500 transition-all hover:bg-slate-200/60 hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
-                                            >
-                                                Cancel
-                                            </button>
-
-                                            <button
-                                                onClick={() => saveSection(section.section)}
-                                                disabled={saving}
-                                                className="inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white sm:w-auto shadow-md shadow-blue-600/20 transition-all duration-200 hover:bg-blue-700 hover:shadow-lg hover:shadow-blue-600/30 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 disabled:shadow-none"
-                                            >
-                                                {saving ? "Saving…" : "Save Changes"}
-                                            </button>
-
-                                        </div>
+                                                {field.action && (
+                                                    <button
+                                                        onClick={field.action.onClick}
+                                                        title={field.action.label}
+                                                        aria-label={field.action.label}
+                                                        className="flex h-7 w-7 shrink-0 cursor-pointer items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-blue-50 hover:text-blue-600"
+                                                    >
+                                                        <Pencil className="h-3.5 w-3.5" />
+                                                    </button>
+                                                )}
+                                            </div>
                                         )}
+
+                                    </div>
+
                                 </div>
-                            </section>
+                            );
+                        })}
+                    </div>
+
+
+                    {!section.readOnly && isEditing && (
+                        <div className="flex flex-col-reverse gap-2 border-t border-slate-200 bg-slate-50/60 px-4 py-4 sm:flex-row sm:items-center sm:justify-end sm:gap-3 sm:px-6">
+
+                            <button
+                                onClick={cancelEdit}
+                                disabled={saving}
+                                className="w-full cursor-pointer rounded-xl px-5 py-2.5 text-sm font-semibold text-slate-500 transition-all hover:bg-slate-200/60 hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
+                            >
+                                Cancel
+                            </button>
+
+                            <button
+                                onClick={() => saveSection(section.section)}
+                                disabled={saving}
+                                className="inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white sm:w-auto shadow-md shadow-blue-600/20 transition-all duration-200 hover:bg-blue-700 hover:shadow-lg hover:shadow-blue-600/30 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 disabled:shadow-none"
+                            >
+                                {saving ? "Saving…" : "Save Changes"}
+                            </button>
+
+                        </div>
+                    )}
+                </div>
+            </section>
         );
     }
 }
- 
+
 export default EmployeesDetails;
- 
+

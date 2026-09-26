@@ -2,7 +2,8 @@ const jwt = require("jsonwebtoken");
 const genrateToken= (user)=>{
     return jwt.sign(
         {
-            employeeId: user.employeeId,
+            // toSafeUser record ki shape lautata hai — id employmentInfo ke andar hai
+            employeeId: user.employmentInfo?.employeeId || user.employeeId,
             companyCode:user.companyCode,
             role:user.role,
 
