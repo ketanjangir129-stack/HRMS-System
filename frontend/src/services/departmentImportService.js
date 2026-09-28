@@ -572,7 +572,7 @@ const newestFirst = (value, limit) =>
 
 /*
 | An ordered query needs `.indexOn: ["uploadedAt"]` on this node, and the rules
-| for it have never been deployed - see §4 and §6 of `department-import-rules`.
+| for it have never been deployed.
 | Firebase usually answers an unindexed query anyway and only warns, but where
 | it refuses outright it rejects the read, and a rejected read here is a history
 | that is empty on screen while every run sits in the database.

@@ -163,10 +163,10 @@ Then:
 1. Add an entry to `TEMPLATES` in `Code.gs` with the name and a label — the
    label is what the sheet's *Email Type* column and the per-row results say.
 2. Add the same name to `EMAIL_TEMPLATES` in
-   [emailService.js](../src/services/email/emailService.js).
+   [emailService.js](../frontend/src/services/email/emailService.js).
 3. Give the screens something to call, next to `sendInvitationEmail` and
    `sendApprovalEmail` in
-   [onboardingEmailService.js](../src/services/email/onboardingEmailService.js).
+   [onboardingEmailService.js](../frontend/src/services/email/onboardingEmailService.js).
    That is where the company is read for the letterhead and the employee is
    flattened into the shape the template expects.
 4. Redeploy the script (see above) — a new template is not live until you do.
