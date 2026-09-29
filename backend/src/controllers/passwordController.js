@@ -13,7 +13,7 @@ const changePassword = async (req, res) => {
         success: false,
         message: "Current password and new password are required.",
       });
-    }
+    } 
 
     // Basic password validation
     if (newPassword.length < 6) {

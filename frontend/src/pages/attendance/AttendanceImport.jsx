@@ -39,8 +39,8 @@ import { IMPORT_STATUS, IMPORT_STEP } from "../../utils/attendance/attendanceImp
 | bypass: a row outside the scope is an error rather than a hidden row.
 |
 | Reaching this screen is not the same as the database allowing the write. See
-| the note in the import service and `docs/attendance-import-rules.md` for
-| what the current authentication model can and cannot enforce.
+| the note in the import service for what the current authentication model
+| can and cannot enforce.
 |--------------------------------------------------------------------------
 */
 
