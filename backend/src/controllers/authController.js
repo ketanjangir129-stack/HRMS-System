@@ -73,7 +73,65 @@ const getCurrentUser = async (req, res) => {
   }
 };
 
+// companyCode DB path ka hissa hai — employeeController jaisa hi pattern
+const COMPANY_CODE_PATTERN = /^[A-Z0-9]{3,10}$/;
+
+// POST /api/auth/owner-token  body: { idToken, companyCode }
+// Owner Firebase se login karta hai; yahan uske ID token ke badle wahi
+// backend JWT milta hai jo HR/Employee ko /login se milta hai.
+const ownerTokenExchange = async (req, res) => {
+  try {
+    const { idToken } = req.body || {};
+    const companyCode = String(req.body?.companyCode ?? "")
+      .trim()
+      .toUpperCase();
+
+    if (!idToken || typeof idToken !== "string") {
+      return res.status(400).json({
+        success: false,
+        message: "Owner ID token is required.",
+      });
+    }
+
+    if (!COMPANY_CODE_PATTERN.test(companyCode)) {
+      return res.status(400).json({
+        success: false,
+        message: "A valid company code is required.",
+      });
+    }
+
+    const { status, ...result } = await authService.verifyOwner(
+      idToken,
+      companyCode
+    );
+
+    if (!result.success) {
+      return res.status(status).json(result);
+    }
+
+    const token = tokenService.genrateOwnerToken({
+      uid: result.uid,
+      companyCode: result.companyCode,
+    });
+
+    return res.status(200).json({
+      success: true,
+      token,
+      role: "owner",
+      companyCode: result.companyCode,
+    });
+  } catch (error) {
+    console.error("Owner token exchange error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Authentication failed.",
+    });
+  }
+};
+
 module.exports = {
   login,
   getCurrentUser,
+  ownerTokenExchange,
 };

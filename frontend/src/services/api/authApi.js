@@ -35,6 +35,35 @@ export const loginEmployeeApi = async (
 };
 
 
+// Owner: Firebase ID token ke badle backend JWT. Password yahan nahi jaata —
+// Firebase login ho chuka hai, backend sirf us session ko verify karta hai.
+export const ownerTokenExchangeApi = async (idToken, companyCode) => {
+    try {
+        const response = await fetch(
+            `${API_URL}/auth/owner-token`,
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    idToken,
+                    companyCode,
+                }),
+            }
+        );
+        return await response.json();
+    }
+    catch (error) {
+        console.error("Owner token exchange API error:", error);
+
+        return {
+            success: false,
+            message: "Unable to connect to authentication server."
+        };
+    }
+};
+
 export const changePasswordApi = async (
     companyCode,
     employeeId,

@@ -178,7 +178,25 @@ const getEmployees = async (companyCode) => {
   );
 };
 
+/*
+| Ek employee — Details page ke liye. Na mile to null (frontend ke
+| getEmployeeById jaisa). getEmployees ki tarah account.password hataya hai.
+*/
+const getEmployeeById = async (companyCode, employeeId) => {
+  const snapshot = await db
+    .ref(`companies/${companyCode}/employees/${employeeId}`)
+    .once("value");
+
+  if (!snapshot.exists()) return null;
+
+  const record = snapshot.val();
+  const { password, ...account } = record.account || {};
+
+  return { ...record, account };
+};
+
 module.exports = {
   createEmployee,
   getEmployees,
+  getEmployeeById,
 };

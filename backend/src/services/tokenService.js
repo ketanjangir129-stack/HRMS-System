@@ -16,6 +16,22 @@ const genrateToken= (user)=>{
     );
 
 };
+// Owner ka koi employee record nahi hota, isliye employeeId nahi — uski
+// jagah Firebase uid. authenticate isse bhi waise hi verify karta hai.
+const genrateOwnerToken = ({ uid, companyCode }) => {
+    return jwt.sign(
+        {
+            uid,
+            companyCode,
+            role: "owner",
+        },
+        process.env.JWT_SECRET,
+        {
+            expiresIn: process.env.JWT_EXPIRES_IN || "1d",
+        }
+    );
+};
+
 const verifyToken = (token)=>{
     return jwt.verify(
         token,
@@ -25,5 +41,6 @@ const verifyToken = (token)=>{
 
 module.exports = {
     genrateToken,
+    genrateOwnerToken,
     verifyToken,
 };

@@ -19,6 +19,7 @@ const DEFAULTS = {
   employees: {
     enabled: { hr: true, manager: true, employee: false },
     add: { hr: true, manager: false, employee: false },
+    details: { hr: true, manager: false, employee: false },
   },
 };
 

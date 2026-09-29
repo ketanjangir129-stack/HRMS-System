@@ -9,6 +9,14 @@ export const createEmployeeApi = async (companyCode, employee) => {
   });
 };
 
+// GET /api/employees/details/:employeeId — ek employee. Company token se
+// aati hai, isliye yahan nahi bheji jaati.
+export const getEmployeeByIdApi = async (employeeId) => {
+  return await apiRequest(
+    `/employees/details/${encodeURIComponent(employeeId)}`
+  );
+};
+
 // GET /api/employees/list?companyCode=... — poori list ek baar.
 export const getEmployeesApi = async (companyCode) => {
   return await apiRequest(

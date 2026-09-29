@@ -80,7 +80,54 @@ const getEmployees = async (req, res) => {
   }
 };
 
+// Employee ID bhi DB path ka hissa hai — "/", ".", "#", "$", "[", "]" andar na aayein
+const EMPLOYEE_ID_PATTERN = /^[A-Z0-9_-]{1,50}$/;
+
+// GET /api/employees/details/:employeeId
+// Company sirf token se — query/body se kabhi nahi, taaki doosri company ka
+// record na padha ja sake.
+const getEmployeeDetails = async (req, res) => {
+  const { companyCode } = req.user;
+  const employeeId = String(req.params.employeeId ?? "").trim().toUpperCase();
+
+  if (!EMPLOYEE_ID_PATTERN.test(employeeId)) {
+    return res.status(400).json({
+      success: false,
+      field: "employeeId",
+      message: "A valid employee ID is required.",
+    });
+  }
+
+  try {
+    const employee = await employeeService.getEmployeeById(
+      companyCode,
+      employeeId
+    );
+
+    if (!employee) {
+      return res.status(404).json({
+        success: false,
+        code: "EMPLOYEE_NOT_FOUND",
+        message: "Employee not found.",
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: employee,
+    });
+  } catch (error) {
+    console.error("Get employee details error:", error);
+
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch employee.",
+    });
+  }
+};
+
 module.exports = {
   createEmployee,
   getEmployees,
+  getEmployeeDetails,
 };
