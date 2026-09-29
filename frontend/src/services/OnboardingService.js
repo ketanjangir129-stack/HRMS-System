@@ -14,6 +14,7 @@ import {
 } from "./ValidationService";
 import { notifyOnboardingSubmitted } from "./notifications/onboardingNotificationService";
 import { OWNER_ROLE } from "../utils/permissions/permissionConstants";
+import { withDepartmentNames } from "../utils/departments/departmentRefs";
 
 /*
 | The link the joiner is sent, and the only way into their form. It is built
@@ -332,19 +333,25 @@ const readValue = async (path) => {
     return snapshot.exists() ? snapshot.val() : null;
 };
 
-const loadHistoryDetails = async (companyCode, employeeId, status) => {
+const loadHistoryDetails = async (companyCode, employeeId, status, departments) => {
 
     if (status === "Approved") {
 
-        const [name, employment] = await Promise.all([
+        const [name, stored] = await Promise.all([
             readValue(`companies/${companyCode}/employees/${employeeId}/personalInfo/name`),
             readValue(`companies/${companyCode}/employees/${employeeId}/employmentInfo`),
         ]);
 
+        // Employee me sirf ids hain — naam departments se
+        const employment = withDepartmentNames(
+            { employmentInfo: stored || {} },
+            departments
+        ).employmentInfo;
+
         return {
             name: name || "",
-            department: employment?.department || "",
-            designation: employment?.designation || "",
+            department: employment.department,
+            designation: employment.designation,
         };
     }
 
@@ -361,9 +368,10 @@ const loadHistoryDetails = async (companyCode, employeeId, status) => {
 
 export const getOnboardingHistory = async (companyCode) => {
 
-    const data = await readValue(
-        `companies/${companyCode}/onboardingHistory`
-    );
+    const [data, departments] = await Promise.all([
+        readValue(`companies/${companyCode}/onboardingHistory`),
+        readValue(`companies/${companyCode}/departments`),
+    ]);
 
     if (!data) {
         return [];
@@ -386,7 +394,7 @@ export const getOnboardingHistory = async (companyCode) => {
                     department: legacy.department || "",
                     designation: legacy.designation || "",
                 }
-                : await loadHistoryDetails(companyCode, employeeId, status);
+                : await loadHistoryDetails(companyCode, employeeId, status, departments || {});
 
             return {
                 id,

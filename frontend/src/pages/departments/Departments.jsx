@@ -165,7 +165,7 @@ function Departments() {
 
         } catch (error) {
             console.error(error);
-            toast.error("Failed to save department.");
+            toast.error(error.message || "Failed to save department.");
         }
     };
 

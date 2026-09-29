@@ -7,43 +7,80 @@ import {
     onValue,
 } from "firebase/database";
 import { db } from "../firebase/firebase";
-import {getDepartmentsApi} from "./api/departmentApi"; 
+import {
+    getDepartmentsApi,
+    addDepartmentApi,
+    addDesignationApi,
+    editDepartmentApi,
+    editDesignationApi,
+} from "./api/departmentApi"; 
 
 
 //Department functions
 const getDepartmentPath = (companyCode) =>
     `companies/${companyCode}/departments`;
 
-export const addDepartment = async (
-    companyCode,
-    name
-) => {
-    const departmentRef = push(
-        ref(db, getDepartmentPath(companyCode))
-    );
+// export const addDepartment = async (
+//     companyCode,
+//     name
+// ) => {
+//     const departmentRef = push(
+//         ref(db, getDepartmentPath(companyCode))
+//     );
 
-    await set(departmentRef, {
-        name,
-        createdAt: Date.now(),
-        designations: {},
-    });
+//     await set(departmentRef, {
+//         name,
+//         createdAt: Date.now(),
+//         designations: {},
+//     });
+// };
+
+export const addDepartment = async (companyCode, name) => {
+  let result;
+  try {
+    result = await addDepartmentApi(companyCode, name);
+  } catch (error) {
+    throw new Error("Unable to connect to the server. Please try again.", { cause: error });
+  }
+  if (!result?.success) {
+    throw new Error(result?.message || "Failed to add department.");
+  }
+  return result.data; // { departmentId }
 };
 
-export const updateDepartment = async (
-    companyCode,
-    departmentId,
-    name
-) => {
-    await update(
-        ref(
-            db,
-            `${getDepartmentPath(
-                companyCode
-            )}/${departmentId}`
-        ),
-        { name }
-    );
+
+
+// export const updateDepartment = async (
+//     companyCode,
+//     departmentId,
+//     name
+// ) => {
+//     await update(
+//         ref(
+//             db,
+//             `${getDepartmentPath(
+//                 companyCode
+//             )}/${departmentId}`
+//         ),
+//         { name }
+//     );
+// };
+export const updateDepartment = async (companyCode, departmentId, name) => {
+  let result;
+  try {
+    result = await editDepartmentApi(companyCode, departmentId, name);
+  } catch (error) {
+    throw new Error("Unable to connect to the server. Please try again.", { cause: error });
+  }
+  if (!result?.success) {
+    throw new Error(result?.message || "Failed to update department.");
+  }
+  return result.data; // { departmentId, name }
 };
+
+
+
+
 
 export const deleteDepartment = async (
     companyCode,
@@ -60,43 +97,74 @@ export const deleteDepartment = async (
 };
 
 //Desgination functions
-export const addDesignation = async (
-    companyCode,
-    departmentId,
-    designationName
-) => {
-    const designationRef = push(
-        ref(
-            db,
-            `${getDepartmentPath(
-                companyCode
-            )}/${departmentId}/designations`
-        )
-    );
+// export const addDesignation = async (
+//     companyCode,
+//     departmentId,
+//     designationName
+// ) => {
+//     const designationRef = push(
+//         ref(
+//             db,
+//             `${getDepartmentPath(
+//                 companyCode
+//             )}/${departmentId}/designations`
+//         )
+//     );
 
-    await set(designationRef, {
-        name: designationName,
-    });
+//     await set(designationRef, {
+//         name: designationName,
+//     });
+// };
+
+
+
+export const addDesignation = async (companyCode,departmentId, designationName) => {
+  let result;
+  try {
+    result = await addDesignationApi(companyCode, departmentId, designationName);
+  } catch (error) {
+    throw new Error("Unable to connect to the server. Please try again.", { cause: error });
+  }
+  if (!result?.success) {
+    throw new Error(result?.message || "Failed to add designation.");
+  }
+  return result.data; // { designationId }
 };
 
-export const updateDesignation = async (
-    companyCode,
-    departmentId,
-    designationId,
-    designationName
-) => {
-    await update(
-        ref(
-            db,
-            `${getDepartmentPath(
-                companyCode
-            )}/${departmentId}/designations/${designationId}`
-        ),
-        {
-            name: designationName,
-        }
-    );
+
+
+// export const updateDesignation = async (
+//     companyCode,
+//     departmentId,
+//     designationId,
+//     designationName
+// ) => {
+//     await update(
+//         ref(
+//             db,
+//             `${getDepartmentPath(
+//                 companyCode
+//             )}/${departmentId}/designations/${designationId}`
+//         ),
+//         {
+//             name: designationName,
+//         }
+//     );
+// };
+
+export const updateDesignation = async (companyCode, departmentId, designationId, designationName) => {
+  let result;
+  try {
+    result = await editDesignationApi(companyCode, departmentId, designationId, designationName);
+  } catch (error) {
+    throw new Error("Unable to connect to the server. Please try again.", { cause: error });
+  }
+  if (!result?.success) {
+    throw new Error(result?.message || "Failed to update designation.");
+  }
+  return result.data; // { designationId, name }
 };
+
 
 export const deleteDesignation = async (
     companyCode,

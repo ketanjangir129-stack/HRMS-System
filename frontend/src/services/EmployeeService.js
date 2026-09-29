@@ -13,6 +13,15 @@ import {
 } from "./api/employeeApi";
 import { releaseManagerFromDepartments } from "./departmentService";
 import {
+  toDepartmentRefs,
+  withDepartmentNames,
+} from "../utils/departments/departmentRefs";
+
+const readDepartments = async (companyCode) => {
+  const snapshot = await get(ref(db, `companies/${companyCode}/departments`));
+  return snapshot.exists() ? snapshot.val() : {};
+};
+import {
   getEmployeeRole,
   releasesDepartments,
   validateRoleChange,
@@ -100,14 +109,19 @@ export const getEmployeeById = async (
   companyCode,
   employeeId
 ) => {
-  const snapshot = await get(
-    ref(
-      db,
-      `companies/${companyCode}/employees/${employeeId.toUpperCase()}`
-    )
-  );
- 
-  return snapshot.exists() ? snapshot.val() : null;
+  const [snapshot, departments] = await Promise.all([
+    get(
+      ref(
+        db,
+        `companies/${companyCode}/employees/${employeeId.toUpperCase()}`
+      )
+    ),
+    readDepartments(companyCode),
+  ]);
+
+  return snapshot.exists()
+    ? withDepartmentNames(snapshot.val(), departments)
+    : null;
 };
 
 /*
@@ -155,15 +169,43 @@ export const subscribeEmployeeById = (
   employeeId,
   onData,
   onError
-) =>
-  onValue(
+) => {
+  // Record me sirf ids hain — departments bhi sunte hain taaki rename turant dikhe.
+  // Dono ki pehli khabar aane tak kuch nahi bhejte.
+  let record;
+  let departments;
+
+  const emit = () => {
+    if (record === undefined || departments === undefined) return;
+    onData(record ? withDepartmentNames(record, departments) : null);
+  };
+
+  const stopEmployee = onValue(
     ref(
       db,
       `companies/${companyCode}/employees/${employeeId.toUpperCase()}`
     ),
-    (snapshot) => onData(snapshot.exists() ? snapshot.val() : null),
+    (snapshot) => {
+      record = snapshot.exists() ? snapshot.val() : null;
+      emit();
+    },
     (error) => onError?.(error)
   );
+
+  const stopDepartments = onValue(
+    ref(db, `companies/${companyCode}/departments`),
+    (snapshot) => {
+      departments = snapshot.exists() ? snapshot.val() : {};
+      emit();
+    },
+    (error) => onError?.(error)
+  );
+
+  return () => {
+    stopEmployee();
+    stopDepartments();
+  };
+};
  
  
 // Update one section of an employee (e.g. { personalInfo: {...} })
@@ -182,6 +224,31 @@ export const updateEmployeeSection = async (
   sectionId,
   sectionData
 ) => {
+  // Form naam bhejta hai — DB me sirf departmentId/designationId jaati hai
+  if (sectionId === "employmentInfo") {
+    const departments = await readDepartments(companyCode);
+    const { department, designation, ...rest } = sectionData;
+    const refs = toDepartmentRefs(departments, department, designation);
+
+    if (refs.error) {
+      return { success: false, ...refs.error };
+    }
+
+    const stored = {
+      ...rest,
+      departmentId: refs.departmentId,
+      designationId: refs.designationId,
+    };
+
+    await updateEmployee(companyCode, employeeId, { employmentInfo: stored });
+
+    return {
+      success: true,
+      data: withDepartmentNames({ employmentInfo: stored }, departments)
+        .employmentInfo,
+    };
+  }
+
   if (sectionId !== "personalInfo") {
     await updateEmployee(companyCode, employeeId, { [sectionId]: sectionData });
     return { success: true, data: sectionData };

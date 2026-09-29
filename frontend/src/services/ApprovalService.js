@@ -3,6 +3,7 @@ import {ref , get , update} from  "firebase/database";
 import { getUserRole } from "../utils/attendance/attendanceRequestUtils";
 import { OWNER_ROLE } from "../utils/permissions/permissionConstants";
 import { isOwnerRole } from "../utils/permissions/permissionUtils";
+import { toDepartmentRefs } from "../utils/departments/departmentRefs";
 
 // Who is deciding, as an id the history screen can trace back. The owner has
 // no employee record, so they are stamped with the fixed owner key — the same
@@ -18,7 +19,7 @@ export const getApproverId = (currentUser) =>
 // employees node uses the personalInfo/employmentInfo/bankInfo shape that
 // addEmployee writes. Map between the two so approved employees render the
 // same as manually added ones.
-const toEmployeeRecord = (request, employeeId) => {
+const toEmployeeRecord = (request, employeeId, departmentRefs) => {
   const employment = request.employmentInfo || {};
   const personal = request.personalInfo || {};
   const bank = request.bankInfo || {};
@@ -43,8 +44,8 @@ const toEmployeeRecord = (request, employeeId) => {
 
     employmentInfo: {
       employeeId,
-      department: employment.department || "",
-      designation: employment.designation || "",
+      departmentId: departmentRefs.departmentId,
+      designationId: departmentRefs.designationId,
       joiningDate: employment.joiningDate || "",
       employeeType: employment.employeeType || "",
       role: employment.role || "employee",
@@ -118,10 +119,28 @@ export const approveOnboarding = async (
 
     const request = snapshot.val();
 
+    // Request me department/designation ka naam hai — employee me uski id jaati hai
+    const departmentsSnapshot = await get(
+      ref(db, `companies/${companyCode}/departments`)
+    );
+
+    const departmentRefs = toDepartmentRefs(
+      departmentsSnapshot.exists() ? departmentsSnapshot.val() : {},
+      request.employmentInfo?.department,
+      request.employmentInfo?.designation
+    );
+
+    if (departmentRefs.error) {
+      return {
+        success: false,
+        message: `${departmentRefs.error.message} Update the request before approving.`,
+      };
+    }
+
     const approvedAt = Date.now();
 
     const employee = {
-      ...toEmployeeRecord(request, employeeId),
+      ...toEmployeeRecord(request, employeeId, departmentRefs),
       approvedAt,
       approvedBy,
       createdAt: request.createdAt || approvedAt,

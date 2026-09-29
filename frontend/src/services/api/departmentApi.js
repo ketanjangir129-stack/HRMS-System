@@ -13,3 +13,24 @@ export const addDepartmentApi = async (companyCode, departmentName) => {
     body: JSON.stringify({ companyCode, name: departmentName }),
   });
 };
+
+export const addDesignationApi = async (companyCode, departmentId, designationName) => {
+  return await apiRequest(`/departments/${departmentId}/adddesignation`, {
+    method: "POST",
+    body: JSON.stringify({ companyCode, name: designationName }),
+  });
+};
+
+export const editDepartmentApi = async (companyCode, departmentId, departmentName) => {
+  return await apiRequest(`/departments/${departmentId}/editdepartment`, {
+    method: "PUT",
+    body: JSON.stringify({ companyCode, name: departmentName }),
+  });
+};
+
+export const editDesignationApi = async (companyCode, departmentId, designationId, designationName) => {
+  return await apiRequest(`/departments/${departmentId}/${designationId}/editdesignation`, {
+    method: "PUT",
+    body: JSON.stringify({ companyCode, name: designationName }),
+  });
+};

@@ -1,10 +1,12 @@
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import {
   acquireEmployees,
   releaseEmployees,
   restartEmployees,
 } from "../store/employeesSlice";
+import useDepartments from "./useDepartments";
+import { withDepartmentNamesAll } from "../utils/departments/departmentRefs";
 
 /*
 |--------------------------------------------------------------------------
@@ -50,20 +52,37 @@ const useEmployees = (companyCode, { enabled = true } = {}) => {
   // Store mein kisi aur company ka data ho to wo is screen ka nahi
   const matches = active && state.companyCode === companyCode;
 
+  // Record me sirf departmentId/designationId hai — naam departments se bharte hain
+  const {
+    departments,
+    loading: departmentsLoading,
+    error: departmentsError,
+    reload: reloadDepartments,
+  } = useDepartments(companyCode, { enabled });
+
   const reload = useCallback(() => {
     if (active) dispatch(restartEmployees(companyCode));
-  }, [dispatch, active, companyCode]);
+    reloadDepartments();
+  }, [dispatch, active, companyCode, reloadDepartments]);
+
+  const employees = useMemo(
+    () => (matches ? withDepartmentNamesAll(state.data, departments) : EMPTY),
+    [matches, state.data, departments]
+  );
 
   return {
-    employees: matches ? state.data : EMPTY,
+    employees,
     /*
     | Bina company ya enabled: false — loading nahi, jaisa pehle hota tha
     | jab fetch chalti hi nahi thi. Warna pehle render se hi "loading", jab
     | tak store is company ka "ready" na kahe — wahi jo pehle useState(true)
-    | se hota tha.
+    | se hota tha. Departments bhi aane tak loading, warna naam khaali dikhte.
     */
-    loading: active && (!matches || state.status === "loading"),
-    error: matches && state.status === "error" ? state.error : "",
+    loading:
+      active && (!matches || state.status === "loading" || departmentsLoading),
+    error:
+      (matches && state.status === "error" ? state.error : "") ||
+      departmentsError,
     reload,
   };
 };

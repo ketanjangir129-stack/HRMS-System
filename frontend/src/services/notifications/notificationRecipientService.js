@@ -12,7 +12,6 @@ import {
 
 import {
   getDepartmentManager,
-  toDepartmentKey,
 } from "../../utils/permissions/departmentScope";
 
 
@@ -45,17 +44,18 @@ const getDepartmentManagerIds = async (
         .toUpperCase()
     ];
 
-  const department =
-    employee?.employmentInfo?.department;
+  // Employee record me department ki id hai, naam nahi
+  const departmentId =
+    employee?.employmentInfo?.departmentId;
 
-  if (!department) {
+  if (!departmentId) {
     return [];
   }
 
   const snapshot = await get(
     ref(
       db,
-      `companies/${companyCode}/departments`
+      `companies/${companyCode}/departments/${departmentId}`
     )
   );
 
@@ -63,17 +63,7 @@ const getDepartmentManagerIds = async (
     return [];
   }
 
-  const wanted = toDepartmentKey(department);
-
-  return Object.values(snapshot.val() || {})
-    .filter(
-      (node) =>
-        toDepartmentKey(node?.name) === wanted
-    )
-    .map(
-      (node) =>
-        getDepartmentManager(node)?.employeeId
-    )
+  return [getDepartmentManager(snapshot.val())?.employeeId]
     .filter((managerId) => {
 
       if (!managerId) return false;

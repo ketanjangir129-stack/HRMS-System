@@ -1,4 +1,10 @@
 const db = require("../config/firebase");
+const {
+  loadDepartments,
+  toDepartmentRefs,
+  withDepartmentNames,
+  withDepartmentNamesAll,
+} = require("../utils/departmentRefs");
 
 const normalize = (value) => String(value ?? "").trim().toLowerCase();
 
@@ -63,7 +69,7 @@ const findIdentityConflict = async (companyCode, employee) => {
 | Body ko seedha spread nahi karte — sirf wahi sections/keys jo form bhejta
 | hai, taaki API se koi extra field DB me na ghus sake.
 */
-const buildEmployeeRecord = (employee, employeeId) => {
+const buildEmployeeRecord = (employee, employeeId, departmentRefs) => {
   const personal = pick(employee.personalInfo, [
     "name",
     "email",
@@ -81,12 +87,9 @@ const buildEmployeeRecord = (employee, employeeId) => {
       address: personal.address.trim(),
     },
     employmentInfo: {
-      ...pick(employee.employmentInfo, [
-        "department",
-        "designation",
-        "joiningDate",
-        "employeeType",
-      ]),
+      ...pick(employee.employmentInfo, ["joiningDate", "employeeType"]),
+      departmentId: departmentRefs.departmentId,
+      designationId: departmentRefs.designationId,
       employeeId,
     },
     bankInfo: pick(employee.bankInfo, [
@@ -131,6 +134,17 @@ const createEmployee = async (companyCode, employee) => {
     return { success: false, status: 409, ...conflict };
   }
 
+  // Form department/designation ka naam bhejta hai — DB me unki id jaati hai
+  const departmentRefs = toDepartmentRefs(
+    await loadDepartments(companyCode),
+    employee.employmentInfo?.department,
+    employee.employmentInfo?.designation
+  );
+
+  if (departmentRefs.error) {
+    return { success: false, status: 400, ...departmentRefs.error };
+  }
+
   /*
   | set() ki jagah transaction: check aur write ke beech agar kisi ne wahi
   | Employee ID bana diya ho, to purana record overwrite nahi hoga.
@@ -138,7 +152,9 @@ const createEmployee = async (companyCode, employee) => {
   const { committed } = await db
     .ref(`companies/${companyCode}/employees/${employeeId}`)
     .transaction((current) =>            
-      current === null ? buildEmployeeRecord(employee, employeeId) : undefined
+      current === null
+        ? buildEmployeeRecord(employee, employeeId, departmentRefs)
+        : undefined
     );
 
   if (!committed) {
@@ -164,17 +180,21 @@ const createEmployee = async (companyCode, employee) => {
 | screens (salary, payroll, departments) use nahi karti.
 */
 const getEmployees = async (companyCode) => {
-  const snapshot = await db
-    .ref(`companies/${companyCode}/employees`)
-    .once("value");
+  const [snapshot, departments] = await Promise.all([
+    db.ref(`companies/${companyCode}/employees`).once("value"),
+    loadDepartments(companyCode),
+  ]);
 
   const employees = snapshot.val() || {};    //fb ko data mil gaya || data nhi hai
 
-  return Object.fromEntries(
-    Object.entries(employees).map(([employeeId, record]) => {
-      const { password, ...account } = record.account || {};
-      return [employeeId, { ...record, account }];
-    })
+  return withDepartmentNamesAll(
+    Object.fromEntries(
+      Object.entries(employees).map(([employeeId, record]) => {
+        const { password, ...account } = record.account || {};
+        return [employeeId, { ...record, account }];
+      })
+    ),
+    departments
   );
 };
 
@@ -183,16 +203,17 @@ const getEmployees = async (companyCode) => {
 | getEmployeeById jaisa). getEmployees ki tarah account.password hataya hai.
 */
 const getEmployeeById = async (companyCode, employeeId) => {
-  const snapshot = await db
-    .ref(`companies/${companyCode}/employees/${employeeId}`)
-    .once("value");
+  const [snapshot, departments] = await Promise.all([
+    db.ref(`companies/${companyCode}/employees/${employeeId}`).once("value"),
+    loadDepartments(companyCode),
+  ]);
 
   if (!snapshot.exists()) return null;
 
   const record = snapshot.val();
   const { password, ...account } = record.account || {};
 
-  return { ...record, account };
+  return withDepartmentNames({ ...record, account }, departments);
 };
 
 module.exports = {

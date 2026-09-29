@@ -20,10 +20,7 @@ const router = express.Router();
     requirePermission("employees.add"),
     createEmployee
   );
-<<<<<<< HEAD
-  router.get("/list", getEmployees);
-=======
-  router.get("/list",authenticate, getEmployees);
+  router.get("/list", authenticate, getEmployees);
   // Company token se aati hai (req.user), URL se sirf employee ID
   router.get(
     "/details/:employeeId",
@@ -31,7 +28,6 @@ const router = express.Router();
     requirePermission("employees.details"),
     getEmployeeDetails
   );
->>>>>>> c5081f91ce3e06153f543fd556e0292af15be6f1
 
 
 module.exports = router;

@@ -1,6 +1,10 @@
 const db = require("../config/firebase");
 // config/firebase default app initialize karta hai — getAuth() usi ko leta hai
 const { getAuth } = require("firebase-admin/auth");
+const {
+  loadDepartments,
+  withDepartmentNames,
+} = require("../utils/departmentRefs");
 
 const loginEmployee = async (
   companyCode,
@@ -47,7 +51,11 @@ const loginEmployee = async (
 
   return {
     success: true,
-    user: toSafeUser(employee, normalizedEmployeeId, companyCode),
+    user: toSafeUser(
+      withDepartmentNames(employee, await loadDepartments(companyCode)),
+      normalizedEmployeeId,
+      companyCode
+    ),
     role: employee.account.role,
   };
 };
@@ -81,7 +89,11 @@ const getEmployeeProfile = async (companyCode, employeeId) => {
 
   return {
     success: true,
-    user: toSafeUser(employee, normalizedEmployeeId, companyCode),
+    user: toSafeUser(
+      withDepartmentNames(employee, await loadDepartments(companyCode)),
+      normalizedEmployeeId,
+      companyCode
+    ),
   };
 };
 
