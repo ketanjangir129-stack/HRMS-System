@@ -19,7 +19,7 @@ const router = express.Router();
     requirePermission("employees.add"),
     createEmployee
   );
-  router.get("/list",authenticate, getEmployees);
+  router.get("/list", getEmployees);
 
 
 module.exports = router;

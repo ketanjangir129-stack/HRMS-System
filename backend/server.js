@@ -1,5 +1,7 @@
-const authRoutes = require("./src/routes/authRoutes")
 require("dotenv").config();
+const authRoutes = require("./src/routes/authRoutes")
+const employeesRoutes = require("./src/routes/employeeRoutes");
+const departmentsRoutes = require("./src/routes/departmentsRoutes");
 const express = require("express");
 const cors = require("cors");
 
@@ -32,8 +34,10 @@ app.get("/",(req,res)=>{
 // server
 // =================
 const PORT = process.env.PORT || 5000;
-app.use("/api/employees", require("./src/routes/employeeRoutes"));
 app.use("/api/auth", authRoutes);
+app.use("/api/employees", employeesRoutes);
+app.use("/api/departments", departmentsRoutes);
+
 app.listen(PORT,()=>{
     console.log(`Hrms Backend running on http://localhost:${PORT}`);
 });

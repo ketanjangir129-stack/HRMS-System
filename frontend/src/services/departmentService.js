@@ -7,6 +7,7 @@ import {
     onValue,
 } from "firebase/database";
 import { db } from "../firebase/firebase";
+import {getDepartmentsApi} from "./api/departmentApi"; 
 
 
 //Department functions
@@ -134,21 +135,24 @@ export const subscribeDepartments = (
         (error) => onError?.(error)
     );
 
-import { get } from "firebase/database";
 
+//getDepartments API call
 export const getDepartments = async (companyCode) => {
-  const departmentsRef = ref(
-    db,
-    getDepartmentPath(companyCode)
-  );
+  let result;
 
-  const snapshot = await get(departmentsRef);
-
-  if (snapshot.exists()) {
-    return snapshot.val();
+  try {
+    result = await getDepartmentsApi(companyCode);
+  } catch (error) {
+    console.error("Get departments API error:", error);
+    throw new Error("Unable to connect to the server. Please try again.", {
+      cause: error,
+    });
   }
 
-  return {};
+  if (!result?.success) {
+    throw new Error(result?.message || "Failed to load departments.");
+  }
+  return result.data || {};
 };
 
 /*
