@@ -21,15 +21,14 @@ const requirePermission = (path) => async (req, res, next) => {
       });
     }
 
-    // Frontend bhi storage padhe bina owner ko allow karta hai
-    if (isOwnerRole(role)) {
-      return next();
-    }
-
     /*
     | Permission token ki company par lagti hai. Body me doosri company aayi
     | to wo permission is check se hoke nahi jaani chahiye — warna ek company
     | ka HR doosri company me employee bana deta.
+    |
+    | Owner bypass iske neeche hai, upar nahi: owner ki permission bypass
+    | hoti hai, company nahi — Company A ka owner bhi Company B me kuch nahi
+    | kar sakta.
     */
     const bodyCompanyCode = req.body?.companyCode;
 
@@ -38,6 +37,11 @@ const requirePermission = (path) => async (req, res, next) => {
         success: false,
         message: "You do not have access to this company.",
       });
+    }
+
+    // Frontend bhi storage padhe bina owner ko allow karta hai
+    if (isOwnerRole(role)) {
+      return next();
     }
 
     const stored = await roleAccessService.getRoleAccessForRole(

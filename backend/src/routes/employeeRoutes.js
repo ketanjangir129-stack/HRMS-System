@@ -3,6 +3,7 @@ const express = require("express");
 const {
   createEmployee,
   getEmployees,
+  getEmployeeDetails,
 } = require("../controllers/employeeController");
 const { authenticate } = require("../middleware/authMiddleware");
 const { requirePermission } = require("../middleware/permissionMiddleware");
@@ -20,6 +21,13 @@ const router = express.Router();
     createEmployee
   );
   router.get("/list", getEmployees);
+  // Company token se aati hai (req.user), URL se sirf employee ID
+  router.get(
+    "/details/:employeeId",
+    authenticate,
+    requirePermission("employees.details"),
+    getEmployeeDetails
+  );
 
 
 module.exports = router;

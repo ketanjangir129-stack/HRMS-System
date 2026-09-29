@@ -6,7 +6,11 @@ import {
   getDownloadURL,
 } from "firebase/storage";
 import { checkEmployeeUniqueness } from "./ValidationService";
-import { createEmployeeApi, getEmployeesApi } from "./api/employeeApi";
+import {
+  createEmployeeApi,
+  getEmployeeByIdApi,
+  getEmployeesApi,
+} from "./api/employeeApi";
 import { releaseManagerFromDepartments } from "./departmentService";
 import {
   getEmployeeRole,
@@ -104,6 +108,35 @@ export const getEmployeeById = async (
   );
  
   return snapshot.exists() ? snapshot.val() : null;
+};
+
+/*
+| Details page ka ek baar ka read, backend se (GET /api/employees/details/:id).
+| Shape getEmployeeById jaisi — record, ya na mile to null — taaki page ka
+| "Employee not found" wala raasta wahi rahe. account.password nahi aata.
+*/
+export const fetchEmployeeDetails = async (employeeId) => {
+  let result;
+
+  try {
+    result = await getEmployeeByIdApi(employeeId);
+  } catch (error) {
+    // Backend band ho (fetch fail) ya JSON ke bajaye HTML aaye
+    console.error("Get employee details API error:", error);
+    throw new Error("Unable to connect to the server. Please try again.", {
+      cause: error,
+    });
+  }
+
+  if (result?.code === "EMPLOYEE_NOT_FOUND") {
+    return null;
+  }
+
+  if (!result?.success) {
+    throw new Error(result?.message || "Failed to load employee.");
+  }
+
+  return result.data || null;
 };
 
 /*

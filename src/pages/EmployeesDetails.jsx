@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
-    subscribeEmployeeById,
+    fetchEmployeeDetails,
     updateEmployee,
     updateEmployeeRole,
     updateEmployeeSection,
@@ -40,7 +40,6 @@ import {
     Hash,
     Heart,
     IdCard,
-    KeyRound,
     Landmark,
     LayoutGrid,
     Lock,
@@ -296,27 +295,33 @@ function EmployeesDetails() {
     };
 
     /*
-    | Employee realtime — kisi aur tab ya kisi aur user ne is employee ko
-    | badla to page bina refresh ke badal jaata hai. Pehle yahan ek baar ka
-    | getEmployeeById tha, aur doosre tab ki edit refresh tak nahi dikhti thi.
+    | Employee backend se (GET /api/employees/details/:id) — company token se
+    | aati hai, password response mein nahi aata. Ek baar ka read: doosre tab
+    | ki edit reload ya Retry par dikhti hai; is page ke apne saves local
+    | state khud badalte hain.
     |
-    | Sirf is ek employee ka path suna jaata hai, poori list nahi.
-    |
-    | id badle (ek details page se doosre par) ya Retry dabe to purana
-    | listener band aur naya lagta hai.
+    | id badle (ek details page se doosre par) ya Retry dabe to dobara padhta
+    | hai; purane request ka jawab der se aaye to use chhod dete hain.
     */
     useEffect(() => {
-        const unsubscribe = subscribeEmployeeById(
-            companyCode,
-            id,
-            applyEmployee,
-            (error) => {
-                console.error("Failed to load employee:", error);
-                setLoadError("Failed to load employee. Please try again.");
-            }
-        );
+        let cancelled = false;
 
-        return unsubscribe;
+        fetchEmployeeDetails(id)
+            .then((data) => {
+                if (!cancelled) applyEmployee(data);
+            })
+            .catch((error) => {
+                if (cancelled) return;
+
+                console.error("Failed to load employee:", error);
+                setLoadError(
+                    error?.message || "Failed to load employee. Please try again."
+                );
+            });
+
+        return () => {
+            cancelled = true;
+        };
     }, [companyCode, id, reloadKey]);
 
     // Departments dropdown ke liye — pehle jaisa, id badalne par ek baar
@@ -477,10 +482,11 @@ function EmployeesDetails() {
         setStatusUpdating(true);
         setActionError("");
         try {
-            // account node poora replace hota hai, isliye baaki fields saath bhejna zaroori hai
             const nextAccount = { ...employee.account, status: nextStatus };
 
-            await updateEmployee(companyCode, id, { account: nextAccount });
+            // Sirf status key — poora account likhte to password (jo API se
+            // aata hi nahi) DB se mit jaata aur employee login na kar pata
+            await updateEmployee(companyCode, id, { "account/status": nextStatus });
 
             // Ek deactivate hua manager ab bhi department node par likha rehta
             // hai. Us department ka koi approver nahi bachta, par screen par
@@ -702,7 +708,7 @@ function EmployeesDetails() {
             readOnly: true,
             fields: [
                 { key: "username", label: "Username", icon: AtSign },
-                { key: "password", label: "Password", icon: KeyRound, masked: true },
+                // Password yahan nahi — backend use kabhi response mein nahi bhejta
                 { key: "status", label: "Status", icon: ShieldCheck, pill: true },
                 /*
                 | The one thing on this card that is not a credential. The

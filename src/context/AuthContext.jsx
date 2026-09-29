@@ -12,6 +12,7 @@ import {
 import {
   loginEmployeeApi,
   changePasswordApi,
+  ownerTokenExchangeApi,
 } from "../services/api/authApi.js";
 import { getCurrentUserApi } from "../services/api/authApi.js";
 import {
@@ -40,6 +41,59 @@ const normalizeCurrentUser = (user) => {
     ...user,
     name,
   };
+};
+
+/*
+| Owner ka backend token. Owner Firebase Auth se login karta hai; backend
+| APIs (apiClient) ke liye uska Firebase ID token backend JWT se badla jaata
+| hai aur wahi `authToken` key mein rakha jaata hai jo HR/Employee use karte
+| hain — apiClient aur middleware ko farq nahi padta.
+|
+| Token sirf padha jaata hai, verify backend karta hai. Yahan bas itna dekhna
+| hai ki rakha hua token isi owner, isi company ka hai aur abhi expire nahi
+| hone wala — warna reload par naya le lo.
+*/
+const isOwnerTokenUsable = (token, firebaseUser, companyCode) => {
+  try {
+    const payload = JSON.parse(
+      atob(token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/"))
+    );
+
+    return (
+      payload.role === "owner" &&
+      payload.uid === firebaseUser.uid &&
+      String(payload.companyCode).toUpperCase() ===
+        String(companyCode).toUpperCase() &&
+      payload.exp * 1000 - Date.now() > 60 * 1000
+    );
+  } catch {
+    return false;
+  }
+};
+
+// Sirf success par token likhta hai — fail par caller decide karta hai
+const exchangeOwnerToken = async (firebaseUser, companyCode) => {
+  try {
+    const idToken = await firebaseUser.getIdToken();
+    const result = await ownerTokenExchangeApi(idToken, companyCode);
+
+    if (result?.success && result.token) {
+      localStorage.setItem("authToken", result.token);
+      return { success: true };
+    }
+
+    return {
+      success: false,
+      message: result?.message || "Unable to start owner session.",
+    };
+  } catch (error) {
+    console.error("Owner token exchange failed:", error);
+
+    return {
+      success: false,
+      message: "Unable to start owner session.",
+    };
+  }
 };
 
 export const AuthProvider = ({ children }) => {
@@ -132,6 +186,30 @@ export const AuthProvider = ({ children }) => {
             setCompany(null);
             setCurrentUser(null);
           } else {
+            /*
+            | Firebase session zinda hai; backend token missing, expire ya
+            | kisi aur ka ho to ID token se dobara lo. Fail ho to session
+            | pehle jaisa chalta rahe — sirf backend APIs 401 denge, agle
+            | reload par phir koshish hogi.
+            */
+            if (
+              !isOwnerTokenUsable(
+                localStorage.getItem("authToken") || "",
+                firebaseUser,
+                companyCode
+              )
+            ) {
+              const exchange = await exchangeOwnerToken(
+                firebaseUser,
+                companyCode
+              );
+
+              if (!exchange.success) {
+                localStorage.removeItem("authToken");
+                console.warn("Owner backend token unavailable:", exchange.message);
+              }
+            }
+
             setCurrentUser(storedUser);
           }
         } else {
@@ -236,6 +314,19 @@ export const AuthProvider = ({ children }) => {
       company.ownerUid !== authResult.user.uid
     ) {
       return await fail("Invalid Company Code.");
+    }
+
+    // Owner ka backend token — upar ke checks pass hone ke baad hi. Backend
+    // yahi checks dobara karta hai; na mile to login adhoora nahi chhodte.
+    if (authResult.role === "owner") {
+      const exchange = await exchangeOwnerToken(
+        authResult.user,
+        company.companyCode
+      );
+
+      if (!exchange.success) {
+        return await fail(exchange.message);
+      }
     }
 
     const loggedInUser =
