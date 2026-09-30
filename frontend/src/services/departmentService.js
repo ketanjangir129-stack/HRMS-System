@@ -13,6 +13,8 @@ import {
     addDesignationApi,
     editDepartmentApi,
     editDesignationApi,
+    deleteDepartmentApi,
+    deleteDesignationApi,
 } from "./api/departmentApi"; 
 
 
@@ -81,20 +83,36 @@ export const updateDepartment = async (companyCode, departmentId, name) => {
 
 
 
-
-export const deleteDepartment = async (
-    companyCode,
-    departmentId
-) => {
-    await remove(
-        ref(
-            db,
-            `${getDepartmentPath(
-                companyCode
-            )}/${departmentId}`
-        )
-    );
+//Delete department API call
+// export const deleteDepartment = async (
+//     companyCode,
+//     departmentId
+// ) => {
+//     await remove(
+//         ref(
+//             db,
+//             `${getDepartmentPath(
+//                 companyCode
+//             )}/${departmentId}`
+//         )
+//     );
+// };
+export const deleteDepartment = async (companyCode, departmentId) => {
+  let result;
+  try {
+    result = await deleteDepartmentApi(companyCode, departmentId);
+  }catch (error) {
+    throw new Error("Unable to connect to the server. Please try again.", { cause: error });
+  }
+  if (!result?.success) {
+    throw new Error(result?.message || "Failed to delete department.");
+  }
+    return result.data; // { departmentId}
 };
+
+
+
+
 
 //Desgination functions
 // export const addDesignation = async (
@@ -166,20 +184,35 @@ export const updateDesignation = async (companyCode, departmentId, designationId
 };
 
 
-export const deleteDesignation = async (
-    companyCode,
-    departmentId,
-    designationId
-) => {
-    await remove(
-        ref(
-            db,
-            `${getDepartmentPath(
-                companyCode
-            )}/${departmentId}/designations/${designationId}`
-        )
-    );
+// export const deleteDesignation = async (
+//     companyCode,
+//     departmentId,
+//     designationId
+// ) => {
+//     await remove(
+//         ref(
+//             db,
+//             `${getDepartmentPath(
+//                 companyCode
+//             )}/${departmentId}/designations/${designationId}`
+//         )
+//     );
+// };
+
+export const deleteDesignation = async (companyCode, departmentId, designationId) => {
+  let result;
+  try {
+    result = await deleteDesignationApi(companyCode, departmentId, designationId);
+  }catch (error) {
+    throw new Error("Unable to connect to the server. Please try again.", { cause: error });
+  }
+  if (!result?.success) {
+    throw new Error(result?.message || "Failed to delete designation.");
+  }
+    return result.data; // { designationId}
 };
+
+
 
 //fetching in realtime
 // Isko seedha component se nahi bulana hai: store/departmentsSlice ek hi

@@ -312,7 +312,136 @@ const editDesignation = async (req, res) => {
 };
 
 
+//Delete /api/departments/:departmentId/deletedepartment?companyCode=ABC123
+const deleteDepartment = async (req, res) => {
+  const { companyCode } = req.query;
+  const { departmentId } = req.params;
 
+  // Validate company code
+  if (!COMPANY_CODE_PATTERN.test(String(companyCode ?? ""))) {
+    return res.status(400).json({
+      success: false,
+      field: "companyCode",
+      message: "A valid company code is required.",
+    });
+  }
+
+  // Validate department ID
+  if (!String(departmentId ?? "").trim()) {
+    return res.status(400).json({
+      success: false,
+      field: "departmentId",
+      message: "Department ID is required.",
+    });
+  }
+
+  try {
+    const result = await departmentService.deleteDepartment(
+      companyCode,
+      departmentId
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: "Department deleted successfully.",
+      data: result,
+    });
+  } catch (error) {
+    console.error("Delete department error:", error);
+
+    if (error.code === "DEPARTMENT_NOT_FOUND") {
+      return res.status(404).json({
+        success: false,
+        message: error.message,
+      });
+    }
+
+    if (error.code === "DEPARTMENT_IN_USE") {
+      return res.status(409).json({
+        success: false,
+        assignedCount: error.assignedCount,
+        message:
+          "This department still has employees assigned. Move them to another department first.",
+      });
+    }
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to delete department.",
+    });
+  }
+};
+
+
+//Delete /api/departments/:departmentId/:designationId/deletedesignation?companyCode=ABC123
+const deleteDesignation = async (req, res) => {
+  const { companyCode } = req.query;
+  const { departmentId, designationId } = req.params;
+
+  // Validate company code
+  if (!COMPANY_CODE_PATTERN.test(String(companyCode ?? ""))) {
+    return res.status(400).json({
+      success: false,
+      field: "companyCode",
+      message: "A valid company code is required.",
+    });
+  }
+
+  // Validate department ID
+  if (!String(departmentId ?? "").trim()) {
+    return res.status(400).json({
+      success: false,
+      field: "departmentId",
+      message: "Department ID is required.",
+    });
+  }
+
+  // Validate designation ID
+  if (!String(designationId ?? "").trim()) {
+    return res.status(400).json({
+      success: false,
+      field: "designationId",
+      message: "Designation ID is required.",
+    });
+  }
+
+  try {
+    const result = await departmentService.deleteDesignation(
+      companyCode,
+      departmentId,
+      designationId
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: "Designation deleted successfully.",
+      data: result,
+    });
+  } catch (error) {
+    console.error("Delete designation error:", error);
+
+    if (error.code === "DESIGNATION_NOT_FOUND") {
+      return res.status(404).json({
+        success: false,
+        message: error.message,
+      });
+    }
+
+    if (error.code === "DESIGNATION_IN_USE") {
+      return res.status(409).json({
+        success: false,
+        assignedCount: error.assignedCount,
+        message:
+          "This designation still has employees assigned. Move them to another designation first.",
+      });
+    }
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to delete designation.",
+    });
+  }
+};
 
 
 module.exports = {
@@ -321,4 +450,6 @@ module.exports = {
   addDesignation,
   editDepartment,
   editDesignation,
+  deleteDepartment,
+  deleteDesignation,
 };

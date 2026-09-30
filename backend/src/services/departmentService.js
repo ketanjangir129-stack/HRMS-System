@@ -180,8 +180,96 @@ const editDesignation = async (companyCode, departmentId, designationId, name) =
 };
 
 // Delete a department from the specified company
+const deleteDepartment = async (companyCode, departmentId) => {
+  const departmentRef = db.ref(
+    `companies/${companyCode}/departments/${departmentId}`
+  );
+
+  // Check whether department exists
+  const departmentSnapshot = await departmentRef.once("value");
+
+  if (!departmentSnapshot.exists()) {
+    const error = new Error("Department not found.");
+    error.code = "DEPARTMENT_NOT_FOUND";
+    throw error;
+  }
+
+  // Employees store employmentInfo.departmentId, so block the delete while
+  // anyone is still assigned — otherwise their department would read as ""
+  const employeesSnapshot = await db
+    .ref(`companies/${companyCode}/employees`)
+    .once("value");
+  const employees = employeesSnapshot.val() || {};
+
+  const assignedCount = Object.values(employees).filter(
+    (employee) => employee?.employmentInfo?.departmentId === departmentId
+  ).length;
+
+  if (assignedCount > 0) {
+    const error = new Error(
+      `Department has ${assignedCount} employee(s) assigned.`
+    );
+    error.code = "DEPARTMENT_IN_USE";
+    error.assignedCount = assignedCount;
+    throw error;
+  }
+
+  // remove() deletes the department node along with its designations
+  await departmentRef.remove();
+
+  return {
+    departmentId,
+    name: departmentSnapshot.val()?.name ?? "",
+  };
+};
 
 
+
+// Delete a designation from the specified department of a company
+const deleteDesignation = async (companyCode, departmentId, designationId) => {
+  const designationRef = db.ref(
+    `companies/${companyCode}/departments/${departmentId}/designations/${designationId}`
+  );
+
+  // Check whether designation exists
+  const designationSnapshot = await designationRef.once("value");
+
+  if (!designationSnapshot.exists()) {
+    const error = new Error("Designation not found.");
+    error.code = "DESIGNATION_NOT_FOUND";
+    throw error;
+  }
+
+  // Employees store employmentInfo.designationId, so block the delete while
+  // anyone is still assigned — otherwise their designation would read as ""
+  const employeesSnapshot = await db
+    .ref(`companies/${companyCode}/employees`)
+    .once("value");
+  const employees = employeesSnapshot.val() || {};
+
+  const assignedCount = Object.values(employees).filter(
+    (employee) =>
+      employee?.employmentInfo?.departmentId === departmentId &&
+      employee?.employmentInfo?.designationId === designationId
+  ).length;
+
+  if (assignedCount > 0) {
+    const error = new Error(
+      `Designation has ${assignedCount} employee(s) assigned.`
+    );
+    error.code = "DESIGNATION_IN_USE";
+    error.assignedCount = assignedCount;
+    throw error;
+  }
+
+  await designationRef.remove();
+
+  return {
+    departmentId,
+    designationId,
+    name: designationSnapshot.val()?.name ?? "",
+  };
+};
 
 module.exports = {
   getDepartments,
@@ -189,4 +277,6 @@ module.exports = {
   addDesignation,
   editDepartment,
   editDesignation,
+  deleteDepartment,
+  deleteDesignation,
 };

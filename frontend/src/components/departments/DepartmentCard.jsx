@@ -30,7 +30,7 @@ function DepartmentCard({
             setConfirmDelete(false);
         } catch (error) {
             console.error(error);
-            toast.error("Failed to delete department.");
+            toast.error(error.message || "Failed to delete department.");
         }
     };
 

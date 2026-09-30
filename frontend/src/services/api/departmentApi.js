@@ -34,3 +34,19 @@ export const editDesignationApi = async (companyCode, departmentId, designationI
     body: JSON.stringify({ companyCode, name: designationName }),
   });
 };
+
+export const deleteDepartmentApi = async (companyCode, departmentId) => {
+  // The backend reads companyCode from the query string for DELETE.
+  return await apiRequest(
+    `/departments/${departmentId}/deletedepartment?companyCode=${encodeURIComponent(companyCode)}`,
+    { method: "DELETE" }
+  );
+}
+
+export const deleteDesignationApi = async (companyCode, departmentId, designationId) => {
+  // The backend reads companyCode from the query string for DELETE.
+  return await apiRequest(
+    `/departments/${departmentId}/${designationId}/deletedesignation?companyCode=${encodeURIComponent(companyCode)}`,
+    { method: "DELETE" }
+  )
+};
