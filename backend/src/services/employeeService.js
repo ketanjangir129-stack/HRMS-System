@@ -222,7 +222,7 @@ const getEmployeeById = async (companyCode, employeeId) => {
 | dikhata hai). employeeId kabhi editable nahi: wahi DB key hai.
 */
 const EDITABLE_FIELDS = {
-  personalInfo: ["name", "email", "mobile", "address", "gender", "dob"],
+  personalInfo: ["name", "email", "mobile", "address", "gender", "dob", "fatherName", "motherName", "maritalStatus","pincode", "city", "state","alternateMobile"],
   employmentInfo: ["joiningDate", "employeeType"],
   bankInfo: ["accountHolderName", "bankName", "accountNumber", "ifsc", "branch"],
   documents: ["aadhaar", "pan", "resume", "uan", "esic"],
