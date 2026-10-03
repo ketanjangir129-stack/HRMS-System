@@ -4,7 +4,7 @@ require("dotenv").config({ path: path.resolve(__dirname, "../../.env") });
 const { initializeApp, cert } = require("firebase-admin/app");
 const { getDatabase } = require("firebase-admin/database");
 
-const serviceAccount = require("../../serviceAccountKey.json");
+// const serviceAccount = require("../../serviceAccountKey.json");
 
 if (!process.env.FIREBASE_DATABASE_URL|| !process.env.FIREBASE_PROJECT_ID|| !process.env.FIREBASE_CLIENT_EMAIL ||!process.env.FIREBASE_PRIVATE_KEY) {
   throw new Error("Firebase environment variables are missing");
