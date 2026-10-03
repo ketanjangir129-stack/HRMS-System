@@ -38,6 +38,8 @@ function Departments() {
     const [expandedDepartment, setExpandedDepartment] = useState(null);
     const [departmentError, setDepartmentError] = useState("");
     const [designationError, setDesignationError] = useState("");
+    const [savingDepartment, setSavingDepartment] = useState(false);
+    const [savingDesignation, setSavingDesignation] = useState(false);
     const {search,setSearch,setSearchPlaceholder} = useOutletContext();
 
     const navigate = useNavigate();
@@ -141,6 +143,7 @@ function Departments() {
             setDepartmentError("Department already exists.");
             return;
         }
+        setSavingDepartment(true);
         try {
             if (editingDepartmentId) {
 
@@ -166,6 +169,8 @@ function Departments() {
         } catch (error) {
             console.error(error);
             toast.error(error.message || "Failed to save department.");
+        } finally {
+            setSavingDepartment(false);
         }
     };
 
@@ -191,6 +196,7 @@ function Departments() {
             return;
         }
 
+        setSavingDesignation(true);
         try {
             if (editingDesignationId) {
                 await updateDesignation(
@@ -218,6 +224,8 @@ function Departments() {
         } catch (error) {
             console.error(error);
             toast.error("Failed to save designation.");
+        } finally {
+            setSavingDesignation(false);
         }
     };
 
@@ -495,6 +503,7 @@ function Departments() {
                 value={departmentName}
                 setValue={setDepartmentName}
                 error={departmentError}
+                saving={savingDepartment}
                 onSave={handleDepartmentSave}
                 onClose={() => {
                     setDepartmentModal(false);
@@ -508,6 +517,7 @@ function Departments() {
                 value={designationName}
                 setValue={setDesignationName}
                 error={designationError}
+                saving={savingDesignation}
                 onSave={handleDesignationSave}
                 onClose={() =>{
                     setDesignationModal(false);

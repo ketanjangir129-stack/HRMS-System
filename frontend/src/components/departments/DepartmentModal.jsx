@@ -1,4 +1,4 @@
-import { FiLayers, FiX } from "react-icons/fi";
+import { FiLayers, FiLoader, FiX } from "react-icons/fi";
 
 function DepartmentModal({
     open,
@@ -6,6 +6,7 @@ function DepartmentModal({
     setValue,
     title,
     error,
+    saving = false,
     onClose,
     onSave,
 }) {
@@ -33,8 +34,9 @@ function DepartmentModal({
 
                     <button
                         onClick={onClose}
+                        disabled={saving}
                         title="Close"
-                        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600 cursor-pointer"
+                        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600 cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
                     >
                         <FiX />
                     </button>
@@ -71,16 +73,25 @@ function DepartmentModal({
                 <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end sm:gap-3">
                     <button
                         onClick={onClose}
-                        className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-600 transition-all duration-200 hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-300 cursor-pointer sm:w-auto"
+                        disabled={saving}
+                        className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-600 transition-all duration-200 hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-300 cursor-pointer disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
                     >
                         Cancel
                     </button>
 
                     <button
                         onClick={onSave}
-                        className="w-full rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white sm:w-auto shadow-md shadow-blue-600/20 transition-all duration-200 hover:-translate-y-0.5 hover:bg-blue-700 hover:shadow-lg hover:shadow-blue-600/30 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 active:translate-y-0 cursor-pointer"
+                        disabled={saving}
+                        className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white sm:w-auto shadow-md shadow-blue-600/20 transition-all duration-200 hover:-translate-y-0.5 hover:bg-blue-700 hover:shadow-lg hover:shadow-blue-600/30 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 active:translate-y-0 cursor-pointer disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0"
                     >
-                        Save
+                        {saving ? (
+                            <>
+                                <FiLoader className="animate-spin" />
+                                Saving...
+                            </>
+                        ) : (
+                            "Save"
+                        )}
                     </button>
                 </div>
 
