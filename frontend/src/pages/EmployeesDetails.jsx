@@ -2,10 +2,11 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
     fetchEmployeeDetails,
+    saveEmployeeSection,
     updateEmployee,
     updateEmployeeRole,
-    updateEmployeeSection,
     uploadResume,
+    setEmployeeStatus,
 } from "../services/EmployeeService";
 // import { getSalary } from "../services/SalaryService";
 import {
@@ -437,8 +438,7 @@ function EmployeesDetails() {
                 sectionData.resume = await uploadResume(companyCode, id, resumeFile);
             }
 
-            const result = await updateEmployeeSection(
-                companyCode,
+            const result = await saveEmployeeSection(
                 id,
                 sectionId,
                 sectionData
@@ -486,7 +486,7 @@ function EmployeesDetails() {
 
             // Sirf status key — poora account likhte to password (jo API se
             // aata hi nahi) DB se mit jaata aur employee login na kar pata
-            await updateEmployee(companyCode, id, { "account/status": nextStatus });
+            await setEmployeeStatus(id, nextStatus);  
 
             // Ek deactivate hua manager ab bhi department node par likha rehta
             // hai. Us department ka koi approver nahi bachta, par screen par

@@ -10,6 +10,8 @@ import {
   createEmployeeApi,
   getEmployeeByIdApi,
   getEmployeesApi,
+  updateEmployeeApi,
+  updateEmployeeStatusApi
 } from "./api/employeeApi";
 import { releaseManagerFromDepartments } from "./departmentService";
 import {
@@ -408,5 +410,38 @@ export const createEmployee = async (companyCode, employee) => {
     throw new Error(result?.message || "Failed to add employee.");
   }
 
+  return result;
+};
+
+
+//updating employee section — backend (PATCH /api/employees/update/:employeeId) karta hai. Response ka shape wahi hai jo form pehle se samajhta hai.
+export const saveEmployeeSection = async (employeeId, sectionId, sectionData) => {
+  let result;
+  try {
+    result = await updateEmployeeApi(employeeId, sectionId, sectionData);
+  } catch (error) {
+    console.error("Update employee API error:", error);
+    throw new Error("Unable to connect to the server. Please try again.", { cause: error });
+  }
+
+  // field wala error input ke neeche; baaki throw → page ka banner
+  if (!result?.success && !result?.field) {
+    throw new Error(result?.message || "Failed to save changes.");
+  }
+  return result;
+};
+
+export const setEmployeeStatus = async (employeeId, status) => {
+  let result;
+  try {
+    result = await updateEmployeeStatusApi(employeeId, status);
+  } catch (error) {
+    console.error("Update status API error:", error);
+    throw new Error("Unable to connect to the server. Please try again.", { cause: error });
+  }
+
+  if (!result?.success) {
+    throw new Error(result?.message || "Status update failed.");
+  }
   return result;
 };

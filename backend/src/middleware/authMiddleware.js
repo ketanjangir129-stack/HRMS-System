@@ -33,6 +33,26 @@ const authenticate = (req,res, next)=>{
    }
 };
 
+const requireActiveAccount = async (req, res, next) => {
+  try {
+    const { companyCode, employeeId, role } = req.user || {};
+    if (role === "owner") return next();
+
+    const snapshot = await db
+      .ref(`companies/${companyCode}/employees/${String(employeeId).toUpperCase()}/account/status`)
+      .once("value");
+
+    if (snapshot.val() !== "Active") {
+      return res.status(403).json({ success: false, code: "ACCOUNT_INACTIVE", message: "Account is inactive." });
+    }
+    next();
+  } catch (error) {
+    console.error("Account status check error:", error);
+    return res.status(500).json({ success: false, message: "Unable to verify account status." });
+  }
+};
+
+
 // Blocks HR / Employee until the temporary password has been changed.
 // Must run after `authenticate`. The flag is read from the DB on every
 // request, not from the token: a token issued before the change would
@@ -76,4 +96,5 @@ const requirePasswordChanged = async (req, res, next) => {
 module.exports={
     authenticate,
     requirePasswordChanged,
+    requireActiveAccount,
 };

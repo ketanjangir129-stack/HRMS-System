@@ -23,3 +23,21 @@ export const getEmployeesApi = async (companyCode) => {
     `/employees/list?companyCode=${encodeURIComponent(companyCode)}`
   );
 };
+
+// PATCH /api/employees/update/:employeeId — ek section. Company token se.
+export const updateEmployeeApi = async (employeeId, section, data) => {
+  return await apiRequest(`/employees/update/${encodeURIComponent(employeeId)}`, {
+    method: "PATCH",
+    body: JSON.stringify({ section, data }),
+  });
+};
+
+// PATCH /api/employees/status/:employeeId — "Active" | "Inactive"
+export const updateEmployeeStatusApi = async (employeeId, status) => {
+  return await apiRequest(`/employees/status/${encodeURIComponent(employeeId)}`, {
+    method: "PATCH",
+    body: JSON.stringify({ status }),
+  });
+};
+
+

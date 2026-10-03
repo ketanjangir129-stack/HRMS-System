@@ -35,15 +35,10 @@ const buildOnboardingRecord = (
 ) => ({
     employmentInfo: {
         employeeId,
-
         name: String(employeeInfo.name || "").trim(),
-
         email: String(employeeInfo.email || "").trim(),
-
         mobile: String(employeeInfo.mobile || "").trim(),
-
         department: employeeInfo.department,
-
         designation: employeeInfo.designation,
         joiningDate: employeeInfo.joiningDate,
         employeeType: employeeInfo.employeeType,

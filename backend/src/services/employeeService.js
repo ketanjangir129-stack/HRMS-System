@@ -93,6 +93,7 @@ const buildEmployeeRecord = (employee, employeeId, departmentRefs) => {
       employeeId,
     },
     bankInfo: pick(employee.bankInfo, [
+      "accountHolderName",
       "bankName",
       "accountNumber",
       "ifsc",
@@ -216,8 +217,144 @@ const getEmployeeById = async (companyCode, employeeId) => {
   return withDepartmentNames({ ...record, account }, departments);
 };
 
+/*
+| Details page jo keys edit karta hai (dob, uan, esic bhi — EmployeesDetails
+| dikhata hai). employeeId kabhi editable nahi: wahi DB key hai.
+*/
+const EDITABLE_FIELDS = {
+  personalInfo: ["name", "email", "mobile", "address", "gender", "dob"],
+  employmentInfo: ["joiningDate", "employeeType"],
+  bankInfo: ["accountHolderName", "bankName", "accountNumber", "ifsc", "branch"],
+  documents: ["aadhaar", "pan", "resume", "uan", "esic"],
+};
+
+const updateEmployee = async (companyCode, employeeId, section, data) => {
+  const employeeRef = db.ref(`companies/${companyCode}/employees/${employeeId}`);
+  const snapshot = await employeeRef.once("value");
+
+  if (!snapshot.exists()) {
+    return { success: false, status: 404, code: "EMPLOYEE_NOT_FOUND", message: "Employee not found." };
+  }
+
+  const current = snapshot.val();
+
+  // Sirf aayi hui whitelisted keys — partial update
+  const fields = Object.fromEntries(
+    EDITABLE_FIELDS[section]
+      .filter((key) => key in data)
+      .map((key) => [key, String(data[key] ?? "").trim()])
+  );
+
+  if (section === "personalInfo") {
+    if ("name" in fields && !fields.name) {
+      return { success: false, status: 400, field: "name", message: "This field is required." };
+    }
+    if ("email" in fields) fields.email = fields.email.toLowerCase();
+
+    // Sirf badli hui value check — warna apna hi email duplicate nikalta
+    const currentEmail = normalize(current.personalInfo?.email || current.employmentInfo?.email);
+    const currentMobile = normalize(current.personalInfo?.mobile || current.employmentInfo?.mobile);
+
+    const conflict = await findIdentityConflict(companyCode, {
+      email: "email" in fields && normalize(fields.email) !== currentEmail ? fields.email : "",
+      mobile: "mobile" in fields && normalize(fields.mobile) !== currentMobile ? fields.mobile : "",
+    });
+
+    if (conflict) return { success: false, status: 409, ...conflict };
+  }
+
+  let departments;
+
+  // Form naam bhejta hai — DB me id jaati hai (createEmployee jaisa)
+  if (section === "employmentInfo" && ("department" in data || "designation" in data)) {
+    departments = await loadDepartments(companyCode);
+    const refs = toDepartmentRefs(departments, data.department, data.designation);
+
+    if (refs.error) return { success: false, status: 400, ...refs.error };
+
+    fields.departmentId = refs.departmentId;
+    fields.designationId = refs.designationId;
+  }
+
+  /*
+  | Har key apne path par likhte hain ("employmentInfo/joiningDate"), poora
+  | section object nahi — warna employmentInfo.employeeId jaisi keys jo form
+  | nahi bhejta, mit jaatin.
+  */
+  const updates = Object.fromEntries(
+    Object.entries(fields).map(([key, value]) => [`${section}/${key}`, value])
+  );
+  updates.updatedAt = Date.now();
+
+  await employeeRef.update(updates);
+
+  const sectionData = { ...(current[section] || {}), ...fields };
+
+  return {
+    success: true,
+    status: 200,
+    message: "Employee updated successfully.",
+    data:
+      section === "employmentInfo"
+        ? withDepartmentNames(
+            { employmentInfo: sectionData },
+            departments ?? (await loadDepartments(companyCode))
+          ).employmentInfo
+        : sectionData,
+  };
+};
+
+/*
+| Status + manager ke departments chhodna — ek hi multi-path update me, taaki
+| ya dono hon ya koi nahi (frontend me ye do alag writes the).
+*/
+const updateEmployeeStatus = async (companyCode, employeeId, nextStatus) => {
+  const [snapshot, departments] = await Promise.all([
+    db.ref(`companies/${companyCode}/employees/${employeeId}/account`).once("value"),
+    loadDepartments(companyCode),
+  ]);
+
+  if (!snapshot.exists()) {
+    return { success: false, status: 404, code: "EMPLOYEE_NOT_FOUND", message: "Employee not found." };
+  }
+
+  const account = snapshot.val();
+
+  if (account.status === nextStatus) {
+    return { success: true, status: 200, message: `Employee is already ${nextStatus}.`, data: { employeeId, accountStatus: nextStatus, releasedDepartments: 0 } };
+  }
+
+  const updates = {
+    [`employees/${employeeId}/account/status`]: nextStatus,
+    [`employees/${employeeId}/account/statusUpdatedAt`]: Date.now(),
+  };
+
+  let releasedDepartments = 0;
+
+  if (nextStatus === "Inactive" && account.role === "manager") {
+    Object.entries(departments).forEach(([departmentId, department]) => {
+      if (normalize(department?.manager?.employeeId) === normalize(employeeId)) {
+        updates[`departments/${departmentId}/manager`] = null;
+        releasedDepartments += 1;
+      }
+    });
+  }
+
+  await db.ref(`companies/${companyCode}`).update(updates);
+
+  return {
+    success: true,
+    status: 200,
+    message: nextStatus === "Inactive" ? "Employee deactivated." : "Employee activated.",
+    data: { employeeId, accountStatus: nextStatus, releasedDepartments },
+  };
+};
+
+
 module.exports = {
   createEmployee,
   getEmployees,
   getEmployeeById,
+  updateEmployee,
+  updateEmployeeStatus,
 };

@@ -4,8 +4,11 @@ const {
   createEmployee,
   getEmployees,
   getEmployeeDetails,
+  updateEmployee,
+  updateEmployeeStatus,
 } = require("../controllers/employeeController");
 const { authenticate } = require("../middleware/authMiddleware");
+const { requireActiveAccount } = require("../middleware/authMiddleware");
 const { requirePermission } = require("../middleware/permissionMiddleware");
 
 const router = express.Router();
@@ -27,6 +30,17 @@ const router = express.Router();
     authenticate,
     requirePermission("employees.details"),
     getEmployeeDetails
+  );
+  router.patch("/update/:employeeId", authenticate, requirePermission("employees.details"), updateEmployee);
+
+
+  // Activate / Deactivate — body: { status: "Active" | "Inactive" }
+  router.patch(
+    "/status/:employeeId",
+    authenticate,
+    requireActiveAccount,
+    requirePermission("employees.details"),
+    updateEmployeeStatus
   );
 
 
