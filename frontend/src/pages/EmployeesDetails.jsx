@@ -386,24 +386,61 @@ function EmployeesDetails() {
         setErrors((prev) => ({ ...prev, [key]: "" }));
     };
 
+    // const validateSection = (sectionId, data) => {
+    //     const sectionErrors = {};
+
+    //     Object.keys(data).forEach((key) => {
+    //         if (!rules[key]) return; // is field ka koi rule nahi → skip
+
+    //         const value = data[key];
+    //         const isEmpty = !String(value ?? "").trim();
+
+    //         // Optional field (rule required nahi) khaali ho to validate mat karo
+    //         if (isEmpty && !rules[key].required) return;
+
+    //         const error = validateField(key, value, { ...employee, [sectionId]: data });
+    //         if (error) sectionErrors[key] = error;
+    //     });
+
+    //     return sectionErrors;
+    // };
+
     const validateSection = (sectionId, data) => {
-        const sectionErrors = {};
+    const sectionErrors = {};
 
-        Object.keys(data).forEach((key) => {
-            if (!rules[key]) return; // is field ka koi rule nahi → skip
+    const section = sections.find(
+        (item) => item.section === sectionId
+    );
 
-            const value = data[key];
-            const isEmpty = !String(value ?? "").trim();
+    const configuredKeys = (section?.fields || [])
+        .filter((field) => !field.readOnly && !section.readOnly)
+        .map((field) => field.key);
 
-            // Optional field (rule required nahi) khaali ho to validate mat karo
-            if (isEmpty && !rules[key].required) return;
+    const keysToValidate = new Set([
+        ...configuredKeys,
+        ...Object.keys(data),
+    ]);
 
-            const error = validateField(key, value, { ...employee, [sectionId]: data });
-            if (error) sectionErrors[key] = error;
+    keysToValidate.forEach((key) => {
+        if (!rules[key]) return;
+
+        const value = data[key];
+        const isEmpty = !String(value ?? "").trim();
+
+        if (isEmpty && !rules[key].required) return;
+
+        const error = validateField(key, value, {
+            ...employee,
+            [sectionId]: data,
         });
 
-        return sectionErrors;
-    };
+        if (error) {
+            sectionErrors[key] = error;
+        }
+    });
+
+    return sectionErrors;
+};
 
     const saveSection = async (sectionId) => {
         const hasNewResume = sectionId === "documents" && !!resumeFile;
@@ -663,7 +700,7 @@ function EmployeesDetails() {
                 { key: "alternateMobile", label: "Alternate Mobile", icon: Smartphone },
                 // Onboarding "Other" bhejta hai, Add Employee form "Prefer not to say" —
                 // dono rakhe hain taaki edit par kisi ki value na ude
-                { key: "gender", label: "Gender", icon: Users, type: "select", options: ["Male", "Female", "Other", "Prefer not to say"] },
+                { key: "gender", label: "Gender", icon: Users, type: "select", options: ["Male", "Female", "Prefer not to say"] },
                 { key: "dob", label: "Date of Birth", icon: Calendar, type: "date" },
                 { key: "fatherName", label: "Father Name", icon: UserRound },
                 { key: "motherName", label: "Mother Name", icon: UserRound },

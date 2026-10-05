@@ -333,6 +333,7 @@ function EmployeeForm() {
               className={fieldClass(errors.name)}
               onBlur={handleBlur}
             />
+            
 
             <FieldError message={errors.name} />
           </div>
@@ -392,7 +393,7 @@ function EmployeeForm() {
               <option value="">Select Gender</option>
               <option value="Male">Male</option>
               <option value="Female">Female</option>
-              <option value="Other">Other</option>
+              <option value="Prefer not to say">Prefer not to say</option>
             </select>
 
             <FieldError message={errors.gender} />

@@ -113,6 +113,172 @@ const buildEmployeeRecord = (employee, employeeId, departmentRefs) => {
 
 // Result { success, status, ... } lautata hai — status controller HTTP code banata hai
 const createEmployee = async (companyCode, employee) => {
+
+  if (!employee || typeof employee !== "object") {
+    return {
+      success: false,
+      status: 400,
+      message: "Invalid employee data.",
+    };
+  }
+
+  if (!employee.personalInfo || typeof employee.personalInfo !== "object") {
+    return {
+      success: false,
+      status: 400,
+      field: "personalInfo",
+      message: "Personal information is required.",
+    };
+  }
+
+  if (!employee.employmentInfo || typeof employee.employmentInfo !== "object") {
+    return {
+      success: false,
+      status: 400,
+      field: "employmentInfo",
+      message: "Employment information is required.",
+    };
+  }
+
+  const { personalInfo, employmentInfo } = employee;
+
+  if (!String(personalInfo.name ?? "").trim()) {
+    return {
+      success: false,
+      status: 400,
+      field: "name",
+      message: "Name is required.",
+    };
+  }
+
+  const name = String(personalInfo.name ?? "").trim();
+  const nameRegex = /^[A-Za-z ]{3,50}$/;
+
+  if (!nameRegex.test(name)) {
+    return {
+      success: false,
+      status: 400,
+      field: "name",
+      message: "Enter a valid name.",
+    };
+  }
+ 
+  if (!String(personalInfo.email ?? "").trim()) {
+  return {
+    success: false,
+    status: 400,
+    field: "email",
+    message: "Email is required.",
+  };
+}
+const email = String(personalInfo.email).trim().toLowerCase();
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+  if (!emailRegex.test(email)) {
+    return {
+      success: false,
+      status: 400,
+      field: "email",
+      message: "Please enter a valid email address.",
+    };
+  }
+
+if (!String(personalInfo.mobile ?? "").trim()) {
+  return {
+    success: false,
+    status: 400,
+    field: "mobile",
+    message: "Mobile number is required.",
+  };
+}
+
+const mobile = String(personalInfo.mobile ?? "").trim();
+
+const mobileRegex = /^[6-9]\d{9}$/;
+
+if (!mobileRegex.test(mobile)) {
+  return {
+    success: false,
+    status: 400,
+    field: "mobile",
+    message: "Please enter a valid 10-digit mobile number.",
+  };
+}
+
+if (!String(employmentInfo.employeeId ?? "").trim()) {
+  return {
+    success: false,
+    status: 400,
+    field: "employeeId",
+    message: "Employee ID is required.",
+  };
+}
+
+const employeeId = String(employmentInfo.employeeId ?? "")
+  .trim()
+  .toUpperCase();
+
+const employeeIdRegex = /^[A-Za-z0-9_-]{3,20}$/;
+
+if (!employeeIdRegex.test(employeeId)) {
+  return {
+    success: false,
+    status: 400,
+    field: "employeeId",
+    message:
+      "Employee ID must be 3-20 characters and contain only letters, numbers, - or _.",
+  };
+}
+
+if (!String(employmentInfo.joiningDate ?? "").trim()) {
+  return {
+    success: false,
+    status: 400,
+    field: "joiningDate",
+    message: "Joining date is required.",
+  };
+}
+
+const joiningDate = String(employmentInfo.joiningDate ?? "").trim();
+
+if (Number.isNaN(Date.parse(joiningDate))) {
+  return {
+    success: false,
+    status: 400,
+    field: "joiningDate",
+    message: "Please enter a valid joining date.",
+  };
+}
+
+
+
+if (!String(employmentInfo.employeeType ?? "").trim()) {
+  return {
+    success: false,
+    status: 400,
+    field: "employeeType",
+    message: "Employee type is required.",
+  };
+}
+
+if (!String(employmentInfo.department ?? "").trim()) {
+  return {
+    success: false,
+    status: 400,
+    field: "department",
+    message: "Please select a department.",
+  };
+}
+if (!String(employmentInfo.designation ?? "").trim()) {
+  return {
+    success: false,
+    status: 400,
+    field: "designation",
+    message: "Please select a designation.",
+  };
+}
+
+  // /Existing company/duplicate/department logic continues below...
   const companySnapshot = await db
     .ref(`companies/${companyCode}/details`)
     .once("value");
@@ -121,9 +287,6 @@ const createEmployee = async (companyCode, employee) => {
     return { success: false, status: 404, message: "Company not found." };
   }
 
-  const employeeId = String(employee.employmentInfo.employeeId)
-    .trim()
-    .toUpperCase();
 
   const conflict = await findIdentityConflict(companyCode, {
     employeeId,
@@ -146,13 +309,9 @@ const createEmployee = async (companyCode, employee) => {
     return { success: false, status: 400, ...departmentRefs.error };
   }
 
-  /*
-  | set() ki jagah transaction: check aur write ke beech agar kisi ne wahi
-  | Employee ID bana diya ho, to purana record overwrite nahi hoga.
-  */
   const { committed } = await db
     .ref(`companies/${companyCode}/employees/${employeeId}`)
-    .transaction((current) =>            
+    .transaction((current) =>
       current === null
         ? buildEmployeeRecord(employee, employeeId, departmentRefs)
         : undefined
@@ -222,7 +381,7 @@ const getEmployeeById = async (companyCode, employeeId) => {
 | dikhata hai). employeeId kabhi editable nahi: wahi DB key hai.
 */
 const EDITABLE_FIELDS = {
-  personalInfo: ["name", "email", "mobile", "address", "gender", "dob", "fatherName", "motherName", "maritalStatus","pincode", "city", "state","alternateMobile"],
+  personalInfo: ["name", "email", "mobile", "address", "gender", "dob", "fatherName", "motherName", "maritalStatus", "pincode", "city", "state", "alternateMobile"],
   employmentInfo: ["joiningDate", "employeeType"],
   bankInfo: ["accountHolderName", "bankName", "accountNumber", "ifsc", "branch"],
   documents: ["aadhaar", "pan", "resume", "uan", "esic"],
@@ -246,11 +405,65 @@ const updateEmployee = async (companyCode, employeeId, section, data) => {
   );
 
   if (section === "personalInfo") {
-    if ("name" in fields && !fields.name) {
-      return { success: false, status: 400, field: "name", message: "This field is required." };
+  if ("name" in fields) {
+    if (!fields.name) {
+      return {
+        success: false,
+        status: 400,
+        field: "name",
+        message: "Name is required.",
+      };
     }
-    if ("email" in fields) fields.email = fields.email.toLowerCase();
 
+    if (!/^[A-Za-z ]{3,50}$/.test(fields.name)) {
+      return {
+        success: false,
+        status: 400,
+        field: "name",
+        message: "Enter a valid name.",
+      };
+    }
+  }
+  if ("email" in fields) {
+  if (!fields.email) {
+    return {
+      success: false,
+      status: 400,
+      field: "email",
+      message: "Email is required.",
+    };
+  }
+
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(fields.email)) {
+    return {
+      success: false,
+      status: 400,
+      field: "email",
+      message: "Please enter a valid email address.",
+    };
+  }
+
+  fields.email = fields.email.toLowerCase();
+}
+if ("mobile" in fields) {
+  if (!fields.mobile) {
+    return {
+      success: false,
+      status: 400,
+      field: "mobile",
+      message: "Mobile number is required.",
+    };
+  }
+
+  if (!/^[6-9]\d{9}$/.test(fields.mobile)) {
+    return {
+      success: false,
+      status: 400,
+      field: "mobile",
+      message: "Please enter a valid 10-digit mobile number.",
+    };
+  }
+}
     // Sirf badli hui value check — warna apna hi email duplicate nikalta
     const currentEmail = normalize(current.personalInfo?.email || current.employmentInfo?.email);
     const currentMobile = normalize(current.personalInfo?.mobile || current.employmentInfo?.mobile);
@@ -264,6 +477,39 @@ const updateEmployee = async (companyCode, employeeId, section, data) => {
   }
 
   let departments;
+
+  if (section === "employmentInfo") {
+  if ("joiningDate" in fields) {
+    if (!fields.joiningDate) {
+      return {
+        success: false,
+        status: 400,
+        field: "joiningDate",
+        message: "Joining date is required.",
+      };
+    }
+
+    if (Number.isNaN(Date.parse(fields.joiningDate))) {
+      return {
+        success: false,
+        status: 400,
+        field: "joiningDate",
+        message: "Please enter a valid joining date.",
+      };
+    }
+  }
+
+if ("employeeType" in fields) {
+  if (!fields.employeeType) {
+    return {
+      success: false,
+      status: 400,
+      field: "employeeType",
+      message: "Employee type is required.",
+    };
+  }
+}
+  }
 
   // Form naam bhejta hai — DB me id jaati hai (createEmployee jaisa)
   if (section === "employmentInfo" && ("department" in data || "designation" in data)) {
@@ -297,9 +543,9 @@ const updateEmployee = async (companyCode, employeeId, section, data) => {
     data:
       section === "employmentInfo"
         ? withDepartmentNames(
-            { employmentInfo: sectionData },
-            departments ?? (await loadDepartments(companyCode))
-          ).employmentInfo
+          { employmentInfo: sectionData },
+          departments ?? (await loadDepartments(companyCode))
+        ).employmentInfo
         : sectionData,
   };
 };

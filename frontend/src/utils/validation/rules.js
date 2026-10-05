@@ -114,6 +114,26 @@ export const rules = {
     message: "Please enter a valid joining date.",
   },
 
+//   joiningDate: {
+//   required: true,
+//   pattern: /^\d{4}-\d{2}-\d{2}$/,
+//   message: "Please enter a valid joining date.",
+//   validate: (value) => {
+//     const [year, month, day] = value.split("-").map(Number);
+//     const date = new Date(year, month - 1, day);
+
+//     if (
+//       date.getFullYear() !== year ||
+//       date.getMonth() !== month - 1 ||
+//       date.getDate() !== day
+//     ) {
+//       return "Please enter a valid joining date.";
+//     }
+
+//     return "";
+//   },
+// },
+
   // bank info — details page ke Bank Information card se bharta hai
   bankName: {
     required: true,
@@ -165,6 +185,72 @@ export const rules = {
     pattern: /^[A-Za-z][A-Za-z ]{1,49}(-[A-Za-z ]{1,49})?$/,
     message: "Enter a valid employee type.",
   },
+
+  // Employee Details — Personal Information
+
+alternateMobile: {
+  required: true,
+  pattern: /^[6-9]\d{9}$/,
+  message: "Enter a valid alternate mobile number.",
+},
+
+fatherName: {
+  required: true,
+  pattern: /^[A-Za-z][A-Za-z .'-]{1,49}$/,
+  message: "Enter a valid father's name.",
+},
+
+motherName: {
+  required: true,
+  pattern: /^[A-Za-z][A-Za-z .'-]{1,49}$/,
+  message: "Enter a valid mother's name.",
+},
+
+maritalStatus: {
+  required: true,
+  pattern: /^(Single|Married|Divorced|Widowed)$/,
+  message: "Please select a valid marital status.",
+},
+
+city: {
+  required: true,
+  pattern: /^[A-Za-z][A-Za-z .'-]{1,49}$/,
+  message: "Enter a valid city.",
+},
+
+state: {
+  required: true,
+  pattern: /^[A-Za-z][A-Za-z .'-]{1,49}$/,
+  message: "Enter a valid state.",
+},
+
+pincode: {
+  required: true,
+  pattern: /^\d{6}$/,
+  message: "PIN code must contain exactly 6 digits.",
+},
+
+// Employee Details — Bank Information
+
+accountHolderName: {
+  required: true,
+  pattern: /^[A-Za-z][A-Za-z ]{2,49}$/,
+  message: "Enter a valid account holder name.",
+},
+
+// Employee Details — Documents / Identification
+
+uan: {
+  required: true,
+  pattern: /^\d{12}$/,
+  message: "UAN must contain exactly 12 digits.",
+},
+
+esic: {
+  required: true,
+  pattern: /^\d{10}$/,
+  message: "Enter a valid 10-digit ESIC insurance number.",
+},
 
   // task module — Tasks page ke create/edit form ke liye
   taskTitle: {

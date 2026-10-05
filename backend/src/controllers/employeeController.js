@@ -8,15 +8,16 @@ const COMPANY_CODE_PATTERN = /^[A-Z0-9]{3,10}$/;
 
 // POST /api/employees  body: { companyCode, employee }
 const createEmployee = async (req, res) => {
-  const { companyCode, employee } = req.body || {};
+  const { companyCode } = req.user;
+const { employee } = req.body || {};
 
-  if (!COMPANY_CODE_PATTERN.test(String(companyCode ?? ""))) {
-    return res.status(400).json({
-      success: false,
-      field: "companyCode",
-      message: "A valid company code is required.",
-    });
-  }
+  // if (!COMPANY_CODE_PATTERN.test(String(companyCode ?? ""))) {
+  //   return res.status(400).json({
+  //     success: false,
+  //     field: "companyCode",
+  //     message: "A valid company code is required.",
+  //   });
+  // }
 
   if (!String(employee?.employmentInfo?.employeeId ?? "").trim()) {
     return res.status(400).json({
@@ -53,7 +54,7 @@ const createEmployee = async (req, res) => {
 
 // GET /api/employees?companyCode=ABC123
 const getEmployees = async (req, res) => {
-  const { companyCode } = req.query;
+  const { companyCode } = req.user;
 
   if (!COMPANY_CODE_PATTERN.test(String(companyCode ?? ""))) {
     return res.status(400).json({
