@@ -4,7 +4,7 @@ import {
   punchOutEmployee,
   subscribeToEmployeeDay,
 } from "../services/attendanceServices/attendanceService";
-import { getDateKey } from "../utils/attendance/attendanceDate";
+import { getAttendanceDateKey } from "../utils/attendance/attendanceDate";
 import { getPunchLocation } from "../utils/attendance/attendanceLocation";
 import { getCurrentEmployeeId } from "../utils/attendance/attendanceRequestUtils";
 
@@ -33,8 +33,10 @@ const useAttendance = (companyCode, currentUser) => {
   const enabled = Boolean(companyCode && employeeId);
 
   const key = `${companyCode}|${employeeId}`;
+  const dateKey = getAttendanceDateKey();
 
   const isCurrent = state.key === key;
+  const attendance = isCurrent ? state.attendance : null;
 
   useEffect(() => {
 
@@ -43,7 +45,7 @@ const useAttendance = (companyCode, currentUser) => {
     const unsubscribe = subscribeToEmployeeDay(
       companyCode,
       employeeId,
-      getDateKey(),
+      dateKey,
       (record) => {
         setState({ key, attendance: record, error: "" });
       },
@@ -64,7 +66,7 @@ const useAttendance = (companyCode, currentUser) => {
 
     return () => unsubscribe();
 
-  }, [companyCode, employeeId, enabled, key]);
+  }, [companyCode, employeeId, enabled, key, dateKey]);
 
   const punchIn = useCallback(
     async () => {
@@ -102,14 +104,14 @@ const useAttendance = (companyCode, currentUser) => {
         };
       }
 
-      return punchOutEmployee(companyCode, employeeId, location);
+      return punchOutEmployee(companyCode, employeeId, location, attendance?.date);
 
     },
-    [companyCode, employeeId]
+    [companyCode, employeeId, attendance?.date]
   );
 
   return {
-    attendance: isCurrent ? state.attendance : null,
+    attendance,
     loading: enabled && !isCurrent,
     error: isCurrent ? state.error : "",
     employeeId,

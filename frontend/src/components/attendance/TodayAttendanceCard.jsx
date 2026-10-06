@@ -19,7 +19,7 @@ import {
 } from "../../utils/attendance/attendanceConstants";
 import {
   formatTime,
-  getDateKey,
+  getAttendanceDateKey,
 } from "../../utils/attendance/attendanceDate";
 import { getApprovalLabel } from "../../utils/attendance/attendanceUtils";
 import {
@@ -247,7 +247,7 @@ function TodayAttendanceCard({ className = "" }) {
   | punch the moment the day rolls over into the weekly off.
   */
 
-  const todayKey = getDateKey(now);
+  const todayKey = getAttendanceDateKey(now);
 
   const onWeeklyOff = isWeeklyOff(todayKey);
 
