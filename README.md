@@ -1,6 +1,6 @@
-# HRS System
+# HRMS System
 
-**HRS System** is a modern **Human Resource Management System (HRMS)** designed to simplify and centralize day-to-day HR operations.
+**HRMS System** is a modern **Human Resource Management System (HRMS)** designed to simplify and centralize day-to-day HR operations.
 
 It provides a complete platform for managing the employee lifecycle, from employee management and attendance to leave, payroll, resignation, and full & final settlement.
 
