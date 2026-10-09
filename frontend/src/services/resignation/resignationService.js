@@ -6,13 +6,8 @@ import {
   update,
 } from "firebase/database";
 
-import {
-  ref as storageRef,
-  uploadBytes,
-  getDownloadURL,
-} from "firebase/storage";
-
-import { db, storage } from "../../firebase/firebase";
+import { db } from "../../firebase/firebase";
+import { uploadFileApi } from "../api/uploadApi";
 
 import {
   RESIGNATION_STATUS,
@@ -211,18 +206,12 @@ export const uploadResignationDocument = async (
   resignationId,
   file
 ) => {
+  const result = await uploadFileApi(file, {
+    folder: `resignations/${resignationId}`,
+    resourceType: "auto",
+  });
 
-  const extension =
-    (file?.name?.split(".").pop() || "pdf").toLowerCase();
-
-  const fileRef = storageRef(
-    storage,
-    `companies/${companyCode}/resignations/${resignationId}/document.${extension}`
-  );
-
-  await uploadBytes(fileRef, file, { contentType: file.type });
-
-  return await getDownloadURL(fileRef);
+  return result.url;
 
 };
 

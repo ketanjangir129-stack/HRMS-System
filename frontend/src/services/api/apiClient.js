@@ -5,12 +5,15 @@ export const apiRequest = async (
     options = {}
 )=>{
     const token = localStorage.getItem("authToken");
+    // FormData body ho to Content-Type set karna nahi chahiye — browser khud
+    // multipart boundary ke saath header laga deta hai.
+    const isFormData = options.body instanceof FormData;
     const response = await fetch(
         `${API_URL}${endpoint}`,
         {
             ...options,
             headers:{
-                "Content-Type":"application/json",
+                ...(isFormData ? {} : { "Content-Type": "application/json" }),
                 ...(token?{
                     Authorization:`Bearer ${token}`,
 

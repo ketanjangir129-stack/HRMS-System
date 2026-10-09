@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import AvatarUpload from "../components/common/AvatarUpload";
 import {
     fetchEmployeeDetails,
     saveEmployeeSection,
     updateEmployee,
     updateEmployeeRole,
-    uploadResume,
     setEmployeeStatus,
 } from "../services/EmployeeService";
 // import { getSalary } from "../services/SalaryService";
@@ -470,15 +470,12 @@ function EmployeesDetails() {
         try {
             const sectionData = { ...formData };
 
-            // Baaki fields sahi hain, ab hi file Storage pe bhejo
-            if (hasNewResume) {
-                sectionData.resume = await uploadResume(companyCode, id, resumeFile);
-            }
-
+            // Resume bhi isi PATCH request ke saath FormData ke roop mein backend ko jaata hai (alag generic upload route ab use nahi hota).
             const result = await saveEmployeeSection(
                 id,
                 sectionId,
-                sectionData
+                sectionData,
+                hasNewResume ? resumeFile : null
             );
 
             // Email/mobile kisi aur employee ka nikla — us field par error dikhao
@@ -927,9 +924,21 @@ function EmployeesDetails() {
 
                     <div className="flex min-w-0 flex-row items-center gap-4 sm:items-center">
 
-                        <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-blue-600 text-xl font-bold text-white shadow-md shadow-blue-600/25 sm:h-20 sm:w-20 sm:text-2xl">
-                            {initials}
-                        </div>
+                        <AvatarUpload
+                            photoUrl={employee.personalInfo?.photo}
+                            name={employee.personalInfo?.name}
+                            employeeId={employee.employmentInfo?.employeeId || id}
+                            onUploaded={async (url) => {
+                                const result = await saveEmployeeSection(id, "personalInfo", { photo: url });
+                                if (result?.success) {
+                                    setEmployee((prev) => ({
+                                        ...prev,
+                                        personalInfo: { ...prev.personalInfo, photo: result.data?.photo ?? url },
+                                    }));
+                                }
+                            }}
+                            className="h-14 w-14 shrink-0 overflow-visible rounded-2xl bg-blue-600 text-xl font-bold text-white shadow-md shadow-blue-600/25 sm:h-20 sm:w-20 sm:text-2xl"
+                        />
 
                         <div className="min-w-0">
 
@@ -1325,7 +1334,7 @@ function EmployeesDetails() {
                                                             {resumeFile
                                                                 ? resumeFile.name
                                                                 : formData[field.key]
-                                                                    ? "Ek resume pehle se uploaded hai — nayi PDF chunne par wo replace ho jayegi."
+                                                                    ? `Uploaded: ${decodeURIComponent(String(formData[field.key]).split("/").pop() || formData[field.key])} — nayi PDF chunne par wo replace ho jayegi.`
                                                                     : "Sirf PDF, 5 MB tak."}
                                                         </p>
                                                     </>
@@ -1385,6 +1394,7 @@ function EmployeesDetails() {
                                                     {value ? (
                                                         field.type === "file" &&
                                                             /^https?:\/\//.test(value) ? (
+                                                            <>
                                                             <a
                                                                 href={value}
                                                                 target="_blank"
@@ -1394,6 +1404,10 @@ function EmployeesDetails() {
                                                                 <FileText className="h-3.5 w-3.5" />
                                                                 View Resume (PDF)
                                                             </a>
+                                                            <span className="block max-w-full truncate text-xs text-slate-500">
+                                                                {decodeURIComponent(value.split("/").pop() || "")}
+                                                            </span>
+                                                            </>
                                                         ) : isHidden ? (
                                                             maskValue(value)
                                                         ) : field.type === "role" ? (

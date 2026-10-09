@@ -28,7 +28,9 @@ export const getEmployeesApi = async (companyCode) => {
 export const updateEmployeeApi = async (employeeId, section, data) => {
   return await apiRequest(`/employees/update/${encodeURIComponent(employeeId)}`, {
     method: "PATCH",
-    body: JSON.stringify({ section, data }),
+    // data agar FormData hai to multipart request bhejo (resume file ke saath),
+    // warna normal JSON rahega.
+    body: data instanceof FormData ? data : JSON.stringify({ section, data }),
   });
 };
 

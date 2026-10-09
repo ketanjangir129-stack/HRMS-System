@@ -10,6 +10,7 @@ const {
 const { authenticate } = require("../middleware/authMiddleware");
 const { requireActiveAccount } = require("../middleware/authMiddleware");
 const { requirePermission } = require("../middleware/permissionMiddleware");
+const upload = require("../middleware/uploadMiddleware");
 
 const router = express.Router();
 
@@ -31,8 +32,22 @@ const router = express.Router();
     requirePermission("employees.details"),
     getEmployeeDetails
   );
-  router.patch("/update/:employeeId", authenticate, requirePermission("employees.details"), updateEmployee);
-
+  router.patch(
+    "/update/:employeeId",
+    authenticate,
+    requirePermission("employees.details"),
+    upload.single("resume"),   //multer
+    (err, req, res, next) => {
+      if (err) {
+        return res.status(400).json({
+          success: false,
+          message: err.code === "LIMIT_FILE_SIZE" ? "Resume must be smaller than 5 MB." : "Invalid resume upload.",
+        });
+      }
+      next();
+    },
+    updateEmployee
+  );
 
   // Activate / Deactivate — body: { status: "Active" | "Inactive" }
   router.patch(

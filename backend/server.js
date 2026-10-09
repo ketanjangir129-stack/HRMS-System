@@ -3,6 +3,7 @@ const authRoutes = require("./src/routes/authRoutes")
 const employeesRoutes = require("./src/routes/employeeRoutes");
 const departmentsRoutes = require("./src/routes/departmentsRoutes");
 const attendanceRoutes = require("./src/routes/attendanceRoutes");
+const uploadRoutes = require("./src/routes/uploadRoutes");
 const express = require("express");
 const cors = require("cors");
 
@@ -36,9 +37,11 @@ app.use("/api/auth", authRoutes);
 app.use("/api/employees", employeesRoutes);
 app.use("/api/departments", departmentsRoutes);
 app.use("/api/attendance", attendanceRoutes);
-
+app.use("/api/upload", uploadRoutes);
 app.listen(PORT,()=>{
     console.log(`Hrms Backend running on http://localhost:${PORT}`);
 });
+
+
 
 

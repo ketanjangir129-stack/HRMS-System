@@ -135,6 +135,7 @@ const updateEmployee = async (req, res) => {
   const { companyCode } = req.user;
   const employeeId = String(req.params.employeeId ?? "").trim().toUpperCase();
   const { section, data } = req.body || {};
+  const resumeFile = req.file || null;
 
   if (!EMPLOYEE_ID_PATTERN.test(employeeId)) {
     return res.status(400).json({ success: false, field: "employeeId", message: "A valid employee ID is required." });
@@ -144,13 +145,24 @@ const updateEmployee = async (req, res) => {
     return res.status(400).json({ success: false, field: "section", message: "Invalid section." });
   }
 
-  if (!data || typeof data !== "object" || Array.isArray(data)) {
+  // Multipart request me "data" JSON string ke roop me aata hai — parse karke
+  // wahi validation aur aage ke flow me bhejo jo JSON request me hota hai.
+  let parsedData = data;
+  if (typeof parsedData === "string") {
+    try {
+      parsedData = JSON.parse(parsedData);
+    } catch {
+      return res.status(400).json({ success: false, message: "Section data must be valid JSON." });
+    }
+  }
+
+  if (!parsedData || typeof parsedData !== "object" || Array.isArray(parsedData)) {
     return res.status(400).json({ success: false, message: "Section data is required." });
   }
 
   try {
     const { status, ...result } = await employeeService.updateEmployee(
-      companyCode, employeeId, section, data
+      companyCode, employeeId, section, parsedData, resumeFile
     );
     res.status(status).json(result);
   } catch (error) {
@@ -158,6 +170,7 @@ const updateEmployee = async (req, res) => {
     res.status(500).json({ success: false, message: "Failed to update employee." });
   }
 };
+
 
 // PATCH /api/employees/status/:employeeId   body: { status }
 const updateEmployeeStatus = async (req, res) => {

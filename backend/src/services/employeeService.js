@@ -1,4 +1,5 @@
 const db = require("../config/firebase");
+const { uploadFile } = require("./uploadServices");
 const {
   loadDepartments,
   toDepartmentRefs,
@@ -381,13 +382,13 @@ const getEmployeeById = async (companyCode, employeeId) => {
 | dikhata hai). employeeId kabhi editable nahi: wahi DB key hai.
 */
 const EDITABLE_FIELDS = {
-  personalInfo: ["name", "email", "mobile", "address", "gender", "dob", "fatherName", "motherName", "maritalStatus", "pincode", "city", "state", "alternateMobile"],
+  personalInfo: ["name", "email", "mobile", "address", "gender", "dob", "fatherName", "motherName", "maritalStatus", "pincode", "city", "state", "alternateMobile", "photo"],
   employmentInfo: ["joiningDate", "employeeType"],
   bankInfo: ["accountHolderName", "bankName", "accountNumber", "ifsc", "branch"],
   documents: ["aadhaar", "pan", "resume", "uan", "esic"],
 };
 
-const updateEmployee = async (companyCode, employeeId, section, data) => {
+const updateEmployee = async (companyCode, employeeId, section, data, resumeFile = null) => {
   const employeeRef = db.ref(`companies/${companyCode}/employees/${employeeId}`);
   const snapshot = await employeeRef.once("value");
 
@@ -403,6 +404,48 @@ const updateEmployee = async (companyCode, employeeId, section, data) => {
       .filter((key) => key in data)
       .map((key) => [key, String(data[key] ?? "").trim()])
   );
+
+  // Resume file tabhi process karo jab documents section ke saath aaya ho.
+  // URL hi documents.resume me jaata hai — Firebase structure wahi rahta hai.
+  if (section === "documents" && resumeFile) {
+    if (resumeFile.mimetype !== "application/pdf") {
+      return {
+        success: false,
+        status: 400,
+        field: "resume",
+        message: "Only PDF resume is allowed.",
+      };
+    }
+
+    if (resumeFile.size > 5 * 1024 * 1024) {
+      return {
+        success: false,
+        status: 400,
+        field: "resume",
+        message: "Resume must be smaller than 5 MB.",
+      };
+    }
+
+    let uploadResult;
+    try {
+      uploadResult = await uploadFile(resumeFile.buffer, {
+        folder: `companies/${companyCode}/employees/${employeeId}/resume`,
+        resourceType: "auto",
+        maxBytes: 5 * 1024 * 1024,
+        fileName: resumeFile.originalname,
+      });
+    } catch (uploadError) {
+      console.error("Resume upload error:", uploadError);
+      return {
+        success: false,
+        status: 502,
+        field: "resume",
+        message: "Failed to upload resume to storage.",
+      };
+    }
+
+    fields.resume = uploadResult.url;
+  }
 
   if (section === "personalInfo") {
   if ("name" in fields) {
@@ -595,6 +638,7 @@ const updateEmployeeStatus = async (companyCode, employeeId, nextStatus) => {
     data: { employeeId, accountStatus: nextStatus, releasedDepartments },
   };
 };
+
 
 
 module.exports = {

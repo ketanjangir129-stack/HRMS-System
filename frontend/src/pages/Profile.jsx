@@ -38,6 +38,7 @@ import useAuth from "../hooks/useAuth";
 import useRoleAccess from "../hooks/useRoleAccess";
 import useResignations from "../hooks/useResignations";
 import Loader from "../components/common/Loader";
+import AvatarUpload from "../components/common/AvatarUpload";
 import ResignationModal from "../components/resignation/ResignationModal";
 import { createResignation } from "../services/resignation/resignationService";
 import { toEmployeeSnapshot } from "../utils/resignation/resignationUtils";
@@ -673,9 +674,29 @@ function Profile() {
 
           <div className="flex min-w-0 flex-col gap-4 sm:flex-row sm:items-center">
 
-            <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-2xl bg-blue-600 text-2xl font-bold text-white shadow-md shadow-blue-600/25">
-              {initials}
-            </div>
+            <AvatarUpload
+              photoUrl={isOwner ? null : employee?.personalInfo?.photo}
+              name={name}
+              employeeId={employeeId}
+              onUploaded={async (url) => {
+                const result = await updateEmployeeSection(
+                  companyCode,
+                  employeeId,
+                  "personalInfo",
+                  { photo: url }
+                );
+
+                if (!result?.success) {
+                  throw new Error(result?.message || "Failed to save photo.");
+                }
+
+                setEmployee((prev) => ({
+                  ...prev,
+                  personalInfo: { ...prev?.personalInfo, photo: result.data?.photo ?? url },
+                }));
+              }}
+              className="h-20 w-20 shrink-0 rounded-2xl bg-blue-600 text-2xl font-bold text-white shadow-md shadow-blue-600/25"
+            />
 
             <div className="min-w-0">
 
@@ -960,8 +981,9 @@ function Profile() {
                         isHidden ? "tracking-widest" : ""
                       } ${field.capitalize ? "capitalize" : ""}`}
                     >
+                      
                       {field.type === "file" && /^https?:\/\//.test(field.value) ? (
-                        <a
+                       <> <a
                           href={field.value}
                           target="_blank"
                           rel="noreferrer"
@@ -970,6 +992,11 @@ function Profile() {
                           <FileText className="h-3.5 w-3.5" />
                           View Resume (PDF)
                         </a>
+                        <span className="block max-w-full truncate text-xs text-slate-500">
+                          {decodeURIComponent(String(field.value).split("/").pop() || "")}
+                        </span>
+                        </>
+                        
                       ) : isHidden ? (
                         maskValue(field.value)
                       ) : field.pill ? (

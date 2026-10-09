@@ -1,10 +1,6 @@
-import { db, storage } from "../firebase/firebase";
+import { db } from "../firebase/firebase";
 import { ref, get, set, update, onValue } from "firebase/database";
-import {
-  ref as storageRef,
-  uploadBytes,
-  getDownloadURL,
-} from "firebase/storage";
+import { uploadFileApi } from "./api/uploadApi";
 import { checkEmployeeUniqueness } from "./ValidationService";
 import {
   createEmployeeApi,
@@ -378,14 +374,12 @@ export const updateEmployeeRole = async (
  
 // Resume upload — PDF Storage mein jaata hai, DB mein sirf uska link save hota hai
 export const uploadResume = async (companyCode, employeeId, file) => {
-  const fileRef = storageRef(
-    storage,
-    `companies/${companyCode}/employees/${employeeId.toUpperCase()}/resume.pdf`
-  );
- 
-  await uploadBytes(fileRef, file, { contentType: "application/pdf" });
- 
-  return await getDownloadURL(fileRef);
+  const result = await uploadFileApi(file, {
+    folder: `employees/${employeeId.toUpperCase()}/resume`,
+    resourceType: "auto",
+  });
+
+  return result.url;
 };
  
 // CREATE THE EMPLOYEES
@@ -415,10 +409,21 @@ export const createEmployee = async (companyCode, employee) => {
 
 
 //updating employee section — backend (PATCH /api/employees/update/:employeeId) karta hai. Response ka shape wahi hai jo form pehle se samajhta hai.
-export const saveEmployeeSection = async (employeeId, sectionId, sectionData) => {
+export const saveEmployeeSection = async (employeeId, sectionId, sectionData, resumeFile = null) => {
   let result;
   try {
-    result = await updateEmployeeApi(employeeId, sectionId, sectionData);
+    if (resumeFile) {
+      // Resume bhi isi PATCH request ke saath jaata hai — alag generic upload
+      // route ab use nahi hota. Backend multer se capture karke Cloudinary pe
+      // bhejta hai aur URL documents.resume me save karta hai.
+      const formData = new FormData();
+      formData.append("section", sectionId);
+      formData.append("data", JSON.stringify(sectionData));
+      formData.append("resume", resumeFile);
+      result = await updateEmployeeApi(employeeId, sectionId, formData);
+    } else {
+      result = await updateEmployeeApi(employeeId, sectionId, sectionData);
+    }
   } catch (error) {
     console.error("Update employee API error:", error);
     throw new Error("Unable to connect to the server. Please try again.", { cause: error });
