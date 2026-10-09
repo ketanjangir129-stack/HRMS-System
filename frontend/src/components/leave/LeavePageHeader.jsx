@@ -31,8 +31,8 @@ function LeavePageHeader({ title, subtitle, icon, action }) {
 
         <button
           type="button"
-          onClick={() => navigate("/leave")}
-          aria-label="Back to leave dashboard"
+          onClick={() => navigate("/attendance")}
+          aria-label="Back to attendance"
           className="mb-1.5 flex cursor-pointer items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-brand transition-colors hover:text-brand-hover"
         >
 
@@ -44,7 +44,7 @@ function LeavePageHeader({ title, subtitle, icon, action }) {
             </span>
           )}
 
-          <span className="truncate">Leave</span>
+          <span className="truncate">Attendance</span>
 
         </button>
 

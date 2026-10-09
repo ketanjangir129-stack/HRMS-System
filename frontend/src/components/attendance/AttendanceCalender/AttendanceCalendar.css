@@ -1,46 +1,71 @@
+/*
+|--------------------------------------------------------------------------
+| Attendance Calendar
+|--------------------------------------------------------------------------
+| Compact by design: every day is a 30px circle (the <abbr>) centred in a
+| 38px row, and every state - hover, today, selected, a status - is drawn on
+| that circle rather than on the full-width tile. A wide tile with a ring
+| around it was what made the month look oversized.
+|
+| react-calendar ships its own backgrounds (#006edc active, #ffff76 today,
+| grey hover), so the tile background is pinned transparent once, here.
+|--------------------------------------------------------------------------
+*/
+
 .attendance-calendar {
   width: 100%;
   border: none;
   font-family: inherit;
   background: transparent;
+  line-height: 1;
 }
 
 /* Navigation */
 
 .attendance-calendar .react-calendar__navigation {
-  margin-bottom: 12px;
-  height: 40px;
+  height: 34px;
+  margin-bottom: 8px;
 }
 
 .attendance-calendar .react-calendar__navigation button {
+  min-width: 34px;
+  border-radius: 10px;
+  background: transparent;
   font-size: 14px;
   font-weight: 600;
   color: var(--color-ink);
-  min-width: 36px;
-  background: transparent;
-  border-radius: 10px;
   transition: background 0.2s ease;
 }
 
-.attendance-calendar .react-calendar__navigation button:hover,
-.attendance-calendar .react-calendar__navigation button:focus {
-  background: var(--color-surface-raised);
+.attendance-calendar .react-calendar__navigation button:enabled:hover,
+.attendance-calendar .react-calendar__navigation button:enabled:focus {
+  background: var(--color-surface-muted);
 }
 
 .attendance-calendar .react-calendar__navigation button:disabled {
   background: transparent;
-  color: color-mix(in oklab, var(--color-ink-faint) 55%, transparent);
+  color: var(--color-ink-faint);
+}
+
+/* The double arrows jump a whole year - noise for a month view. */
+.attendance-calendar .react-calendar__navigation__prev2-button,
+.attendance-calendar .react-calendar__navigation__next2-button {
+  display: none;
 }
 
 /* Weekdays */
 
 .attendance-calendar .react-calendar__month-view__weekdays {
-  text-transform: uppercase;
+  padding-bottom: 4px;
   font-size: 11px;
   font-weight: 600;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
   color: var(--color-ink-faint);
-  padding-bottom: 6px;
+}
+
+.attendance-calendar .react-calendar__month-view__weekdays__weekday {
+  padding: 6px 0;
 }
 
 .attendance-calendar .react-calendar__month-view__weekdays__weekday abbr {
@@ -48,41 +73,65 @@
   cursor: default;
 }
 
-/* Tiles */
+/* Tiles: the row is just a slot, the circle carries everything */
+
+.attendance-calendar .react-calendar__tile,
+.attendance-calendar .react-calendar__tile:enabled:hover,
+.attendance-calendar .react-calendar__tile:enabled:focus,
+.attendance-calendar .react-calendar__tile--now,
+.attendance-calendar .react-calendar__tile--active {
+  background: transparent !important;
+}
 
 .attendance-calendar .react-calendar__tile {
-  height: 44px;
+  display: flex;
+  height: 38px;
+  align-items: center;
+  justify-content: center;
   padding: 0;
-  border-radius: 12px;
   font-size: 13px;
   font-weight: 500;
   color: var(--color-ink-muted);
-  background: transparent;
-  transition: background 0.2s ease, color 0.2s ease;
 }
 
-.attendance-calendar .react-calendar__tile:hover {
+.attendance-calendar .react-calendar__tile abbr {
+  display: inline-flex;
+  width: 30px;
+  height: 30px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+
+.attendance-calendar .react-calendar__tile:enabled:hover abbr {
   background: var(--color-surface-raised);
 }
 
 .attendance-calendar .react-calendar__month-view__days__day--neighboringMonth {
-  color: color-mix(in oklab, var(--color-ink-faint) 55%, transparent);
+  color: var(--color-ink-faint) !important;
+  opacity: 0.6;
 }
 
-.attendance-calendar .react-calendar__tile--now {
-  background: color-mix(in oklab, var(--color-brand) 12%, transparent);
+/* Today: brand tint. Selected: brand outline (outline, so it never fights
+   the pending ring, which is a box-shadow). */
+
+.attendance-calendar .react-calendar__tile--now abbr {
+  background: color-mix(in oklab, var(--color-brand) 14%, transparent);
   color: var(--color-brand);
   font-weight: 700;
 }
 
-.attendance-calendar .react-calendar__tile--active,
-.attendance-calendar .react-calendar__tile--active:hover {
-  background: color-mix(in oklab, var(--color-brand) 12%, transparent) !important;
-  color: var(--color-brand-hover);
-  box-shadow: inset 0 0 0 2px var(--color-brand);
+.attendance-calendar .react-calendar__tile--active {
+  color: var(--color-ink);
 }
 
-/* Attendance status */
+.attendance-calendar .react-calendar__tile--active abbr {
+  outline: 2px solid var(--color-brand);
+  outline-offset: 2px;
+}
+
+/* Attendance status: a solid circle, white digit */
 
 .attendance-calendar .present abbr,
 .attendance-calendar .late abbr,
@@ -90,91 +139,64 @@
 .attendance-calendar .leave abbr,
 .attendance-calendar .half-day abbr,
 .attendance-calendar .holiday abbr {
-  width: 30px;
-  height: 30px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 999px;
   color: #ffffff;
   font-weight: 600;
-  transition: transform 0.2s ease;
 }
 
-.attendance-calendar .react-calendar__tile:hover abbr {
+.attendance-calendar .react-calendar__tile:enabled:hover:is(.present, .late, .absent, .leave, .half-day, .holiday) abbr {
   transform: scale(1.08);
 }
 
-.attendance-calendar .present abbr {
+.attendance-calendar .present abbr,
+.attendance-calendar .present:enabled:hover abbr {
   background: #10b981;
 }
 
-.attendance-calendar .late abbr {
+.attendance-calendar .late abbr,
+.attendance-calendar .late:enabled:hover abbr {
   background: #f59e0b;
 }
 
-.attendance-calendar .absent abbr {
+.attendance-calendar .absent abbr,
+.attendance-calendar .absent:enabled:hover abbr {
   background: #ef4444;
 }
 
-.attendance-calendar .leave abbr {
+.attendance-calendar .leave abbr,
+.attendance-calendar .leave:enabled:hover abbr {
   background: #6366f1;
 }
 
-.attendance-calendar .half-day abbr {
+.attendance-calendar .half-day abbr,
+.attendance-calendar .half-day:enabled:hover abbr {
   background: #a855f7;
 }
 
-/* A declared company holiday: a day nobody was expected in, so it is drawn
-   apart from the four statuses a working day can end up with. */
-
-.attendance-calendar .holiday abbr {
+.attendance-calendar .holiday abbr,
+.attendance-calendar .holiday:enabled:hover abbr {
   background: #14b8a6;
 }
 
-/* A day still waiting on HR or the owner to sign it off. Drawn as a ring
-   around whatever the day already is, not as a fill: the approval is a note
-   on a status rather than a status of its own, and amber is already taken by
-   Late. The geometry is repeated here so a status with no fill of its own is
-   still ringed as a circle instead of tight around its digits, and the white
-   inner ring keeps the amber off the fill it sits on. */
+/* Waiting on approval: an amber ring around whatever the day already is.
+   The inner band is the card colour, so the ring never touches the fill. */
 
 .attendance-calendar .pending abbr {
-  width: 30px;
-  height: 30px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 999px;
-  box-shadow: 0 0 0 2px var(--color-surface), 0 0 0 4px #f59e0b;
-  transition: transform 0.2s ease;
+  box-shadow: 0 0 0 2px var(--color-surface), 0 0 0 3.5px #f59e0b;
 }
 
-/* The weekly off. Greyed rather than filled: it is the absence of a working
-   day rather than a status somebody ended up with, and a solid circle on
-   every Sunday would out-shout the four that were earned. */
+/* Weekly off: the absence of a working day, so dimmed rather than filled. */
 
 .attendance-calendar .weekly-off abbr {
-  color: color-mix(in oklab, var(--color-ink-faint) 55%, transparent);
+  color: var(--color-ink-faint);
   font-weight: 500;
 }
 
-/* Small screens
-
-   Seven columns have to fit whatever the viewport is, so the tiles are
-   shortened rather than squeezed: a 44px row is taller than it needs to be
-   once each column is only 40px wide, and the status circle is brought down
-   with it so it stays a circle instead of overflowing its own tile. */
+/* Small screens: seven columns must fit, so the row and circle shrink. */
 
 @media (max-width: 480px) {
-  .attendance-calendar .react-calendar__navigation {
-    height: 36px;
-    margin-bottom: 8px;
-  }
-
   .attendance-calendar .react-calendar__navigation button {
-    font-size: 13px;
     min-width: 30px;
+    font-size: 13px;
   }
 
   .attendance-calendar .react-calendar__month-view__weekdays {
@@ -182,134 +204,25 @@
   }
 
   .attendance-calendar .react-calendar__tile {
-    height: 38px;
+    height: 34px;
     font-size: 12px;
   }
 
-  .attendance-calendar .present abbr,
-  .attendance-calendar .late abbr,
-  .attendance-calendar .absent abbr,
-  .attendance-calendar .leave abbr,
-  .attendance-calendar .half-day abbr,
-  .attendance-calendar .holiday abbr,
-  .attendance-calendar .pending abbr {
+  .attendance-calendar .react-calendar__tile abbr {
     width: 26px;
     height: 26px;
   }
 
-  /* The ring is thinned with the circle, so a 26px tile is not spent on
-     4px of outline. */
-
   .attendance-calendar .pending abbr {
     box-shadow: 0 0 0 1.5px var(--color-surface), 0 0 0 3px #f59e0b;
   }
 }
 
 /*
-|--------------------------------------------------------------------------
-| Dark theme
-|--------------------------------------------------------------------------
-| react-calendar paints itself from its own stylesheet and everything above
-| answers it in fixed hex, so none of it moved when the theme did. The tile
-| digits are the half that mattered: #334155 is a dark slate written for a
-| white card, and the card underneath it is now #1e293b, so the dates were
-| there the whole time and simply could not be seen.
-|
-| Light mode is untouched - every rule below is scoped to `.dark`, and the
-| values are the semantic tokens from index.css rather than a second set of
-| hex, so the calendar follows the rest of the app if those are ever retuned.
-|
-| The status circles are deliberately absent: `present` through `holiday` are
-| solid -500 fills with white digits on them, which is exactly what index.css
-| leaves alone in the dark for being strong enough already. Same for the
-| weekday header, which is #94a3b8 - the value `ink-subtle` already holds in
-| both themes.
-|--------------------------------------------------------------------------
+| Dark theme: everything above already reads semantic tokens, which flip with
+| the theme. Only today's tint needs a lighter label to stay legible.
 */
 
-/* Navigation */
-
-.dark .attendance-calendar .react-calendar__navigation button {
-  color: var(--color-ink);
-}
-
-.dark .attendance-calendar .react-calendar__navigation button:hover,
-.dark .attendance-calendar .react-calendar__navigation button:focus {
-  background: var(--color-surface-raised);
-}
-
-.dark .attendance-calendar .react-calendar__navigation button:disabled {
-  color: var(--color-ink-faint);
-}
-
-/* Tiles */
-
-.dark .attendance-calendar .react-calendar__tile {
-  color: var(--color-ink-muted);
-}
-
-.dark .attendance-calendar .react-calendar__tile:hover {
-  background: var(--color-surface-raised);
-}
-
-/*
-| Both of these are "this day is dimmer than a real one", and in the light
-| theme both are #cbd5e1 - a shade lighter than the body text. In the dark
-| theme #cbd5e1 IS the body text, so keeping it would have made a spill-over
-| day and a Sunday read as loud as the month itself. `ink-faint` is the step
-| back down.
-*/
-
-.dark
-  .attendance-calendar
-  .react-calendar__month-view__days__day--neighboringMonth {
-  color: var(--color-ink-faint);
-}
-
-.dark .attendance-calendar .weekly-off abbr {
-  color: var(--color-ink-faint);
-}
-
-/*
-| Today and the selected day. Mixed from `--color-blue-500` at the same
-| strengths index.css uses for a `-50` and a `-100` tint, so the two stay in
-| step with every other blue wash in the app, and the labels are read from
-| the light end of the scale the way the status text is.
-|
-| The inset ring is what separates the two - a 12% and an 18% wash are close
-| by design, and in the light theme it is the ring rather than the fill that
-| says which day you clicked.
-*/
-
-.dark .attendance-calendar .react-calendar__tile--now {
-  background: color-mix(in oklab, var(--color-blue-500) 12%, transparent);
-  color: var(--color-blue-300);
-}
-
-.dark .attendance-calendar .react-calendar__tile--active,
-.dark .attendance-calendar .react-calendar__tile--active:hover {
-  background: color-mix(
-    in oklab,
-    var(--color-blue-500) 18%,
-    transparent
-  ) !important;
-  color: var(--color-blue-300);
-  box-shadow: inset 0 0 0 2px var(--color-blue-400);
-}
-
-/*
-| The pending ring. Its inner band is the card showing through, keeping the
-| amber off whatever fill it is drawn over - so it has to be the surface it
-| sits on, not white. Left as white it was a bright halo on a dark card, and
-| the brightest thing on the tile was the gap.
-*/
-
-.dark .attendance-calendar .pending abbr {
-  box-shadow: 0 0 0 2px var(--color-surface), 0 0 0 4px #f59e0b;
-}
-
-@media (max-width: 480px) {
-  .dark .attendance-calendar .pending abbr {
-    box-shadow: 0 0 0 1.5px var(--color-surface), 0 0 0 3px #f59e0b;
-  }
+.dark .attendance-calendar .react-calendar__tile--now abbr {
+  color: var(--color-brand-hover);
 }

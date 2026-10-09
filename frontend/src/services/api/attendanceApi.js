@@ -32,10 +32,49 @@ const mutateAttendance = async (endpoint, method, payload) => {
     });
 };
 
-export const punchInAttendanceApi = (payload) =>
-  mutateAttendance("/attendance/punch-in", "POST", payload);
-export const punchOutAttendanceApi = (payload) =>
-  mutateAttendance("/attendance/punch-out", "POST", payload);
+const mutateAttendanceWithImage = async (endpoint, payload, image) => {
+  const formData = new FormData();
+
+  formData.append("image", image, "attendance.jpg");
+
+  Object.entries(payload || {}).forEach(([key, value]) => {
+    if (value !== undefined && value !== null) {
+      formData.append(
+        key,
+        typeof value === "object"
+          ? JSON.stringify(value)
+          : String(value)
+      );
+    }
+  });
+
+  try {
+    return await apiRequest(endpoint, {
+      method: "POST",
+      body: formData,
+    });
+  } catch (error) {
+    // fetch() rejects on network failure; a non-JSON reply fails in .json().
+    console.error("Attendance upload failed:", error);
+    return {
+      success: false,
+      message: navigator.onLine
+        ? "Could not reach the server. Please try again."
+        : "You are offline. Check your connection and try again.",
+    };
+  }
+};
+
+export const punchInAttendanceApi = (payload, image) =>
+  mutateAttendanceWithImage("/attendance/punch-in", payload, image);
+
+export const punchOutAttendanceApi = (payload, image) =>
+  mutateAttendanceWithImage("/attendance/punch-out", payload, image);
+
+export const retakePunchPhotoApi = (payload, image) =>
+  mutateAttendanceWithImage("/attendance/photo", payload, image);
+
+
 export const saveManualAttendanceApi = (payload) =>
   mutateAttendance("/attendance/manual", "POST", payload);
 export const updateAttendanceCorrectionApi = (payload) =>

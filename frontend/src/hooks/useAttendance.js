@@ -2,7 +2,8 @@ import { useCallback, useEffect, useState } from "react";
 import {
   punchInEmployee,
   punchOutEmployee,
-  subscribeToEmployeeDay,
+  retakePunchPhoto,
+  subscribeToEmployeeDayFields,
 } from "../services/attendanceServices/attendanceService";
 import { getAttendanceDateKey } from "../utils/attendance/attendanceDate";
 import { getPunchLocation } from "../utils/attendance/attendanceLocation";
@@ -12,13 +13,36 @@ import { getCurrentEmployeeId } from "../utils/attendance/attendanceRequestUtils
 |--------------------------------------------------------------------------
 | My Attendance
 |--------------------------------------------------------------------------
-| The signed in employee's record for today, plus their punch actions. The
-| subscription keeps the card in sync the moment a punch is written.
+| The signed in employee's day, plus their punch and photo-retake actions.
+| Only the fields in CARD_FIELDS are subscribed to - the record's location,
+| approval and audit data are never downloaded - and the card stays in sync
+| the moment a punch is written.
 |
 | Loading is derived from which request has been delivered, so it resets on
 | its own without setting state from inside the effect body.
 |--------------------------------------------------------------------------
 */
+
+export const PUNCH_TYPE = Object.freeze({
+  IN: "in",
+  OUT: "out",
+});
+
+// Exactly what the punch card renders.
+const CARD_FIELDS = Object.freeze([
+  "punchIn",
+  "punchOut",
+  "punchInTime",
+  "punchOutTime",
+  "status",
+  "images/punchIn/url",
+  "images/punchOut/url",
+]);
+
+const PUNCH_LABEL = {
+  [PUNCH_TYPE.IN]: "punch in",
+  [PUNCH_TYPE.OUT]: "punch out",
+};
 
 const useAttendance = (companyCode, currentUser) => {
 
@@ -31,9 +55,8 @@ const useAttendance = (companyCode, currentUser) => {
   });
 
   const enabled = Boolean(companyCode && employeeId);
-
-  const key = `${companyCode}|${employeeId}`;
   const dateKey = getAttendanceDateKey();
+  const key = `${companyCode}|${employeeId}|${dateKey}`;
 
   const isCurrent = state.key === key;
   const attendance = isCurrent ? state.attendance : null;
@@ -42,25 +65,20 @@ const useAttendance = (companyCode, currentUser) => {
 
     if (!enabled) return undefined;
 
-    const unsubscribe = subscribeToEmployeeDay(
+    const unsubscribe = subscribeToEmployeeDayFields(
       companyCode,
       employeeId,
       dateKey,
-      (record) => {
-        setState({ key, attendance: record, error: "" });
-      },
+      CARD_FIELDS,
+      (record) => setState({ key, attendance: record, error: "" }),
       // Without this the subscription fails silently and loading never ends.
       (subscriptionError) => {
-
         console.error("Failed to load attendance:", subscriptionError);
-
         setState({
           key,
           attendance: null,
-          error:
-            subscriptionError.message || "Failed to load attendance.",
+          error: subscriptionError.message || "Failed to load attendance.",
         });
-
       }
     );
 
@@ -68,46 +86,43 @@ const useAttendance = (companyCode, currentUser) => {
 
   }, [companyCode, employeeId, enabled, key, dateKey]);
 
-  const punchIn = useCallback(
-    async () => {
+  /*
+  | `location` may be a value or a promise. The card starts the GPS lookup the
+  | moment the camera opens, so by the time the photo is confirmed the fix is
+  | usually ready and the punch is not held up by it.
+  */
+  const punch = useCallback(
+    async (type, image, location) => {
 
-      const location = await getPunchLocation();
+      if (type !== PUNCH_TYPE.IN && type !== PUNCH_TYPE.OUT) {
+        return { success: false, message: "Unknown attendance action." };
+      }
 
-      /*
-      | The punch is not attempted without a position, so a denied prompt
-      | leaves the day untouched rather than recording a punch nobody can
-      | place.
-      */
+      if (!image) {
+        return { success: false, message: "Please capture an attendance photo." };
+      }
 
-      if (!location) {
+      const position = await (location ?? getPunchLocation());
+
+      if (!position) {
         return {
           success: false,
-          message: "Location permission is required to punch in.",
+          message: `Location permission is required to ${PUNCH_LABEL[type]}.`,
         };
       }
 
-      return punchInEmployee(companyCode, employeeId, location);
+      return type === PUNCH_TYPE.IN
+        ? punchInEmployee(companyCode, employeeId, position, image)
+        : punchOutEmployee(companyCode, employeeId, position, dateKey, image);
 
     },
-    [companyCode, employeeId]
+    [companyCode, employeeId, dateKey]
   );
 
-  const punchOut = useCallback(
-    async () => {
-
-      const location = await getPunchLocation();
-
-      if (!location) {
-        return {
-          success: false,
-          message: "Location permission is required to punch out.",
-        };
-      }
-
-      return punchOutEmployee(companyCode, employeeId, location, attendance?.date);
-
-    },
-    [companyCode, employeeId, attendance?.date]
+  // Swap the photo of a punch already made today. No GPS needed.
+  const retakePhoto = useCallback(
+    (type, image) => retakePunchPhoto(employeeId, type, image),
+    [employeeId]
   );
 
   return {
@@ -115,8 +130,8 @@ const useAttendance = (companyCode, currentUser) => {
     loading: enabled && !isCurrent,
     error: isCurrent ? state.error : "",
     employeeId,
-    punchIn,
-    punchOut,
+    punch,
+    retakePhoto,
   };
 
 };

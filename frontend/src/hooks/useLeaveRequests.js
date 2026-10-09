@@ -6,6 +6,7 @@ import {
   approveLeaveRequest,
   rejectLeaveRequest,
   deleteLeaveRequest,
+  updateLeaveRequest,
 } from "../services/leaveServices/leaveService";
 
 /*
@@ -224,6 +225,30 @@ function useLeaveRequests(
 
     };
 
+  /*
+  |--------------------------------------------------------------------------
+  | Update Request
+  |--------------------------------------------------------------------------
+  | Only a pending request may be edited (checked again in the service), so
+  | the days on the attendance sheet can never drift from the request.
+  */
+
+  const updateRequest =
+    async (request, updates) => {
+
+      const result =
+        await updateLeaveRequest(
+          companyCode,
+          request,
+          updates
+        );
+
+      reload();
+
+      return result;
+
+    };
+
   return {
 
     requests,
@@ -241,6 +266,8 @@ function useLeaveRequests(
     rejectRequest,
 
     deleteRequest,
+
+    updateRequest,
 
   };
 

@@ -1,4 +1,7 @@
 const db = require("../config/firebase");
+const cloudinary = require("../config/cloudinary");
+const {uploadFile} = require("./uploadServices");
+
 const {
   DEFAULT_TIMEZONE,
   getDateKey,
@@ -116,6 +119,21 @@ const loadEmployees = async (companyCode) => {
   return snapshot.val() || {};
 };
 
+/*
+ * One employee's employment block instead of the whole employees node.
+ * Employee keys are stored upper-case (see authMiddleware), so the normalized
+ * id is the key. Returns null when the employee does not exist.
+ */
+const loadEmployment = async (companyCode, employeeId) => {
+  const base = companyPath(companyCode, `employees/${employeeId}`);
+  const snapshot = await db.ref(`${base}/employmentInfo`).once("value");
+  if (snapshot.exists()) return snapshot.val() || {};
+
+  // Rare: an employee without employmentInfo. Confirm the record exists.
+  const account = await db.ref(`${base}/account`).once("value");
+  return account.exists() ? {} : null;
+};
+
 const getManagedDepartmentIds = (departments, managerEmployeeId) => {
   const managerId = normalizeId(managerEmployeeId);
   if (!managerId) return [];
@@ -129,22 +147,21 @@ const getAccessibleEmployeeIds = async (companyCode, user) => {
   const role = getUserRole(user);
   if (!role) throw serviceError("User role is missing.", 403);
 
-  const employees = await loadEmployees(companyCode);
-
-  /* Owner / HR → all employees */
-  if (role === ROLES.OWNER || role === ROLES.HR) {
-    return Object.keys(employees);
-  }
-
-  /* Employee → self only */
+  /* Employee → self only. Never needs the full employees node. */
   if (role === ROLES.EMPLOYEE) {
     const id = getUserEmployeeId(user);
     if (!id) throw serviceError("Employee identity is missing.", 403);
 
-    const actual = Object.keys(employees).find((k) => normalizeId(k) === id);
-    if (!actual) throw serviceError("Employee record not found.", 403);
+    if (!(await loadEmployment(companyCode, id))) {
+      throw serviceError("Employee record not found.", 403);
+    }
 
-    return [actual];
+    return [id];
+  }
+
+  /* Owner / HR → all employees */
+  if (role === ROLES.OWNER || role === ROLES.HR) {
+    return Object.keys(await loadEmployees(companyCode));
   }
 
   /* Manager → employees in managed departments */
@@ -152,7 +169,10 @@ const getAccessibleEmployeeIds = async (companyCode, user) => {
     const managerId = getUserEmployeeId(user);
     if (!managerId) throw serviceError("Manager employee identity is missing.", 403);
 
-    const departments = await loadDepartments(companyCode);
+    const [departments, employees] = await Promise.all([
+      loadDepartments(companyCode),
+      loadEmployees(companyCode),
+    ]);
     const deptIds = getManagedDepartmentIds(departments, managerId);
 
     if (deptIds.length === 0) return [];
@@ -187,6 +207,85 @@ const filterMonthByScope = (monthRecords, employeeIds) => {
   );
 };
 
+
+const validateAttendanceImage = (file) => {
+  if (!file || !Buffer.isBuffer(file.buffer) || !file.buffer.length) {
+    throw serviceError(
+      "An attendance photo is required.",
+      400,
+      "ATTENDANCE_IMAGE_REQUIRED"
+    );
+  }
+
+  if (file.buffer.length > 5 * 1024 * 1024) {
+    throw serviceError(
+      "Attendance photo must not exceed 5 MB.",
+      413,
+      "ATTENDANCE_IMAGE_TOO_LARGE"
+    );
+  }
+
+  const buffer = file.buffer;
+
+  const isJpeg =
+    buffer.length >= 3 &&
+    buffer[0] === 0xff &&
+    buffer[1] === 0xd8 &&
+    buffer[2] === 0xff;
+
+  const isPng =
+    buffer.length >= 8 &&
+    buffer.subarray(0, 8).equals(
+      Buffer.from([137, 80, 78, 71, 13, 10, 26, 10])
+    );
+
+  const isWebp =
+    buffer.length >= 12 &&
+    buffer.toString("ascii", 0, 4) === "RIFF" &&
+    buffer.toString("ascii", 8, 12) === "WEBP";
+
+  if (!isJpeg && !isPng && !isWebp) {
+    throw serviceError(
+      "Upload a valid JPEG, PNG, or WebP image.",
+      400,
+      "INVALID_ATTENDANCE_IMAGE"
+    );
+  }
+
+  return true;
+};
+
+const uploadAttendanceImage = async ({
+  companyCode,
+  employeeId,
+  date,
+  action,
+  file,
+}) => {
+  validateAttendanceImage(file);
+
+  return uploadFile(file.buffer, {
+    folder: `companies/${companyCode}/attendance/${employeeId}/${date}`,
+    resourceType: "image",
+    maxBytes: 5 * 1024 * 1024,
+  });
+};
+
+const deleteAttendanceImage = async (image) => {
+  if (!image?.publicId) return;
+
+  try {
+    await cloudinary.uploader.destroy(image.publicId, {
+      resource_type: "image",
+    });
+  } catch (error) {
+    // Cleanup failure should not hide the original attendance error.
+    console.error("Attendance image cleanup failed:", error.message);
+  }
+};
+
+
+
 /*
 |--------------------------------------------------------------------------
 | READ: Daily Attendance
@@ -206,6 +305,14 @@ const getDailyAttendance = async (companyCode, date, user) => {
     companyCode,
     `attendance/records/${parsed.year}/${monthName}/${date}`
   );
+
+  /* An employee only ever sees their own row: read that row, not the day. */
+  if (getUserRole(user) === ROLES.EMPLOYEE) {
+    const [id] = employeeIds;
+    const own = await db.ref(`${path}/${id}`).once("value");
+
+    return { date, records: own.exists() ? { [id]: own.val() } : {} };
+  }
 
   const snapshot = await db.ref(path).once("value");
 
@@ -255,47 +362,39 @@ const getEmployeeAttendance = async (companyCode, employeeId, year, month, user)
   const requestedId = normalizeId(employeeId);
   if (!requestedId) throw serviceError("Employee ID is required.", 400);
 
-  const employeeIds = await getAccessibleEmployeeIds(companyCode, user);
-
-  const actualId = employeeIds.find((id) => normalizeId(id) === requestedId);
-  if (!actualId) {
-    throw serviceError(
-      "You do not have permission to view this employee's attendance.",
-      403
-    );
-  }
-
   const { year: y, month: m, monthName } = validateYearMonth(year, month);
+
+  // Targeted scope check: one employee, not the whole employees node.
+  const { employeeId: actualId } = await assertEmployeeScope(
+    companyCode,
+    requestedId,
+    user
+  );
 
   const path = companyPath(
     companyCode,
     `attendance/records/${y}/${monthName}`
   );
 
-  //Teting Here: Log the existing snapshot for debugging purposes
-  const existingSnapshot = await ref.once("value");
-  console.log("ATTENDANCE PUNCH OUT DEBUG", {
-    companyCode,
-    employeeId,
-    date,
-    timezone: settings.timezone,
-    path,
-    exists: existingSnapshot.exists(),
-    record: existingSnapshot.val(),
-  });
-  // End of testing log
+  /*
+   * Read this employee's node under each day instead of the whole month
+   * (which holds every employee's records). The reads run in parallel over
+   * the same connection.
+   */
+  const daysInMonth = new Date(Date.UTC(y, m, 0)).getUTCDate();
+  const dates = Array.from(
+    { length: daysInMonth },
+    (_, index) => `${y}-${String(m).padStart(2, "0")}-${String(index + 1).padStart(2, "0")}`
+  );
 
+  const snapshots = await Promise.all(
+    dates.map((date) => db.ref(`${path}/${date}/${actualId}`).once("value"))
+  );
 
-  const snapshot = await db.ref(path).once("value");
-  const monthRecords = snapshot.val() || {};
-
-  /* Extract only this employee's records from each day */
   const records = {};
-  for (const [date, daily] of Object.entries(monthRecords)) {
-    if (daily?.[actualId]) {
-      records[date] = daily[actualId];
-    }
-  }
+  snapshots.forEach((snapshot, index) => {
+    if (snapshot.exists()) records[dates[index]] = snapshot.val();
+  });
 
   return {
     employeeId: actualId,
@@ -323,38 +422,60 @@ const loadAttendanceSettings = async (companyCode) => {
   return { ...normalizeWorkRules(stored), timezone: stored.timezone || DEFAULT_TIMEZONE };
 };
 
-const assertEmployeeScope = async (companyCode, employeeId, user, approverOnly = false) => {
+/*
+ * Confirms the user may act on one employee's attendance.
+ *
+ * Reads only that employee's employmentInfo (plus departments for a manager)
+ * instead of the full employees node. `cache` lets bulk callers share the
+ * departments read across many ids.
+ */
+const assertEmployeeScope = async (
+  companyCode,
+  employeeId,
+  user,
+  approverOnly = false,
+  cache = {}
+) => {
   const id = normalizeId(employeeId);
   if (!EMPLOYEE_ID_PATTERN.test(id)) {
     throw serviceError("A valid employee ID is required.", 400, "INVALID_EMPLOYEE_ID");
   }
 
   const role = getUserRole(user);
+  if (!role) throw serviceError("User role is missing.", 403, "ACCESS_DENIED");
+
   if (approverOnly && ![ROLES.OWNER, ROLES.HR, ROLES.MANAGER].includes(role)) {
     throw serviceError("You do not have permission to approve attendance.", 403, "ACCESS_DENIED");
   }
 
-  const employees = await loadEmployees(companyCode);
-  const allIds = Object.keys(employees);
-
-  /* Get scoped IDs */
-  const scopedIds = await getAccessibleEmployeeIds(companyCode, user);
-  const actualId = scopedIds.find((k) => normalizeId(k) === id);
-
-  if (!actualId) {
-    const exists = allIds.some((k) => normalizeId(k) === id);
-    throw serviceError(
-      exists ? "You do not have access to this employee's attendance." : "Employee not found.",
-      exists ? 403 : 404,
-      exists ? "ACCESS_DENIED" : "EMPLOYEE_NOT_FOUND"
-    );
+  if (role === ROLES.EMPLOYEE && getUserEmployeeId(user) !== id) {
+    throw serviceError("Employees can only access their own attendance.", 403, "ACCESS_DENIED");
   }
 
-  if (role === ROLES.EMPLOYEE && normalizeId(getUserEmployeeId(user)) !== id) {
-    throw serviceError("Employees can only update their own attendance.", 403, "ACCESS_DENIED");
+  const employment = await loadEmployment(companyCode, id);
+  if (!employment) {
+    throw serviceError("Employee not found.", 404, "EMPLOYEE_NOT_FOUND");
   }
 
-  return { employeeId: actualId, employee: employees[actualId] };
+  if ([ROLES.OWNER, ROLES.HR, ROLES.EMPLOYEE].includes(role)) {
+    return { employeeId: id };
+  }
+
+  if (role === ROLES.MANAGER) {
+    const managerId = getUserEmployeeId(user);
+    if (!managerId) throw serviceError("Manager employee identity is missing.", 403, "ACCESS_DENIED");
+
+    cache.departments ??= loadDepartments(companyCode);
+    const managed = getManagedDepartmentIds(await cache.departments, managerId);
+
+    if (!managed.includes(employment.departmentId)) {
+      throw serviceError("You do not have access to this employee's attendance.", 403, "ACCESS_DENIED");
+    }
+
+    return { employeeId: id };
+  }
+
+  throw serviceError("You do not have permission to access attendance.", 403, "ACCESS_DENIED");
 };
 
 const buildRecord = ({ employeeId, date, punchIn = null, punchOut = null,
@@ -391,64 +512,165 @@ const sanitizeLocation = (location, timestamp) => {
 |--------------------------------------------------------------------------
 */
 
-const punchInEmployee = async (companyCode, payload, user) => {
-  const { employeeId } = await assertEmployeeScope(companyCode, payload?.employeeId, user);
-  const settings = await loadAttendanceSettings(companyCode);
+/*
+ * Shared punch rules. Used twice per punch: once against a fresh read so a
+ * punch that can never succeed is rejected BEFORE the photo is uploaded, and
+ * again inside the transaction where the write is decided atomically.
+ */
+const isHalfDayLeaveAwaitingPunch = (current) =>
+  current?.status === "Half Day" && current?.leaveRequestId && !current?.punchIn;
+
+const getPunchInRejection = (current) => {
+  if (!current) return null;
+
+  if (current.status === "Leave") {
+    return serviceError("You are on approved leave today.", 409, "ATTENDANCE_ON_LEAVE");
+  }
+
+  if (isHalfDayLeaveAwaitingPunch(current)) return null;
+
+  return serviceError("Attendance already marked.", 409, "ATTENDANCE_ALREADY_MARKED");
+};
+
+const getPunchOutRejection = (current, now, date) => {
+  if (!current || !Number.isFinite(Number(current.punchIn))) {
+    return serviceError(`No punch-in record found for ${date}.`, 409, "PUNCH_IN_REQUIRED");
+  }
+
+  if (current.punchOut) {
+    return serviceError(
+      "Attendance has already been punched out.",
+      409,
+      "PUNCH_OUT_ALREADY_MARKED"
+    );
+  }
+
+  if (now <= Number(current.punchIn)) {
+    return serviceError("Punch out must be after punch in.", 400, "INVALID_PUNCH_TIME");
+  }
+
+  return null;
+};
+
+/*
+ * Everything a punch needs before it can upload: identity/scope, settings and
+ * the current record. Independent reads, so they run in parallel.
+ */
+const preparePunch = async (companyCode, payload, user, imageFile) => {
+  // Cheap, synchronous checks first so a bad request costs no reads.
+  validateAttendanceImage(imageFile);
+
+  const [{ employeeId }, settings] = await Promise.all([
+    assertEmployeeScope(companyCode, payload?.employeeId, user),
+    loadAttendanceSettings(companyCode),
+  ]);
+
   const now = Date.now();
   const date = getDateKey(now, settings.timezone);
   const location = sanitizeLocation(payload?.location, now);
   const ref = db.ref(recordPath(companyCode, date, employeeId));
+  const current = (await ref.once("value")).val();
 
-  let rejected;
+  return { employeeId, settings, now, date, location, ref, current };
+};
 
-  // Temporary production debugging
-  const path1 = recordPath(companyCode, date, employeeId);
-  const ref1 = db.ref(path1);
+/*
+ * What a punch response carries back: only the fields the punch card shows.
+ * Location, approval and audit fields stay on the server.
+ */
+const punchSummary = (record) => ({
+  punchIn: record?.punchIn || null,
+  punchInTime: record?.punchInTime || "",
+  punchOut: record?.punchOut || null,
+  punchOutTime: record?.punchOutTime || "",
+  status: record?.status || "",
+  images: {
+    punchIn: record?.images?.punchIn?.url ? { url: record.images.punchIn.url } : null,
+    punchOut: record?.images?.punchOut?.url ? { url: record.images.punchOut.url } : null,
+  },
+});
 
-  console.log("========== PUNCH IN DEBUG ==========");
-  console.log({
+const punchInEmployee = async (companyCode, payload, user, imageFile) => {
+  const { employeeId, settings, now, date, location, ref, current: existing } =
+    await preparePunch(companyCode, payload, user, imageFile);
+
+  const early = getPunchInRejection(existing);
+  if (early) throw early;
+
+  const uploadedImage = await uploadAttendanceImage({
     companyCode,
     employeeId,
     date,
-    timezone: settings.timezone,
-    path: path1,
+    action: "punch-in",
+    file: imageFile,
   });
-  console.log("====================================");
-  // End of debugging
 
-  const transaction = await ref.transaction((current) => {
-    rejected = null;
+  let rejected;
 
-    if (current) {
-      if (current.status === "Leave") {
-        rejected = serviceError("You are on approved leave today.", 409, "ATTENDANCE_ON_LEAVE");
-        return;
+  try {
+    const transaction = await ref.transaction((current) => {
+      rejected = null;
+
+      if (current) {
+        rejected = getPunchInRejection(current);
+        if (rejected) return;
+
+        if (isHalfDayLeaveAwaitingPunch(current)) {
+          return {
+            ...current,
+            punchIn: now,
+            punchInTime: formatTime(now, settings.timezone),
+            ...makeApproval({ at: now }),
+            ...(location
+              ? {
+                  location: {
+                    ...(current.location || {}),
+                    punchIn: location,
+                  },
+                }
+              : {}),
+            images: {
+              ...(current.images || {}),
+              punchIn: uploadedImage,
+            },
+          };
+        }
       }
-      if (current.status === "Half Day" && current.leaveRequestId && !current.punchIn) {
-        return {
-          ...current,
+
+      return {
+        ...buildRecord({
+          employeeId,
+          date,
           punchIn: now,
-          punchInTime: formatTime(now, settings.timezone),
-          ...makeApproval({ at: now }),
-          ...(location ? { location: { ...(current.location || {}), punchIn: location } } : {}),
-        };
-      }
-      rejected = serviceError("Attendance already marked.", 409, "ATTENDANCE_ALREADY_MARKED");
-      return;
+          settings,
+          approval: makeApproval({ at: now }),
+        }),
+        ...(location ? { location: { punchIn: location } } : {}),
+        images: {
+          punchIn: uploadedImage,
+          punchOut: null,
+        },
+      };
+    });
+
+    if (rejected) throw rejected;
+
+    if (!transaction.committed) {
+      throw serviceError(
+        "Attendance already marked.",
+        409,
+        "ATTENDANCE_ALREADY_MARKED"
+      );
     }
 
     return {
-      ...buildRecord({ employeeId, date, punchIn: now, settings, approval: makeApproval({ at: now }) }),
-      ...(location ? { location: { punchIn: location } } : {}),
+      date,
+      attendance: punchSummary(transaction.snapshot.val()),
     };
-  });
-
-  if (rejected) throw rejected;
-  if (!transaction.committed) {
-    throw serviceError("Attendance already marked.", 409, "ATTENDANCE_ALREADY_MARKED");
+  } catch (error) {
+    await deleteAttendanceImage(uploadedImage);
+    throw error;
   }
-
-  return { date, attendance: transaction.snapshot.val() };
 };
 
 /*
@@ -459,142 +681,161 @@ const punchInEmployee = async (companyCode, payload, user) => {
 
 
 
-const punchOutEmployee = async (companyCode, payload, user) => {
-  // ---------------------------------------------------------
-  // 1. Validate employee scope
-  // ---------------------------------------------------------
-  const { employeeId } = await assertEmployeeScope(
+const punchOutEmployee = async (companyCode, payload, user, imageFile) => {
+  const { employeeId, settings, now, date, location, ref, current: existing } =
+    await preparePunch(companyCode, payload, user, imageFile);
+
+  const early = getPunchOutRejection(existing, now, date);
+  if (early) throw early;
+
+  const uploadedImage = await uploadAttendanceImage({
     companyCode,
-    payload?.employeeId,
-    user
-  );
-
-  // ---------------------------------------------------------
-  // 2. Load company attendance settings
-  // ---------------------------------------------------------
-  const settings = await loadAttendanceSettings(companyCode);
-
-  // ---------------------------------------------------------
-  // 3. Server-side timestamp and attendance date
-  // ---------------------------------------------------------
-  const now = Date.now();
-
-  const date = getDateKey(
-    now,
-    settings.timezone
-  );
-
-  // ---------------------------------------------------------
-  // 4. Validate optional location
-  // ---------------------------------------------------------
-  const location = sanitizeLocation(
-    payload?.location,
-    now
-  );
-
-  // ---------------------------------------------------------
-  // 5. Build authoritative Firebase path
-  // ---------------------------------------------------------
-  const path = recordPath(
-    companyCode,
-    date,
-    employeeId
-  );
-
-  const ref = db.ref(path);
-
-  // ---------------------------------------------------------
-  // 6. Read today's attendance
-  // ---------------------------------------------------------
-  const snapshot = await ref.once("value");
-
-  const current = snapshot.val();
-
-  // ---------------------------------------------------------
-  // 7. Attendance must exist
-  // ---------------------------------------------------------
-  if (!current) {
-    throw serviceError(
-      `No punch-in record found for ${date}.`,
-      409,
-      "PUNCH_IN_REQUIRED"
-    );
-  }
-
-  // ---------------------------------------------------------
-  // 8. Punch-in must exist
-  // ---------------------------------------------------------
-  const punchIn = Number(current.punchIn);
-
-  if (!Number.isFinite(punchIn)) {
-    throw serviceError(
-      `No valid punch-in record found for ${date}.`,
-      409,
-      "PUNCH_IN_REQUIRED"
-    );
-  }
-
-  // ---------------------------------------------------------
-  // 9. Prevent duplicate punch-out
-  // ---------------------------------------------------------
-  if (current.punchOut) {
-    throw serviceError(
-      "Attendance has already been punched out.",
-      409,
-      "PUNCH_OUT_ALREADY_MARKED"
-    );
-  }
-
-  // ---------------------------------------------------------
-  // 10. Validate punch-out time
-  // ---------------------------------------------------------
-  if (now <= punchIn) {
-    throw serviceError(
-      "Punch out must be after punch in.",
-      400,
-      "INVALID_PUNCH_TIME"
-    );
-  }
-  // ---------------------------------------------------------
-  // 11. Calculate working hours on backend
-  // ---------------------------------------------------------
-  const workingHours = calculateWorkingHours(
-    punchIn,
-    now
-  );
-  // ---------------------------------------------------------
-  // 12. Build updated attendance record
-  // ---------------------------------------------------------
-  const updatedRecord = {
-    ...current,
     employeeId,
     date,
-    punchOut: now,
-    punchOutTime: formatTime(
-      now,
-      settings.timezone
-    ),
-    workingHours,
-    ...(location
-      ? {
-          location: {
-            ...(current.location || {}),
-            punchOut: location,
-          },
-        }
-      : {}),
-  };
-  // ---------------------------------------------------------
-  // 13. Save attendance
-  // ---------------------------------------------------------
-  await ref.set(updatedRecord);
-  // ---------------------------------------------------------
-  // 14. Return backend result
-  // ---------------------------------------------------------
-  return {
+    action: "punch-out",
+    file: imageFile,
+  });
+
+  let rejected;
+
+  try {
+    const transaction = await ref.transaction((current) => {
+      rejected = null;
+
+      /*
+       * BUG FIX: the Admin SDK first runs this handler with its LOCAL cache,
+       * which is null for a node nobody is listening to. Aborting on null
+       * (the old behaviour) rejected every punch out with "No punch-in record
+       * found". Returning null lets the server reply with the real value and
+       * the handler runs again with it.
+       */
+      if (current === null) return null;
+
+      rejected = getPunchOutRejection(current, now, date);
+      if (rejected) return;
+
+      const punchIn = Number(current.punchIn);
+
+      return {
+        ...current,
+        employeeId,
+        date,
+        punchOut: now,
+        punchOutTime: formatTime(now, settings.timezone),
+        workingHours: calculateWorkingHours(punchIn, now),
+        ...(location
+          ? {
+              location: {
+                ...(current.location || {}),
+                punchOut: location,
+              },
+            }
+          : {}),
+        images: {
+          ...(current.images || {}),
+          punchOut: uploadedImage,
+        },
+      };
+    });
+
+    if (rejected) throw rejected;
+
+    if (!transaction.committed) {
+      throw serviceError(
+        "Unable to record punch out. Please try again.",
+        409,
+        "PUNCH_OUT_CONFLICT"
+      );
+    }
+
+    // The server confirmed there is no record at all for today.
+    if (!transaction.snapshot.exists()) {
+      throw getPunchOutRejection(null, now, date);
+    }
+
+    return {
+      date,
+      attendance: punchSummary(transaction.snapshot.val()),
+    };
+  } catch (error) {
+    await deleteAttendanceImage(uploadedImage);
+    throw error;
+  }
+};
+
+/*
+|--------------------------------------------------------------------------
+| MUTATION: Retake a punch photo
+|--------------------------------------------------------------------------
+| Replaces the photo of a punch already made TODAY. The punch time, status
+| and location are untouched - only the image changes - and `retakenAt`
+| keeps the change visible for audit. The old Cloudinary asset is deleted
+| once the new one is committed.
+|--------------------------------------------------------------------------
+*/
+
+const PHOTO_SLOTS = Object.freeze({ in: "punchIn", out: "punchOut" });
+
+const retakePunchPhoto = async (companyCode, payload, user, imageFile) => {
+  const slot = PHOTO_SLOTS[String(payload?.type || "")];
+  if (!slot) {
+    throw serviceError("Photo type must be 'in' or 'out'.", 400, "INVALID_PHOTO_TYPE");
+  }
+
+  const { employeeId, now, date, ref, current: existing } =
+    await preparePunch(companyCode, { employeeId: payload?.employeeId }, user, imageFile);
+
+  const missingPunch = () =>
+    serviceError(
+      `There is no ${slot === "punchIn" ? "punch in" : "punch out"} today to update.`,
+      409,
+      "PUNCH_REQUIRED"
+    );
+
+  if (!existing?.[slot]) throw missingPunch();
+
+  const uploadedImage = await uploadAttendanceImage({
+    companyCode,
+    employeeId,
     date,
-    attendance: updatedRecord,
-  };
+    action: `${slot}-retake`,
+    file: imageFile,
+  });
+
+  let rejected;
+  let previousImage = null;
+
+  try {
+    const transaction = await ref.transaction((current) => {
+      rejected = null;
+      if (current === null) return null; // empty local cache - let the server answer
+
+      if (!current[slot]) {
+        rejected = missingPunch();
+        return;
+      }
+
+      previousImage = current.images?.[slot] || null;
+
+      return {
+        ...current,
+        images: {
+          ...(current.images || {}),
+          [slot]: { ...uploadedImage, retakenAt: now },
+        },
+      };
+    });
+
+    if (rejected) throw rejected;
+    if (!transaction.committed || !transaction.snapshot.exists()) throw missingPunch();
+  } catch (error) {
+    await deleteAttendanceImage(uploadedImage);
+    throw error;
+  }
+
+  await deleteAttendanceImage(previousImage);
+
+  return { date, type: payload.type, image: { url: uploadedImage.url } };
 };
 
 /*
@@ -668,10 +909,8 @@ const updateAttendanceCorrection = async (companyCode, payload, user) => {
 
   const transaction = await ref.transaction((current) => {
     rejected = null;
-    if (!current && !reqIn) {
-      rejected = serviceError("A punch in time is required to create attendance.", 404, "ATTENDANCE_NOT_FOUND");
-      return;
-    }
+    // Null may just be the empty local cache: let the server answer (see punch out).
+    if (current === null && !reqIn) return null;
 
     const punchIn = reqIn || current?.punchIn || null;
     const punchOut = reqOut || current?.punchOut || null;
@@ -704,6 +943,9 @@ const updateAttendanceCorrection = async (companyCode, payload, user) => {
 
   if (rejected) throw rejected;
   if (!transaction.committed) throw serviceError("Unable to apply attendance correction.", 409, "ATTENDANCE_WRITE_FAILED");
+  if (!transaction.snapshot.exists()) {
+    throw serviceError("A punch in time is required to create attendance.", 404, "ATTENDANCE_NOT_FOUND");
+  }
 
   return { success: true };
 };
@@ -808,7 +1050,10 @@ const approveAttendanceDay = async (companyCode, date, employeeIds = [], user) =
     throw serviceError("Invalid employee ID.", 400, "INVALID_EMPLOYEE_ID");
   }
 
-  for (const id of uniqueIds) await assertEmployeeScope(companyCode, id, user, true);
+  const scopeCache = {};
+  await Promise.all(
+    uniqueIds.map((id) => assertEmployeeScope(companyCode, id, user, true, scopeCache))
+  );
 
   const snapshots = await Promise.all(
     uniqueIds.map((id) => db.ref(recordPath(companyCode, date, id)).once("value"))
@@ -962,6 +1207,7 @@ module.exports = {
   /* Mutations */
   punchInEmployee,
   punchOutEmployee,
+  retakePunchPhoto,
   saveManualAttendance,
   updateAttendanceCorrection,
   setAttendanceApproval,

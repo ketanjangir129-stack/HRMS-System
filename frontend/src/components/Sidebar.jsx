@@ -10,7 +10,6 @@ import {
   PartyPopper,
   ReceiptIndianRupee,
   Settings,
-  TreePalm,
   UserRoundPlus,
   Users,
   Wallet,
@@ -103,12 +102,6 @@ const menuGroups = [
         path: "/attendance",
         icon: CalendarCheck,
         permission: "attendance",
-      },
-      {
-        label: "Leave",
-        path: "/leave",
-        icon: TreePalm,
-        permission: "leave",
       },
       {
         label: "Holidays",

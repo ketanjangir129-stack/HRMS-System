@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import AttendanceCalendar from "../../components/attendance/AttendanceCalender/AttendanceCalendar";
 import AttendanceHeader from "../../components/attendance/AttendanceHeader";
@@ -10,6 +11,7 @@ import TodayAttendanceCard from "../../components/attendance/TodayAttendanceCard
 import RejectRequestModal from "../../components/attendance/requests/RejectRequestModal";
 import HolidayNotice from "../../components/holiday/HolidayNotice";
 import WeeklyOffNotice from "../../components/holiday/WeeklyOffNotice";
+import ApplyLeaveModal from "../../components/leave/ApplyLeaveModal";
 import useAttendanceHistory from "../../hooks/useAttendanceHistory";
 import useAttendanceQuickActions from "../../hooks/useAttendanceQuickActions";
 import useAttendanceRequests from "../../hooks/useAttendanceRequests";
@@ -19,9 +21,16 @@ import useEmployeeDirectory from "../../hooks/useEmployeeDirectory";
 import useHolidayDates from "../../hooks/useHolidayDates";
 import useManagerScope from "../../hooks/useManagerScope";
 import useRoleAccess from "../../hooks/useRoleAccess";
+import useLeaveBalance from "../../hooks/useLeaveBalance";
+import useLeaveRequests from "../../hooks/useLeaveRequests";
 import { getDateKey } from "../../utils/attendance/attendanceDate";
 import { attachEmployeeDetails } from "../../utils/attendance/attendanceUtils";
 import { isWeeklyOff } from "../../utils/holiday/holidayUtils";
+import {
+  isPendingLeave,
+  filterLeaveRequestsByYear,
+  getPendingLeaveDays,
+} from "../../utils/leave/leaveUtils";
 import {
   filterOwnRequests,
   getCurrentEmployeeId,
@@ -64,14 +73,27 @@ function AttendanceDashboard() {
   const showCalendar = canAccessSection("attendance.calendar");
   const showRequests = canAccessSection("attendance.requests");
 
+  /*
+  | Leave panels on this page, each behind the same switch the old leave
+  | page used, so an owner toggling a right moves it between the modules
+  | without a permission migration.
+  */
+  const canApplyLeave = canAccessSection("leave.apply");
+  const canViewLeaveHistory = canAccessSection("leave.history");
+  const canViewLeaveApprovals = canAccessSection("leave.approvals");
+
   /* Quick actions stay below the core day view, keeping punch in/out and the
      personal calendar as the dashboard's first, uncluttered decision area. */
   const quickActions = useAttendanceQuickActions();
 
 
   const [markOpen, setMarkOpen] = useState(false);
+  const [applyLeaveOpen, setApplyLeaveOpen] = useState(false);
+  const [applying, setApplying] = useState(false);
   const [rejectRequest, setRejectRequest] = useState(null);
   const [rejecting, setRejecting] = useState(false);
+
+  const navigate = useNavigate();
 
   const today = useMemo(() => new Date(), []);
 
@@ -96,12 +118,19 @@ function AttendanceDashboard() {
     loading: scopeLoading,
   } = useManagerScope();
 
+  /*
+  | The day node holds every employee's record, so it is only subscribed to
+  | when something on screen uses it: the Today table, or the reviewer's
+  | Mark Attendance form. An empty date disables the subscription.
+  */
+  const needsDayRecords = showToday || isApprover(currentUser);
+
   const {
     attendance,
     loading: attendanceLoading,
     error: attendanceError,
     markAttendance,
-  } = useDailyAttendance(companyCode);
+  } = useDailyAttendance(companyCode, needsDayRecords ? getDateKey() : "");
 
   const {
     requests,
@@ -110,12 +139,82 @@ function AttendanceDashboard() {
     reject,
   } = useAttendanceRequests(companyCode);
 
+  // No calendar on screen → no history listeners.
   const { history, loading: calendarLoading } = useAttendanceHistory(
     companyCode,
-    employeeId,
+    showCalendar ? employeeId : "",
     calendarMonth.year,
     calendarMonth.month
   );
+
+  /*
+  | Leave rides on this hook everywhere: the history page reads it for the
+  | table, the apply modal needs the balance, and the approvals badge counts
+  | the same list the approvals page shows.
+  */
+  const {
+    requests: leaveRequests,
+    createRequest: createLeaveRequest,
+  } = useLeaveRequests(companyCode);
+
+  const ownLeaveRequests = useMemo(
+    () =>
+      employeeId
+        ? leaveRequests.filter(
+            (request) => request.employeeId === employeeId
+          )
+        : [],
+    [leaveRequests, employeeId]
+  );
+
+  /*
+  | The history page table follows the same scope rule as the approvals
+  | page: a reviewer reads the list narrowed to their departments. Only
+  | the pending count is needed here; the table itself lives on that page.
+  */
+  const scopedLeaveRequests = useMemo(
+    () =>
+      isApprover(currentUser)
+        ? filterRows(
+            attachEmployeeDetails(leaveRequests, directory)
+          )
+        : ownLeaveRequests,
+    [filterRows, leaveRequests, directory, currentUser, ownLeaveRequests]
+  );
+
+  const pendingLeaveCount = useMemo(
+    () => scopedLeaveRequests.filter(isPendingLeave).length,
+    [scopedLeaveRequests]
+  );
+
+  /*
+  | The balance behind the apply modal: this employee's own, for the
+  | running year. Pending requests are priced as already spent so the
+  | modal and the balance cards cannot disagree.
+  */
+  const currentYear = today.getFullYear();
+
+  const ownYearRequests = useMemo(
+    () => filterLeaveRequestsByYear(ownLeaveRequests, currentYear),
+    [ownLeaveRequests, currentYear]
+  );
+
+  const pendingDays = useMemo(
+    () => getPendingLeaveDays(ownYearRequests),
+    [ownYearRequests]
+  );
+
+  const { balance } = useLeaveBalance(
+    companyCode,
+    employeeId,
+    currentYear,
+    pendingDays
+  );
+
+  const applyHolidayDates = useHolidayDates(
+    companyCode,
+    useMemo(() => [currentYear, currentYear + 1], [currentYear])
+  ).holidayDates;
 
   /*
   | Today is used for the notices; the calendar's year can be browsed
@@ -169,6 +268,56 @@ function AttendanceDashboard() {
       : filterOwnRequests(detailed, currentUser);
 
   }, [filterRows, requests, directory, currentUser]);
+
+  /*
+  |--------------------------------------------------------------------------
+  | Apply Leave
+  |--------------------------------------------------------------------------
+  | The button already hides this without the permission, and the submit path
+  | checks again: the write must not depend on the button being the only way
+  | to reach it.
+  */
+  const handleApplyLeave = async (payload) => {
+
+    if (!canApplyLeave) {
+      toast.error("You are not allowed to apply for leave.");
+      return;
+    }
+
+    if (!employeeId) {
+      toast.error("Your employee profile is missing an employee ID.");
+      return;
+    }
+
+    setApplying(true);
+
+    try {
+
+      const result = await createLeaveRequest({
+        ...payload,
+        employeeId,
+      });
+
+      if (!result?.success) {
+        toast.error(result?.message || "Failed to submit leave request.");
+        return;
+      }
+
+      toast.success("Leave request submitted for approval.");
+      setApplyLeaveOpen(false);
+
+    } catch (applyError) {
+
+      console.error(applyError);
+      toast.error("Failed to submit leave request.");
+
+    } finally {
+
+      setApplying(false);
+
+    }
+
+  };
 
   const actorName = currentUser?.personalInfo?.name || currentUser?.name || "Admin";
 
@@ -250,6 +399,13 @@ function AttendanceDashboard() {
       <AttendanceHeader
         onMarkAttendance={() => setMarkOpen(true)}
         canMarkAttendance={isApprover(currentUser)}
+        onApplyLeave={() => setApplyLeaveOpen(true)}
+        canApplyLeave={canApplyLeave}
+        onHistory={() => navigate("/attendance/leave-history")}
+        canHistory={canViewLeaveHistory}
+        onApprovals={() => navigate("/leave/approvals")}
+        canApprovals={canViewLeaveApprovals}
+        pendingApprovals={pendingLeaveCount}
       />
 
       {/*
@@ -264,9 +420,10 @@ function AttendanceDashboard() {
 
         {todayWeeklyOff && <WeeklyOffNotice date={todayKey} label="Today" />}
 
-        <div className="grid grid-cols-1 items-start gap-4 sm:gap-6 xl:grid-cols-12">
+        {/* Equal columns, stretched to equal height, so the pair reads as one row. */}
+        <div className="grid grid-cols-1 gap-4 sm:gap-6 xl:grid-cols-12">
           {showCalendar && (
-            <div className="xl:col-span-6">
+            <div className="min-w-0 xl:col-span-6">
               <AttendanceCalendar
                 history={history}
                 holidayDates={holidayDates}
@@ -276,8 +433,8 @@ function AttendanceDashboard() {
             </div>
           )}
 
-          <div className={showCalendar ? "xl:col-span-6" : "xl:col-span-12"}>
-            <TodayAttendanceCard />
+          <div className={`min-w-0 ${showCalendar ? "xl:col-span-6" : "xl:col-span-12"}`}>
+            <TodayAttendanceCard className="h-full" />
           </div>
 
         </div>
@@ -341,6 +498,15 @@ function AttendanceDashboard() {
         onConfirm={handleReject}
         loading={rejecting}
         employeeName={rejectRequest?.employeeName}
+      />
+
+      <ApplyLeaveModal
+        open={applyLeaveOpen && canApplyLeave}
+        onClose={() => setApplyLeaveOpen(false)}
+        balance={balance}
+        onSubmit={handleApplyLeave}
+        submitting={applying}
+        holidayDates={applyHolidayDates}
       />
 
     </div>

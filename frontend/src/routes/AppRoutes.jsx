@@ -51,6 +51,7 @@ const AttendanceDashboard = lazy(() => import("../pages/attendance/AttendanceDas
 const DailyAttendance = lazy(() => import("../pages/attendance/DailyAttendance"));
 const MonthlyAttendance = lazy(() => import("../pages/attendance/MonthlyAttendance"));
 const MyAttendance = lazy(() => import("../pages/attendance/MyAttendance"));
+const LeaveHistory = lazy(() => import("../pages/attendance/LeaveHistory"));
 const AttendanceRequests = lazy(() => import("../pages/attendance/AttendanceRequests"));
 const AttendanceApprovals = lazy(() => import("../pages/attendance/AttendanceApprovals"));
 const Regularization = lazy(() => import("../pages/attendance/Regularization"));
@@ -58,7 +59,6 @@ const AttendanceReports = lazy(() => import("../pages/attendance/AttendanceRepor
 const AttendanceImport = lazy(() => import("../pages/attendance/AttendanceImport"));
 const AttendanceSettings = lazy(() => import("../pages/attendance/AttendanceSettings"));
 const AttendanceLocation = lazy(() => import("../pages/attendance/AttendanceLocation"));
-const LeaveDashboard = lazy(() => import("../pages/leave/LeaveDashboard"));
 const LeaveApprovals = lazy(() => import("../pages/leave/LeaveApprovals"));
 const HolidayDashboard = lazy(() => import("../pages/holiday/HolidayDashboard"));
 const EmployeeOnboarding = lazy(() => import("../pages/onboarding/EmployeeOnboarding/EmployeeOnboarding"));
@@ -347,6 +347,21 @@ function AppRoutes() {
                             }
                         />
 
+                        {/*
+                  The leave history page: guarded by the leave section that
+                  already decided who sees it, so the registry entry, the
+                  button on the attendance page and this guard all read the
+                  same switch.
+                */}
+                        <Route
+                            path="/attendance/leave-history"
+                            element={
+                                <PermissionRoute permission="leave.history">
+                                    <LeaveHistory />
+                                </PermissionRoute>
+                            }
+                        />
+
                         <Route
                             path="/attendance/monthly"
                             element={
@@ -417,14 +432,15 @@ function AppRoutes() {
                         />
 
 
-                        {/* Leave Management Routing */}
+                        {/*
+                  The leave dashboard was merged into the attendance page:
+                  the calendar already showed leave days, so the two modules
+                  now share one screen. The old address stays as a redirect
+                  rather than a 404, and the approvals desk keeps its route.
+                */}
                         <Route
                             path="/leave"
-                            element={
-                                <PermissionRoute permission="leave">
-                                    <LeaveDashboard />
-                                </PermissionRoute>
-                            }
+                            element={<Navigate to="/attendance" replace />}
                         />
 
                         <Route

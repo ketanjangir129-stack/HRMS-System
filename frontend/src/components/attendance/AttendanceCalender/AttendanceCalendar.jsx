@@ -22,13 +22,8 @@ import { isWeeklyOff } from "../../../utils/holiday/holidayUtils";
 /*
 | The seven things a day can be, and after them the one thing a day can be
 | waiting on. Pending is last because it is a mark drawn over a status rather
-| than a status of its own.
-|
-| Seven leaves an odd cell at two columns and two spare at three, so Pending
-| takes exactly the room that is left at each: one cell where the seven wrap
-| odd, two where they wrap short. Every breakpoint fills its last row, and the
-| order matches `STATUS_DOTS` so the colours read the same here as everywhere
-| else a status is shown.
+| than a status of its own. The order matches `STATUS_DOTS` so the colours read
+| the same here as everywhere else a status is shown.
 */
 
 const LEGEND = [
@@ -42,7 +37,6 @@ const LEGEND = [
   {
     label: "Pending Approval",
     color: "bg-surface ring-2 ring-amber-500",
-    span: "sm:col-span-2 xl:col-span-1",
   },
 ];
 
@@ -96,7 +90,7 @@ function AttendanceCalendar({
     <div className="ui-card ui-card-body flex h-full flex-col">
 
       {/* Header */}
-      <div className="mb-5">
+      <div className="mb-4">
 
         <h2 className="ui-card-title">
           Attendance Calendar
@@ -110,16 +104,20 @@ function AttendanceCalendar({
 
       {loading ? (
 
-        <div className="flex-1 space-y-3">
+        <div aria-busy="true" aria-label="Loading calendar">
 
-          <div className="h-8 w-full animate-pulse rounded-lg bg-surface-muted" />
+          <div className="mb-2 flex h-8.5 items-center justify-between">
+            <div className="h-7 w-7 animate-pulse rounded-lg bg-surface-muted" />
+            <div className="h-4 w-32 animate-pulse rounded bg-surface-raised" />
+            <div className="h-7 w-7 animate-pulse rounded-lg bg-surface-muted" />
+          </div>
 
-          {[0, 1, 2, 3, 4].map((row) => (
-            <div key={row} className="grid grid-cols-7 gap-2">
+          {[0, 1, 2, 3, 4, 5].map((row) => (
+            <div key={row} className="grid h-9.5 grid-cols-7 place-items-center">
               {[0, 1, 2, 3, 4, 5, 6].map((cell) => (
                 <div
                   key={cell}
-                  className="h-8 animate-pulse rounded-md bg-surface-muted"
+                  className="h-7.5 w-7.5 animate-pulse rounded-full bg-surface-muted"
                 />
               ))}
             </div>
@@ -143,22 +141,22 @@ function AttendanceCalendar({
 
       )}
 
-      {/* Legend */}
-      <div className="mt-5 grid grid-cols-2 gap-2 pt-0 sm:grid-cols-3 xl:grid-cols-4">
+      {/* Legend: one quiet wrapping line of dots, not a grid of chips */}
+      <ul className="mt-4 flex flex-wrap gap-x-4 gap-y-2 border-t border-line pt-4">
 
         {LEGEND.map((item) => (
 
-          <div
+          <li
             key={item.label}
-            className={`flex items-center gap-2 rounded-lg bg-surface-muted px-2.5 py-2 text-[11px] font-medium text-ink-muted sm:px-3 sm:text-xs ${item.span || ""}`}
+            className="flex items-center gap-1.5 text-[11px] font-medium text-ink-subtle"
           >
             <span className={`h-2 w-2 shrink-0 rounded-full ${item.color}`} />
-            <span className="truncate">{item.label}</span>
-          </div>
+            {item.label}
+          </li>
 
         ))}
 
-      </div>
+      </ul>
 
     </div>
   );

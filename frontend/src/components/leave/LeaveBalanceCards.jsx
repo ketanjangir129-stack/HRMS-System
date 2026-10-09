@@ -8,9 +8,13 @@ import {
 
 /*
 | Two across on a phone rather than stacked: five full width cards are most
-| of a screen of scrolling before the calendar below them starts, and a
-| balance is a short enough number to read at half the width. Three across
-| from `md` so a tablet does not leave half of each row empty.
+| of a screen of scrolling before the content below them starts, and a
+| balance is a short enough number to read at half the width.
+|
+| Styled to match the attendance summary cards: top accent bar, icon chip,
+| and a thin progress track against the annual allocation, so a page can
+| tell at a glance how much of the year is left and how much has been
+| spoken for.
 |
 | Shared by the skeleton so the loading state occupies the same shape the
 | loaded cards will, and the page does not jump when the balance arrives.
@@ -60,6 +64,18 @@ function LeaveBalanceCards({
 
   }
 
+  const annual = balance.annualLeave || 0;
+
+  /*
+  | Every card's bar is measured against the annual allocation: a full year
+  | allocated counts as the whole track on the first card, and the others
+  | read as what share of that allocation they represent.
+  */
+  const share = (value) =>
+    annual > 0
+      ? Math.min(100, Math.round((value / annual) * 100))
+      : 0;
+
   const cards = [
 
     {
@@ -67,19 +83,21 @@ function LeaveBalanceCards({
       value: balance.annualLeave,
       subtitle: "Allocated this year",
       icon: <FiCalendar />,
-      color: "bg-blue-500",
       iconBg: "bg-blue-50",
       iconColor: "text-blue-600",
+      bar: "bg-blue-500",
+      percentage: 100,
     },
 
     {
       title: "Earned",
       value: balance.earned,
-      subtitle: "Leaves earned",
+      subtitle: "1 day accrued per month",
       icon: <FiTrendingUp />,
-      color: "bg-emerald-500",
       iconBg: "bg-emerald-50",
       iconColor: "text-emerald-600",
+      bar: "bg-emerald-500",
+      percentage: share(balance.earned),
     },
 
     {
@@ -87,9 +105,10 @@ function LeaveBalanceCards({
       value: balance.used,
       subtitle: "Leaves taken",
       icon: <FiCheckCircle />,
-      color: "bg-amber-500",
       iconBg: "bg-amber-50",
       iconColor: "text-amber-600",
+      bar: "bg-amber-500",
+      percentage: share(balance.used),
     },
 
     {
@@ -105,9 +124,10 @@ function LeaveBalanceCards({
           ? `${balance.available} available · ${balance.pending} pending`
           : "Available balance",
       icon: <FiClock />,
-      color: "bg-violet-500",
       iconBg: "bg-violet-50",
       iconColor: "text-violet-600",
+      bar: "bg-violet-500",
+      percentage: share(balance.remaining),
     },
 
     {
@@ -115,9 +135,10 @@ function LeaveBalanceCards({
       value: balance.lwp,
       subtitle: "Leave Without Pay",
       icon: <FiAlertTriangle />,
-      color: "bg-red-500",
       iconBg: "bg-red-50",
       iconColor: "text-red-600",
+      bar: "bg-red-500",
+      percentage: 0,
     },
 
   ];
@@ -130,11 +151,13 @@ function LeaveBalanceCards({
 
         <div
           key={card.title}
-          className="ui-card ui-card-interactive group relative overflow-hidden p-4 sm:p-6"
+          className="ui-card ui-card-interactive group relative flex flex-col justify-center overflow-hidden p-4 sm:p-6"
         >
 
+          {/* Top Border */}
+
           <span
-            className={`absolute left-0 top-0 h-1 w-full ${card.color}`}
+            className={`absolute left-0 top-0 h-1 w-full ${card.bar}`}
           />
 
           <div className="flex items-start justify-between gap-2">
@@ -145,28 +168,42 @@ function LeaveBalanceCards({
                 {card.title}
               </p>
 
-              <h2 className="mt-1 text-2xl font-bold text-ink sm:mt-2 sm:text-4xl">
+              <h2 className="mt-1 text-3xl font-bold text-ink sm:mt-2 sm:text-4xl">
                 {card.value}
               </h2>
 
             </div>
 
             <div
-              className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl text-lg transition group-hover:scale-110 sm:h-12 sm:w-12 sm:text-xl ${card.iconBg} ${card.iconColor}`}
+              className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl text-lg transition group-hover:scale-110 sm:h-12 sm:w-12 sm:text-xl ${card.iconBg} ${card.iconColor}`}
             >
               {card.icon}
             </div>
 
           </div>
 
-          {/*
-          | The remaining card's caption carries two figures, so it is left to
-          | wrap at half width rather than truncated: which part of the balance
-          | is already spoken for is the point of the line.
-          */}
-          <p className="mt-4 text-[11px] leading-relaxed text-ink-subtle sm:mt-6 sm:text-sm">
-            {card.subtitle}
-          </p>
+          <div className="mt-4 sm:mt-6">
+
+            <div className="mb-2 flex items-center justify-between gap-2 text-[11px] font-medium text-ink-subtle sm:text-xs">
+
+              <span className="truncate">{card.subtitle}</span>
+
+              <span className="shrink-0">{card.percentage}%</span>
+
+            </div>
+
+            <div className="h-2 overflow-hidden rounded-full bg-surface-muted">
+
+              <div
+                className={`h-full rounded-full transition-all duration-500 ${card.bar}`}
+                style={{
+                  width: `${card.percentage}%`,
+                }}
+              />
+
+            </div>
+
+          </div>
 
         </div>
 

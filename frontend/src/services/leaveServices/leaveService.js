@@ -4,7 +4,7 @@ import {
   get,
   set,
   push,
-  update,
+update,
   remove,
   runTransaction,
 } from "firebase/database";
@@ -834,6 +834,81 @@ export const rejectLeaveRequest = async (
 | Deleting an approved request has to give the days back, otherwise the
 | balance stays spent on leave that no longer exists.
 */
+
+/*
+|--------------------------------------------------------------------------
+| Update Leave Request
+|--------------------------------------------------------------------------
+| Editing is only for a request still waiting on a decision, and the stored
+| node is checked here rather than trusting the caller: a pending request has
+| not moved any days onto the attendance sheet yet, so rewriting it cannot
+| strand booked days, and an approved or rejected one must not drift after
+| the fact.
+|--------------------------------------------------------------------------
+*/
+
+export const updateLeaveRequest = async (
+    companyCode,
+    request,
+    updates
+) => {
+
+    try {
+
+        const keys = requestKeys(request);
+
+        if (!getMonthPath(keys.appliedDate) || !keys.employeeId) {
+            return { success: false, message: "Leave request not found." };
+        }
+
+        const found = await findRequestRef(companyCode, keys);
+
+        if (!found) {
+            return {
+                success: false,
+                message: "This leave request no longer exists.",
+            };
+        }
+
+        const stored = found.value || {};
+
+        if (stored.status !== LEAVE_STATUS.PENDING) {
+            return {
+                success: false,
+                message: "Only a pending request can be edited.",
+            };
+        }
+
+        await update(found.ref, {
+
+            requestType: updates.requestType,
+
+            fromDate: updates.fromDate,
+
+            toDate: updates.toDate,
+
+            days: updates.days,
+
+            halfDaySession: updates.halfDaySession ?? "",
+
+            reason: updates.reason,
+
+        });
+
+        return { success: true };
+
+    } catch (error) {
+
+        console.error(
+            "Update Leave Request Error:",
+            error
+        );
+
+        throw error;
+
+    }
+
+};
 
 export const deleteLeaveRequest = async (
     companyCode,

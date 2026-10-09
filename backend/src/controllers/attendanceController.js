@@ -15,14 +15,57 @@ const runMutation = (handler, fallback) => async (req, res) => {
   }
 };
 
+const parsePunchPayload = (req) => {
+  const payload = { ...(req.body || {}) };
+
+  // Multipart fields arrive as strings.
+  if (typeof payload.location === "string") {
+    try {
+      payload.location = JSON.parse(payload.location);
+    } catch {
+      const error = new Error("Invalid location data.");
+      error.statusCode = 400;
+      error.code = "INVALID_LOCATION";
+      throw error;
+    }
+  }
+
+  return payload;
+};
+
 const punchIn = runMutation(
-  (req) => attendanceService.punchInEmployee(req.user.companyCode, req.body || {}, req.user),
+  (req) =>
+    attendanceService.punchInEmployee(
+      req.user.companyCode,
+      parsePunchPayload(req),
+      req.user,
+      req.file
+    ),
   "Failed to record punch in."
 );
+
 const punchOut = runMutation(
-  (req) => attendanceService.punchOutEmployee(req.user.companyCode, req.body || {}, req.user),
+  (req) =>
+    attendanceService.punchOutEmployee(
+      req.user.companyCode,
+      parsePunchPayload(req),
+      req.user,
+      req.file
+    ),
   "Failed to record punch out."
 );
+
+const retakePunchPhoto = runMutation(
+  (req) =>
+    attendanceService.retakePunchPhoto(
+      req.user.companyCode,
+      req.body || {},
+      req.user,
+      req.file
+    ),
+  "Failed to update attendance photo."
+);
+
 const saveManualAttendance = runMutation(
   (req) => attendanceService.saveManualAttendance(req.user.companyCode, req.body || {}, req.user),
   "Failed to save attendance."
@@ -427,6 +470,7 @@ module.exports = {
   getEmployeeAttendance,
   punchIn,
   punchOut,
+  retakePunchPhoto,
   saveManualAttendance,
   updateAttendanceCorrection,
   setAttendanceApproval,

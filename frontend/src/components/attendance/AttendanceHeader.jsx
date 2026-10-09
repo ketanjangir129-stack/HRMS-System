@@ -1,4 +1,4 @@
-import { FiCalendar, FiPlus } from "react-icons/fi";
+import { FiCalendar, FiCheckSquare, FiClock, FiPlus } from "react-icons/fi";
 
 /*
 |--------------------------------------------------------------------------
@@ -15,7 +15,17 @@ import { FiCalendar, FiPlus } from "react-icons/fi";
 |--------------------------------------------------------------------------
 */
 
-function AttendanceHeader({ onMarkAttendance, canMarkAttendance = true }) {
+function AttendanceHeader({
+  onMarkAttendance,
+  canMarkAttendance = true,
+  onApplyLeave,
+  canApplyLeave = false,
+  onHistory,
+  canHistory = false,
+  onApprovals,
+  canApprovals = false,
+  pendingApprovals = 0,
+}) {
 
   /*
   | "Monday, 11 August 2026" is too long for a phone once it shares the line
@@ -64,22 +74,68 @@ function AttendanceHeader({ onMarkAttendance, canMarkAttendance = true }) {
 
       </div>
 
-      {canMarkAttendance && (
-        <button
-          type="button"
-          onClick={onMarkAttendance}
-          className="ui-btn ui-btn-primary group w-full shrink-0 font-semibold md:w-auto"
-        >
+      <div className="flex w-full flex-wrap items-center gap-2.5 sm:w-auto sm:gap-3">
 
-          <FiPlus
-            size={18}
-            className="transition-transform duration-200 group-hover:rotate-90"
-          />
+        {canHistory && (
+          <button
+            type="button"
+            onClick={onHistory}
+            className="ui-btn ui-btn-secondary w-full font-semibold sm:w-auto"
+          >
+            <FiClock />
+            Leave History
+          </button>
+        )}
 
-          Mark Attendance
+        {canApprovals && (
+          <button
+            type="button"
+            onClick={onApprovals}
+            className="ui-btn ui-btn-secondary relative w-full font-semibold sm:w-auto"
+          >
 
-        </button>
-      )}
+            <FiCheckSquare />
+
+           Leave Approvals
+
+            {pendingApprovals > 0 && (
+              <span className="ml-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-amber-500 px-1.5 text-[11px] font-bold text-white">
+                {pendingApprovals}
+              </span>
+            )}
+
+          </button>
+        )}
+
+        {canApplyLeave && (
+          <button
+            type="button"
+            onClick={onApplyLeave}
+            className="ui-btn ui-btn-secondary w-full font-semibold sm:w-auto"
+          >
+            <FiPlus size={18} />
+            Apply Leave
+          </button>
+        )}
+
+        {canMarkAttendance && (
+          <button
+            type="button"
+            onClick={onMarkAttendance}
+            className="ui-btn ui-btn-primary group w-full shrink-0 font-semibold md:w-auto"
+          >
+
+            <FiPlus
+              size={18}
+              className="transition-transform duration-200 group-hover:rotate-90"
+            />
+
+            Mark Attendance
+
+          </button>
+        )}
+
+      </div>
 
     </div>
   );

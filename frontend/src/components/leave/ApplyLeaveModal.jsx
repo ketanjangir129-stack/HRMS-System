@@ -60,13 +60,22 @@ function ApplyLeaveForm({
   onSubmit,
   submitting = false,
   holidayDates = [],
+  initialRequest = null,
 }) {
 
-  const [requestType, setRequestType] = useState(LEAVE_REQUEST_TYPE.SINGLE_DAY);
-  const [halfDaySession, setHalfDaySession] = useState(HALF_DAY_SESSION.BEFORE_LUNCH);
-  const [fromDate, setFromDate] = useState("");
-  const [toDate, setToDate] = useState("");
-  const [reason, setReason] = useState("");
+  const [requestType, setRequestType] = useState(
+    initialRequest?.requestType || LEAVE_REQUEST_TYPE.SINGLE_DAY
+  );
+  const [halfDaySession, setHalfDaySession] = useState(
+    initialRequest?.halfDaySession || HALF_DAY_SESSION.BEFORE_LUNCH
+  );
+  const [fromDate, setFromDate] = useState(initialRequest?.fromDate || "");
+  const [toDate, setToDate] = useState(
+    initialRequest && initialRequest.requestType === LEAVE_REQUEST_TYPE.MULTIPLE_DAY
+      ? initialRequest.toDate
+      : ""
+  );
+  const [reason, setReason] = useState(initialRequest?.reason || "");
 
   useEffect(() => {
 
@@ -231,11 +240,13 @@ function ApplyLeaveForm({
             <div className="min-w-0">
 
               <h2 className="ui-card-title">
-                Apply Leave
+                {initialRequest ? "Edit Leave Request" : "Apply Leave"}
               </h2>
 
               <p className="ui-card-subtitle truncate">
-                Submit a leave request for approval.
+                {initialRequest
+                  ? "Update your pending request."
+                  : "Submit a leave request for approval."}
               </p>
 
             </div>
@@ -590,7 +601,13 @@ function ApplyLeaveForm({
             className="ui-btn ui-btn-primary font-semibold"
           >
             {submitting && <FiLoader className="animate-spin" />}
-            {submitting ? "Applying..." : "Apply Leave"}
+            {submitting
+              ? initialRequest
+                ? "Saving..."
+                : "Applying..."
+              : initialRequest
+                ? "Save Changes"
+                : "Apply Leave"}
           </button>
 
         </div>
@@ -605,14 +622,21 @@ function ApplyLeaveForm({
 
 /*
 | The form only exists while the modal is open, so every application starts
-| from a clean slate instead of the fields the previous one was left with.
+| from a clean slate instead of the fields the previous one was left with,
+| and an edit starts from the request it was opened with.
 */
 
-function ApplyLeaveModal({ open, ...props }) {
+function ApplyLeaveModal({ open, initialRequest, ...props }) {
 
   if (!open) return null;
 
-  return <ApplyLeaveForm {...props} />;
+  return (
+    <ApplyLeaveForm
+      key={initialRequest?.requestId || "apply"}
+      initialRequest={initialRequest || null}
+      {...props}
+    />
+  );
 
 }
 
