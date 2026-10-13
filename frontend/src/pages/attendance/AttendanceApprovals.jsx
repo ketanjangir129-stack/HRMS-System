@@ -716,6 +716,7 @@ function AttendanceApprovals() {
           onRetry={handleRetry}
           search={search}
           departments={departmentOptions}
+          directory={directory}
 
           queue={queue}
           onQueueChange={handleQueueChange}

@@ -464,25 +464,29 @@ function ApprovalDetail({
           {canReview && (
             <>
 
-              <button
-                type="button"
-                onClick={() => onReject(record)}
-                disabled={locked || status === APPROVAL_STATUS.REJECTED}
-                className="ui-btn border border-red-200 bg-red-50 font-semibold text-red-700 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                <FiX />
-                Reject
-              </button>
+              {status !== APPROVAL_STATUS.REJECTED && (
+                <button
+                  type="button"
+                  onClick={() => onReject(record)}
+                  disabled={locked}
+                  className="ui-btn border border-red-200 bg-red-50 font-semibold text-red-700 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <FiX />
+                  Reject
+                </button>
+              )}
 
-              <button
-                type="button"
-                onClick={() => onApprove(record)}
-                disabled={locked || status === APPROVAL_STATUS.APPROVED}
-                className="ui-btn bg-emerald-600 font-semibold text-white shadow-sm hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {busy ? <FiLoader className="animate-spin" /> : <FiCheck />}
-                {busy ? "Saving..." : "Approve"}
-              </button>
+              {status !== APPROVAL_STATUS.APPROVED && (
+                <button
+                  type="button"
+                  onClick={() => onApprove(record)}
+                  disabled={locked}
+                  className="ui-btn bg-emerald-600 font-semibold text-white shadow-sm hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {busy ? <FiLoader className="animate-spin" /> : <FiCheck />}
+                  {busy ? "Saving..." : "Approve"}
+                </button>
+              )}
 
             </>
           )}

@@ -53,7 +53,7 @@ const ProfileDrawer = ({ isOpen, onClose }) => {
       // currentUser localStorage se hata deta hai.
       await logout();
       onClose();
-      navigate("/login", { replace: true });
+      navigate("/", { replace: true });
       toast.success("Logged Out Successfully");
     } catch (error) {
       console.error("Logout failed:", error);

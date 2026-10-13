@@ -369,7 +369,7 @@ const handleSubmit = async (e) => {
                     <div className="flex justify-center mt-3">
                         <h1 className="font-semibold text-md text-ink-muted">Already have an account ?</h1>
                         <button
-                            onClick={() => navigate("/login")}
+                            onClick={() => navigate("/login", { replace: true })}
                             className="text-blue-600 hover:text-blue-700 font-bold transition cursor-pointer"
                         >
                             Login

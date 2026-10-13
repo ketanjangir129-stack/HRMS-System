@@ -89,9 +89,9 @@ const Login = () => {
 
       // HR / Employee must set a new password before entering the app.
       if (result.role !== "owner" && !result.isPasswordChanged) {
-        navigate("/change-password");
+        navigate("/change-password", { replace: true });
       } else {
-        navigate("/dashboard");
+        navigate("/dashboard", { replace: true });
       }
     } catch (error) {
       console.error(error);
@@ -337,7 +337,7 @@ const Login = () => {
             <span className="text-slate-500">Don't have an account?</span>
 
             <button
-              onClick={() => navigate("/")}
+              onClick={() => navigate("/register", { replace: true })}
               className="text-blue-600 hover:text-blue-700 font-bold transition cursor-pointer"
             >
               Register

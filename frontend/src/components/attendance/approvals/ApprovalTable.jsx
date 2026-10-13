@@ -267,6 +267,7 @@ function ApprovalTable({
   onRetry,
   search = "",
   departments = [],
+  directory = {},
 
   /* The queue tab and the counts the tabs are labelled with. */
   queue = APPROVAL_STATUS.PENDING,
@@ -344,33 +345,37 @@ function ApprovalTable({
         {reviewable && (
           <>
 
-            <button
-              type="button"
-              onClick={() => onApprove(record)}
-              disabled={busy || status === APPROVAL_STATUS.APPROVED}
-              aria-label="Approve this day"
-              title="Approve this day"
-              className={`${DECISION_BUTTON} border-emerald-200 text-emerald-700 hover:border-emerald-500 hover:bg-emerald-50 focus:ring-emerald-300`}
-            >
-              {busy ? (
-                <FiLoader className="animate-spin" size={15} />
-              ) : (
-                <FiCheck size={16} />
-              )}
-              <span className="hidden 2xl:inline">Approve</span>
-            </button>
+            {status !== APPROVAL_STATUS.APPROVED && (
+              <button
+                type="button"
+                onClick={() => onApprove(record)}
+                disabled={busy}
+                aria-label="Approve this day"
+                title="Approve this day"
+                className={`${DECISION_BUTTON} border-emerald-200 text-emerald-700 hover:border-emerald-500 hover:bg-emerald-50 focus:ring-emerald-300`}
+              >
+                {busy ? (
+                  <FiLoader className="animate-spin" size={15} />
+                ) : (
+                  <FiCheck size={16} />
+                )}
+                <span className="hidden 2xl:inline">Approve</span>
+              </button>
+            )}
 
-            <button
-              type="button"
-              onClick={() => onReject(record)}
-              disabled={busy || status === APPROVAL_STATUS.REJECTED}
-              aria-label="Reject this day"
-              title="Reject this day"
-              className={`${DECISION_BUTTON} border-red-200 text-red-700 hover:border-red-500 hover:bg-red-50 focus:ring-red-300`}
-            >
-              <FiX size={16} />
-              <span className="hidden 2xl:inline">Reject</span>
-            </button>
+            {status !== APPROVAL_STATUS.REJECTED && (
+              <button
+                type="button"
+                onClick={() => onReject(record)}
+                disabled={busy}
+                aria-label="Reject this day"
+                title="Reject this day"
+                className={`${DECISION_BUTTON} border-red-200 text-red-700 hover:border-red-500 hover:bg-red-50 focus:ring-red-300`}
+              >
+                <FiX size={16} />
+                <span className="hidden 2xl:inline">Reject</span>
+              </button>
+            )}
 
           </>
         )}
@@ -395,23 +400,30 @@ function ApprovalTable({
   | "Approved" on its own is half the answer - the name beside it is what a
   | second reviewer needs before changing it.
   */
-  const approvalCell = (record) => (
-    <div className="min-w-0">
+  const approvalCell = (record) => {
+    const approverName =
+      record.approvedByName ||
+      directory[record.approvedBy]?.name ||
+      record.approvedBy;
 
-      <AttendanceStatusBadge
-        status={getApprovalLabel(record)}
-        variant="approval"
-        size="sm"
-      />
+    return (
+      <div className="min-w-0">
 
-      {record.approvedBy && (
-        <p className="mt-1 truncate text-xs text-ink-subtle">
-          by {record.approvedBy}
-        </p>
-      )}
+        <AttendanceStatusBadge
+          status={getApprovalLabel(record)}
+          variant="approval"
+          size="sm"
+        />
 
-    </div>
-  );
+        {record.approvedBy && (
+          <p className="mt-1 truncate text-xs text-ink-subtle" title={`by ${approverName} (${record.approvedBy})`}>
+            by {approverName}
+          </p>
+        )}
+
+      </div>
+    );
+  };
 
   /*
   | Rebuilt every render rather than memoised. Most of the cells close over

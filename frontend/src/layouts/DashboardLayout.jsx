@@ -1,10 +1,10 @@
 import Sidebar from "../components/Sidebar";
 import Navbar from "../components/Navbar";
-import { Outlet } from "react-router-dom";
+import { Outlet, useLocation } from "react-router-dom";
 import { useEffect, useState } from "react";
 
 function DashboardLayout() {
-
+  const location = useLocation();
   const [search,setSearch] = useState("");
   const [searchPlaceholder, setSearchPlaceholder] = useState("Search...");
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -31,6 +31,24 @@ function DashboardLayout() {
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [isSidebarOpen]);
+
+  /*
+  | Prevent browser back from exiting the authenticated application session.
+  | Pushes a state to the history stack and traps `popstate` events so clicking
+  | Chrome's Back button does not exit the app or navigate back to login.
+  */
+  useEffect(() => {
+    window.history.pushState(null, "", window.location.href);
+
+    const handlePopState = () => {
+      window.history.pushState(null, "", window.location.href);
+    };
+
+    window.addEventListener("popstate", handlePopState);
+    return () => {
+      window.removeEventListener("popstate", handlePopState);
+    };
+  }, [location.pathname]);
 
   return (
     <div className="flex h-dvh">

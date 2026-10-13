@@ -247,7 +247,7 @@ const ChangePassword = () => {
       | chosen, which is also the first proof that it took. Somebody sent here
       | on their first login is already signed in and simply carries on.
       */
-      navigate(isReset ? "/login" : "/dashboard", { replace: isReset });
+      navigate(isReset ? "/login" : "/dashboard", { replace: true });
 
     } catch (error) {
       console.error(error);

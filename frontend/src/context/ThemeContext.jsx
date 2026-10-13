@@ -182,7 +182,7 @@ const applyThemeInstantly = (theme) => {
 | waiting for the provider to work it out would paint one dark frame of the
 | login screen on a device that last signed out in the dark.
 */
-applyTheme(inShell() ? readStoredTheme() : LIGHT);
+applyTheme(readStoredTheme());
 
 export const ThemeContext = createContext();
 
@@ -215,10 +215,9 @@ export const ThemeProvider = ({ children }) => {
     : Boolean(currentUser) && passwordSettled(currentUser);
 
   /*
-  | What is actually on screen. The preference is only honoured behind a
-  | login; everywhere else it is held aside rather than forgotten.
+  | What is actually on screen. Applied on the landing page and throughout the app.
   */
-  const appliedTheme = signedIn ? theme : LIGHT;
+  const appliedTheme = theme;
 
   useEffect(() => {
     applyThemeInstantly(appliedTheme);

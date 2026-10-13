@@ -295,11 +295,16 @@ export const attachEmployeeDetails = (records = [], directory = {}) =>
             record.employeeId
         );
 
+        const approver = record.approvedBy
+            ? getEmployeeDetails(directory, record.approvedBy)
+            : null;
+
         return {
             ...record,
             employeeName: employee.name,
             department: employee.department,
             designation: employee.designation,
+            approvedByName: approver?.name || record.approvedBy || "",
         };
 
     });

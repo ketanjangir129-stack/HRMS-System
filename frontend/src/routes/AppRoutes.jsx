@@ -35,6 +35,7 @@ import RouteErrorBoundary from "../components/common/RouteErrorBoundary";
 | already had one.
 */
 
+const LandingPage = lazy(() => import("../pages/landing/LandingPage"));
 const Dashboard = lazy(() => import("../pages/Dashboard"));
 const Departments = lazy(() => import("../pages/departments/Departments"));
 const DepartmentImport = lazy(() => import("../pages/departments/DepartmentImport"));
@@ -110,6 +111,14 @@ function AppRoutes() {
                 <Routes>
                     <Route
                         path="/"
+                        element={
+                            <GuestRoute>
+                                <LandingPage />
+                            </GuestRoute>
+                        }
+                    />
+                    <Route
+                        path="/register"
                         element={
                             <GuestRoute>
                                 <Register />
