@@ -35,6 +35,7 @@ const CARD_FIELDS = Object.freeze([
   "punchInTime",
   "punchOutTime",
   "status",
+  "workingHours",
   "images/punchIn/url",
   "images/punchOut/url",
 ]);

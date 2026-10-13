@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
   FiAlertCircle,
   FiCheckCircle,
+  FiClock,
   FiCoffee,
   FiLoader,
   FiLogIn,
@@ -15,6 +16,7 @@ import useAuth from "../../hooks/useAuth";
 import { ATTENDANCE_STATUS } from "../../utils/attendance/attendanceConstants";
 import { formatTime, getAttendanceDateKey } from "../../utils/attendance/attendanceDate";
 import { getPunchLocation } from "../../utils/attendance/attendanceLocation";
+import { calculateWorkingHours } from "../../utils/attendance/attendanceUtils";
 import { getDayName, isWeeklyOff } from "../../utils/holiday/holidayUtils";
 import AttendanceCameraModal from "./punch/AttendanceCameraModal";
 import AttendancePhotoTile from "./punch/AttendancePhotoTile";
@@ -64,8 +66,11 @@ function StatusPill({ tone, pulse = false, children }) {
   const styles = {
     working: ["bg-blue-500/10 text-blue-600 dark:text-blue-400", "bg-blue-500"],
     warn: ["bg-amber-500/10 text-amber-600 dark:text-amber-400", "bg-amber-500"],
+    success: ["bg-emerald-500/10 text-emerald-600 dark:text-emerald-400", "bg-emerald-500"],
+    info: ["bg-indigo-500/10 text-indigo-600 dark:text-indigo-400", "bg-indigo-500"],
+    neutral: ["bg-surface-muted text-ink-subtle", "bg-ink-faint"],
   };
-  const [pill, dot] = styles[tone];
+  const [pill, dot] = styles[tone] || styles.neutral;
 
   return (
     <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${pill}`}>
@@ -257,6 +262,16 @@ function TodayAttendanceCard({ className = "" }) {
   const punchInTime = punchedIn ? attendance.punchInTime || formatTime(attendance.punchIn) : "";
   const punchOutTime = punchedOut ? attendance.punchOutTime || formatTime(attendance.punchOut) : "";
 
+  const totalHours = (() => {
+    if (punchedOut) {
+      return attendance?.workingHours || calculateWorkingHours(attendance.punchIn, attendance.punchOut) || "--";
+    }
+    if (punchedIn) {
+      return calculateWorkingHours(attendance.punchIn, now.getTime()) || "--";
+    }
+    return "--";
+  })();
+
   const dateLabel = now.toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short" });
   const timeLabel = now.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" });
 
@@ -273,9 +288,17 @@ function TodayAttendanceCard({ className = "" }) {
 
         <div className="flex shrink-0 flex-wrap justify-end gap-1.5">
           {isLate && <StatusPill tone="warn">Late</StatusPill>}
-          {punchedIn && !punchedOut ? (
+          {onApprovedLeave ? (
+            <StatusPill tone="info"><FiSun size={12} /> Leave</StatusPill>
+          ) : onWeeklyOff ? (
+            <StatusPill tone="info"><FiCoffee size={12} /> Day Off</StatusPill>
+          ) : punchedOut ? (
+            <StatusPill tone="success"><FiCheckCircle size={12} /> Completed</StatusPill>
+          ) : punchedIn ? (
             <StatusPill tone="working" pulse>Working</StatusPill>
-          ) : null}
+          ) : (
+            <StatusPill tone="neutral">Not Punched In</StatusPill>
+          )}
         </div>
       </div>
 
@@ -314,7 +337,9 @@ function TodayAttendanceCard({ className = "" }) {
         <div className="mt-auto"><Notice tone="info" icon={<FiSun />}>You are on approved leave today.</Notice></div>
       ) : punchedOut ? (
         <div className="mt-auto">
-          <Notice tone="success" icon={<FiCheckCircle />}>Attendance completed for today. See you tomorrow!</Notice>
+          <Notice tone="success" icon={<FiCheckCircle />}>
+            Attendance completed for today ({totalHours} worked). See you tomorrow!
+          </Notice>
         </div>
       ) : punchedIn ? (
         <button

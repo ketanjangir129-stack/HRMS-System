@@ -84,6 +84,7 @@ function AttendanceCameraModal({
   const [captured, setCaptured] = useState(null);
   const [cameraSession, setCameraSession] = useState(0);
   const [flash, setFlash] = useState(false);
+  const [isMirrored, setIsMirrored] = useState(false);
 
   const capturedImage = captured?.file ?? null;
 
@@ -188,6 +189,10 @@ function AttendanceCameraModal({
       return;
     }
 
+    if (isMirrored) {
+      context.translate(canvas.width, 0);
+      context.scale(-1, 1);
+    }
     context.drawImage(video, 0, 0, canvas.width, canvas.height);
 
     setFlash(true);
@@ -269,16 +274,27 @@ function AttendanceCameraModal({
                 autoPlay
                 muted
                 playsInline
-                className={`absolute inset-0 h-full w-full -scale-x-100 object-cover transition-opacity duration-300 ${
-                  cameraReady ? "opacity-100" : "opacity-0"
-                }`}
+                className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-300 ${
+                  isMirrored ? "-scale-x-100" : ""
+                } ${cameraReady ? "opacity-100" : "opacity-0"}`}
               />
 
               {cameraReady && (
-                <div
-                  aria-hidden="true"
-                  className="pointer-events-none absolute left-1/2 top-1/2 h-[72%] w-[46%] -translate-x-1/2 -translate-y-1/2 rounded-[50%] border-2 border-dashed border-white/60 shadow-[0_0_0_9999px_rgba(15,23,42,0.35)]"
-                />
+                <>
+                  <div
+                    aria-hidden="true"
+                    className="pointer-events-none absolute left-1/2 top-1/2 h-[72%] w-[46%] -translate-x-1/2 -translate-y-1/2 rounded-[50%] border-2 border-dashed border-white/60 shadow-[0_0_0_9999px_rgba(15,23,42,0.35)]"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setIsMirrored((prev) => !prev)}
+                    title={isMirrored ? "Switch to Normal view" : "Switch to Mirror view"}
+                    className="absolute left-3 top-3 z-10 flex items-center gap-1.5 rounded-full bg-slate-900/75 px-3 py-1.5 text-xs font-medium text-white shadow-md backdrop-blur-sm transition hover:bg-slate-900/90"
+                  >
+                    <FiRefreshCw size={12} className={isMirrored ? "rotate-180 transition-transform duration-300" : "transition-transform duration-300"} />
+                    <span>{isMirrored ? "Mirror View" : "Normal View"}</span>
+                  </button>
+                </>
               )}
 
               {!cameraReady && !cameraError && (

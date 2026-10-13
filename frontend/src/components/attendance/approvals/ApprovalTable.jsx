@@ -1,10 +1,11 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   FiArrowRight,
   FiCalendar,
   FiCheck,
   FiCheckCircle,
   FiEye,
+  FiImage,
   FiInbox,
   FiLoader,
   FiRefreshCw,
@@ -20,6 +21,8 @@ import {
   parseDateKey,
 } from "../../../utils/attendance/attendanceDate";
 import { getRecordKey } from "../../../utils/attendance/attendanceApproval";
+import { getAttendancePhotoUrl, PHOTO_PRESETS } from "../../../utils/attendance/attendanceImage";
+import { PhotoLightbox } from "../punch/AttendancePhotoTile";
 import {
   getApprovalLabel,
   getApprovalStatus,
@@ -160,6 +163,70 @@ function DayTile({ date }) {
 
 /*
 |--------------------------------------------------------------------------
+| Punch Photos (table cell)
+|--------------------------------------------------------------------------
+| Tiny avatar pair — punch-in on the left, punch-out on the right — so a
+| reviewer can glance at the selfie without opening the detail modal.
+*/
+
+function PunchPhotos({ record, onZoom }) {
+  const inThumb = getAttendancePhotoUrl(record.images?.punchIn?.url, PHOTO_PRESETS.THUMB);
+  const outThumb = getAttendancePhotoUrl(record.images?.punchOut?.url, PHOTO_PRESETS.THUMB);
+  const inFull = getAttendancePhotoUrl(record.images?.punchIn?.url, PHOTO_PRESETS.FULL);
+  const outFull = getAttendancePhotoUrl(record.images?.punchOut?.url, PHOTO_PRESETS.FULL);
+
+  if (!inThumb && !outThumb) return <span className="text-xs text-ink-faint">—</span>;
+
+  return (
+    <div className="flex items-center gap-1.5">
+      {inThumb ? (
+        <button
+          type="button"
+          onClick={() => onZoom?.({ src: inFull, title: `Punch In · ${record.employeeName || record.employeeId}` })}
+          title="View Punch In photo"
+          className="group relative h-9 w-9 shrink-0 overflow-hidden rounded-lg ring-1 ring-line-subtle transition hover:ring-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+        >
+          <img
+            src={inThumb}
+            alt="Punch in"
+            className="h-full w-full object-cover transition duration-200 group-hover:scale-110"
+          />
+        </button>
+      ) : (
+        <span
+          title="No punch in photo"
+          className="flex h-9 w-9 items-center justify-center rounded-lg bg-surface-muted text-ink-faint"
+        >
+          <FiImage size={14} />
+        </span>
+      )}
+      {outThumb ? (
+        <button
+          type="button"
+          onClick={() => onZoom?.({ src: outFull, title: `Punch Out · ${record.employeeName || record.employeeId}` })}
+          title="View Punch Out photo"
+          className="group relative h-9 w-9 shrink-0 overflow-hidden rounded-lg ring-1 ring-line-subtle transition hover:ring-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+        >
+          <img
+            src={outThumb}
+            alt="Punch out"
+            className="h-full w-full object-cover transition duration-200 group-hover:scale-110"
+          />
+        </button>
+      ) : (
+        <span
+          title="No punch out photo"
+          className="flex h-9 w-9 items-center justify-center rounded-lg bg-surface-muted text-ink-faint"
+        >
+          <FiImage size={14} />
+        </span>
+      )}
+    </div>
+  );
+}
+
+/*
+|--------------------------------------------------------------------------
 | Work Day
 |--------------------------------------------------------------------------
 | Both punches and the hours they came to, in one cell. The arrow is what
@@ -234,6 +301,8 @@ function ApprovalTable({
   onRejectSelected,
 
 }) {
+
+  const [lightbox, setLightbox] = useState(null);
 
   /*
   | A day is selectable only when it is both waiting and this reviewer's to
@@ -458,6 +527,13 @@ function ApprovalTable({
     },
 
     {
+      key: "photos",
+      label: "Photos",
+      ...hideBelow("lg"),
+      render: (record) => <PunchPhotos record={record} onZoom={setLightbox} />,
+    },
+
+    {
       key: "status",
       label: "Status",
       sortable: true,
@@ -525,6 +601,14 @@ function ApprovalTable({
       <div className="rounded-xl bg-surface-muted px-3 py-2.5">
         <WorkDay record={record} />
       </div>
+
+      {/* Punch photos */}
+      {(record.images?.punchIn?.url || record.images?.punchOut?.url) && (
+        <div className="flex items-center gap-3 rounded-xl bg-surface-muted/60 px-3 py-2.5">
+          <span className="text-xs font-medium text-ink-subtle">Photos</span>
+          <PunchPhotos record={record} onZoom={setLightbox} />
+        </div>
+      )}
 
       <div className="flex items-center justify-between gap-3 border-t border-line-subtle pt-3">
 
@@ -746,6 +830,14 @@ function ApprovalTable({
               : "No recorded day in this period matches the current filters.",
         }}
       />
+
+      {lightbox && (
+        <PhotoLightbox
+          src={lightbox.src}
+          title={lightbox.title}
+          onClose={() => setLightbox(null)}
+        />
+      )}
 
     </div>
   );

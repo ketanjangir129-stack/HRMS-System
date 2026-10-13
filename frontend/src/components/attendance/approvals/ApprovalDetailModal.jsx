@@ -1,6 +1,7 @@
 import { useState } from "react";
 import {
   FiAlertTriangle,
+  FiCamera,
   FiCheck,
   FiClipboard,
   FiExternalLink,
@@ -8,6 +9,7 @@ import {
   FiLogIn,
   FiLogOut,
   FiMapPin,
+  FiMaximize2,
   FiX,
 } from "react-icons/fi";
 import {
@@ -27,6 +29,8 @@ import {
 } from "../../../utils/attendance/attendanceUtils";
 import AttendanceStatusBadge from "../common/AttendanceStatusBadge";
 import EmployeeCell from "../common/EmployeeCell";
+import { getAttendancePhotoUrl, PHOTO_PRESETS } from "../../../utils/attendance/attendanceImage";
+import { PhotoLightbox } from "../punch/AttendancePhotoTile";
 
 /*
 |--------------------------------------------------------------------------
@@ -63,21 +67,15 @@ const mapsUrl = ({ latitude, longitude }) =>
 function PunchTile({ icon, label, time, location }) {
   return (
     <div className="rounded-xl bg-surface-muted p-3">
-
       <div className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-ink-subtle">
         {icon}
         {label}
       </div>
 
       <p className="mt-1 truncate text-sm font-semibold text-ink-muted">
-        {formatTime(time)}
+        {formatTime(time) || "--:--"}
       </p>
 
-      {/*
-      | The coordinate itself belongs on the location modal the table already
-      | opens. What matters here is only whether the punch carried one, and a
-      | way through to it for the day that needs checking.
-      */}
       {isPlottable(location) && (
         <a
           href={mapsUrl(location)}
@@ -90,7 +88,50 @@ function PunchTile({ icon, label, time, location }) {
           <FiExternalLink size={11} />
         </a>
       )}
+    </div>
+  );
+}
 
+function PunchPhotoCard({ label, time, imageUrl, onZoom }) {
+  const thumb = getAttendancePhotoUrl(imageUrl, PHOTO_PRESETS.THUMB);
+  const full = getAttendancePhotoUrl(imageUrl, PHOTO_PRESETS.FULL);
+
+  return (
+    <div className="flex flex-col overflow-hidden rounded-xl border border-line-subtle bg-surface-muted/40 p-2.5">
+      <div className="mb-2 flex items-center justify-between gap-1 text-xs font-semibold">
+        <span className="truncate text-ink-muted">{label}</span>
+        {time ? (
+          <span className="text-[11px] font-medium text-ink-subtle tabular-nums">{formatTime(time)}</span>
+        ) : (
+          <span className="text-[11px] font-medium text-ink-faint">Not recorded</span>
+        )}
+      </div>
+
+      {thumb ? (
+        <button
+          type="button"
+          onClick={() => onZoom({ src: full, title: `${label} · ${formatTime(time) || ""}` })}
+          className="group relative aspect-[4/3] w-full overflow-hidden rounded-lg bg-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+        >
+          <img
+            src={thumb}
+            alt={label}
+            loading="eager"
+            className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
+          />
+          <div className="absolute inset-0 flex items-center justify-center bg-slate-950/40 opacity-0 transition group-hover:opacity-100">
+            <span className="flex items-center gap-1 rounded-full bg-slate-900/80 px-2.5 py-1 text-xs font-medium text-white shadow-sm backdrop-blur">
+              <FiMaximize2 size={12} />
+              Enlarge
+            </span>
+          </div>
+        </button>
+      ) : (
+        <div className="flex aspect-[4/3] w-full flex-col items-center justify-center gap-1.5 rounded-lg bg-surface-muted text-ink-faint">
+          <FiCamera size={22} />
+          <span className="text-xs">No photo</span>
+        </div>
+      )}
     </div>
   );
 }
@@ -203,6 +244,7 @@ function ApprovalDetail({
   | writes it.
   */
   const [savingTo, setSavingTo] = useState("");
+  const [lightbox, setLightbox] = useState(null);
 
   const handleQuickStatus = (option) => {
     setSavingTo(option);
@@ -321,6 +363,25 @@ function ApprovalDetail({
 
             </div>
 
+            {/* Attendance Verification Photos */}
+            <div className="mt-4">
+              <p className="ui-eyebrow mb-2">Punch Verification Photos</p>
+              <div className="grid grid-cols-2 gap-2.5">
+                <PunchPhotoCard
+                  label="Punch In Photo"
+                  time={record.punchIn}
+                  imageUrl={record.images?.punchIn?.url}
+                  onZoom={setLightbox}
+                />
+                <PunchPhotoCard
+                  label="Punch Out Photo"
+                  time={record.punchOut}
+                  imageUrl={record.images?.punchOut?.url}
+                  onZoom={setLightbox}
+                />
+              </div>
+            </div>
+
           </section>
 
           {/*
@@ -429,6 +490,14 @@ function ApprovalDetail({
         </div>
 
       </div>
+
+      {lightbox && (
+        <PhotoLightbox
+          src={lightbox.src}
+          title={lightbox.title}
+          onClose={() => setLightbox(null)}
+        />
+      )}
 
     </div>
   );

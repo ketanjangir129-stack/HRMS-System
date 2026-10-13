@@ -24,7 +24,7 @@ const DOTS = {
   out: "bg-amber-500",
 };
 
-function PhotoLightbox({ src, title, onClose }) {
+export function PhotoLightbox({ src, title, onClose }) {
   useEffect(() => {
     const handleKeyDown = (event) => event.key === "Escape" && onClose();
     window.addEventListener("keydown", handleKeyDown);
