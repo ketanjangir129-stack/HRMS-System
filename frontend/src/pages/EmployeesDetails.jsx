@@ -4,7 +4,7 @@ import AvatarUpload from "../components/common/AvatarUpload";
 import {
     fetchEmployeeDetails,
     saveEmployeeSection,
-    updateEmployee,
+    // updateEmployee — UNUSED here (never called in this file)
     updateEmployeeRole,
     setEmployeeStatus,
 } from "../services/EmployeeService";
@@ -650,13 +650,13 @@ function EmployeesDetails() {
     }
 
     // Build the initials for the avatar
-    const initials =
-        (employee.personalInfo?.name || "?")
-            .split(" ")
-            .filter(Boolean)
-            .slice(0, 2)
-            .map((w) => w[0].toUpperCase())
-            .join("") || "?";
+    // const initials = // UNUSED — AvatarUpload apne initials khud banata hai
+    //     (employee.personalInfo?.name || "?")
+    //         .split(" ")
+    //         .filter(Boolean)
+    //         .slice(0, 2)
+    //         .map((w) => w[0].toUpperCase())
+    //         .join("") || "?";
 
     const status = employee.account?.status || "Unknown";
     const isActive = status.toLowerCase() === "active";

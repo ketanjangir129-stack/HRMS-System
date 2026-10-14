@@ -1,7 +1,9 @@
+
+
 import { db } from "../firebase/firebase";
-import { ref, get, set, update, onValue } from "firebase/database";
-import { uploadFileApi } from "./api/uploadApi";
-import { checkEmployeeUniqueness } from "./ValidationService";
+import { ref, get, /* set — only addEmployee (UNUSED) used it, */ update, onValue } from "firebase/database";
+// import { uploadFileApi } from "./api/uploadApi"; // UNUSED — only uploadResume (UNUSED) used it
+// import { checkEmployeeUniqueness } from "./ValidationService"; // UNUSED — only updateEmployeeSection (UNUSED) used it
 import {
   createEmployeeApi,
   getEmployeeByIdApi,
@@ -11,10 +13,10 @@ import {
 } from "./api/employeeApi";
 import { releaseManagerFromDepartments } from "./departmentService";
 import {
-  toDepartmentRefs,
+  // toDepartmentRefs, // UNUSED — only updateEmployeeSection (UNUSED) used it
   withDepartmentNames,
 } from "../utils/departments/departmentRefs";
-get
+
 const readDepartments = async (companyCode) => {
   const snapshot = await get(ref(db, `companies/${companyCode}/departments`));
   return snapshot.exists() ? snapshot.val() : {};
@@ -26,6 +28,7 @@ import {
 } from "../utils/permissions/roleAssignment";
  
 // Add Employee
+/* UNUSED — replaced by createEmployee (backend API). Kept for reference.
 export const addEmployee = async (companyCode, employee) => {
   const employeeId = employee.employmentInfo.employeeId.trim().toUpperCase();
   const personal = employee.personalInfo || {};
@@ -59,6 +62,7 @@ export const addEmployee = async (companyCode, employee) => {
     }
   );
 };
+UNUSED-END */
  
  
 // Get All Employees
@@ -216,6 +220,7 @@ export const updateEmployee = async (companyCode, employeeId, data) => {
  
 // Details page ka section save — updateEmployee ke upar ek patli layer.
 // personalInfo ke liye email/mobile ka duplicate check + trim/lowercase karti hai.
+/* UNUSED — replaced by saveEmployeeSection (backend API). Kept for reference.
 export const updateEmployeeSection = async (
   companyCode,
   employeeId,
@@ -285,9 +290,10 @@ export const updateEmployeeSection = async (
   }
  
   await updateEmployee(companyCode, employeeId, { personalInfo: nextData });
- 
+
   return { success: true, data: nextData };
 };
+UNUSED-END */
  
 /*
 |--------------------------------------------------------------------------
@@ -372,7 +378,7 @@ export const updateEmployeeRole = async (
  
 };
  
-// Resume upload — PDF Storage mein jaata hai, DB mein sirf uska link save hota hai
+/* UNUSED — resume ab PATCH /employees/update se jaata hai. Kept for reference.
 export const uploadResume = async (companyCode, employeeId, file) => {
   const result = await uploadFileApi(file, {
     folder: `employees/${employeeId.toUpperCase()}/resume`,
@@ -381,6 +387,7 @@ export const uploadResume = async (companyCode, employeeId, file) => {
 
   return result.url;
 };
+UNUSED-END */
  
 // CREATE THE EMPLOYEES
 // Duplicate check aur DB write ab backend karta hai (POST /api/employees/create).

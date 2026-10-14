@@ -4,7 +4,8 @@ const ALLOWED_RESOURCE_TYPES = ["auto", "image", "raw", "video"];
 
 // POST /api/upload/file  multipart: file + folder + resourceType?
 const uploadSingleFile = async (req, res) => {
-  const { companyCode } = req.user;
+  // Frontend company nhi bhejta , backend authenticate middleware se token open krke nikala
+  const { companyCode } = req.user;  
 
   if (!req.file) {
     return res.status(400).json({

@@ -1,12 +1,12 @@
 const cloudinary = require("../config/cloudinary");
 
-const uploadFile = (
-  buffer,  //backend ko mili file ka temporary data
+const uploadFile = ( 
+  buffer,  //backend ko mili file ka temporary data(using multer)
   {
     folder,   //cloudinary mein file kis folder mein jayegi
     resourceType = "auto",
-    allowedTypes = [],
-    maxBytes = 500 * 1024 * 1024,    //default maximum size 5 MB
+    // allowedTypes = [],
+    maxBytes = 5 * 1024 * 1024,    //default maximum size 5 MB
     fileName,   //uploaded original file ka naam (optional) — URL me wahi dikhega
   }
 ) => {
@@ -42,7 +42,7 @@ const uploadFile = (
     }
 
     cloudinary.uploader
-      .upload_stream(     //file ko cloudinary par upload karta haii
+      .upload_stream(     //file ko cloudinary par upload karta haii buffer send karke
         uploadOptions,
         (error, result) => {
           if (error) return reject(error);

@@ -5,6 +5,7 @@ import { ArrowLeft, ChevronRight, LogOut, UserRound } from "lucide-react";
 import { toast } from "react-toastify";
 import useAuth from "../hooks/useAuth";
 import { getInitials, getUserName } from "../utils/user";
+import { subscribeEmployeeById } from "../services/EmployeeService";
 
 /*
 |--------------------------------------------------------------------------
@@ -17,11 +18,12 @@ import { getInitials, getUserName } from "../utils/user";
 */
 
 const ProfileDrawer = ({ isOpen, onClose }) => {
-  const { currentUser, logout } = useAuth();
+  const { currentUser, company, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
   const [loggingOut, setLoggingOut] = useState(false);
+  const [livePhoto, setLivePhoto] = useState(undefined);
 
   // Esc se drawer band ho jaye
   useEffect(() => {
@@ -38,6 +40,31 @@ const ProfileDrawer = ({ isOpen, onClose }) => {
   const name = getUserName(currentUser);
   const initials = getInitials(currentUser);
   const role = currentUser?.account?.role || currentUser?.role || "—";
+  const isOwner = (currentUser?.role || currentUser?.account?.role) === "owner";
+
+  // Login user ki photo — owner company se, employee apne live record se
+  // (upload ke turant baad drawer me dikhe, reload ka wait na ho).
+  const companyCode =
+    company?.companyCode || localStorage.getItem("companyCode");
+  const employeeId =
+    currentUser?.account?.username ||
+    currentUser?.employmentInfo?.employeeId ||
+    "";
+
+  useEffect(() => {
+    if (isOwner || !companyCode || !employeeId || !isOpen) return;
+    const stop = subscribeEmployeeById(
+      companyCode,
+      employeeId,
+      (data) => setLivePhoto(data?.personalInfo?.photo || null),
+      () => {}
+    );
+    return stop;
+  }, [isOwner, companyCode, employeeId, isOpen]);
+
+  const photoUrl = isOwner
+    ? company?.ownerPhoto || null
+    : (livePhoto !== undefined ? livePhoto : currentUser?.personalInfo?.photo) || null;
 
   const handleViewProfile = () => {
     onClose();
@@ -105,9 +132,17 @@ const ProfileDrawer = ({ isOpen, onClose }) => {
 
         {/* User card */}
         <div className="flex items-center gap-3 border-b border-line-subtle px-4 py-5">
-          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-lg font-bold text-white">
-            {initials}
-          </div>
+          {photoUrl ? (
+            <img
+              src={photoUrl}
+              alt={name || "Profile photo"}
+              className="h-14 w-14 shrink-0 rounded-full object-cover"
+            />
+          ) : (
+            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-lg font-bold text-white">
+              {initials}
+            </div>
+          )}
 
           <div className="min-w-0">
             <p className="truncate text-sm font-semibold text-ink">{name}</p>

@@ -6,7 +6,7 @@ import {
 } from "react-icons/fa";
 import { HiOutlineViewList } from "react-icons/hi";
 import { MdContrast } from "react-icons/md";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import useAuth from "../hooks/useAuth";
 import useRoleAccess from "../hooks/useRoleAccess";
@@ -15,13 +15,38 @@ import { THEME_ENABLED } from "../context/ThemeContext";
 import ProfileDrawer from "./ProfileDrawer";
 import { getInitials } from "../utils/user";
 import NotificationBell from "./notifications/NotificationBell";
+import { subscribeEmployeeById } from "../services/EmployeeService";
 
 
 const Navbar = ({ search, setSearch, searchPlaceholder, onMenuClick }) => {
   const navigate = useNavigate();
   const { isOwner } = useRoleAccess();
-  const { currentUser } = useAuth();
+  const { currentUser, company } = useAuth();
   const { isDark, toggleTheme } = useTheme();
+
+  // Profile icon — initials ki jagah login user ki photo (mile to).
+  const isOwnerUser = (currentUser?.role || currentUser?.account?.role) === "owner";
+  const navCompanyCode =
+    company?.companyCode || localStorage.getItem("companyCode");
+  const navEmployeeId =
+    currentUser?.account?.username ||
+    currentUser?.employmentInfo?.employeeId ||
+    "";
+  const [navPhoto, setNavPhoto] = useState(undefined);
+
+  useEffect(() => {
+    if (isOwnerUser || !navCompanyCode || !navEmployeeId) return;
+    return subscribeEmployeeById(
+      navCompanyCode,
+      navEmployeeId,
+      (data) => setNavPhoto(data?.personalInfo?.photo || null),
+      () => {}
+    );
+  }, [isOwnerUser, navCompanyCode, navEmployeeId]);
+
+  const navPhotoUrl = isOwnerUser
+    ? company?.ownerPhoto || null
+    : (navPhoto !== undefined ? navPhoto : currentUser?.personalInfo?.photo) || null;
 
   // Profile icon par click karne se right side ka drawer khulta hai
   const [isProfileOpen, setIsProfileOpen] = useState(false);
@@ -148,8 +173,16 @@ const Navbar = ({ search, setSearch, searchPlaceholder, onMenuClick }) => {
         >
 
           <div
-            className="w-9 h-9 text-sm rounded-full bg-emerald-600 text-white font-semibold flex items-center justify-center">
-            {getInitials(currentUser)}
+            className="w-9 h-9 text-sm rounded-full bg-emerald-600 text-white font-semibold flex items-center justify-center overflow-hidden">
+            {navPhotoUrl ? (
+              <img
+                src={navPhotoUrl}
+                alt="Profile"
+                className="h-full w-full rounded-full object-cover"
+              />
+            ) : (
+              getInitials(currentUser)
+            )}
           </div>
 
         </button>

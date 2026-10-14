@@ -12,7 +12,7 @@ import { uploadFileApi } from "../../services/api/uploadApi";
 | usko employee record me save kar deta hai.
 |--------------------------------------------------------------------------
 */
-function AvatarUpload({ photoUrl, name, employeeId, onUploaded, className = "" }) {
+function AvatarUpload({ photoUrl, name, employeeId, folder, canEdit = true,  onUploaded, className = "" }) {
   const inputRef = useRef(null);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
@@ -39,10 +39,8 @@ function AvatarUpload({ photoUrl, name, employeeId, onUploaded, className = "" }
     setError("");
 
     try {
-      const result = await uploadFileApi(file, {
-        folder: `employees/${String(employeeId || "unknown").toUpperCase()}/photo`,
-        resourceType: "image",
-      });
+      const targetFolder = folder || `employees/${String(employeeId || "unknown").toUpperCase()}/photo` ;
+      const result = await uploadFileApi(file, { folder:targetFolder, resourceType: "image"  });
 
       await onUploaded?.(result.url);
     } catch (err) {
@@ -67,6 +65,9 @@ function AvatarUpload({ photoUrl, name, employeeId, onUploaded, className = "" }
         </div>
       )}
 
+      {canEdit && (
+        <>
+
       <button
         type="button"
         onClick={() => inputRef.current?.click()}
@@ -84,6 +85,12 @@ function AvatarUpload({ photoUrl, name, employeeId, onUploaded, className = "" }
         className="hidden"
         onChange={handleFile}
       />
+
+          
+        </>
+
+
+      )}
 
       {error && (
         <p className="absolute left-0 top-full mt-1 w-max max-w-[180px] text-xs text-rose-600">

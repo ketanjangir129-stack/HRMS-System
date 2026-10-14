@@ -6,6 +6,6 @@ const { uploadSingleFile } = require("../controllers/uploadController");
 const router = express.Router();
 
 // POST /api/upload/file  field name: "file", body: folder, resourceType?
-router.post("/file", authenticate, upload.single("file"), uploadSingleFile);
+router.post("/file", authenticate, upload.single("file"), uploadSingleFile);  //token check then req.user mein companyCode
 
 module.exports = router;

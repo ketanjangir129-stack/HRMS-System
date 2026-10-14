@@ -105,6 +105,7 @@ const EDITABLE_COMPANY_FIELDS = [
   "ownerName",
   "mobile",
   "address",
+  "ownerPhoto",
 ];
 
 export const updateCompanyDetails = async (companyCode, updates) => {

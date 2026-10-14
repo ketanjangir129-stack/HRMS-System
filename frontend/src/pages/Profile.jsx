@@ -20,7 +20,7 @@ import {
   IdCard,
   Landmark,
   Lock,
-  LogOut,
+  // LogOut, // UNUSED
   Mail,
   MapPin,
   Pencil,
@@ -35,19 +35,22 @@ import {
 import { toast } from "react-toastify";
 
 import useAuth from "../hooks/useAuth";
-import useRoleAccess from "../hooks/useRoleAccess";
+// import useRoleAccess from "../hooks/useRoleAccess"; // UNUSED — canAccessSection commented below
 import useResignations from "../hooks/useResignations";
 import Loader from "../components/common/Loader";
 import AvatarUpload from "../components/common/AvatarUpload";
 import ResignationModal from "../components/resignation/ResignationModal";
 import { createResignation } from "../services/resignation/resignationService";
 import { toEmployeeSnapshot } from "../utils/resignation/resignationUtils";
+// import {
+//   subscribeEmployeeById,
+//   updateEmployeeSection,
+// } from "../services/EmployeeService";
 import {
-  subscribeEmployeeById,
-  updateEmployeeSection,
+  subscribeEmployeeById, saveEmployeeSection
 } from "../services/EmployeeService";
 import { getUserRole } from "../utils/attendance/attendanceRequestUtils";
-import { getInitials, getUserName } from "../utils/user";
+import { getUserName } from "../utils/user"; // getInitials UNUSED — initials commented below
 import { rules } from "../utils/validation/rules";
 import { validateField } from "../utils/validation/validateField";
 
@@ -173,9 +176,10 @@ function Profile() {
   const [resignOpen, setResignOpen] = useState(false);
   const [resigning, setResigning] = useState(false);
 
-  const { canAccessSection } = useRoleAccess();
+  // const { canAccessSection } = useRoleAccess(); // UNUSED
 
-  const { activeResignation, reload: reloadResignations } = useResignations();
+  // activeResignation UNUSED — sirf reload use hota hai
+  const { reload: reloadResignations } = useResignations();
 
   const companyCode = company?.companyCode || localStorage.getItem("companyCode");
 
@@ -276,7 +280,7 @@ function Profile() {
     ? company?.ownerName || getUserName(currentUser)
     : getUserName(employee || currentUser);
 
-  const initials = getInitials(isOwner ? { name } : employee || currentUser);
+  // const initials = getInitials(isOwner ? { name } : employee || currentUser); // UNUSED
 
   const email = isOwner
     ? company?.email || currentUser?.email || ""
@@ -674,29 +678,48 @@ function Profile() {
 
           <div className="flex min-w-0 flex-col gap-4 sm:flex-row sm:items-center">
 
-            <AvatarUpload
-              photoUrl={isOwner ? null : employee?.personalInfo?.photo}
-              name={name}
-              employeeId={employeeId}
-              onUploaded={async (url) => {
-                const result = await updateEmployeeSection(
-                  companyCode,
-                  employeeId,
-                  "personalInfo",
-                  { photo: url }
-                );
-
-                if (!result?.success) {
-                  throw new Error(result?.message || "Failed to save photo.");
-                }
-
-                setEmployee((prev) => ({
-                  ...prev,
-                  personalInfo: { ...prev?.personalInfo, photo: result.data?.photo ?? url },
-                }));
-              }}
-              className="h-20 w-20 shrink-0 rounded-2xl bg-blue-600 text-2xl font-bold text-white shadow-md shadow-blue-600/25"
-            />
+          {isOwner ? (
+  <AvatarUpload
+    photoUrl={company?.ownerPhoto || null}
+    name={name}
+    folder={`company/${companyCode}/owner/photo`}
+    canEdit={true}
+    onUploaded={async (url) => {
+      const result = await updateCompanyProfile({ ownerPhoto: url });
+      if (!result?.success) throw new Error(result?.message || "Failed to save photo.");
+    }}
+    className="h-20 w-20 shrink-0 rounded-2xl bg-blue-600 text-2xl font-bold text-white shadow-md shadow-blue-600/25"
+  />
+) : (
+  <AvatarUpload
+    photoUrl={employee?.personalInfo?.photo}
+    name={name}
+    employeeId={employeeId}
+    canEdit={true}
+    onUploaded={async (url) => {
+      const result = await saveEmployeeSection(employeeId, "personalInfo", { photo: url });
+      if (!result?.success) throw new Error(result?.message || "Failed to save photo.");
+      const nextPhoto = result.data?.photo ?? url;
+      setEmployee((prev) => ({
+        ...prev,
+        personalInfo: { ...prev?.personalInfo, photo: nextPhoto },
+      }));
+      // Login snapshot bhi taaza rakho — navbar/drawer reload ke baad bhi photo dikhe
+      try {
+        const stored = JSON.parse(localStorage.getItem("currentUser") || "null");
+        if (stored) {
+          localStorage.setItem(
+            "currentUser",
+            JSON.stringify({ ...stored, personalInfo: { ...(stored.personalInfo || {}), photo: nextPhoto } })
+          );
+        }
+      } catch {
+        // Snapshot sync optional hai — save already ho chuka hai
+      }
+    }}
+    className="h-20 w-20 shrink-0 rounded-2xl bg-blue-600 text-2xl font-bold text-white shadow-md shadow-blue-600/25"
+  />
+  )}
 
             <div className="min-w-0">
 
@@ -1232,8 +1255,13 @@ function Profile() {
 
       // personalInfo node poora replace hota hai, isliye formData me record ki
       // baaki keys bhi rehti hain (startEdit poora personalInfo copy karta hai).
-      const result = await updateEmployeeSection(
-        companyCode,
+      // const result = await updateEmployeeSection(
+      //   companyCode,
+      //   employeeId,
+      //   "personalInfo",
+      //   formData
+      // );
+      const result = saveEmployeeSection(
         employeeId,
         "personalInfo",
         formData

@@ -199,7 +199,8 @@ const announce = async (label, work) => {
 | The original extension is kept: the file is opened by whoever reviews it,
 | and a PDF served as a name with no suffix is one the browser will not
 | preview.
-|--------------------------------------------------------------------------
+|-
+-------------------------------------------------------------------------
 */
 
 export const uploadResignationDocument = async (
