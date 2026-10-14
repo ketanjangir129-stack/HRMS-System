@@ -1,89 +1,117 @@
 import { Link } from "react-router-dom";
-import { FiLogIn, FiShield } from "react-icons/fi";
+import { FiLogIn, FiShield, FiArrowRight } from "react-icons/fi";
 
 export default function LandingFooter() {
   const currentYear = new Date().getFullYear();
+  const companyCode = localStorage.getItem("companyCode");
+  const authToken = localStorage.getItem("authToken");
+  const isLoggedIn = Boolean(companyCode && authToken);
+
+  const scrollTo = (e, id) => {
+    e.preventDefault();
+    const el = document.getElementById(id);
+    if (el) {
+      const navOffset = 80;
+      const pos = el.getBoundingClientRect().top + window.pageYOffset - navOffset;
+      window.scrollTo({ top: pos, behavior: "smooth" });
+    }
+  };
 
   return (
-    <footer className="bg-surface border-t border-line text-ink-subtle">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
+    <footer className="relative bg-surface border-t border-line text-ink-subtle overflow-hidden">
+      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-12 pb-8 sm:pt-14 sm:pb-10">
         
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-8 lg:gap-12 mb-12">
+        {/* Main Grid Columns */}
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-8 lg:gap-12 mb-10">
           
-          {/* Brand Info */}
-          <div className="md:col-span-2 space-y-4">
+          {/* Brand Col */}
+          <div className="md:col-span-6 space-y-4">
             <div className="flex items-center gap-3">
-              <div className="h-9 w-9 rounded-xl bg-gradient-to-tr from-brand to-blue-500 flex items-center justify-center text-white font-extrabold text-sm shadow-sm">
+              <div className="h-10 w-10 rounded-2xl bg-gradient-to-tr from-brand to-purple-600 flex items-center justify-center text-white font-extrabold text-sm shadow-md shadow-brand/20">
                 HR
               </div>
-              <span className="text-xl font-bold text-ink tracking-tight">
+              <span className="text-xl sm:text-2xl font-bold text-ink tracking-tight">
                 HRMS System
               </span>
             </div>
 
-            <p className="text-sm text-ink-subtle max-w-sm leading-relaxed">
-              An enterprise-grade workforce management platform uniting selfie-verified biometric attendance, geofence validation, multi-tier approvals, automated payroll, and digital employee onboarding.
+            <p className="text-sm sm:text-base text-ink-subtle max-w-md leading-relaxed">
+              Everything HR. One Connected Platform. Manage your people, attendance, leave, policies, approvals, and employee lifecycle from one streamlined HRMS.
             </p>
 
-            <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-600 text-xs font-medium border border-emerald-500/20">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              <span>All Systems Operational</span>
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-600 text-xs font-semibold border border-emerald-500/20">
+              <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+              <span>Production Workforce Services Active</span>
             </div>
           </div>
 
-          {/* Quick Links */}
-          <div>
+          {/* Core Modules Links */}
+          <div className="md:col-span-3">
             <h4 className="text-xs font-bold uppercase tracking-wider text-ink mb-4">
               Core Modules
             </h4>
             <ul className="space-y-2.5 text-sm">
               <li>
-                <a href="#attendance" className="hover:text-brand transition-colors">
-                  Smart Camera Attendance
+                <a href="#attendance-leave" onClick={(e) => scrollTo(e, "attendance-leave")} className="hover:text-brand transition-colors">
+                  Selfie Attendance & GPS
                 </a>
               </li>
               <li>
-                <a href="#attendance" className="hover:text-brand transition-colors">
-                  GPS Office Geofencing
+                <a href="#attendance-leave" onClick={(e) => scrollTo(e, "attendance-leave")} className="hover:text-brand transition-colors">
+                  Leave & Quota Tracking
                 </a>
               </li>
               <li>
-                <a href="#payroll" className="hover:text-brand transition-colors">
-                  Automated Payroll & Slips
+                <a href="#audiences" onClick={(e) => scrollTo(e, "audiences")} className="hover:text-brand transition-colors">
+                  Statutory Payroll (PF/ESI)
                 </a>
               </li>
               <li>
-                <a href="#onboarding" className="hover:text-brand transition-colors">
-                  Paperless Onboarding
+                <a href="#lifecycle" onClick={(e) => scrollTo(e, "lifecycle")} className="hover:text-brand transition-colors">
+                  Digital KYC Onboarding
                 </a>
               </li>
               <li>
-                <a href="#security" className="hover:text-brand transition-colors">
-                  Role-Based Security
+                <a href="#lifecycle" onClick={(e) => scrollTo(e, "lifecycle")} className="hover:text-brand transition-colors">
+                  Exit & FnF Settlement
                 </a>
               </li>
             </ul>
           </div>
 
-          {/* Portal Access */}
-          <div>
+          {/* Platform Navigation */}
+          <div className="md:col-span-3">
             <h4 className="text-xs font-bold uppercase tracking-wider text-ink mb-4">
-              Portal Access
+              Platform Access
             </h4>
             <ul className="space-y-2.5 text-sm">
               <li>
-                <Link to="/login" replace className="inline-flex items-center gap-1.5 hover:text-brand transition-colors font-medium">
-                  <FiLogIn className="h-3.5 w-3.5" />
-                  <span>Company / Employee Login</span>
+                <Link
+                  to={isLoggedIn ? "/dashboard" : "/login"}
+                  replace
+                  className="inline-flex items-center gap-1.5 text-brand font-semibold hover:text-brand-hover"
+                >
+                  <FiLogIn className="w-3.5 h-3.5" />
+                  <span>Open HRMS Portal</span>
                 </Link>
               </li>
               <li>
-                <Link to="/login" replace className="hover:text-brand transition-colors">
-                  Forgot Password Help
-                </Link>
+                <a href="#solutions" onClick={(e) => scrollTo(e, "solutions")} className="hover:text-brand transition-colors">
+                  Core Solutions
+                </a>
               </li>
               <li>
-                <a href="#overview" className="hover:text-brand transition-colors">
+                <a href="#workflows" onClick={(e) => scrollTo(e, "workflows")} className="hover:text-brand transition-colors">
+                  Modular Architecture
+                </a>
+              </li>
+              <li>
+                <a href="#principles" onClick={(e) => scrollTo(e, "principles")} className="hover:text-brand transition-colors">
+                  Product Principles
+                </a>
+              </li>
+              <li>
+                <a href="#overview" onClick={(e) => scrollTo(e, "overview")} className="hover:text-brand transition-colors">
                   Back to Top
                 </a>
               </li>
@@ -93,12 +121,12 @@ export default function LandingFooter() {
         </div>
 
         {/* Bottom Bar */}
-        <div className="pt-8 border-t border-line flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-ink-subtle">
+        <div className="pt-8 border-t border-line/70 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-ink-subtle">
           <p>© {currentYear} HRMS System. All rights reserved.</p>
           <div className="flex items-center gap-6">
-            <span className="flex items-center gap-1">
+            <span className="flex items-center gap-1.5 font-medium">
               <FiShield className="h-3.5 w-3.5 text-brand" />
-              Enterprise Privacy & Security
+              Role-Based Access Control & Encrypted Cloudinary Storage
             </span>
           </div>
         </div>
@@ -107,4 +135,3 @@ export default function LandingFooter() {
     </footer>
   );
 }
-

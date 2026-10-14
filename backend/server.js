@@ -45,15 +45,8 @@ app.use("/api/upload", uploadRoutes);
 app.use("/api/leave", leaveRoutes);
 
 
+
+
 app.listen(PORT,()=>{
     console.log(`Hrms Backend running on http://localhost:${PORT}`);
 });
-
-
-
-
-
-
-
-
-

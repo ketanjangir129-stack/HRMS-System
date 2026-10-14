@@ -2177,3 +2177,129 @@ input:-webkit-autofill {
   transition: background-color 9999s;  
 }
 
+/*
+|--------------------------------------------------------------------------
+| LANDING PAGE ANIMATIONS & HERO EFFECTS
+|--------------------------------------------------------------------------
+*/
+@keyframes float-slow {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes float-delayed {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(10px);
+  }
+}
+
+@keyframes float-horizontal {
+  0%, 100% {
+    transform: translateX(0px) translateY(0px);
+  }
+  50% {
+    transform: translateX(8px) translateY(-6px);
+  }
+}
+
+@keyframes beam-flow {
+  0% {
+    stroke-dashoffset: 100;
+  }
+  100% {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes pulse-ring {
+  0% {
+    transform: scale(0.95);
+    opacity: 0.8;
+  }
+  50% {
+    transform: scale(1.05);
+    opacity: 0.3;
+  }
+  100% {
+    transform: scale(0.95);
+    opacity: 0.8;
+  }
+}
+
+.animate-float-slow {
+  animation: float-slow 5s ease-in-out infinite;
+}
+
+.animate-float-delayed {
+  animation: float-delayed 6s ease-in-out 1.5s infinite;
+}
+
+.animate-float-horizontal {
+  animation: float-horizontal 7s ease-in-out 0.8s infinite;
+}
+
+.animate-pulse-ring {
+  animation: pulse-ring 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.beam-animated {
+  stroke-dasharray: 8 12;
+  animation: beam-flow 2.5s linear infinite;
+}
+
+@keyframes counter-spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(-360deg);
+  }
+}
+
+@keyframes bar-pulse {
+  0%, 100% {
+    opacity: 0.88;
+    transform: scaleY(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scaleY(1.05);
+  }
+}
+
+@keyframes draw-line {
+  0% {
+    stroke-dashoffset: 300;
+  }
+  100% {
+    stroke-dashoffset: 0;
+  }
+}
+
+.animate-counter-spin {
+  animation: counter-spin 25s linear infinite;
+}
+
+.animate-bar-pulse {
+  animation: bar-pulse 3s ease-in-out infinite;
+  transform-origin: bottom;
+}
+
+.animate-draw-line {
+  stroke-dasharray: 300;
+  animation: draw-line 2s ease-out forwards;
+}
+
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 5.5rem;
+}
+
+
