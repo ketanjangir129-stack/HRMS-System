@@ -25,7 +25,7 @@ import { EARNING_FIELDS, DEDUCTION_FIELDS } from "./salaryFields";
 | forgetting to fill the column in, not somebody being paid nothing. Every
 | other amount is optional and an empty cell there means 0.
 |
-| `readOnly` marks the four deductions the HR Policy prices itself. They stay
+| `readOnly` marks the four deductions the Statutory Compliance prices itself. They stay
 | in the template so the file matches what the salary screen shows, but
 | whatever is typed into them is replaced by the policy's own figure - the
 | same rule the salary form follows, so an import cannot introduce a structure
@@ -167,7 +167,7 @@ export const EARNING_KEYS = EARNING_FIELDS.map((field) => field.name);
 
 export const DEDUCTION_KEYS = DEDUCTION_FIELDS.map((field) => field.name);
 
-// The four the HR Policy prices, in the order the deduction band shows them.
+// The four the Statutory Compliance prices, in the order the deduction band shows them.
 export const POLICY_DRIVEN_KEYS = IMPORT_COLUMNS
     .filter((column) => column.readOnly)
     .map((column) => column.key);

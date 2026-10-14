@@ -1,12 +1,13 @@
 /*
 |--------------------------------------------------------------------------
-| HR Policy Constants
+| Statutory Compliance Constants
 |--------------------------------------------------------------------------
 | The statutory deductions a company can switch on for its salaries, declared
 | once: the defaults a company starts on, the shape stored in Firebase, and
 | the rules a draft is checked against before it is saved.
 |
-| Nothing here reads Firebase and nothing here reads the screen. The HR Policy
+| Nothing here reads Firebase and nothing here reads the screen. The Statutory
+| Compliance
 | page, the service that writes the branch and anything that later prices a
 | payslip all work off this file, so the percentages mean the same thing in
 | every one of them.
@@ -114,7 +115,7 @@ export const DEFAULT_INCOME_TAX_POLICY = {
   ],
 };
 
-export const DEFAULT_HR_POLICY = {
+export const DEFAULT_STATUTORY_COMPLIANCE = {
   pf: DEFAULT_PF_POLICY,
   esi: DEFAULT_ESI_POLICY,
   professionalTax: DEFAULT_PROFESSIONAL_TAX_POLICY,
@@ -240,8 +241,9 @@ export const toComparableSlabs = (slabs, valueKey) =>
 |--------------------------------------------------------------------------
 | A stored branch merged over the defaults.
 |
-| A company with no `settings/hrPolicy` node, and any single field an older
-| record never stored, both fall back to the defaults rather than to zero: a
+| A company with no `settings/statutoryCompliance` node (or, for companies
+| configured before the rename, no legacy `settings/hrPolicy` node), and any
+| single field an older record never stored, both fall back to the defaults rather than to zero: a
 | missing rate is "not configured", and pricing it as 0% would quietly stop a
 | deduction the company thinks is running.
 */
@@ -366,7 +368,7 @@ export const normalizeIncomeTaxPolicy = (stored) => ({
   ),
 });
 
-export const normalizeHRPolicy = (stored) => ({
+export const normalizeStatutoryCompliance = (stored) => ({
   pf: normalizePFPolicy(stored?.pf),
   esi: normalizeESIPolicy(stored?.esi),
   professionalTax: normalizeProfessionalTaxPolicy(stored?.professionalTax),
@@ -743,3 +745,7 @@ export const toStoredIncomeTaxPolicy = (draft) => ({
 
 export const isSamePolicy = (left, right) =>
   JSON.stringify(left ?? null) === JSON.stringify(right ?? null);
+
+// Legacy aliases: HR Policy was renamed to Statutory Compliance.
+export const DEFAULT_HR_POLICY = DEFAULT_STATUTORY_COMPLIANCE;
+export const normalizeHRPolicy = normalizeStatutoryCompliance;

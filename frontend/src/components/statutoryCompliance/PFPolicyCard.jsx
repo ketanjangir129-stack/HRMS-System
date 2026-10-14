@@ -5,7 +5,7 @@ import {
   isSamePolicy,
   toFieldValue,
   validatePFPolicy,
-} from "../../utils/hrPolicy/hrPolicyConstants";
+} from "../../utils/statutoryCompliance/statutoryComplianceConstants";
 import PolicyCard from "./PolicyCard";
 import PolicyNumberField from "./PolicyNumberField";
 import PolicyRadioGroup from "./PolicyRadioGroup";

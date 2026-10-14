@@ -3,22 +3,22 @@ import { FiInfo, FiLock } from "react-icons/fi";
 import { MdOutlinePolicy } from "react-icons/md";
 import { toast } from "react-toastify";
 import {
-  getHRPolicy,
+  getStatutoryCompliance,
   updateESIPolicy,
   updateIncomeTaxPolicy,
   updatePFPolicy,
   updateProfessionalTaxPolicy,
-} from "../../services/settings/hrPolicyService";
-import ESIPolicyCard from "../../components/hrPolicy/ESIPolicyCard";
-import IncomeTaxPolicyCard from "../../components/hrPolicy/IncomeTaxPolicyCard";
-import PFPolicyCard from "../../components/hrPolicy/PFPolicyCard";
-import ProfessionalTaxPolicyCard from "../../components/hrPolicy/ProfessionalTaxPolicyCard";
+} from "../../services/settings/statutoryComplianceService";
+import ESIPolicyCard from "../../components/statutoryCompliance/ESIPolicyCard";
+import IncomeTaxPolicyCard from "../../components/statutoryCompliance/IncomeTaxPolicyCard";
+import PFPolicyCard from "../../components/statutoryCompliance/PFPolicyCard";
+import ProfessionalTaxPolicyCard from "../../components/statutoryCompliance/ProfessionalTaxPolicyCard";
 import Loader from "../../components/common/Loader";
 import useRoleAccess from "../../hooks/useRoleAccess";
 
 /*
 |--------------------------------------------------------------------------
-| HR Policy
+| Statutory Compliance
 |--------------------------------------------------------------------------
 | The company's statutory deduction rules, in one place: whether PF and ESI
 | are deducted at all, at what rate, and on what.
@@ -29,27 +29,29 @@ import useRoleAccess from "../../hooks/useRoleAccess";
 |
 | The page is the container only. It reads the stored policies, holds them,
 | and writes back whichever card was saved; the fields, the rules behind them
-| and the drafts being typed belong to the cards under `components/hrPolicy`.
+| and the drafts being typed belong to the cards under
+| `components/statutoryCompliance`.
 |
-| Each policy is saved on its own. `hrPolicy.pf`, `hrPolicy.esi`,
-| `hrPolicy.professionalTax` and `hrPolicy.incomeTax` decide which cards a role
-| is shown, and `hrPolicy.update` whether it may change them - a role without it
+| Each policy is saved on its own. `statutoryCompliance.pf`,
+| `statutoryCompliance.esi`, `statutoryCompliance.professionalTax` and
+| `statutoryCompliance.incomeTax` decide which cards a role is shown, and
+| `statutoryCompliance.update` whether it may change them - a role without it
 | still reads the rates, which is what somebody who has to answer "what is our
 | PF set to" actually needs.
 |--------------------------------------------------------------------------
 */
 
-function HRPolicy() {
+function StatutoryCompliance() {
 
   const companyCode = localStorage.getItem("companyCode");
 
   const { canAccessSection } = useRoleAccess();
 
-  const canViewPF = canAccessSection("hrPolicy.pf");
-  const canViewESI = canAccessSection("hrPolicy.esi");
-  const canViewProfessionalTax = canAccessSection("hrPolicy.professionalTax");
-  const canViewIncomeTax = canAccessSection("hrPolicy.incomeTax");
-  const canUpdate = canAccessSection("hrPolicy.update");
+  const canViewPF = canAccessSection("statutoryCompliance.pf");
+  const canViewESI = canAccessSection("statutoryCompliance.esi");
+  const canViewProfessionalTax = canAccessSection("statutoryCompliance.professionalTax");
+  const canViewIncomeTax = canAccessSection("statutoryCompliance.incomeTax");
+  const canUpdate = canAccessSection("statutoryCompliance.update");
 
   const canViewAny =
     canViewPF || canViewESI || canViewProfessionalTax || canViewIncomeTax;
@@ -68,7 +70,7 @@ function HRPolicy() {
 
       try {
 
-        const stored = await getHRPolicy(companyCode);
+        const stored = await getStatutoryCompliance(companyCode);
 
         if (!cancelled) {
           setPolicy(stored);
@@ -88,7 +90,7 @@ function HRPolicy() {
           | if they were this company's policy.
           */
           setPolicy(null);
-          toast.error(error.message || "Could not load HR policies.");
+          toast.error(error.message || "Could not load statutory compliance policies.");
         }
 
       }
@@ -119,7 +121,7 @@ function HRPolicy() {
   const savePolicy = async ({ key, label, save, draft }) => {
 
     if (!canUpdate) {
-      toast.error("You are not allowed to change HR policies.");
+      toast.error("You are not allowed to change statutory compliance policies.");
       return;
     }
 
@@ -166,7 +168,7 @@ function HRPolicy() {
   if (loading) {
     return (
       <div className="h-full w-full p-8">
-        <Loader text="Loading HR policies..." />
+        <Loader text="Loading statutory compliance policies..." />
       </div>
     );
   }
@@ -187,7 +189,7 @@ function HRPolicy() {
           <div className="min-w-0">
 
             <h1 className="text-lg font-bold tracking-tight text-slate-900 sm:text-3xl">
-              HR Policy
+              Statutory Compliance
             </h1>
 
             <p className="mt-0.5 text-xs text-slate-500 sm:mt-1 sm:text-base">
@@ -239,7 +241,7 @@ function HRPolicy() {
           </div>
 
           <h2 className="mt-4 text-lg font-semibold text-slate-900">
-            HR policies could not be loaded
+            Statutory compliance policies could not be loaded
           </h2>
 
           <p className="mt-1 max-w-md text-sm text-slate-500">
@@ -336,4 +338,4 @@ function HRPolicy() {
 
 }
 
-export default HRPolicy;
+export default StatutoryCompliance;

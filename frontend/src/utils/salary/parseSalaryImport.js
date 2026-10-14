@@ -18,7 +18,7 @@ import {
 | the reasons they are not.
 |
 | Nothing here talks to the database and nothing here writes: it takes the
-| file, the register and the HR Policy and returns a verdict on every row. The
+| file, the register and the Statutory Compliance and returns a verdict on every row. The
 | modal decides what to show and the service decides what to save, which is
 | what lets the whole check run and be read before a single salary is touched.
 |
@@ -425,7 +425,7 @@ const checkRow = ({
     const imported = readAmounts(values, DEDUCTION_KEYS, errors);
 
     /*
-    | The HR Policy prices PF, ESI, Professional Tax and Income Tax, exactly as
+    | The Statutory Compliance prices PF, ESI, Professional Tax and Income Tax, exactly as
     | it does on the salary form. Whatever the file carried for those is
     | replaced, so an import cannot create a structure that disagrees with the
     | policy screen. A policy that is switched off returns `null` and its
@@ -567,7 +567,7 @@ const checkRow = ({
 | Every row checked, in the order the file had them.
 |
 | `employees` is the register keyed by employee ID, `assignedIds` is who
-| already has a structure, and `policy` is the company's HR Policy or `null`
+| already has a structure, and `policy` is the company's Statutory Compliance or `null`
 | when it could not be read - in which case the four statutory deductions are
 | taken from the file as typed rather than being priced against defaults
 | nobody chose.

@@ -4,7 +4,7 @@ import {
   isSamePolicy,
   toFieldValue,
   validateESIPolicy,
-} from "../../utils/hrPolicy/hrPolicyConstants";
+} from "../../utils/statutoryCompliance/statutoryComplianceConstants";
 import PolicyCard from "./PolicyCard";
 import PolicyNumberField from "./PolicyNumberField";
 

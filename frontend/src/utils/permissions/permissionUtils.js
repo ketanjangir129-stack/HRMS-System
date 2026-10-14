@@ -67,7 +67,11 @@ const normalizeRoleTree = (stored, role) => {
 
   return PERMISSION_PAGES.reduce((tree, page) => {
 
-    const storedPage = stored?.[page.key];
+    // Backward compatibility: HR Policy was renamed to Statutory Compliance.
+    // Companies configured before the rename have `hrPolicy` stored.
+    const storedPage =
+      stored?.[page.key] ??
+      (page.key === "statutoryCompliance" ? stored?.hrPolicy : undefined);
 
     const defaultPage = defaults[page.key];
 

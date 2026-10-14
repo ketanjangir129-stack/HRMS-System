@@ -1,7 +1,7 @@
 import { ref, get, set } from "firebase/database";
 import { db } from "../../firebase/firebase";
 import {
-  normalizeHRPolicy,
+  normalizeStatutoryCompliance,
   toStoredESIPolicy,
   toStoredIncomeTaxPolicy,
   toStoredPFPolicy,
@@ -10,20 +10,20 @@ import {
   validateIncomeTaxPolicy,
   validatePFPolicy,
   validateProfessionalTaxPolicy,
-} from "../../utils/hrPolicy/hrPolicyConstants";
+} from "../../utils/statutoryCompliance/statutoryComplianceConstants";
 
 /*
 |--------------------------------------------------------------------------
-| HR Policy Service
+| Statutory Compliance Service
 |--------------------------------------------------------------------------
-| The only place that talks to the HR policy branch of the database.
+| The only place that talks to the statutory compliance branch of the database.
 |
-| companies/{companyCode}/settings/hrPolicy/{pf|esi}
+| companies/{companyCode}/settings/statutoryCompliance/{pf|esi}
 |
-| Reads never write. A company that has never opened the HR Policy screen
-| simply has no node, and the read answers with the defaults from the policy
-| constants; initialising the branch on a read would need write access from
-| whoever happened to open the page first.
+| Reads never write. A company that has never opened the Statutory Compliance
+| screen simply has no node, and the read answers with the defaults from the
+| policy constants; initialising the branch on a read would need write access
+| from whoever happened to open the page first.
 |
 | Writes go through the policy constants first, so what lands in Firebase is
 | the declared shape as numbers and booleans and nothing else.
@@ -34,11 +34,14 @@ import {
 |--------------------------------------------------------------------------
 */
 
-const hrPolicyPath = (companyCode) =>
+const statutoryCompliancePath = (companyCode) =>
+  `companies/${companyCode}/settings/statutoryCompliance`;
+
+const legacyHRPolicyPath = (companyCode) =>
   `companies/${companyCode}/settings/hrPolicy`;
 
 const policyPath = (companyCode, key) =>
-  `${hrPolicyPath(companyCode)}/${key}`;
+  `${statutoryCompliancePath(companyCode)}/${key}`;
 
 /*
 |--------------------------------------------------------------------------
@@ -55,7 +58,7 @@ const describeError = (error, fallback) => {
   ).toLowerCase();
 
   if (code.includes("permission_denied")) {
-    return "You do not have permission to manage HR policies.";
+    return "You do not have permission to manage statutory compliance policies.";
   }
 
   if (
@@ -82,26 +85,37 @@ const failWith = (error, context, fallback) => {
 
 /*
 |--------------------------------------------------------------------------
-| Get HR Policy
+| Get Statutory Compliance
 |--------------------------------------------------------------------------
 | Both policies, already merged over the defaults, so a caller never has to
 | ask whether a company has configured anything.
+|
+| Falls back to the legacy `settings/hrPolicy` node so companies configured
+| before the rename keep their rules without a migration.
 */
 
-export const getHRPolicy = async (companyCode) => {
+export const getStatutoryCompliance = async (companyCode) => {
 
   try {
 
     if (!companyCode) {
-      return normalizeHRPolicy(null);
+      return normalizeStatutoryCompliance(null);
     }
 
     const snapshot = await get(
-      ref(db, hrPolicyPath(companyCode))
+      ref(db, statutoryCompliancePath(companyCode))
     );
 
-    return normalizeHRPolicy(
-      snapshot.exists() ? snapshot.val() : null
+    if (snapshot.exists()) {
+      return normalizeStatutoryCompliance(snapshot.val());
+    }
+
+    const legacySnapshot = await get(
+      ref(db, legacyHRPolicyPath(companyCode))
+    );
+
+    return normalizeStatutoryCompliance(
+      legacySnapshot.exists() ? legacySnapshot.val() : null
     );
 
   }
@@ -110,13 +124,16 @@ export const getHRPolicy = async (companyCode) => {
 
     throw failWith(
       error,
-      "Get HR Policy Error",
-      "Failed to load HR policies."
+      "Get Statutory Compliance Error",
+      "Failed to load statutory compliance policies."
     );
 
   }
 
 };
+
+// Legacy alias: HR Policy was renamed to Statutory Compliance.
+export const getHRPolicy = getStatutoryCompliance;
 
 /*
 |--------------------------------------------------------------------------

@@ -667,14 +667,14 @@ export const PERMISSION_PAGES = [
   },
 
   {
-    key: "hrPolicy",
-    label: "HR Policy",
+    key: "statutoryCompliance",
+    label: "Statutory Compliance",
     description: "Statutory deduction rules for the company",
-    path: "/hr-policy",
+    path: "/statutory-compliance",
     defaults: { hr: true, employee: false },
     sections: [
       /*
-      | The two policies are panels rather than sub-routes: withholding one
+      | The four policies are panels rather than sub-routes: withholding one
       | takes its card off the screen and leaves the other readable.
       */
       {
@@ -689,6 +689,18 @@ export const PERMISSION_PAGES = [
         description: "ESI rates and salary eligibility limit",
         defaults: { hr: true, employee: false },
       },
+      {
+        key: "professionalTax",
+        label: "Professional Tax Policy",
+        description: "Professional Tax slabs by salary band",
+        defaults: { hr: true, employee: false },
+      },
+      {
+        key: "incomeTax",
+        label: "Income Tax Policy",
+        description: "Income Tax slabs, rebate and cess",
+        defaults: { hr: true, employee: false },
+      },
       /*
       | Reading a rate and setting it are different rights: without this the
       | cards are still shown, with their switches, fields and Save closed.
@@ -696,7 +708,7 @@ export const PERMISSION_PAGES = [
       {
         key: "update",
         label: "Save Policy",
-        description: "Change and save the PF and ESI policies",
+        description: "Change and save the statutory compliance policies",
         defaults: { hr: true, employee: false },
       },
     ],

@@ -2,7 +2,7 @@ import { FiPlus, FiTrash2 } from "react-icons/fi";
 import {
   toNumber,
   toNumericInput,
-} from "../../utils/hrPolicy/hrPolicyConstants";
+} from "../../utils/statutoryCompliance/statutoryComplianceConstants";
 
 /*
 |--------------------------------------------------------------------------

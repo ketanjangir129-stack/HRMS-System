@@ -1,15 +1,15 @@
 import {
   PF_CALCULATION_BASE,
   PF_CALCULATION_BASE_OPTIONS,
-} from "../hrPolicy/hrPolicyConstants";
+} from "../statutoryCompliance/statutoryComplianceConstants";
 
 /*
 |--------------------------------------------------------------------------
 | Statutory Deductions
 |--------------------------------------------------------------------------
-| The company's HR Policy priced against one employee's earnings.
+| The company's Statutory Compliance priced against one employee's earnings.
 |
-| This is the only place the policies are turned into rupees. The HR Policy
+| This is the only place the policies are turned into rupees. The Statutory Compliance
 | screen decides what the rules are, the salary form shows the result, and
 | neither of them knows how a slab is walked or what PF is a percentage of -
 | the two would otherwise have to agree on it by hand, and a payslip that
@@ -242,7 +242,7 @@ export const describeStatutoryDeductions = (policy) => {
       )?.label || "Basic + DA";
 
     description.pf =
-      `HR Policy: ${toAmount(policy.pf.employeeContribution)}% of ${base}`;
+      `Statutory Compliance: ${toAmount(policy.pf.employeeContribution)}% of ${base}`;
 
   }
 
@@ -251,17 +251,17 @@ export const describeStatutoryDeductions = (policy) => {
     const limit = toAmount(policy.esi.salaryEligibilityLimit);
 
     description.esi =
-      `HR Policy: ${toAmount(policy.esi.employeeContribution)}% of gross, ` +
+      `Statutory Compliance: ${toAmount(policy.esi.employeeContribution)}% of gross, ` +
       `up to ₹${limit.toLocaleString("en-IN")}`;
 
   }
 
   if (policy?.professionalTax?.enabled) {
-    description.professionalTax = "HR Policy: fixed amount for this salary band";
+    description.professionalTax = "Statutory Compliance: fixed amount for this salary band";
   }
 
   if (policy?.incomeTax?.enabled) {
-    description.incomeTax = "HR Policy: a twelfth of the year's tax on this salary";
+    description.incomeTax = "Statutory Compliance: a twelfth of the year's tax on this salary";
   }
 
   return description;

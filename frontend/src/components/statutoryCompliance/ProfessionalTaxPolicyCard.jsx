@@ -7,7 +7,7 @@ import {
   toComparableSlabs,
   toSlabFields,
   validateProfessionalTaxPolicy,
-} from "../../utils/hrPolicy/hrPolicyConstants";
+} from "../../utils/statutoryCompliance/statutoryComplianceConstants";
 import PolicyCard from "./PolicyCard";
 import PolicySlabTable from "./PolicySlabTable";
 

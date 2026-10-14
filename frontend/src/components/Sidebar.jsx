@@ -115,12 +115,7 @@ const menuGroups = [
         icon: ListChecks,
         permission: "tasks",
       },
-      {
-        label: "HR Policy",
-        path: "/hr-policy",
-        icon: ShieldUser ,
-        permission: "hrPolicy",
-      },
+     
     ],
   },
   {
@@ -147,6 +142,12 @@ const menuGroups = [
         path: "/my-payroll",
         icon: BadgeIndianRupee,
         permission: "myPayroll",
+      },
+       {
+        label: "Statutory Compliance",
+        path: "/statutory-compliance",
+        icon: ShieldUser ,
+        permission: "statutoryCompliance",
       },
     ],
   },
