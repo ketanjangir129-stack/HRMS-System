@@ -13,6 +13,7 @@ import {
   formatLeaveDuration,
   formatLeaveRange,
   formatLeaveType,
+  formatReviewerName,
   getLeaveDaysBreakdown,
   isPendingLeave,
 } from "../../utils/leave/leaveUtils";
@@ -210,7 +211,7 @@ function LeaveRequestDetailModal({
               label="Reviewed"
               value={
                 request.approvedAt
-                  ? `${request.approvedBy || "--"} · ${formatDateTime(request.approvedAt)}`
+                  ? `${formatReviewerName(request.approvedBy)} · ${formatDateTime(request.approvedAt)}`
                   : "Not reviewed yet"
               }
             />

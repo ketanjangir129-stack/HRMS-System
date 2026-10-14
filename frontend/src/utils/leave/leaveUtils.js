@@ -824,3 +824,19 @@ export const getLeaveAttendanceRemarks = (request = {}) => {
   }`;
 
 };
+
+export const formatReviewerName = (approver) => {
+  if (!approver) return "--";
+  const str = String(approver).trim();
+  if (!str) return "--";
+  if (str.toLowerCase() === "owner") return "Owner";
+  // If it's a raw Firebase Auth UID (alphanumeric 20+ chars, not an employee/HR code)
+  if (
+    /^[a-zA-Z0-9_-]{20,}$/.test(str) &&
+    !str.startsWith("EMP") &&
+    !str.startsWith("HR")
+  ) {
+    return "Owner";
+  }
+  return str;
+};

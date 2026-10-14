@@ -40,6 +40,20 @@ function LeaveCalendar({
     [requests]
   );
 
+  const counts = useMemo(() => {
+    let approved = 0;
+    let pending = 0;
+    let rejected = 0;
+    requests.forEach((r) => {
+      const days = Number(r.days) || 1;
+      const st = String(r.status || "").toLowerCase();
+      if (st === "approved") approved += days;
+      else if (st === "pending") pending += days;
+      else if (st === "rejected") rejected += days;
+    });
+    return { approved, pending, rejected };
+  }, [requests]);
+
   const selected = leaveByDate[getDateKey(value)] || null;
 
   /*
@@ -58,7 +72,7 @@ function LeaveCalendar({
 
   return (
 
-    <div className="ui-card ui-card-body flex h-full flex-col">
+    <div className="ui-card ui-card-body flex flex-col">
 
       {/* Header */}
 
@@ -76,7 +90,7 @@ function LeaveCalendar({
 
       {loading ? (
 
-        <div className="flex-1 space-y-3">
+        <div className="space-y-3">
 
           <div className="h-8 w-full animate-pulse rounded-lg bg-surface-muted" />
 
@@ -114,55 +128,63 @@ function LeaveCalendar({
 
       )}
 
-      {/* Selected day */}
+      {/* Details / Helper Section */}
 
       {!loading && selected && (
-
-        <div className="mt-4 rounded-xl border border-line bg-surface-muted p-3 sm:mt-5 sm:p-4">
-
+        <div className="mt-4 rounded-xl border border-line bg-surface-muted/60 p-3.5 shadow-xs transition-all duration-200">
           <div className="flex items-start justify-between gap-3">
-
             <div className="min-w-0">
-
-              <p className="truncate text-sm font-semibold text-ink-muted">
+              <span className="text-[11px] font-semibold uppercase tracking-wider text-ink-subtle">
+                {value.toLocaleDateString("en-US", {
+                  weekday: "short",
+                  month: "short",
+                  day: "numeric",
+                })}
+              </span>
+              <p className="mt-0.5 truncate text-sm font-semibold text-ink">
                 {formatLeaveType(selected.request)}
               </p>
-
-              <p className="mt-0.5 text-xs text-ink-subtle">
+              <p className="mt-1 text-xs text-ink-subtle">
                 {formatLeaveDuration(selected.request.days)} ·{" "}
                 {selected.request.reason || "No reason recorded"}
               </p>
-
             </div>
-
             <span className="shrink-0">
               <LeaveStatusBadge status={selected.status} size="sm" />
             </span>
-
           </div>
-
         </div>
-
       )}
 
-      {/* Legend */}
+      {!loading && !selected && (
+        <div className="mt-4 flex w-full items-center justify-center rounded-xl border border-dashed border-line/80 bg-surface-muted/20 px-4 py-2.5 text-center transition-all">
+          <p className="text-xs text-ink-subtle">
+            Select any marked date on the calendar to view request details
+          </p>
+        </div>
+      )}
 
-      <div className="mt-auto grid grid-cols-3 gap-2 pt-5 sm:pt-6">
+      {/* Legend with Year Counts */}
 
-        {LEAVE_CALENDAR_LEGEND.map((item) => (
-
-          <div
-            key={item.label}
-            className="flex items-center gap-1.5 rounded-lg bg-surface-muted px-2 py-2 text-[11px] font-medium text-ink-muted sm:gap-2 sm:px-3 sm:text-xs"
-          >
-            <span className={`h-2 w-2 shrink-0 rounded-full ${item.color}`} />
-            <span className="truncate">{item.label}</span>
-          </div>
-
-        ))}
-
+      <div className="mt-4 grid grid-cols-3 gap-2 border-t border-line/60 pt-3.5 sm:pt-4">
+        {LEAVE_CALENDAR_LEGEND.map((item) => {
+          const count = counts[item.label.toLowerCase()] || 0;
+          return (
+            <div
+              key={item.label}
+              className="flex items-center justify-between gap-1.5 rounded-lg border border-line-subtle bg-surface-muted/60 px-2.5 py-2 text-[11px] font-medium text-ink-muted transition-colors sm:text-xs"
+            >
+              <div className="flex min-w-0 items-center gap-1.5">
+                <span className={`h-2 w-2 shrink-0 rounded-full ${item.color}`} />
+                <span className="truncate">{item.label}</span>
+              </div>
+              <span className="shrink-0 rounded-md bg-surface px-1.5 py-0.5 text-[10px] font-semibold text-ink-subtle shadow-xs">
+                {count}d
+              </span>
+            </div>
+          );
+        })}
       </div>
-
     </div>
 
   );

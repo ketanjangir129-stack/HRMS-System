@@ -19,6 +19,7 @@ import {
   formatLeaveDuration,
   formatLeaveRange,
   formatLeaveType,
+  formatReviewerName,
 } from "../../utils/leave/leaveUtils";
 import LeaveStatusBadge from "./common/LeaveStatusBadge";
 
@@ -110,7 +111,7 @@ function LeaveHistoryTable({
         request.days,
         request.status,
         formatDateTime(request.requestedAt),
-        request.approvedBy || "",
+        formatReviewerName(request.approvedBy) || "",
         request.reason || "",
         request.remarks || "",
       ])
@@ -269,7 +270,7 @@ function LeaveHistoryTable({
 
           {row.approvedBy && (
             <span className="max-w-[120px] truncate text-[11px] text-ink-faint">
-              by {row.approvedBy}
+              by {formatReviewerName(row.approvedBy)}
             </span>
           )}
 
@@ -346,7 +347,7 @@ function LeaveHistoryTable({
 
           {row.approvedBy && (
             <span className="max-w-28 truncate text-[11px] text-ink-faint">
-              by {row.approvedBy}
+              by {formatReviewerName(row.approvedBy)}
             </span>
           )}
 

@@ -171,6 +171,8 @@ function LeaveHistory() {
     const nowYear = new Date().getFullYear();
 
     return MONTH_LABELS.map((label, monthIndex) => {
+      const isCurrent = year === nowYear && monthIndex === nowMonth;
+      const isFuture = year === nowYear && monthIndex > nowMonth;
 
       const entitled =
         year < nowYear
@@ -183,11 +185,28 @@ function LeaveHistory() {
 
       const used = usedByMonth[monthIndex] || 0;
 
-      return { label, entitled, used, net: entitled - used };
-
+      return {
+        label,
+        monthIndex,
+        isCurrent,
+        isFuture,
+        entitled,
+        used,
+        net: entitled - used,
+      };
     });
-
   }, [ownRequests, year, holidayDates, settings]);
+
+  const monthTotals = useMemo(() => {
+    return monthRows.reduce(
+      (acc, row) => ({
+        entitled: acc.entitled + row.entitled,
+        used: acc.used + row.used,
+        net: acc.net + row.net,
+      }),
+      { entitled: 0, used: 0, net: 0 }
+    );
+  }, [monthRows]);
 
   /*
   | Who took how many days, for the reviewer's scope. Only approved days
@@ -399,7 +418,7 @@ function LeaveHistory() {
 
         {employeeId && (
 
-        <div className="grid grid-cols-1 gap-4 sm:gap-6 xl:grid-cols-12">
+        <div className="grid grid-cols-1 items-start gap-4 sm:gap-6 xl:grid-cols-12">
 
           <div className="xl:col-span-5">
             <LeaveCalendar
@@ -410,25 +429,40 @@ function LeaveHistory() {
           </div>
 
           <div className="xl:col-span-7">
+            <div className="ui-card flex flex-col overflow-hidden">
+              <div className="flex flex-col gap-3 border-b border-line px-4 py-3.5 sm:flex-row sm:items-center sm:justify-between sm:px-5">
+                <div>
+                  <h3 className="text-sm font-semibold text-ink sm:text-base">
+                    Month-wise Balance
+                  </h3>
+                  <p className="text-xs text-ink-subtle">
+                    Accrued vs. charged leave across {year}
+                  </p>
+                </div>
 
-            <div className="ui-card overflow-hidden">
+                {/* Quick Summary Stat Chips */}
+                <div className="flex flex-wrap items-center gap-2">
+                  <div className="flex items-center gap-1.5 rounded-lg border border-line-subtle bg-surface-muted/60 px-2.5 py-1 text-xs text-ink-muted">
+                    <span className="text-ink-subtle">Entitled:</span>
+                    <span className="font-semibold text-ink">{monthTotals.entitled}d</span>
+                  </div>
 
-              <div className="border-b border-line px-4 py-3 sm:px-5 sm:py-4">
-                <h3 className="text-sm font-semibold text-ink sm:text-base">
-                  Month-wise Balance
-                </h3>
+                  <div className="flex items-center gap-1.5 rounded-lg border border-amber-200/50 bg-amber-500/10 px-2.5 py-1 text-xs text-amber-700 dark:border-amber-900/40 dark:text-amber-400">
+                    <span className="opacity-80">Used:</span>
+                    <span className="font-semibold">{monthTotals.used}d</span>
+                  </div>
 
-                <p className="text-xs text-ink-subtle sm:text-sm">
-                  Accrued versus charged, month by month, {year}
-                </p>
+                  <div className="flex items-center gap-1.5 rounded-lg border border-emerald-200/50 bg-emerald-500/10 px-2.5 py-1 text-xs text-emerald-700 dark:border-emerald-900/40 dark:text-emerald-400">
+                    <span className="opacity-80">Net:</span>
+                    <span className="font-semibold">+{monthTotals.net}d</span>
+                  </div>
+                </div>
               </div>
 
-              <div className="overflow-x-auto">
-
+              <div className="flex-1 overflow-x-auto">
                 <table className="w-full text-sm">
-
                   <thead>
-                    <tr className="text-left text-xs uppercase tracking-wide text-ink-subtle">
+                    <tr className="border-b border-line bg-surface-muted/30 text-left text-[11px] font-semibold uppercase tracking-wider text-ink-subtle">
                       <th className="px-4 py-2.5 sm:px-5">Month</th>
                       <th className="px-4 py-2.5 text-right">Entitled</th>
                       <th className="px-4 py-2.5 text-right">Used</th>
@@ -436,40 +470,84 @@ function LeaveHistory() {
                     </tr>
                   </thead>
 
-                  <tbody>
-
+                  <tbody className="divide-y divide-line/60">
                     {monthRows.map((row) => (
-
-                      <tr key={row.label} className="border-t border-line">
-
-                        <td className="px-4 py-2.5 font-medium text-ink-muted sm:px-5">
-                          {row.label}
+                      <tr
+                        key={row.label}
+                        className={`transition-colors hover:bg-surface-raised/40 ${
+                          row.isCurrent
+                            ? "bg-brand/5 font-medium text-ink dark:bg-brand/10"
+                            : row.isFuture
+                              ? "opacity-60"
+                              : ""
+                        }`}
+                      >
+                        <td className="px-4 py-2 text-xs sm:px-5 sm:text-sm">
+                          <div className="flex items-center gap-2">
+                            <span className={row.isCurrent ? "font-semibold text-brand" : "text-ink-muted"}>
+                              {row.label}
+                            </span>
+                            {row.isCurrent && (
+                              <span className="rounded-full bg-brand/15 px-2 py-0.5 text-[10px] font-semibold text-brand">
+                                Current
+                              </span>
+                            )}
+                            {row.isFuture && (
+                              <span className="rounded-full bg-surface-muted px-1.5 py-0.5 text-[9px] font-medium text-ink-subtle">
+                                Upcoming
+                              </span>
+                            )}
+                          </div>
                         </td>
 
-                        <td className="px-4 py-2.5 text-right text-ink-muted">
+                        <td className="px-4 py-2 text-right text-xs text-ink-muted sm:text-sm">
                           {row.entitled}
                         </td>
 
-                        <td className="px-4 py-2.5 text-right text-ink-muted">
-                          {row.used}
+                        <td className="px-4 py-2 text-right text-xs sm:text-sm">
+                          {row.used > 0 ? (
+                            <span className="inline-flex items-center rounded-full bg-amber-500/15 px-2 py-0.5 text-xs font-semibold text-amber-700 dark:text-amber-400">
+                              {row.used}
+                            </span>
+                          ) : (
+                            <span className="text-ink-faint">0</span>
+                          )}
                         </td>
 
-                        <td className="px-4 py-2.5 text-right font-semibold text-ink sm:px-5">
-                          {row.net}
+                        <td className="px-4 py-2 text-right sm:px-5">
+                          {row.net > 0 ? (
+                            <span className="inline-flex items-center rounded-full bg-emerald-500/15 px-2 py-0.5 text-xs font-semibold text-emerald-700 dark:text-emerald-400">
+                              +{row.net}
+                            </span>
+                          ) : (
+                            <span className="text-xs font-medium text-ink-faint">
+                              {row.net}
+                            </span>
+                          )}
                         </td>
-
                       </tr>
-
                     ))}
-
                   </tbody>
 
+                  <tfoot>
+                    <tr className="border-t-2 border-line bg-surface-muted/50 font-semibold text-ink">
+                      <td className="px-4 py-2.5 text-xs sm:px-5 sm:text-sm">
+                        Total ({year})
+                      </td>
+                      <td className="px-4 py-2.5 text-right text-xs sm:text-sm">
+                        {monthTotals.entitled}
+                      </td>
+                      <td className="px-4 py-2.5 text-right text-xs text-amber-700 dark:text-amber-400 sm:text-sm">
+                        {monthTotals.used}
+                      </td>
+                      <td className="px-4 py-2.5 text-right text-xs text-emerald-700 dark:text-emerald-400 sm:px-5 sm:text-sm">
+                        +{monthTotals.net}
+                      </td>
+                    </tr>
+                  </tfoot>
                 </table>
-
               </div>
-
             </div>
-
           </div>
 
         </div>

@@ -49,7 +49,10 @@ const requirePermission = (path) => async (req, res, next) => {
       role
     );
 
-    if (!hasPermission(stored, role, path)) {
+    const paths = Array.isArray(path) ? path : [path];
+    const allowed = paths.some((p) => hasPermission(stored, role, p));
+
+    if (!allowed) {
       return res.status(403).json({
         success: false,
         message: "You do not have permission to perform this action.",

@@ -8,8 +8,17 @@
 /* Navigation */
 
 .leave-calendar .react-calendar__navigation {
-  margin-bottom: 12px;
-  height: 40px;
+  margin-bottom: 8px;
+  height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* Hide year jump double arrows to eliminate awkward gap at ends */
+.leave-calendar .react-calendar__navigation__prev2-button,
+.leave-calendar .react-calendar__navigation__next2-button {
+  display: none !important;
 }
 
 .leave-calendar .react-calendar__navigation button {
@@ -17,9 +26,13 @@
   font-weight: 600;
   color: var(--color-ink);
   min-width: 36px;
+  height: 36px;
   background: transparent;
   border-radius: 10px;
   transition: background 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .leave-calendar .react-calendar__navigation button:hover,
@@ -32,6 +45,13 @@
   color: color-mix(in oklab, var(--color-ink-faint) 55%, transparent);
 }
 
+.leave-calendar .react-calendar__navigation__label {
+  pointer-events: none;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--color-ink);
+}
+
 /* Weekdays */
 
 .leave-calendar .react-calendar__month-view__weekdays {
@@ -41,6 +61,7 @@
   letter-spacing: 0.05em;
   color: var(--color-ink-faint);
   padding-bottom: 6px;
+  text-align: center;
 }
 
 .leave-calendar .react-calendar__month-view__weekdays__weekday abbr {
@@ -51,7 +72,10 @@
 /* Tiles */
 
 .leave-calendar .react-calendar__tile {
-  height: 44px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   padding: 0;
   border-radius: 12px;
   font-size: 13px;
@@ -193,6 +217,10 @@
 
 .dark .leave-calendar .react-calendar__navigation button:disabled {
   color: var(--color-ink-faint);
+}
+
+.dark .leave-calendar .react-calendar__navigation__label {
+  color: var(--color-ink);
 }
 
 /* Tiles */
