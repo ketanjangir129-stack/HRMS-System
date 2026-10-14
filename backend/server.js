@@ -6,6 +6,7 @@ const attendanceRoutes = require("./src/routes/attendanceRoutes");
 const resignationRoutes = require("./src/routes/resignation.routes");
 const uploadRoutes = require("./src/routes/uploadRoutes");
 const leaveRoutes       =   require("./src/routes/leaveRoutes");
+const statutoryComplianceRoutes = require("./src/routes/statutorycomplianceRoutes");
 
 const express = require("express");
 const cors = require("cors");
@@ -43,6 +44,7 @@ app.use("/api/attendance", attendanceRoutes);
 app.use("/api/companies/:companyCode/resignations", resignationRoutes);
 app.use("/api/upload", uploadRoutes);
 app.use("/api/leave", leaveRoutes);
+app.use("/api/statutory-compliance", statutoryComplianceRoutes);
 
 
 app.listen(PORT,()=>{

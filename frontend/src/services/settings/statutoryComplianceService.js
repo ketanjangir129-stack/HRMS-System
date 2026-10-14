@@ -1,135 +1,82 @@
-import { ref, get, set } from "firebase/database";
-import { db } from "../../firebase/firebase";
 import {
   normalizeStatutoryCompliance,
-  toStoredESIPolicy,
-  toStoredIncomeTaxPolicy,
-  toStoredPFPolicy,
-  toStoredProfessionalTaxPolicy,
-  validateESIPolicy,
-  validateIncomeTaxPolicy,
-  validatePFPolicy,
-  validateProfessionalTaxPolicy,
 } from "../../utils/statutoryCompliance/statutoryComplianceConstants";
+import {
+  calculateStatutoryDeductionsApi,
+  getStatutoryComplianceApi,
+  updateESIPolicyApi,
+  updateIncomeTaxPolicyApi,
+  updatePFPolicyApi,
+  updateProfessionalTaxPolicyApi,
+} from "../api/statutoryComplianceApi";
 
 /*
 |--------------------------------------------------------------------------
 | Statutory Compliance Service
 |--------------------------------------------------------------------------
-| The only place that talks to the statutory compliance branch of the database.
+| Thin client over the backend API. Company scope comes from the auth token,
+| so `companyCode` is kept in the signatures for compatibility with existing
+| callers but is not sent — the backend derives it from the session.
 |
-| companies/{companyCode}/settings/statutoryCompliance/{pf|esi}
+| companies/{companyCode}/settings/statutoryCompliance/{pf|esi|...}
+| lives behind the API now; nothing here touches Firebase directly.
 |
 | Reads never write. A company that has never opened the Statutory Compliance
-| screen simply has no node, and the read answers with the defaults from the
-| policy constants; initialising the branch on a read would need write access
-| from whoever happened to open the page first.
+| screen gets the defaults merged by the backend.
 |
-| Writes go through the policy constants first, so what lands in Firebase is
-| the declared shape as numbers and booleans and nothing else.
-|
-| PF and ESI are written separately, each behind its own Save button, because
-| they are two policies that happen to share a screen - saving one should not
-| commit half-finished edits to the other.
+| PF, ESI, Professional Tax and Income Tax are written separately, each behind
+| its own Save button, because they are policies that happen to share a
+| screen - saving one should not commit half-finished edits to another.
 |--------------------------------------------------------------------------
-*/
-
-const statutoryCompliancePath = (companyCode) =>
-  `companies/${companyCode}/settings/statutoryCompliance`;
-
-const legacyHRPolicyPath = (companyCode) =>
-  `companies/${companyCode}/settings/hrPolicy`;
-
-const policyPath = (companyCode, key) =>
-  `${statutoryCompliancePath(companyCode)}/${key}`;
-
-/*
-|--------------------------------------------------------------------------
-| Firebase Errors
-|--------------------------------------------------------------------------
-| A raw Firebase error reads as "PERMISSION_DENIED: Permission denied", which
-| is not something to put in a toast.
 */
 
 const describeError = (error, fallback) => {
+  const code = String(error?.code || error?.message || "").toLowerCase();
 
-  const code = String(
-    error?.code || error?.message || ""
-  ).toLowerCase();
-
-  if (code.includes("permission_denied")) {
+  if (code.includes("permission_denied") || code.includes("permission")) {
     return "You do not have permission to manage statutory compliance policies.";
   }
 
   if (
     code.includes("network") ||
     code.includes("unavailable") ||
-    code.includes("disconnected")
+    code.includes("disconnected") ||
+    code.includes("fetch") ||
+    code.includes("failed to fetch")
   ) {
     return "Network error. Please check your connection and try again.";
   }
 
   return fallback;
-
-};
-
-const failWith = (error, context, fallback) => {
-
-  console.error(`${context}:`, error);
-
-  return new Error(
-    describeError(error, fallback)
-  );
-
 };
 
 /*
 |--------------------------------------------------------------------------
 | Get Statutory Compliance
 |--------------------------------------------------------------------------
-| Both policies, already merged over the defaults, so a caller never has to
+| The full policy, already merged over the defaults, so a caller never has to
 | ask whether a company has configured anything.
-|
-| Falls back to the legacy `settings/hrPolicy` node so companies configured
-| before the rename keep their rules without a migration.
 */
 
-export const getStatutoryCompliance = async (companyCode) => {
+export const getStatutoryCompliance = async (_companyCode) => {
+  let result;
 
   try {
-
-    if (!companyCode) {
-      return normalizeStatutoryCompliance(null);
-    }
-
-    const snapshot = await get(
-      ref(db, statutoryCompliancePath(companyCode))
+    result = await getStatutoryComplianceApi();
+  } catch (error) {
+    throw new Error(
+      describeError(error, "Failed to load statutory compliance policies."),
+      { cause: error }
     );
-
-    if (snapshot.exists()) {
-      return normalizeStatutoryCompliance(snapshot.val());
-    }
-
-    const legacySnapshot = await get(
-      ref(db, legacyHRPolicyPath(companyCode))
-    );
-
-    return normalizeStatutoryCompliance(
-      legacySnapshot.exists() ? legacySnapshot.val() : null
-    );
-
   }
 
-  catch (error) {
-
-    throw failWith(
-      error,
-      "Get Statutory Compliance Error",
-      "Failed to load statutory compliance policies."
+  if (!result?.success) {
+    throw new Error(
+      result?.message || "Failed to load statutory compliance policies."
     );
-
   }
 
+  return normalizeStatutoryCompliance(result.data);
 };
 
 // Legacy alias: HR Policy was renamed to Statutory Compliance.
@@ -139,112 +86,94 @@ export const getHRPolicy = getStatutoryCompliance;
 |--------------------------------------------------------------------------
 | Save
 |--------------------------------------------------------------------------
-| One policy at a time, validated here as well as on the screen: the page can
-| be edited into a valid looking state and still be saved by a caller that
-| skipped the form, and a rate is not something to take on trust.
-|
-| The branch is replaced rather than merged - the draft is the complete answer
-| for that policy, and merging would leave a key the shape no longer mentions
-| sitting in the record.
-|
-| The saved record is returned so the screen can hold it as the new baseline
-| without a second read.
+| One policy at a time. Validation failures come back as
+| `{ success: false, message, errors }` so the form can show the field error;
+| anything else throws for the toast.
 */
 
-const savePolicy = async ({
-  companyCode,
-  key,
-  draft,
-  validate,
-  toStored,
-  context,
-  fallbackMessage,
-}) => {
+const savePolicy = async ({ draft, api, fallbackMessage }) => {
+  let result;
 
   try {
+    result = await api(draft);
+  } catch (error) {
+    throw new Error(describeError(error, fallbackMessage), { cause: error });
+  }
 
-    if (!companyCode) {
+  if (!result?.success) {
+    if (result?.errors) {
       return {
         success: false,
-        message: "Company not found.",
+        message: result.message || fallbackMessage,
+        errors: result.errors,
       };
     }
 
-    const errors = validate(draft);
-
-    const [firstError] = Object.values(errors);
-
-    if (firstError) {
-      return {
-        success: false,
-        message: firstError,
-        errors,
-      };
-    }
-
-    const policy = toStored(draft);
-
-    await set(
-      ref(db, policyPath(companyCode, key)),
-      policy
-    );
-
-    return {
-      success: true,
-      policy,
-    };
-
+    throw new Error(result?.message || fallbackMessage);
   }
 
-  catch (error) {
+  // Backend answers `{ data: { [key]: policy }, policy }` — accept either.
+  const policy =
+    result.policy ?? Object.values(result.data || {})[0] ?? result.data;
 
-    throw failWith(error, context, fallbackMessage);
-
-  }
-
+  return { success: true, policy };
 };
 
-export const updatePFPolicy = (companyCode, draft) =>
+export const updatePFPolicy = (_companyCode, draft) =>
   savePolicy({
-    companyCode,
-    key: "pf",
     draft,
-    validate: validatePFPolicy,
-    toStored: toStoredPFPolicy,
-    context: "Update PF Policy Error",
+    api: updatePFPolicyApi,
     fallbackMessage: "Failed to save the PF policy. Please try again.",
   });
 
-export const updateESIPolicy = (companyCode, draft) =>
+export const updateESIPolicy = (_companyCode, draft) =>
   savePolicy({
-    companyCode,
-    key: "esi",
     draft,
-    validate: validateESIPolicy,
-    toStored: toStoredESIPolicy,
-    context: "Update ESI Policy Error",
+    api: updateESIPolicyApi,
     fallbackMessage: "Failed to save the ESI policy. Please try again.",
   });
 
-export const updateProfessionalTaxPolicy = (companyCode, draft) =>
+export const updateProfessionalTaxPolicy = (_companyCode, draft) =>
   savePolicy({
-    companyCode,
-    key: "professionalTax",
     draft,
-    validate: validateProfessionalTaxPolicy,
-    toStored: toStoredProfessionalTaxPolicy,
-    context: "Update Professional Tax Policy Error",
+    api: updateProfessionalTaxPolicyApi,
     fallbackMessage:
       "Failed to save the Professional Tax policy. Please try again.",
   });
 
-export const updateIncomeTaxPolicy = (companyCode, draft) =>
+export const updateIncomeTaxPolicy = (_companyCode, draft) =>
   savePolicy({
-    companyCode,
-    key: "incomeTax",
     draft,
-    validate: validateIncomeTaxPolicy,
-    toStored: toStoredIncomeTaxPolicy,
-    context: "Update Income Tax Policy Error",
+    api: updateIncomeTaxPolicyApi,
     fallbackMessage: "Failed to save the Income Tax policy. Please try again.",
   });
+
+/*
+|--------------------------------------------------------------------------
+| Calculate
+|--------------------------------------------------------------------------
+| Price earnings against the stored policy without a second read. The salary
+| screens keep their local calculator for instant feedback; this is the
+| server-side check the backend guarantees with the same rules.
+*/
+
+export const calculateDeductions = async (earnings, policy) => {
+  let result;
+
+  try {
+    result = await calculateStatutoryDeductionsApi(earnings, policy);
+  } catch (error) {
+    throw new Error(
+      describeError(error, "Failed to calculate statutory deductions."),
+      { cause: error }
+    );
+  }
+
+  if (!result?.success) {
+    throw new Error(
+      result?.message || "Failed to calculate statutory deductions."
+    );
+  }
+
+  return result.data;
+};
