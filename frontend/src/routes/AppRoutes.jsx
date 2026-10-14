@@ -70,7 +70,7 @@ const SalaryHistory = lazy(() => import("../pages/salary/SalaryHistory"));
 const PayrolllDashboard = lazy(() => import("../pages/payroll/PayrollDashboard"));
 const PaySlip = lazy(() => import("../pages/payroll/PaySlip"));
 const MyPayroll = lazy(() => import("../pages/payroll/MyPayroll"));
-const HRPolicy = lazy(() => import("../pages/hrPolicy/HRPolicy"));
+const StatutoryCompliance = lazy(() => import("../pages/statutoryCompliance/StatutoryCompliance"));
 const AllTasks = lazy(() => import("../pages/tasks/AllTasks"));
 const Settings = lazy(() => import("../pages/settings/Settings"));
 const Profile = lazy(() => import("../pages/Profile"));
@@ -592,14 +592,23 @@ function AppRoutes() {
                             }
                         />
 
-                        {/* HR Policy - the PF and ESI rules payslips are priced against */}
+                        {/* Statutory Compliance - the PF and ESI rules payslips are priced against */}
                         <Route
-                            path="/hr-policy"
+                            path="/statutory-compliance"
                             element={
-                                <PermissionRoute permission="hrPolicy">
-                                    <HRPolicy />
+                                <PermissionRoute permission="statutoryCompliance">
+                                    <StatutoryCompliance />
                                 </PermissionRoute>
                             }
+                        />
+
+                        {/*
+                  Legacy HR Policy address. Kept as a redirect so old links and
+                  bookmarks land on the renamed screen instead of a 404.
+                */}
+                        <Route
+                            path="/hr-policy"
+                            element={<Navigate to="/statutory-compliance" replace />}
                         />
 
                         {/* Tasks */}

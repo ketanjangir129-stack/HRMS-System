@@ -14,12 +14,37 @@
 */
 const OWNER_ROLE = "owner";
 
-// permissionConstants.js ke `employees` page se
+// permissionConstants.js ke pages se (frontend registry ka backend mirror).
+// Legacy `hrPolicy` key companies configured before the rename ke liye.
 const DEFAULTS = {
   employees: {
     enabled: { hr: true, manager: true, employee: false },
     add: { hr: true, manager: false, employee: false },
     details: { hr: true, manager: false, employee: false },
+  },
+  statutoryCompliance: {
+    enabled: { hr: true, manager: false, employee: false },
+    pf: { hr: true, manager: false, employee: false },
+    esi: { hr: true, manager: false, employee: false },
+    professionalTax: { hr: true, manager: false, employee: false },
+    incomeTax: { hr: true, manager: false, employee: false },
+    update: { hr: true, manager: false, employee: false },
+  },
+  hrPolicy: {
+    enabled: { hr: true, manager: false, employee: false },
+    pf: { hr: true, manager: false, employee: false },
+    esi: { hr: true, manager: false, employee: false },
+    professionalTax: { hr: true, manager: false, employee: false },
+    incomeTax: { hr: true, manager: false, employee: false },
+    update: { hr: true, manager: false, employee: false },
+  },
+  salary: {
+    enabled: { hr: true, manager: false, employee: false },
+    create: { hr: true, manager: false, employee: false },
+    update: { hr: true, manager: false, employee: false },
+  },
+  payroll: {
+    enabled: { hr: true, manager: false, employee: false },
   },
 };
 
@@ -42,7 +67,10 @@ const hasPermission = (stored, role, path) => {
   // warna aisa page hamesha ke liye chhup jaata jise owner wapas kar hi na sake
   if (!page) return true;
 
-  const node = stored?.[pageKey];
+  const node =
+    stored?.[pageKey] ??
+    // Backward compatibility: HR Policy was renamed to Statutory Compliance.
+    (pageKey === "statutoryCompliance" ? stored?.hrPolicy : undefined);
 
   const pageAllowed =
     node === undefined || node === null

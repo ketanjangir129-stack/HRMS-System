@@ -8,7 +8,7 @@ import {
   toFieldValue,
   toSlabFields,
   validateIncomeTaxPolicy,
-} from "../../utils/hrPolicy/hrPolicyConstants";
+} from "../../utils/statutoryCompliance/statutoryComplianceConstants";
 import PolicyCard from "./PolicyCard";
 import PolicyNumberField from "./PolicyNumberField";
 import PolicySlabTable from "./PolicySlabTable";

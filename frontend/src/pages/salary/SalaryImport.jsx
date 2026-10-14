@@ -17,7 +17,7 @@ import { TbMoneybagEdit } from "react-icons/tb";
 import { toast } from "react-toastify";
 import { getEmployees } from "../../services/EmployeeService";
 import { getAllSalary, importSalaries } from "../../services/SalaryService";
-import { getHRPolicy } from "../../services/settings/hrPolicyService";
+import { getStatutoryCompliance } from "../../services/settings/statutoryComplianceService";
 import {
     readSalaryImportFile,
     buildImportRows,
@@ -197,7 +197,7 @@ function SalaryImport() {
     |----------------------------------------------------------------------
     | What The Check Is Made Against
     |----------------------------------------------------------------------
-    | The register, who already has a structure, and the HR Policy. All three
+    | The register, who already has a structure, and the Statutory Compliance. All three
     | are loaded once when the page opens rather than per file, so uploading a
     | corrected file re-checks instantly instead of re-reading the company.
     */
@@ -231,7 +231,7 @@ function SalaryImport() {
         | nothing to check an employee ID against at all.
         */
         try {
-            setPolicy(await getHRPolicy(companyCode));
+            setPolicy(await getStatutoryCompliance(companyCode));
             setPolicyError("");
         }
         catch (error) {
@@ -239,7 +239,7 @@ function SalaryImport() {
             setPolicy(null);
             setPolicyError(
                 error?.message ||
-                "Could not load the HR Policy, so PF, ESI, Professional Tax and Income Tax will be taken from the file as they are entered."
+                "Could not load the Statutory Compliance, so PF, ESI, Professional Tax and Income Tax will be taken from the file as they are entered."
             );
         }
 
@@ -593,7 +593,7 @@ function SalaryImport() {
             </ol>
 
             {/*
-            | The HR Policy could not be read. Said here rather than only on the
+            | The Statutory Compliance could not be read. Said here rather than only on the
             | review screen, because it changes what the file itself should
             | carry: with no policy the four statutory columns are the user's
             | to fill in.
@@ -763,7 +763,7 @@ function SalaryImport() {
                                 <p className="text-xs text-blue-900 sm:text-sm">
                                     {policyDrivenNames.join(", ")}{" "}
                                     {policyDrivenNames.length === 1 ? "is" : "are"}{" "}
-                                    calculated from your company's HR Policy, exactly as on
+                                    calculated from your company's Statutory Compliance, exactly as on
                                     the salary form. Whatever the file carries in{" "}
                                     {policyDrivenNames.length === 1 ? "that column" : "those columns"}{" "}
                                     is replaced by the policy's own figure.
@@ -832,7 +832,7 @@ function SalaryImport() {
                                                         <FiLock
                                                             size={12}
                                                             className="shrink-0 text-slate-400"
-                                                            title="Calculated from the HR Policy"
+                                                            title="Calculated from the Statutory Compliance"
                                                         />
                                                     )}
 
@@ -843,7 +843,7 @@ function SalaryImport() {
 
                                                     <p className="mt-1 text-xs text-ink-subtle">
                                                         {column.note ||
-                                                            "Calculated from your company's HR Policy"}
+                                                            "Calculated from your company's Statutory Compliance"}
                                                     </p>
 
                                                 )}
@@ -1101,7 +1101,7 @@ function SalaryImport() {
                                         </h2>
 
                                         <p className="ui-card-subtitle">
-                                            Checked against the register and priced against the HR Policy.
+                                            Checked against the register and priced against the Statutory Compliance.
                                         </p>
 
                                     </div>
@@ -1242,7 +1242,7 @@ function SalaryImport() {
                                                             <FiLock
                                                                 size={10}
                                                                 className="shrink-0 text-slate-400"
-                                                                title="From the HR Policy"
+                                                                title="From the Statutory Compliance"
                                                             />
 
                                                         )}

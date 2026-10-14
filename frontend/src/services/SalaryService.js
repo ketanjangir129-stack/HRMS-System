@@ -140,7 +140,7 @@ export const createSalary = async (
 | Writes the rows an import has already checked.
 |
 | Nothing is validated here. By the time a row reaches this point it has been
-| read, priced against the HR Policy and shown to somebody who pressed the
+| read, priced against the Statutory Compliance and shown to somebody who pressed the
 | button, so the only things that can still go wrong are the write itself and
 | the structure having appeared since the file was checked.
 |

@@ -110,7 +110,7 @@ const buildNotesRows = () => {
 
         if (!note && column.kind === "amount") {
             note = column.readOnly
-                ? "Calculated from your company's HR Policy - anything entered here is replaced"
+                ? "Calculated from your company's Statutory Compliance - anything entered here is replaced"
                 : "A monthly amount in rupees. Leave empty for none";
         }
 
@@ -129,7 +129,7 @@ const buildNotesRows = () => {
     rows.push([
         `${POLICY_DRIVEN_KEYS
             .map((key) => COLUMN_BY_KEY[key].label.replace(/\s*\(.*\)\s*$/, ""))
-            .join(", ")} are priced by your company's HR Policy, not by this file.`,
+            .join(", ")} are priced by your company's Statutory Compliance, not by this file.`,
     ]);
     rows.push([
         "Rows with errors are listed on screen and are not imported. Everything else is.",

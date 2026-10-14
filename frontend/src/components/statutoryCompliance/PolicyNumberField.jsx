@@ -1,4 +1,4 @@
-import { toNumericInput } from "../../utils/hrPolicy/hrPolicyConstants";
+import { toNumericInput } from "../../utils/statutoryCompliance/statutoryComplianceConstants";
 
 /*
 |--------------------------------------------------------------------------

@@ -16,7 +16,7 @@ import {
     describeStatutoryDeductions,
 } from "../../utils/salary/calculateStatutoryDeductions";
 import { createSalary, getSalary, editSalary } from "../../services/SalaryService";
-import { getHRPolicy } from "../../services/settings/hrPolicyService";
+import { getStatutoryCompliance } from "../../services/settings/statutoryComplianceService";
 import { EARNING_FIELDS, DEDUCTION_FIELDS } from "../../utils/salary/salaryFields";
 import { formatCurrency } from "../../utils/salary/formatCurrency";
 import SalaryPageHeader from "../../components/salary/SalaryPageHeader";
@@ -108,7 +108,7 @@ function SalaryForm() {
 
     /*
     | The deductions as they were typed. PF, ESI, Professional Tax and Income
-    | Tax are not typed at all once the HR Policy runs them, so what is kept
+    | Tax are not typed at all once the Statutory Compliance runs them, so what is kept
     | here for those four is only whatever an older record was saved with - the
     | policy's own figures are merged over the top below.
     */
@@ -122,7 +122,7 @@ function SalaryForm() {
     });
 
     /*
-    | The company's HR Policy, which is what prices PF, ESI, Professional Tax
+    | The company's Statutory Compliance, which is what prices PF, ESI, Professional Tax
     | and Income Tax. It is held here rather than read inside the calculation so
     | the four deductions are re-priced from one loaded copy as the earnings are
     | typed, instead of one read per keystroke.
@@ -141,7 +141,7 @@ function SalaryForm() {
     | Policy Driven Deductions
     |--------------------------------------------------------------------------
     | PF, ESI, Professional Tax and Income Tax are not entered - they are what
-    | the company's HR Policy charges on the earnings above, so they are priced
+    | the company's Statutory Compliance charges on the earnings above, so they are priced
     | from the earnings as they are typed.
     |
     | They are derived rather than written into the deduction state. A field
@@ -247,7 +247,7 @@ function SalaryForm() {
         try {
 
             setPolicy(
-                await getHRPolicy(companyCode)
+                await getStatutoryCompliance(companyCode)
             );
 
             setPolicyError("");
@@ -260,7 +260,7 @@ function SalaryForm() {
 
             setPolicyError(
                 error.message ||
-                "Could not load the HR Policy, so the statutory deductions have not been calculated."
+                "Could not load the Statutory Compliance, so the statutory deductions have not been calculated."
             );
 
         }
@@ -517,13 +517,13 @@ function SalaryForm() {
         : policyDrivenNames.length
             ? `${toSentenceList(policyDrivenNames)} ${
                 policyDrivenNames.length === 1 ? "is" : "are"
-            } calculated from your company's HR Policy as the earnings are entered, so ${
+            } calculated from your company's Statutory Compliance as the earnings are entered, so ${
                 policyDrivenNames.length === 1 ? "it is" : "they are"
             } read only here.`
-            : "No statutory deductions are switched on in your company's HR Policy, so every amount below is entered by hand.";
+            : "No statutory deductions are switched on in your company's Statutory Compliance, so every amount below is entered by hand.";
 
     /*
-    | `readOnly` is a field the HR Policy fills in - PF, ESI, Professional Tax
+    | `readOnly` is a field the Statutory Compliance fills in - PF, ESI, Professional Tax
     | or Income Tax while the matching policy is switched on. It is deliberately
     | not `disabled`: a disabled input is skipped by the keyboard and greyed to
     | the point of being hard to read, and this is a figure the person assigning

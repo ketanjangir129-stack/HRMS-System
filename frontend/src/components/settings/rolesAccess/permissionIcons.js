@@ -32,6 +32,8 @@ export const PERMISSION_ICONS = {
   holidays: MdOutlineCelebration,
   salary: GiTakeMyMoney,
   payroll: BadgeIndianRupee,
+  statutoryCompliance: MdOutlinePolicy,
+  // Legacy alias: HR Policy was renamed to Statutory Compliance.
   hrPolicy: MdOutlinePolicy,
   tasks: FaTasks,
 };
