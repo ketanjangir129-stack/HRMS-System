@@ -18,6 +18,7 @@ import {
   canViewResignation,
   formatDate,
   formatDateTime,
+  getDecisionStampName,
   toDateKey,
 } from "../../utils/resignation/resignationUtils";
 
@@ -361,7 +362,10 @@ function NoObjectionCertificate() {
                 <div className={styles.signatureLine} />
 
                 <p className={styles.signatureLabel}>
-                  {resignation.financeApproval?.byName || "Authorised Signatory"}
+                  {getDecisionStampName(
+                    resignation.financeApproval,
+                    "Authorised Signatory"
+                  )}
                 </p>
 
                 <p className={styles.signatureMeta}>
@@ -375,7 +379,10 @@ function NoObjectionCertificate() {
                 <div className={styles.signatureLine} />
 
                 <p className={styles.signatureLabel}>
-                  {resignation.hrReview?.byName || "Human Resources"}
+                  {getDecisionStampName(
+                    resignation.hrReview,
+                    "Human Resources"
+                  )}
                 </p>
 
                 <p className={styles.signatureMeta}>

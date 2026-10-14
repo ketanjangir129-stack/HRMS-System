@@ -87,6 +87,7 @@ function ResignationApprovals() {
     role,
     employeeId,
     scope,
+    viewer,
     canFinanceApprove,
   } = useResignations();
 
@@ -147,7 +148,7 @@ function ResignationApprovals() {
 
     if (canReviewFnF(resignation, role)) return "Review Settlement";
 
-    if (canApproveFinance(resignation, canFinanceApprove)) return "Approve";
+    if (canApproveFinance(resignation, canFinanceApprove, viewer)) return "Approve";
 
     if (isChasingEquipment(resignation)) return "Chase Equipment";
 
@@ -176,7 +177,7 @@ function ResignationApprovals() {
     if (
       canPrepareFnF(resignation, role) ||
       canReviewFnF(resignation, role) ||
-      canApproveFinance(resignation, canFinanceApprove) ||
+      canApproveFinance(resignation, canFinanceApprove, viewer) ||
       isChasingEquipment(resignation)
     ) {
       navigate(`/resignation/settlement/${resignation.resignationId}`);

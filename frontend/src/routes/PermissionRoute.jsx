@@ -2,7 +2,9 @@ import { Navigate, useLocation } from "react-router-dom";
 
 import NoAccess from "../components/common/NoAccess";
 import PageAccessSkeleton from "../components/skeletons/PageAccessSkeleton";
+import useAuth from "../hooks/useAuth";
 import useRoleAccess from "../hooks/useRoleAccess";
+import { isFinanceMember } from "../utils/resignation/resignationUtils";
 
 /*
 |--------------------------------------------------------------------------
@@ -32,6 +34,9 @@ import useRoleAccess from "../hooks/useRoleAccess";
 function PermissionRoute({
   permission = "",
   ownerOnly = false,
+  /* Finance members carry no special role, so the two resignation screens
+  | they need (queue + settlement) opt into a membership bypass instead. */
+  allowFinanceMember = false,
   children,
 }) {
 
@@ -41,6 +46,8 @@ function PermissionRoute({
     canAccess,
     fallbackPath,
   } = useRoleAccess();
+
+  const { currentUser } = useAuth();
 
   const location = useLocation();
 
@@ -58,7 +65,9 @@ function PermissionRoute({
     ? true
     : ownerOnly
       ? false
-      : !permission || canAccess(permission);
+      : allowFinanceMember && isFinanceMember(currentUser)
+        ? true
+        : !permission || canAccess(permission);
 
   if (allowed) {
     return children;

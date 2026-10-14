@@ -280,7 +280,7 @@ function AppRoutes() {
                         <Route
                             path="/resignation/approvals"
                             element={
-                                <PermissionRoute permission="resignation.approvals">
+                                <PermissionRoute permission="resignation.approvals" allowFinanceMember>
                                     <ResignationApprovals />
                                 </PermissionRoute>
                             }
@@ -298,7 +298,7 @@ function AppRoutes() {
                         <Route
                             path="/resignation/settlement/:resignationId"
                             element={
-                                <PermissionRoute permission="resignation.settlement">
+                                <PermissionRoute permission="resignation.settlement" allowFinanceMember>
                                     <FnFSettlement />
                                 </PermissionRoute>
                             }

@@ -444,15 +444,82 @@ export const canReviewFnF = (resignation, role) =>
   (role === ROLE.OWNER || role === ROLE.HR);
 
 /*
-| The last step. Unlike every other check here this one takes a permission
-| rather than a role: the finance sign-off is a switch the owner hands out in
-| Roles & Access, the same way `payroll.approve` and `payroll.lock` are, so
-| asking "which role is this" would answer the wrong question.
+|--------------------------------------------------------------------------
+| Finance Membership
+|--------------------------------------------------------------------------
+| There is no finance role — roles stay owner / hr / manager / employee.
+| Instead, whoever sits in the Finance department as a Finance Executive or
+| Finance Manager may see and approve settlements waiting on finance.
+|
+| `viewer` accepts any of the shapes callers hold: the signed in user (with
+| `employmentInfo`), a bare `{ department, designation }` profile, or an
+| employee record. Matching is case-insensitive so "finance", "Finance" and
+| " FINANCE " all count.
+|--------------------------------------------------------------------------
 */
 
-export const canApproveFinance = (resignation, canFinanceApprove) =>
-  resignation?.status === RESIGNATION_STATUS.FINANCE_PENDING &&
-  Boolean(canFinanceApprove);
+export const FINANCE_DEPARTMENT_KEY = "finance";
+
+export const FINANCE_DESIGNATIONS = [
+  "finance executive",
+  "finance manager",
+];
+
+const normalizeNameKey = (value) =>
+  String(value ?? "").trim().toLowerCase();
+
+const viewerDepartmentOf = (viewer) =>
+  viewer?.employmentInfo?.department ?? viewer?.department ?? "";
+
+const viewerDesignationOf = (viewer) =>
+  viewer?.employmentInfo?.designation ?? viewer?.designation ?? "";
+
+export const isFinanceMember = (viewer) => {
+  if (!viewer) return false;
+
+  if (normalizeNameKey(viewerDepartmentOf(viewer)) !== FINANCE_DEPARTMENT_KEY) {
+    return false;
+  }
+
+  return FINANCE_DESIGNATIONS.includes(
+    normalizeNameKey(viewerDesignationOf(viewer))
+  );
+};
+
+/*
+| The last step. Whoever holds the `resignation.financeApprove` switch may
+| sign, and so may a member of the Finance department — either path answers
+| the same question, so a company that never opened Roles & Access still has
+| finance coverage as long as its Finance people carry the right designation.
+|
+| `viewer` is optional: callers that only hold the permission keep passing
+| two arguments and behave exactly as before.
+*/
+
+export const canApproveFinance = (
+  resignation,
+  canFinanceApprove,
+  viewer = null
+) => {
+  if (resignation?.status !== RESIGNATION_STATUS.FINANCE_PENDING) {
+    return false;
+  }
+
+  /* Second argument may itself be the viewer when the caller holds no switch. */
+  const permission =
+    canFinanceApprove !== null &&
+    typeof canFinanceApprove === "object"
+      ? false
+      : Boolean(canFinanceApprove);
+
+  const profile =
+    viewer ??
+    (canFinanceApprove !== null && typeof canFinanceApprove === "object"
+      ? canFinanceApprove
+      : null);
+
+  return permission || isFinanceMember(profile);
+};
 
 /*
 | Whether the signed in user may open this record at all. Wider than any of
@@ -461,13 +528,24 @@ export const canApproveFinance = (resignation, canFinanceApprove) =>
 | reads the exits of their departments after they have passed on.
 */
 
-export const canViewResignation = (resignation, { role, employeeId, scope }) => {
+export const canViewResignation = (resignation, { role, employeeId, scope, viewer }) => {
 
   if (!resignation) return false;
 
   if (role === ROLE.OWNER || role === ROLE.HR) return true;
 
   if (isOwnResignation(resignation, employeeId)) return true;
+
+  /*
+  | Finance members read the settlements waiting on them. Nothing else is
+  | widened: any other stage stays invisible to them exactly as before.
+  */
+  if (
+    resignation?.status === RESIGNATION_STATUS.FINANCE_PENDING &&
+    isFinanceMember(viewer)
+  ) {
+    return true;
+  }
 
   if (role === ROLE.MANAGER) {
     return isDepartmentInScope(scope, resignation?.department);
@@ -485,10 +563,10 @@ export const canViewResignation = (resignation, { role, employeeId, scope }) => 
 
 export const filterVisibleResignations = (
   resignations = [],
-  { role, employeeId, scope }
+  { role, employeeId, scope, viewer }
 ) =>
   resignations.filter((resignation) =>
-    canViewResignation(resignation, { role, employeeId, scope })
+    canViewResignation(resignation, { role, employeeId, scope, viewer })
   );
 
 /*
@@ -499,14 +577,14 @@ export const filterVisibleResignations = (
 
 export const isAwaitingUser = (
   resignation,
-  { role, employeeId, scope, canFinanceApprove }
+  { role, employeeId, scope, canFinanceApprove, viewer }
 ) =>
   canManagerReview(resignation, role, scope) ||
   canHrReview(resignation, role) ||
   canSubmitEquipment(resignation, employeeId) ||
   canPrepareFnF(resignation, role) ||
   canReviewFnF(resignation, role) ||
-  canApproveFinance(resignation, canFinanceApprove);
+  canApproveFinance(resignation, canFinanceApprove, viewer);
 
 /*
 |--------------------------------------------------------------------------
@@ -608,3 +686,66 @@ export const searchResignations = (resignations = [], term = "") => {
   );
 
 };
+
+/*
+|--------------------------------------------------------------------------
+| Decision Stamps
+|--------------------------------------------------------------------------
+| Every step of the exit leaves a stamp, but not in the same shape: the
+| backend writes `{ reviewedBy, reviewedAt }`, `{ approvedBy, approvedAt }`
+| or `{ returnedBy, returnedAt }` depending on the step, rejects carry
+| `reason` where approvals carry `remarks`, and records written before the
+| API existed carry the legacy `{ by, byName, at }` shape.
+|
+| This folds every variant into one `{ name, at, text }` stamp, so the
+| detail modal and the certificate render "who, when, and what they said"
+| without knowing which step they are looking at. Unknown shapes resolve to
+| blanks rather than crashing the reader.
+|--------------------------------------------------------------------------
+*/
+
+const stampPersonOf = (stamp) => {
+  if (!stamp || typeof stamp !== "object") return "";
+
+  const person =
+    stamp.reviewedBy ?? stamp.approvedBy ?? stamp.returnedBy ?? null;
+
+  if (person && typeof person === "object") {
+    return (
+      String(person.name || "").trim() ||
+      String(person.employeeId || "").trim()
+    );
+  }
+
+  if (typeof person === "string" && person.trim()) return person.trim();
+
+  return (
+    String(stamp.byName || "").trim() || String(stamp.by || "").trim()
+  );
+};
+
+const stampTimeOf = (stamp) =>
+  stamp?.reviewedAt ??
+  stamp?.approvedAt ??
+  stamp?.returnedAt ??
+  stamp?.at ??
+  null;
+
+const stampTextOf = (stamp) =>
+  String(stamp?.remarks ?? stamp?.reason ?? "").trim();
+
+export const resolveDecisionStamp = (stamp) => {
+  if (!stamp || typeof stamp !== "object") {
+    return { name: "", at: null, text: "" };
+  }
+
+  return {
+    name: stampPersonOf(stamp),
+    at: stampTimeOf(stamp),
+    text: stampTextOf(stamp),
+  };
+};
+
+/* The display name of whoever left the stamp, or the fallback when unknown. */
+export const getDecisionStampName = (stamp, fallback = "") =>
+  resolveDecisionStamp(stamp).name || fallback;

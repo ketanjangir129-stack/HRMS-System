@@ -93,6 +93,7 @@ function FnFSettlement() {
     role,
     employeeId,
     scope,
+    viewer,
     canFinanceApprove,
     actor,
   } = useResignation(resignationId);
@@ -383,11 +384,11 @@ function FnFSettlement() {
     );
   }
 
-  if (!canViewResignation(resignation, { role, employeeId, scope })) {
+  if (!canViewResignation(resignation, { role, employeeId, scope, viewer })) {
     return (
       <NoAccess
         title="You cannot open this settlement"
-        message="Full & final settlements are visible to HR and the account owner."
+        message="Full & final settlements are visible to HR, the account owner and the Finance department."
         fallbackPath="/resignation"
       />
     );
@@ -398,7 +399,7 @@ function FnFSettlement() {
 
   const reviewing = canReviewFnF(resignation, role);
 
-  const financing = canApproveFinance(resignation, canFinanceApprove);
+  const financing = canApproveFinance(resignation, canFinanceApprove, viewer);
 
   /* The worksheet is editable only while it is being prepared. Once it is
      under review the figures are what somebody is checking. */

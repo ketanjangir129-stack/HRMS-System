@@ -1,4 +1,4 @@
-const API_URL = "http://localhost:5001/api";
+import { API_URL } from "./apiConfig";
 
 /*
 | Sabhi image/file uploads ab backend ke through Cloudinary par jaati hain —

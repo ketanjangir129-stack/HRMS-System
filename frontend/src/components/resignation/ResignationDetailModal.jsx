@@ -23,6 +23,7 @@ import EquipmentChecklist from "./EquipmentChecklist";
 import {
   formatDate,
   formatDateTime,
+  resolveDecisionStamp,
 } from "../../utils/resignation/resignationUtils";
 
 import { formatCurrency } from "../../utils/salary/formatCurrency";
@@ -102,6 +103,8 @@ function TrailEntry({ stamp, title, tone = "neutral" }) {
 
   if (!stamp) return null;
 
+  const resolved = resolveDecisionStamp(stamp);
+
   const approved = tone === "approve";
 
   const rejected = tone === "reject";
@@ -129,18 +132,18 @@ function TrailEntry({ stamp, title, tone = "neutral" }) {
 
           <p className="text-sm font-semibold text-ink">{title}</p>
 
-          <p className="text-xs text-ink-faint">{formatDateTime(stamp.at)}</p>
+          <p className="text-xs text-ink-faint">{formatDateTime(resolved.at)}</p>
 
         </div>
 
         <p className="mt-0.5 text-xs text-ink-subtle">
-          by {stamp.byName || stamp.by || "—"}
+          by {resolved.name || "—"}
         </p>
 
-        {stamp.remarks && (
+        {resolved.text && (
           <p className="mt-2 flex items-start gap-2 text-sm text-ink-muted">
             <MessageSquare className="mt-0.5 h-3.5 w-3.5 shrink-0 text-ink-faint" />
-            <span className="break-words">{stamp.remarks}</span>
+            <span className="break-words">{resolved.text}</span>
           </p>
         )}
 

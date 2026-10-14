@@ -7,7 +7,7 @@ const login = async (req, res) => {
       companyCode,
       userId,
       password,
-    } = req.body;
+    } = req.body || {};
 
     if (!companyCode || !userId || !password) {
       return res.status(400).json({

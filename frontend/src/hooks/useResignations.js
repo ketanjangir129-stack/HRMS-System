@@ -19,6 +19,7 @@ import {
   getActiveResignation,
   getResignationSummary,
   isAwaitingUser,
+  isFinanceMember,
   isOwnResignation,
   sortByNewest,
 } from "../utils/resignation/resignationUtils";
@@ -71,7 +72,22 @@ function useResignations() {
     currentUser?.account?.username ||
     "";
 
-  const canFinanceApprove = canAccessSection("resignation.financeApprove");
+  const canFinanceApprove =
+    canAccessSection("resignation.financeApprove") ||
+    isFinanceMember(currentUser);
+
+  /*
+  | The viewer's Finance profile, read off the signed in user. Roles stay
+  | owner / hr / manager / employee — Finance coverage comes from the
+  | department + designation instead of a fourth role.
+  */
+  const viewer = useMemo(
+    () => ({
+      department: currentUser?.employmentInfo?.department || "",
+      designation: currentUser?.employmentInfo?.designation || "",
+    }),
+    [currentUser]
+  );
 
   const [records, setRecords] = useState([]);
 
@@ -148,10 +164,10 @@ function useResignations() {
     if (scopeLoading) return [];
 
     return sortByNewest(
-      filterVisibleResignations(records, { role, employeeId, scope })
+      filterVisibleResignations(records, { role, employeeId, scope, viewer })
     );
 
-  }, [records, role, employeeId, scope, scopeLoading]);
+  }, [records, role, employeeId, scope, scopeLoading, viewer]);
 
   /* The signed in user's own, however many they have raised over time. */
   const mine = useMemo(
@@ -184,9 +200,10 @@ function useResignations() {
           employeeId,
           scope,
           canFinanceApprove,
+          viewer,
         })
       ),
-    [visible, role, employeeId, scope, canFinanceApprove]
+    [visible, role, employeeId, scope, canFinanceApprove, viewer]
   );
 
   const summary = useMemo(
@@ -213,6 +230,8 @@ function useResignations() {
     role,
     employeeId,
     scope,
+    viewer,
+    isFinanceMember: isFinanceMember(currentUser),
     canFinanceApprove,
 
   };
@@ -256,6 +275,18 @@ export function useResignation(resignationId) {
     getCurrentEmployeeId(currentUser) ||
     currentUser?.account?.username ||
     "";
+
+  const viewer = useMemo(
+    () => ({
+      department: currentUser?.employmentInfo?.department || "",
+      designation: currentUser?.employmentInfo?.designation || "",
+    }),
+    [currentUser]
+  );
+
+  const canFinanceApprove =
+    canAccessSection("resignation.financeApprove") ||
+    isFinanceMember(currentUser);
 
   const [resignation, setResignation] = useState(null);
 
@@ -330,7 +361,9 @@ export function useResignation(resignationId) {
     role,
     employeeId,
     scope,
-    canFinanceApprove: canAccessSection("resignation.financeApprove"),
+    viewer,
+    isFinanceMember: isFinanceMember(currentUser),
+    canFinanceApprove,
 
     /* The actor stamped onto whatever this page writes. */
     actor: {

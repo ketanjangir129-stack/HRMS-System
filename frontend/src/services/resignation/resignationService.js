@@ -35,6 +35,7 @@ import {
   sendNocEmail,
 } from "../email/resignationEmailService";
 
+import {ResignationcreateApi,getResignationsApi,getResignationByIdApi,approveByManagerApi,rejectByManagerApi,approveByHrApi,rejectByHrApi,submitEquipmentApi,attachDocumentApi,saveFnFApi,submitFnFForReviewApi,reviewFnFApi,returnFnFApi,financeApproveApi} from "../api/resignationApi";
 /*
 |--------------------------------------------------------------------------
 | Where A Resignation Lives
@@ -231,134 +232,104 @@ export const uploadResignationDocument = async (
 */
 
 export const createResignation = async (
-  companyCode,
-  { employee, reasonCategory, reason, lastWorkingDay, noticePeriodDays, document }
+companyCode,
+{ employee, reasonCategory, reason, lastWorkingDay, noticePeriodDays, document }
 ) => {
+try {
+if (!companyCode || !employee?.employeeId) {
+return {
+success: false,
+message: "An employee is required to raise a resignation.",
+};
+}
 
-  try {
+// Prevent duplicate active resignations.
+const existing = await getEmployeeResignations(
+  companyCode,
+  employee.employeeId
+);
 
-    if (!companyCode || !employee?.employeeId) {
-      return {
-        success: false,
-        message: "An employee is required to raise a resignation.",
-      };
+const active = existing.find(
+  (item) =>
+    item.status !== RESIGNATION_STATUS.EXITED &&
+    item.status !== RESIGNATION_STATUS.MANAGER_REJECTED &&
+    item.status !== RESIGNATION_STATUS.HR_REJECTED
+);
+
+if (active) {
+  return {
+    success: false,
+    message: "You already have a resignation in progress.",
+    resignation: active,
+  };
+}
+
+// Call the backend API instead of writing directly to Firebase.
+const response = await ResignationcreateApi(companyCode, {
+  employee,
+  reasonCategory,
+  reason,
+  lastWorkingDay,
+  noticePeriodDays,
+});
+
+if (!response?.success) {
+  return response || {
+    success: false,
+    message: "Unable to create resignation.",
+  };
+}
+
+const resignation = response.resignation;
+const resignationId =
+  response.resignationId || resignation?.resignationId;
+
+// Upload the document only after successful creation, then pin the
+// Cloudinary URL onto the record through the backend — never a direct
+// client write, so it cannot be blocked by database rules.
+if (document && resignationId) {
+  const documentUrl = await announce(
+    "Resignation document upload",
+    () =>
+      uploadResignationDocument(
+        companyCode,
+        resignationId,
+        document
+      )
+  );
+
+  if (documentUrl) {
+    const attached = await announce(
+      "Resignation document attach",
+      () => attachDocumentApi(companyCode, resignationId, documentUrl)
+    );
+
+    if (resignation && attached?.success !== false) {
+      resignation.documentUrl = documentUrl;
     }
-
-    /*
-    | Refused here as well as on the profile button. Two tabs, or a stale
-    | one, could otherwise file a second resignation while the first is
-    | still moving, and an employee with two live exits is a state no screen
-    | in this module knows how to show.
-    */
-    const existing = await getEmployeeResignations(
-      companyCode,
-      employee.employeeId
-    );
-
-    const active = existing.find(
-      (item) =>
-        item.status !== RESIGNATION_STATUS.EXITED &&
-        item.status !== RESIGNATION_STATUS.MANAGER_REJECTED &&
-        item.status !== RESIGNATION_STATUS.HR_REJECTED
-    );
-
-    if (active) {
-      return {
-        success: false,
-        message: "You already have a resignation in progress.",
-        resignation: active,
-      };
-    }
-
-    const resignationId = generateResignationId(companyCode);
-
-    const raisedAt = Date.now();
-
-    const record = {
-
-      resignationId,
-
-      /* The employee, snapshotted. */
-      ...employee,
-
-      reasonCategory: reasonCategory || "",
-      reason: reason || "",
-
-      /* What the employee asked for. HR may move it on approval. */
-      requestedLastWorkingDay: lastWorkingDay,
-
-      /* What was agreed. Empty until HR approves, and it is this one the
-         settlement is priced against. */
-      lastWorkingDay: "",
-
-      noticePeriodDays: Number(noticePeriodDays) || 0,
-
-      documentUrl: "",
-
-      status: RESIGNATION_STATUS.MANAGER_PENDING,
-
-      raisedAt,
-      raisedOn: toDateKey(new Date(raisedAt)),
-
-      /* Every stage's stamp, filled in as the record moves. */
-      managerReview: null,
-      hrReview: null,
-      equipment: null,
-      equipmentSubmittedAt: null,
-      fnf: null,
-      fnfReview: null,
-      financeApproval: null,
-      exitedAt: null,
-      nocIssuedAt: null,
-
-    };
-
-    await set(
-      ref(db, resignationPath(companyCode, resignationId)),
-      record
-    );
-
-    if (document) {
-
-      const documentUrl = await announce(
-        "Resignation document upload",
-        () => uploadResignationDocument(companyCode, resignationId, document)
-      );
-
-      if (documentUrl) {
-
-        await update(
-          ref(db, resignationPath(companyCode, resignationId)),
-          { documentUrl }
-        );
-
-        record.documentUrl = documentUrl;
-
-      }
-
-    }
-
-    await announce(
-      "Resignation notification",
-      () => notifyResignationRaised(companyCode, record)
-    );
-
-    return {
-      success: true,
-      resignationId,
-      resignation: record,
-    };
-
-  } catch (error) {
-
-    console.error("Create Resignation Error:", error);
-
-    throw error;
-
   }
+}
 
+// Notify only after successful creation.
+if (resignation) {
+  await announce(
+    "Resignation notification",
+    () => notifyResignationRaised(companyCode, resignation)
+  );
+}
+
+return {
+  ...response,
+  success: true,
+  resignationId,
+  resignation,
 };
 
+} catch (error) {
+console.error("Create Resignation Error:", error);
+throw error;
+}
+};
 /*
 |--------------------------------------------------------------------------
 | Reading
@@ -369,42 +340,62 @@ export const createResignation = async (
 | disagree.
 |--------------------------------------------------------------------------
 */
-
 export const getResignations = async (companyCode) => {
-
   try {
-
     if (!companyCode) return [];
 
-    const snapshot = await get(ref(db, resignationsPath(companyCode)));
+    const response = await getResignationsApi(companyCode);
 
-    if (!snapshot.exists()) return [];
+    // Support either an array or the backend envelope { data: [...] }.
+    const records = Array.isArray(response)
+      ? response
+      : (response?.data ?? response?.resignations ?? []);
 
-    return Object.entries(snapshot.val()).map(
-      ([resignationId, record]) => ({ resignationId, ...record })
-    );
+    if (!Array.isArray(records)) {
+      return [];
+    }
 
+    return records;
   } catch (error) {
-
     console.error("Get Resignations Error:", error);
-
     throw error;
-
   }
-
 };
+// export const getResignations = async (companyCode) => {
+
+//   try {
+
+//     if (!companyCode) return [];
+
+//     const snapshot = await get(ref(db, resignationsPath(companyCode)));
+
+//     if (!snapshot.exists()) return [];
+
+//     return Object.entries(snapshot.val()).map(
+//       ([resignationId, record]) => ({ resignationId, ...record })
+//     );
+
+//   } catch (error) {
+
+//     console.error("Get Resignations Error:", error);
+
+//     throw error;
+
+//   }
+
+// };
 
 export const getResignationById = async (companyCode, resignationId) => {
 
   if (!companyCode || !resignationId) return null;
 
-  const snapshot = await get(
-    ref(db, resignationPath(companyCode, resignationId))
-  );
+  const response = await getResignationByIdApi(companyCode, resignationId);
 
-  if (!snapshot.exists()) return null;
+  const record = response?.data ?? response?.resignation ?? response;
 
-  return { resignationId, ...snapshot.val() };
+  if (!record || typeof record !== "object") return null;
+
+  return { resignationId, ...record };
 
 };
 
@@ -433,28 +424,50 @@ export const approveByManager = async (
   companyCode,
   resignationId,
   actor,
-  remarks = ""
+  remarks = "",
+  lastWorkingDay = null
 ) => {
+  try {
+    // 4th arg may be an options object { remarks/note, lastWorkingDay }.
+    let finalRemarks = remarks;
+    let finalLastWorkingDay = lastWorkingDay;
+    if (remarks && typeof remarks === "object") {
+      finalRemarks = remarks.remarks ?? remarks.note ?? "";
+      finalLastWorkingDay = remarks.lastWorkingDay ?? null;
+    }
 
-  const result = await transition(
-    companyCode,
-    resignationId,
-    [RESIGNATION_STATUS.MANAGER_PENDING],
-    () => ({
-      status: RESIGNATION_STATUS.HR_PENDING,
-      managerReview: { ...stamp(actor, remarks), decision: "Approved" },
-    })
-  );
+    // The manager modal collects no date, but the backend requires one —
+    // fall back to the employee's requested date (HR can still adjust it).
+    if (!finalLastWorkingDay) {
+      const current = await getResignationById(companyCode, resignationId);
+      finalLastWorkingDay =
+        current?.requestedLastWorkingDay || current?.lastWorkingDay || null;
+    }
 
-  if (result.success) {
-    await announce(
-      "Manager approval notification",
-      () => notifyManagerApproved(companyCode, result.resignation, actor)
+    const result = await approveByManagerApi(
+      companyCode,
+      resignationId,
+      finalRemarks,
+      finalLastWorkingDay
     );
+
+    if (result?.success) {
+      await announce(
+        "Manager approval notification",
+        () =>
+          notifyManagerApproved(
+            companyCode,
+            result.resignation,
+            actor
+          )
+      );
+    }
+
+    return result;
+  } catch (error) {
+    console.error("Approve By Manager Error:", error);
+    throw error;
   }
-
-  return result;
-
 };
 
 export const rejectByManager = async (
@@ -471,32 +484,32 @@ export const rejectByManager = async (
     };
   }
 
-  const result = await transition(
-    companyCode,
-    resignationId,
-    [RESIGNATION_STATUS.MANAGER_PENDING],
-    () => ({
-      status: RESIGNATION_STATUS.MANAGER_REJECTED,
-      managerReview: { ...stamp(actor, reason), decision: "Rejected" },
-      rejectionReason: reason,
-    })
-  );
-
-  if (result.success) {
-    await announce(
-      "Resignation rejection notification",
-      () =>
-        notifyResignationRejected(
-          companyCode,
-          result.resignation,
-          actor,
-          "manager",
-          reason
-        )
+  try {
+    const result = await rejectByManagerApi(
+      companyCode,
+      resignationId,
+      reason
     );
-  }
 
-  return result;
+    if (result?.success) {
+      await announce(
+        "Resignation rejection notification",
+        () =>
+          notifyResignationRejected(
+            companyCode,
+            result.resignation,
+            actor,
+            "manager",
+            reason
+          )
+      );
+    }
+
+    return result;
+  } catch (error) {
+    console.error("Reject By Manager Error:", error);
+    throw error;
+  }
 
 };
 
@@ -528,19 +541,14 @@ export const approveByHr = async (
     };
   }
 
-  const result = await transition(
-    companyCode,
-    resignationId,
-    [RESIGNATION_STATUS.HR_PENDING],
-    () => ({
-      status: RESIGNATION_STATUS.EQUIPMENT_PENDING,
-      lastWorkingDay,
-      hrReview: { ...stamp(actor, remarks), decision: "Approved" },
-      equipment: getEmptyEquipment(),
-    })
-  );
+  try {
+    const result = await approveByHrApi(
+      companyCode,
+      resignationId,
+      { lastWorkingDay, remarks }
+    );
 
-  if (!result.success) return result;
+    if (!result?.success) return result;
 
   /*
   | The email carries the outcome back to the caller, because this is the one
@@ -559,6 +567,10 @@ export const approveByHr = async (
   );
 
   return { ...result, email };
+  } catch (error) {
+    console.error("Approve By HR Error:", error);
+    throw error;
+  }
 
 };
 
@@ -576,32 +588,32 @@ export const rejectByHr = async (
     };
   }
 
-  const result = await transition(
-    companyCode,
-    resignationId,
-    [RESIGNATION_STATUS.HR_PENDING],
-    () => ({
-      status: RESIGNATION_STATUS.HR_REJECTED,
-      hrReview: { ...stamp(actor, reason), decision: "Rejected" },
-      rejectionReason: reason,
-    })
-  );
-
-  if (result.success) {
-    await announce(
-      "Resignation rejection notification",
-      () =>
-        notifyResignationRejected(
-          companyCode,
-          result.resignation,
-          actor,
-          "hr",
-          reason
-        )
+  try {
+    const result = await rejectByHrApi(
+      companyCode,
+      resignationId,
+      reason
     );
-  }
 
-  return result;
+    if (result?.success) {
+      await announce(
+        "Resignation rejection notification",
+        () =>
+          notifyResignationRejected(
+            companyCode,
+            result.resignation,
+            actor,
+            "hr",
+            reason
+          )
+      );
+    }
+
+    return result;
+  } catch (error) {
+    console.error("Reject By HR Error:", error);
+    throw error;
+  }
 
 };
 
@@ -622,27 +634,25 @@ export const submitEquipment = async (
   { items, remarks = "" }
 ) => {
 
-  const result = await transition(
-    companyCode,
-    resignationId,
-    [RESIGNATION_STATUS.EQUIPMENT_PENDING],
-    () => ({
-      status: RESIGNATION_STATUS.FNF_PENDING,
-      equipment: items,
-      equipmentRemarks: remarks,
-      equipmentSubmittedAt: Date.now(),
-      equipmentSubmittedBy: stamp(actor, remarks),
-    })
-  );
-
-  if (result.success) {
-    await announce(
-      "Equipment submitted notification",
-      () => notifyEquipmentSubmitted(companyCode, result.resignation)
+  try {
+    const result = await submitEquipmentApi(
+      companyCode,
+      resignationId,
+      { equipment: items, remarks }
     );
-  }
 
-  return result;
+    if (result?.success) {
+      await announce(
+        "Equipment submitted notification",
+        () => notifyEquipmentSubmitted(companyCode, result.resignation)
+      );
+    }
+
+    return result;
+  } catch (error) {
+    console.error("Submit Equipment Error:", error);
+    throw error;
+  }
 
 };
 
@@ -668,56 +678,56 @@ export const saveFnF = async (
   resignationId,
   actor,
   { values, notes = "", derivation = null }
-) =>
-  transition(
-    companyCode,
-    resignationId,
-    [RESIGNATION_STATUS.FNF_PENDING, RESIGNATION_STATUS.FNF_REVIEW],
-    (current) => ({
-      fnf: {
-        ...(current.fnf || {}),
-        values,
-        notes,
-        derivation,
-        updatedAt: Date.now(),
-        updatedBy: stamp(actor).byName,
-      },
-    })
-  );
+) => {
+  try {
+    return await saveFnFApi(
+      companyCode,
+      resignationId,
+      { values, notes, derivation }
+    );
+  } catch (error) {
+    console.error("Save F&F Error:", error);
+    throw error;
+  }
+};
 
 export const submitFnFForReview = async (
   companyCode,
   resignationId,
   actor,
-  { values, notes = "", derivation = null, totals }
+  { values, notes = "", derivation = null, totals } = {}
 ) => {
 
-  const result = await transition(
-    companyCode,
-    resignationId,
-    [RESIGNATION_STATUS.FNF_PENDING],
-    (current) => ({
-      status: RESIGNATION_STATUS.FNF_REVIEW,
-      fnf: {
-        ...(current.fnf || {}),
-        values,
-        notes,
-        derivation,
-        totals,
-        preparedBy: stamp(actor),
-        updatedAt: Date.now(),
-      },
-    })
-  );
+  try {
+    // The backend submit step carries no worksheet payload and requires
+    // saved F&F details, so persist the on-screen figures first.
+    if (values && typeof values === "object" && Object.keys(values).length) {
+      const saved = await saveFnFApi(
+        companyCode,
+        resignationId,
+        { values, notes, derivation, totals }
+      );
 
-  if (result.success) {
-    await announce(
-      "Settlement review notification",
-      () => notifyFnFUnderReview(companyCode, result.resignation, actor)
+      if (!saved?.success) return saved;
+    }
+
+    const result = await submitFnFForReviewApi(
+      companyCode,
+      resignationId
     );
-  }
 
-  return result;
+    if (result?.success) {
+      await announce(
+        "Settlement review notification",
+        () => notifyFnFUnderReview(companyCode, result.resignation, actor)
+      );
+    }
+
+    return result;
+  } catch (error) {
+    console.error("Submit F&F For Review Error:", error);
+    throw error;
+  }
 
 };
 
@@ -734,28 +744,25 @@ export const reviewFnF = async (
   { remarks = "", totals } = {}
 ) => {
 
-  const result = await transition(
-    companyCode,
-    resignationId,
-    [RESIGNATION_STATUS.FNF_REVIEW],
-    (current) => ({
-      status: RESIGNATION_STATUS.FINANCE_PENDING,
-      fnf: {
-        ...(current.fnf || {}),
-        totals: totals || current.fnf?.totals || null,
-      },
-      fnfReview: { ...stamp(actor, remarks), decision: "Reviewed" },
-    })
-  );
-
-  if (result.success) {
-    await announce(
-      "Finance approval notification",
-      () => notifyFinanceApprovalPending(companyCode, result.resignation, actor)
+  try {
+    const result = await reviewFnFApi(
+      companyCode,
+      resignationId,
+      { remarks }
     );
-  }
 
-  return result;
+    if (result?.success) {
+      await announce(
+        "Finance approval notification",
+        () => notifyFinanceApprovalPending(companyCode, result.resignation, actor)
+      );
+    }
+
+    return result;
+  } catch (error) {
+    console.error("Review F&F Error:", error);
+    throw error;
+  }
 
 };
 
@@ -780,24 +787,25 @@ export const returnFnF = async (
     };
   }
 
-  const result = await transition(
-    companyCode,
-    resignationId,
-    [RESIGNATION_STATUS.FNF_REVIEW, RESIGNATION_STATUS.FINANCE_PENDING],
-    () => ({
-      status: RESIGNATION_STATUS.FNF_PENDING,
-      fnfReturn: { ...stamp(actor, reason), decision: "Returned" },
-    })
-  );
-
-  if (result.success) {
-    await announce(
-      "Settlement returned notification",
-      () => notifyFnFReady(companyCode, result.resignation, reason)
+  try {
+    const result = await returnFnFApi(
+      companyCode,
+      resignationId,
+      reason
     );
-  }
 
-  return result;
+    if (result?.success) {
+      await announce(
+        "Settlement returned notification",
+        () => notifyFnFReady(companyCode, result.resignation, reason)
+      );
+    }
+
+    return result;
+  } catch (error) {
+    console.error("Return F&F Error:", error);
+    throw error;
+  }
 
 };
 
@@ -827,41 +835,39 @@ export const approveFinanceAndExit = async (
   { remarks = "" } = {}
 ) => {
 
-  const exitedAt = Date.now();
-
-  const result = await transition(
-    companyCode,
-    resignationId,
-    [RESIGNATION_STATUS.FINANCE_PENDING],
-    () => ({
-      status: RESIGNATION_STATUS.EXITED,
-      financeApproval: { ...stamp(actor, remarks), decision: "Approved" },
-      exitedAt,
-    })
-  );
-
-  if (!result.success) return result;
-
-  const email = await announce(
-    "NOC email",
-    () => sendNocEmail(companyCode, result.resignation)
-  );
-
-  if (email?.success) {
-
-    await update(
-      ref(db, resignationPath(companyCode, resignationId)),
-      { nocIssuedAt: Date.now(), nocSentTo: email.to || "" }
+  try {
+    const result = await financeApproveApi(
+      companyCode,
+      resignationId,
+      { remarks }
     );
 
+    if (!result?.success) return result;
+
+    const email = await announce(
+      "NOC email",
+      () => sendNocEmail(companyCode, result.resignation)
+    );
+
+    if (email?.success) {
+
+      await update(
+        ref(db, resignationPath(companyCode, resignationId)),
+        { nocIssuedAt: Date.now(), nocSentTo: email.to || "" }
+      );
+
+    }
+
+    await announce(
+      "Exit notification",
+      () => notifyExitCompleted(companyCode, result.resignation, actor)
+    );
+
+    return { ...result, email };
+  } catch (error) {
+    console.error("Finance Approve Error:", error);
+    throw error;
   }
-
-  await announce(
-    "Exit notification",
-    () => notifyExitCompleted(companyCode, result.resignation, actor)
-  );
-
-  return { ...result, email };
 
 };
 

@@ -14,7 +14,7 @@ import {
   toDepartmentRefs,
   withDepartmentNames,
 } from "../utils/departments/departmentRefs";
-
+get
 const readDepartments = async (companyCode) => {
   const snapshot = await get(ref(db, `companies/${companyCode}/departments`));
   return snapshot.exists() ? snapshot.val() : {};

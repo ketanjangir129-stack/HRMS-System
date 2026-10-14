@@ -270,9 +270,30 @@ const deleteDesignation = async (companyCode, departmentId, designationId) => {
     name: designationSnapshot.val()?.name ?? "",
   };
 };
+const getDepartmentById = async (companyCode, departmentId) => {
+  if (!departmentId) {
+    return null;
+  }
+
+  const snapshot = await db
+    .ref(
+      `companies/${companyCode}/departments/${departmentId}`
+    )
+    .once("value");
+
+  if (!snapshot.exists()) {
+    return null;
+  }
+
+  return {
+    departmentId,
+    ...snapshot.val(),
+  };
+};
 
 module.exports = {
   getDepartments,
+  getDepartmentById,
   addDepartment,
   addDesignation,
   editDepartment,
