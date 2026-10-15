@@ -7,6 +7,8 @@ const resignationRoutes = require("./src/routes/resignation.routes");
 const uploadRoutes = require("./src/routes/uploadRoutes");
 const leaveRoutes       =   require("./src/routes/leaveRoutes");
 const statutoryComplianceRoutes = require("./src/routes/statutorycomplianceRoutes");
+const holidaysRoutes = require("./src/routes/holidayRoutes");
+const onboardingRoutes = require("./src/routes/onboardingRoutes");
 
 const express = require("express");
 const cors = require("cors");
@@ -33,6 +35,7 @@ app.get("/",(req,res)=>{
     });
 });
 
+
 //===========================
 // server
 // =================
@@ -45,8 +48,8 @@ app.use("/api/companies/:companyCode/resignations", resignationRoutes);
 app.use("/api/upload", uploadRoutes);
 app.use("/api/leave", leaveRoutes);
 app.use("/api/statutory-compliance", statutoryComplianceRoutes);
-
-
+app.use("/api/holidays", holidaysRoutes);
+app.use("/api/onboarding", onboardingRoutes);
 
 
 app.listen(PORT,()=>{

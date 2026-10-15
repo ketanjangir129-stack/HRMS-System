@@ -1,18 +1,9 @@
-import { db } from "../../firebase/firebase";
-import {
-  ref,
-  get,
-  onValue,
-  set,
-  push,
-  update,
-  remove,
-} from "firebase/database";
+
 import {
   getDateKey,
-  getMonthPath,
   parseDateKey,
 } from "../../utils/attendance/attendanceDate";
+
 import {
   HOLIDAY_NAME_MAX,
   HOLIDAY_NAME_MIN,
@@ -20,132 +11,130 @@ import {
   HOLIDAY_TYPE_OPTIONS,
   UPCOMING_HOLIDAY_LIMIT,
 } from "../../utils/holiday/holidayConstants";
+
 import { getHolidayYear } from "../../utils/holiday/holidayUtils";
+
 import { notifyHolidayAdded } from "../notifications/holidayNotificationService";
+
+import {
+  getHolidaysApi,
+  getUpcomingHolidaysApi,
+  createHolidayApi,
+  updateHolidayApi,
+  deleteHolidayApi,
+} from "../api/holidayApi";
 
 /*
 |--------------------------------------------------------------------------
 | Holiday Service
 |--------------------------------------------------------------------------
-| The only place that talks to the holiday branch of the database.
+| Every read and write goes through the backend API. The browser no longer
+| listens to the holidays tree in Firebase directly: only the owner signs in
+| to Firebase, so for everyone else a direct read either failed or depended
+| on the database being readable without a login.
 |
+| Database structure (owned by the backend):
 | companies/{companyCode}/holidays/{year}/{Month}/{holidayId}
-|
-| Holidays are filed under the year they fall in and then under their month,
-| so a dashboard only ever downloads the year it is showing instead of the
-| whole history, and a single month can be read on its own. Neither the year
-| nor the month is stored on the record: they are the nodes the record lives
-| in, and deriving them from the date is the only way they can never disagree.
-|
-| The year stays the outer node because everything that reads this tree - the
-| table, the calendar, the upcoming list and every leave range - wants a whole
-| year at once, and that has to stay one read.
-|
-| Every write goes through `validateHolidayInput` first and then through the
-| duplicate check, because a second holiday on the same date would be counted
-| twice by the attendance and leave modules that read this tree.
 |--------------------------------------------------------------------------
 */
 
-const holidaysPath = (companyCode) =>
-  `companies/${companyCode}/holidays`;
-
-const yearPath = (companyCode, year) =>
-  `${holidaysPath(companyCode)}/${year}`;
-
 /*
-| A holiday is addressed by its date, because the date is what decides both
-| the year and the month node it is filed under.
+|--------------------------------------------------------------------------
+| In-Memory Cache
+|--------------------------------------------------------------------------
+| Holiday lists by companyCode:year.
+|
+| - Entries expire after CACHE_TTL_MS, so a holiday added by another admin
+|   reaches the attendance and leave pages without a hard refresh.
+| - Requests already in flight are shared: two hooks asking for the same
+|   year in the same render send one request, not two.
+|--------------------------------------------------------------------------
 */
 
-const holidayPath = (companyCode, date, holidayId) =>
-  `${holidaysPath(companyCode)}/${getMonthPath(date)}/${holidayId}`;
+const CACHE_TTL_MS = 5 * 60 * 1000;
 
-/*
-| Every holiday of a year, flattened out of its month nodes. The duplicate
-| check and every read below work on a plain list, so none of them has to know
-| the tree is nested.
-*/
+const holidayCache = new Map(); // key -> { data, expiresAt }
+const inFlight = new Map(); // key -> Promise<list>
 
-const flattenYear = (months) =>
-  Object.values(months || {}).flatMap(
-    (holidays) => Object.values(holidays || {})
-  );
+const cacheKey = (companyCode, year) => `${companyCode}:${Number(year)}`;
 
-/*
-| Push keys are generated from the timestamp plus a random component, so two
-| people adding a holiday in the same millisecond cannot end up with the same
-| id. Prefixed the same way leave requests are, so an id says what it is.
-*/
+const readCache = (key) => {
+  const entry = holidayCache.get(key);
+  if (!entry) return null;
+  if (entry.expiresAt <= Date.now()) {
+    holidayCache.delete(key);
+    return null;
+  }
+  return entry.data;
+};
 
-const generateHolidayId = (companyCode) => {
+const writeCache = (key, data) => {
+  holidayCache.set(key, { data, expiresAt: Date.now() + CACHE_TTL_MS });
+};
 
-  const key = push(
-    ref(
-      db,
-      holidaysPath(companyCode)
-    )
-  ).key;
-
-  return `HOL_${key}`;
-
+export const clearHolidayCache = (companyCode, year) => {
+  if (companyCode && year) {
+    holidayCache.delete(cacheKey(companyCode, year));
+  } else if (companyCode) {
+    for (const key of holidayCache.keys()) {
+      if (key.startsWith(`${companyCode}:`)) {
+        holidayCache.delete(key);
+      }
+    }
+  } else {
+    holidayCache.clear();
+  }
 };
 
 /*
 |--------------------------------------------------------------------------
-| Firebase Errors
+| Error Handling
 |--------------------------------------------------------------------------
-| A raw Firebase error reads as "PERMISSION_DENIED: Permission denied", which
-| is not something to put in a toast. The known ones are translated and
-| anything else falls back to the message the caller supplied.
 */
 
 const describeError = (error, fallback) => {
+  const code = String(error?.code || error?.message || "").toLowerCase();
 
-  const code = String(
-    error?.code || error?.message || ""
-  ).toLowerCase();
-
-  if (code.includes("permission_denied")) {
-    return "You do not have permission to manage holidays.";
+  if (
+    code.includes("permission_denied") ||
+    code.includes("forbidden") ||
+    code.includes("unauthorized")
+  ) {
+    return error?.message || "You do not have permission to manage holidays.";
   }
 
   if (
     code.includes("network") ||
+    code.includes("failed to fetch") ||
     code.includes("unavailable") ||
     code.includes("disconnected")
   ) {
     return "Network error. Please check your connection and try again.";
   }
 
-  return fallback;
-
+  return error?.message || fallback;
 };
 
 const failWith = (error, context, fallback) => {
-
   console.error(`${context}:`, error);
-
-  return new Error(
-    describeError(error, fallback)
-  );
-
+  return new Error(describeError(error, fallback));
 };
+
+const apiFailed = (result) =>
+  !result || result.success === false;
+
+const apiErrorMessage = (result, fallback) =>
+  result?.message || fallback;
 
 /*
 |--------------------------------------------------------------------------
 | Validation
 |--------------------------------------------------------------------------
-| Returns the first problem as a message, or null when the holiday is valid.
-|
-| The date is checked by rebuilding it: `2026-02-31` parses into the 3rd of
-| March, so a date that does not come back as it went in never existed.
 */
 
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
 const validateHolidayInput = (holiday = {}) => {
-
   const name = String(holiday.name || "").trim();
 
   if (!name) {
@@ -166,12 +155,25 @@ const validateHolidayInput = (holiday = {}) => {
     return "Holiday date is required.";
   }
 
-  const parsed = DATE_PATTERN.test(date)
-    ? parseDateKey(date)
-    : null;
+  const parsed = DATE_PATTERN.test(date) ? parseDateKey(date) : null;
 
   if (!parsed || getDateKey(parsed) !== date) {
     return "Please select a valid holiday date.";
+  }
+
+  if (holiday.isMultiDay && holiday.endDate) {
+    const endDate = String(holiday.endDate).trim();
+    const parsedEnd = DATE_PATTERN.test(endDate)
+      ? parseDateKey(endDate)
+      : null;
+
+    if (!parsedEnd || getDateKey(parsedEnd) !== endDate) {
+      return "Please select a valid end date.";
+    }
+
+    if (endDate < date) {
+      return "End date cannot be earlier than start date.";
+    }
   }
 
   if (!holiday.type) {
@@ -189,332 +191,188 @@ const validateHolidayInput = (holiday = {}) => {
     return `Description cannot exceed ${HOLIDAY_DESCRIPTION_MAX} characters.`;
   }
 
+  if (
+    holiday.isOptional !== undefined &&
+    typeof holiday.isOptional !== "boolean"
+  ) {
+    return "Optional holiday status must be true or false.";
+  }
+
   return null;
-
 };
-
-/*
-|--------------------------------------------------------------------------
-| Duplicate Check
-|--------------------------------------------------------------------------
-| Two holidays on the same day would be counted twice by every calculation
-| that reads this tree, and two holidays with the same name in one year is
-| almost always the same holiday entered twice.
-|
-| `ignoreId` is the record being edited, which must not clash with itself.
-| Names are compared case and space insensitively, so "Republic  Day" and
-| "republic day" are recognised as the same holiday.
-*/
-
-const normalizeName = (value = "") =>
-  String(value)
-    .trim()
-    .toLowerCase()
-    .replace(/\s+/g, " ");
-
-const findDuplicate = (
-  holidays = [],
-  { date, name, ignoreId }
-) => {
-
-  const nameKey = normalizeName(name);
-
-  const clash = holidays.find((holiday) => {
-
-    if (holiday?.holidayId === ignoreId) return false;
-
-    return (
-      holiday?.date === date ||
-      normalizeName(holiday?.name) === nameKey
-    );
-
-  });
-
-  if (!clash) return null;
-
-  return clash.date === date
-    ? `A holiday is already recorded on ${date}: ${clash.name}.`
-    : `A holiday named "${clash.name}" already exists in ${getHolidayYear(clash.date)}.`;
-
-};
-
-/*
-|--------------------------------------------------------------------------
-| Record
-|--------------------------------------------------------------------------
-| Firebase rejects `undefined`, so every field is written explicitly.
-*/
-
-const buildHolidayRecord = ({
-  holidayId,
-  name,
-  date,
-  type,
-  description = "",
-  isOptional = false,
-  createdBy = "",
-  createdAt,
-}) => ({
-
-  holidayId,
-
-  name: String(name).trim(),
-
-  date,
-
-  type,
-
-  description: String(description || "").trim(),
-
-  isOptional: Boolean(isOptional),
-
-  createdBy: createdBy || "",
-
-  createdAt: createdAt || Date.now(),
-
-  updatedAt: Date.now(),
-
-});
 
 /*
 |--------------------------------------------------------------------------
 | Create Holiday
 |--------------------------------------------------------------------------
+| The person who declared it is taken from the login on the server; the
+| browser does not send a name.
 */
 
-export const createHoliday = async (
-  companyCode,
-  holiday
-) => {
+export const createHoliday = async (companyCode, holiday) => {
+  if (!companyCode) {
+    return {
+      success: false,
+      message: "Company not found.",
+    };
+  }
+
+  const validationError = validateHolidayInput(holiday);
+
+  if (validationError) {
+    return {
+      success: false,
+      message: validationError,
+    };
+  }
+
+  const date = String(holiday.date).trim();
 
   try {
+    const result = await createHolidayApi({
+      name: String(holiday.name).trim(),
+      date,
+      ...(holiday.isMultiDay && holiday.endDate
+        ? {
+            isMultiDay: true,
+            endDate: String(holiday.endDate).trim(),
+          }
+        : {}),
+      type: holiday.type,
+      description: String(holiday.description || "").trim(),
+      isOptional: Boolean(holiday.isOptional),
+    });
 
-    if (!companyCode) {
+    if (apiFailed(result)) {
       return {
         success: false,
-        message: "Company not found.",
+        message: apiErrorMessage(result, "Failed to create holiday."),
       };
     }
 
-    const error = validateHolidayInput(holiday);
+    const created = Array.isArray(result.holidays) && result.holidays.length
+      ? result.holidays
+      : [result.holiday || { ...holiday, date, holidayId: result.holidayId }];
 
-    if (error) {
-      return {
-        success: false,
-        message: error,
-      };
-    }
+    const first = created[0];
+    const last = created[created.length - 1];
+    const holidayId = first?.holidayId || result.holidayId;
 
-    const date = String(holiday.date).trim();
-
-    const year = getHolidayYear(date);
-
-    const snapshot = await get(
-      ref(db, yearPath(companyCode, year))
-    );
-
-    const duplicate = findDuplicate(
-      flattenYear(snapshot.val()),
-      { date, name: holiday.name }
-    );
-
-    if (duplicate) {
-      return {
-        success: false,
-        message: duplicate,
-      };
-    }
-
-    const holidayId = generateHolidayId(companyCode);
-
-    await set(
-      ref(db, holidayPath(companyCode, date, holidayId)),
-      buildHolidayRecord({
-        ...holiday,
-        holidayId,
-        date,
-      })
-    );
+    // A range can cross into the next year, so every year it touched is
+    // dropped from the cache, not just the first.
+    const years = Array.isArray(result.years) && result.years.length
+      ? result.years
+      : [Number(result.year || getHolidayYear(date))];
+    years.forEach((y) => clearHolidayCache(companyCode, y));
 
     /*
-    | Announced after the holiday is stored, and never allowed to fail the
-    | call: the holiday exists either way, and one that was declared but not
-    | announced is recoverable, one that was announced but not declared is not.
+    | One announcement per declaration (a five day festival is one message,
+    | naming its range), sent in the background: the Save button no longer
+    | waits for a write per employee, and a failure cannot undo the create.
     */
-
-    try {
-
-      await notifyHolidayAdded(
-        companyCode,
-        { ...holiday, date },
-        holidayId
-      );
-
-    } catch (notificationError) {
-
-      console.error(
-        "Holiday notification failed:",
-        notificationError
-      );
-
-    }
+    notifyHolidayAdded(
+      companyCode,
+      {
+        ...first,
+        name: created.length > 1 ? String(holiday.name).trim() : first?.name,
+        endDate: created.length > 1 ? last?.date : undefined,
+      },
+      holidayId
+    ).catch((notificationError) => {
+      console.error("Holiday notification failed:", notificationError);
+    });
 
     return {
       success: true,
       holidayId,
-      year,
+      holidays: result.holidays,
+      count: result.count || 1,
+      year: Number(result.year || getHolidayYear(date)),
+      years,
     };
-
   } catch (error) {
-
     throw failWith(
       error,
       "Create Holiday Error",
       "Failed to create holiday."
     );
-
   }
-
 };
 
 /*
 |--------------------------------------------------------------------------
-| Get Holiday
+| Get Holidays For One Year
 |--------------------------------------------------------------------------
-| The date says which year and which month node to look in, so a single
-| holiday is still answered without walking the tree.
 */
 
-export const getHoliday = async (
-  companyCode,
-  date,
-  holidayId
-) => {
+const fetchYear = (companyCode, year) => {
+  const key = cacheKey(companyCode, year);
 
-  try {
+  if (inFlight.has(key)) return inFlight.get(key);
 
-    const year = getHolidayYear(date);
+  const request = getHolidaysApi(year)
+    .then((result) => {
+      if (apiFailed(result)) {
+        throw new Error(
+          apiErrorMessage(result, "Failed to load holidays.")
+        );
+      }
 
-    if (!companyCode || !year || !holidayId) {
-      return null;
-    }
+      const list = Array.isArray(result.holidays) ? result.holidays : [];
+      writeCache(key, list);
+      return list;
+    })
+    .finally(() => {
+      inFlight.delete(key);
+    });
 
-    const snapshot = await get(
-      ref(db, holidayPath(companyCode, date, holidayId))
-    );
-
-    return snapshot.exists() ? snapshot.val() : null;
-
-  } catch (error) {
-
-    throw failWith(
-      error,
-      "Get Holiday Error",
-      "Failed to load holiday."
-    );
-
-  }
-
+  inFlight.set(key, request);
+  return request;
 };
-
-/*
-|--------------------------------------------------------------------------
-| Get Holidays
-|--------------------------------------------------------------------------
-| Every holiday of one year, as a plain array. The month nodes are flattened
-| away here, and ordering and grouping are left to the holiday utilities, so
-| the same single read still serves the table, the calendar and the upcoming
-| list.
-*/
 
 export const getHolidays = async (
   companyCode,
-  year
+  year,
+  { force = false } = {}
 ) => {
+  if (!companyCode || !year) {
+    return [];
+  }
+
+  const key = cacheKey(companyCode, year);
+
+  if (!force) {
+    const cached = readCache(key);
+    if (cached) return cached;
+  } else {
+    holidayCache.delete(key);
+  }
 
   try {
-
-    if (!companyCode || !year) {
-      return [];
-    }
-
-    const snapshot = await get(
-      ref(db, yearPath(companyCode, year))
-    );
-
-    if (!snapshot.exists()) {
-      return [];
-    }
-
-    return flattenYear(snapshot.val());
-
+    return await fetchYear(companyCode, year);
   } catch (error) {
-
     throw failWith(
       error,
       "Get Holidays Error",
       "Failed to load holidays."
     );
-
   }
-
 };
 
 /*
 |--------------------------------------------------------------------------
-| Subscribe Holidays
+| Get Holidays Across Multiple Years
 |--------------------------------------------------------------------------
-| The same year as `getHolidays`, but kept open: whenever anyone adds, edits
-| or deletes a holiday, `onData` runs again with the new list.
-|
-| A screen that is only ever opened to read the year can stay on the one shot
-| read. This is for the ones that sit on the dashboard all day, where a
-| holiday declared this morning has to appear without the page being
-| reloaded.
-|
-| Returns the unsubscribe function. Call it from the effect cleanup, or the
-| listener outlives the screen that opened it.
-*/
-
-export const subscribeHolidays = (
-  companyCode,
-  year,
-  onData,
-  onError
-) => {
-
-  if (!companyCode || !year) {
-
-    onData?.([]);
-
-    return () => {};
-
-  }
-
-  return onValue(
-    ref(db, yearPath(companyCode, year)),
-    (snapshot) =>
-      onData?.(
-        snapshot.exists() ? flattenYear(snapshot.val()) : []
-      ),
-    (error) => onError?.(error)
-  );
-
-};
-
-/*
-| The holidays of several years at once, flattened into one list.
-|
-| A leave range and a payroll month can both straddle a new year, and the
-| callers that do should not have to fire the reads themselves.
+| Years already cached or already being fetched are reused; the rest go in
+| one consolidated request.
 */
 
 export const getHolidaysForYears = async (
   companyCode,
-  years = []
+  years = [],
+  { force = false } = {}
 ) => {
-
-  const unique = [
+  const uniqueYears = [
     ...new Set(
       years
         .map(Number)
@@ -522,30 +380,64 @@ export const getHolidaysForYears = async (
     ),
   ];
 
-  if (!companyCode || unique.length === 0) {
+  if (!companyCode || uniqueYears.length === 0) {
     return [];
   }
 
-  const lists = await Promise.all(
-    unique.map((year) => getHolidays(companyCode, year))
-  );
+  if (force) {
+    uniqueYears.forEach((y) => holidayCache.delete(cacheKey(companyCode, y)));
+  }
 
-  return lists.flat();
+  const missingYears = uniqueYears.filter((y) => {
+    const key = cacheKey(companyCode, y);
+    return !readCache(key) && !inFlight.has(key);
+  });
 
+  if (missingYears.length > 1) {
+    const request = getHolidaysApi(missingYears).then((result) => {
+      if (apiFailed(result) || !Array.isArray(result.holidays)) {
+        throw new Error(apiErrorMessage(result, "Failed to load holidays."));
+      }
+      return result.holidays;
+    });
+
+    // Each year's promise is registered so a concurrent caller asking for one
+    // of them waits for this request instead of sending its own.
+    missingYears.forEach((y) => {
+      const key = cacheKey(companyCode, y);
+      const yearRequest = request
+        .then((all) => {
+          const list = all.filter((h) => getHolidayYear(h?.date) === y);
+          writeCache(key, list);
+          return list;
+        })
+        .finally(() => inFlight.delete(key));
+      inFlight.set(key, yearRequest);
+    });
+  }
+
+  try {
+    const lists = await Promise.all(
+      uniqueYears.map((y) => {
+        const key = cacheKey(companyCode, y);
+        return readCache(key) || inFlight.get(key) || fetchYear(companyCode, y);
+      })
+    );
+
+    return lists.flat();
+  } catch (error) {
+    throw failWith(
+      error,
+      "Get Holidays Error",
+      "Failed to load holidays."
+    );
+  }
 };
 
 /*
 |--------------------------------------------------------------------------
 | Update Holiday
 |--------------------------------------------------------------------------
-| `currentDate` is the date the record is filed under today, which is not
-| always the date it is being moved to: editing a holiday from the 31st of
-| January to the 1st of February changes the node it belongs in, and so does
-| any edit that crosses a new year.
-|
-| A move is written as a create at the new node followed by a remove from the
-| old one. Doing it in that order means a failure leaves the holiday readable
-| in both places rather than in neither, and re-saving repairs it.
 */
 
 export const updateHoliday = async (
@@ -554,116 +446,58 @@ export const updateHoliday = async (
   holidayId,
   updates
 ) => {
+  if (!companyCode || !currentDate || !holidayId) {
+    return {
+      success: false,
+      message: "Holiday not found.",
+    };
+  }
+
+  const validationError = validateHolidayInput(updates);
+
+  if (validationError) {
+    return {
+      success: false,
+      message: validationError,
+    };
+  }
 
   try {
-
-    const currentYear = getHolidayYear(currentDate);
-
-    if (!companyCode || !currentYear || !holidayId) {
-      return {
-        success: false,
-        message: "Holiday not found.",
-      };
-    }
-
-    const error = validateHolidayInput(updates);
-
-    if (error) {
-      return {
-        success: false,
-        message: error,
-      };
-    }
-
-    const currentRef = ref(
-      db,
-      holidayPath(companyCode, currentDate, holidayId)
-    );
-
-    const snapshot = await get(currentRef);
-
-    if (!snapshot.exists()) {
-      return {
-        success: false,
-        message: "This holiday no longer exists.",
-      };
-    }
-
-    const existing = snapshot.val();
-
-    const date = String(updates.date).trim();
-
-    const year = getHolidayYear(date);
-
-    const yearSnapshot = await get(
-      ref(db, yearPath(companyCode, year))
-    );
-
-    const duplicate = findDuplicate(
-      flattenYear(yearSnapshot.val()),
+    const result = await updateHolidayApi(
+      currentDate,
+      holidayId,
       {
-        date,
-        name: updates.name,
-        ignoreId: holidayId,
+        name: String(updates.name).trim(),
+        date: String(updates.date).trim(),
+        type: updates.type,
+        description: String(updates.description || "").trim(),
+        isOptional: Boolean(updates.isOptional),
       }
     );
 
-    if (duplicate) {
+    if (apiFailed(result)) {
       return {
         success: false,
-        message: duplicate,
+        message: apiErrorMessage(result, "Failed to update holiday."),
       };
     }
 
-    const record = buildHolidayRecord({
-      ...existing,
-      ...updates,
-      holidayId,
-      date,
-      createdAt: existing.createdAt,
-      createdBy: existing.createdBy,
-    });
-
-    /*
-    | The month node is what a record is addressed by, so the two dates are
-    | compared on their month rather than on their year: a move from January
-    | to February stays inside the year but still changes the node.
-    */
-
-    if (getMonthPath(date) === getMonthPath(currentDate)) {
-
-      await update(currentRef, record);
-
-      return {
-        success: true,
-        year,
-      };
-
-    }
-
-    await set(
-      ref(db, holidayPath(companyCode, date, holidayId)),
-      record
-    );
-
-    await remove(currentRef);
+    clearHolidayCache(companyCode);
 
     return {
       success: true,
-      year,
-      moved: true,
+      year: Number(
+        result.year || getHolidayYear(updates.date)
+      ),
+      ...(result.moved ? { moved: true } : {}),
     };
-
   } catch (error) {
-
     throw failWith(
       error,
       "Update Holiday Error",
       "Failed to update holiday."
     );
-
   }
-
 };
 
 /*
@@ -677,97 +511,44 @@ export const deleteHoliday = async (
   date,
   holidayId
 ) => {
+  if (!companyCode || !date || !holidayId) {
+    return {
+      success: false,
+      message: "Holiday not found.",
+    };
+  }
 
   try {
+    const result = await deleteHolidayApi(date, holidayId);
 
-    const year = getHolidayYear(date);
-
-    if (!companyCode || !year || !holidayId) {
+    if (apiFailed(result)) {
       return {
         success: false,
-        message: "Holiday not found.",
+        message: apiErrorMessage(result, "Failed to delete holiday."),
       };
     }
 
-    const holidayRef = ref(
-      db,
-      holidayPath(companyCode, date, holidayId)
-    );
-
-    const snapshot = await get(holidayRef);
-
-    if (!snapshot.exists()) {
-      return {
-        success: false,
-        message: "This holiday no longer exists.",
-      };
-    }
-
-    await remove(holidayRef);
+    clearHolidayCache(companyCode);
 
     return {
       success: true,
     };
-
   } catch (error) {
-
     throw failWith(
       error,
       "Delete Holiday Error",
       "Failed to delete holiday."
     );
-
   }
-
-};
-
-/*
-|--------------------------------------------------------------------------
-| Get Holiday By Date
-|--------------------------------------------------------------------------
-| The year is derived from the date, so a single day is answered by reading
-| one year node instead of the whole tree.
-*/
-
-export const getHolidayByDate = async (
-  companyCode,
-  date
-) => {
-
-  try {
-
-    const year = getHolidayYear(date);
-
-    if (!companyCode || !year) {
-      return null;
-    }
-
-    const holidays = await getHolidays(companyCode, year);
-
-    return (
-      holidays.find((holiday) => holiday?.date === date) || null
-    );
-
-  } catch (error) {
-
-    throw failWith(
-      error,
-      "Get Holiday By Date Error",
-      "Failed to load holiday."
-    );
-
-  }
-
 };
 
 /*
 |--------------------------------------------------------------------------
 | Upcoming Holidays
 |--------------------------------------------------------------------------
-| The next holidays from a given day onwards, nearest first.
-|
-| Late in December the current year has nothing left to show, so the next
-| year is read as well and only when the current one cannot fill the list.
+| The dedicated backend endpoint: one call, crossing into next year on its
+| own when the current one has run out.
+|--------------------------------------------------------------------------
 */
 
 export const getUpcomingHolidays = async (
@@ -777,65 +558,25 @@ export const getUpcomingHolidays = async (
     limit = UPCOMING_HOLIDAY_LIMIT,
   } = {}
 ) => {
+  if (!companyCode) {
+    return [];
+  }
 
   try {
+    const result = await getUpcomingHolidaysApi({ limit, from });
 
-    const year = getHolidayYear(from);
-
-    if (!companyCode || !year) {
-      return [];
-    }
-
-    const upcoming = (await getHolidays(companyCode, year))
-      .filter((holiday) => holiday?.date >= from);
-
-    if (upcoming.length < limit) {
-
-      const next = await getHolidays(
-        companyCode,
-        year + 1
+    if (apiFailed(result)) {
+      throw new Error(
+        apiErrorMessage(result, "Failed to load upcoming holidays.")
       );
-
-      upcoming.push(...next);
-
     }
 
-    return upcoming
-      .sort((a, b) =>
-        String(a.date).localeCompare(String(b.date))
-      )
-      .slice(0, limit);
-
+    return Array.isArray(result.holidays) ? result.holidays : [];
   } catch (error) {
-
     throw failWith(
       error,
       "Get Upcoming Holidays Error",
       "Failed to load upcoming holidays."
     );
-
   }
-
-};
-
-/*
-|--------------------------------------------------------------------------
-| Is Holiday
-|--------------------------------------------------------------------------
-| Whether a single `YYYY-MM-DD` day is a declared holiday.
-|
-| Only for one off checks: anything that walks a month or a leave range reads
-| the year once with `getHolidays` and asks the holiday utilities instead, so
-| a report does not fire one read per day.
-*/
-
-export const isHoliday = async (
-  companyCode,
-  date
-) => {
-
-  const holiday = await getHolidayByDate(companyCode, date);
-
-  return Boolean(holiday);
-
 };

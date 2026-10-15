@@ -675,6 +675,21 @@ export const validateHolidayForm = (form = {}) => {
     errors.date = "Please select a valid holiday date.";
   }
 
+  if (form.isMultiDay) {
+    const endDate = String(form.endDate || "").trim();
+    const parsedEnd = DATE_PATTERN.test(endDate)
+      ? parseDateKey(endDate)
+      : null;
+
+    if (!endDate) {
+      errors.endDate = "Please select an end date.";
+    } else if (!parsedEnd || getDateKey(parsedEnd) !== endDate) {
+      errors.endDate = "Please select a valid end date.";
+    } else if (date && endDate < date) {
+      errors.endDate = "End date cannot be earlier than start date.";
+    }
+  }
+
   if (!form.type) {
     errors.type = "Please select a holiday type.";
   } else if (!HOLIDAY_TYPE_OPTIONS.includes(form.type)) {
@@ -695,35 +710,35 @@ export const validateHolidayForm = (form = {}) => {
 /*
 | A duplicate is caught by the service against the stored year, but the modal
 | already has the list on screen and can say so before a save is attempted.
+| Re-using festival names across different dates is allowed.
 */
 
 export const findHolidayConflict = (
   holidays = [],
-  { date, name, ignoreId = "" }
+  { date, ignoreId = "" }
 ) => {
-
-  const nameKey = String(name || "")
-    .trim()
-    .toLowerCase()
-    .replace(/\s+/g, " ");
+  if (!date) return null;
 
   return (
     holidays.find((holiday) => {
-
       if (!holiday || holiday.holidayId === ignoreId) return false;
-
-      const sameName =
-        Boolean(nameKey) &&
-        String(holiday.name || "")
-          .trim()
-          .toLowerCase()
-          .replace(/\s+/g, " ") === nameKey;
-
-      return holiday.date === date || sameName;
-
+      return holiday.date === date;
     }) || null
   );
+};
 
+export const findHolidayRangeConflict = (
+  holidays = [],
+  { startDate, endDate, ignoreId = "" }
+) => {
+  if (!startDate || !endDate) return null;
+
+  return (
+    holidays.find((holiday) => {
+      if (!holiday || holiday.holidayId === ignoreId) return false;
+      return holiday.date >= startDate && holiday.date <= endDate;
+    }) || null
+  );
 };
 
 /*

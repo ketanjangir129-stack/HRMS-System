@@ -49,10 +49,13 @@ export const notifyHolidayAdded = async (
     holiday?.name ||
     "A holiday";
 
+  // A multi-day declaration is announced once, with its range.
   const dateText =
-    formatHolidayDateWithDay(
-      holiday?.date
-    );
+    holiday?.endDate && holiday.endDate !== holiday?.date
+      ? `${formatHolidayDateWithDay(holiday.date)} to ${formatHolidayDateWithDay(holiday.endDate)}`
+      : formatHolidayDateWithDay(
+          holiday?.date
+        );
 
   await Promise.all(
 
@@ -75,7 +78,9 @@ export const notifyHolidayAdded = async (
               "New Holiday Declared",
 
             message:
-              `${holidayName} has been declared as a holiday on ${dateText}.`,
+              holiday?.endDate && holiday.endDate !== holiday?.date
+                ? `${holidayName} has been declared as a holiday from ${dateText}.`
+                : `${holidayName} has been declared as a holiday on ${dateText}.`,
 
             entityType:
               "holiday",

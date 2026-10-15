@@ -130,6 +130,7 @@ function LeaveHistory() {
 
   const { holidayDates } = useHolidayDates(
     companyCode,
+    // Next year too: a December leave can run into January.
     useMemo(() => [year, year + 1], [year])
   );
 

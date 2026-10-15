@@ -45,6 +45,7 @@ const MONTHS = Object.freeze([
 
 const ATTENDANCE_STATUSES = new Set(["Present", "Late", "Absent", "Leave", "Half Day"]);
 const APPROVAL_STATUSES = new Set(["Approved", "Rejected"]);
+const LEAVE_STATUSES = new Set(["Leave", "Half Day"]);
 const EMPLOYEE_ID_PATTERN = /^[A-Z0-9_-]{1,50}$/;
 
 /* ── Helpers ── */
@@ -340,6 +341,24 @@ const getMonthlyAttendance = async (companyCode, year, month, user) => {
     `attendance/records/${y}/${monthName}`
   );
 
+  /*
+   * An employee only ever sees their own rows, so read their node under each
+   * day instead of downloading every employee's month and filtering it.
+   */
+  if (getUserRole(user) === ROLES.EMPLOYEE) {
+    const [id] = employeeIds;
+    const own = await readEmployeeMonth(path, y, m, id);
+
+    return {
+      year: y,
+      month: m,
+      monthName,
+      records: Object.fromEntries(
+        Object.entries(own).map(([date, record]) => [date, { [id]: record }])
+      ),
+    };
+  }
+
   const snapshot = await db.ref(path).once("value");
 
   return {
@@ -348,6 +367,30 @@ const getMonthlyAttendance = async (companyCode, year, month, user) => {
     monthName,
     records: filterMonthByScope(snapshot.val(), employeeIds),
   };
+};
+
+/*
+ * One employee's records for a month as `{ date: record }`: their node under
+ * each day, read in parallel over the same connection, instead of the month
+ * node that holds every employee.
+ */
+const readEmployeeMonth = async (monthPath, year, month, employeeId) => {
+  const daysInMonth = new Date(Date.UTC(year, month, 0)).getUTCDate();
+  const dates = Array.from(
+    { length: daysInMonth },
+    (_, index) => `${year}-${String(month).padStart(2, "0")}-${String(index + 1).padStart(2, "0")}`
+  );
+
+  const snapshots = await Promise.all(
+    dates.map((date) => db.ref(`${monthPath}/${date}/${employeeId}`).once("value"))
+  );
+
+  const records = {};
+  snapshots.forEach((snapshot, index) => {
+    if (snapshot.exists()) records[dates[index]] = snapshot.val();
+  });
+
+  return records;
 };
 
 /*
@@ -376,25 +419,7 @@ const getEmployeeAttendance = async (companyCode, employeeId, year, month, user)
     `attendance/records/${y}/${monthName}`
   );
 
-  /*
-   * Read this employee's node under each day instead of the whole month
-   * (which holds every employee's records). The reads run in parallel over
-   * the same connection.
-   */
-  const daysInMonth = new Date(Date.UTC(y, m, 0)).getUTCDate();
-  const dates = Array.from(
-    { length: daysInMonth },
-    (_, index) => `${y}-${String(m).padStart(2, "0")}-${String(index + 1).padStart(2, "0")}`
-  );
-
-  const snapshots = await Promise.all(
-    dates.map((date) => db.ref(`${path}/${date}/${actualId}`).once("value"))
-  );
-
-  const records = {};
-  snapshots.forEach((snapshot, index) => {
-    if (snapshot.exists()) records[dates[index]] = snapshot.val();
-  });
+  const records = await readEmployeeMonth(path, y, m, actualId);
 
   return {
     employeeId: actualId,
@@ -419,7 +444,22 @@ const loadAttendanceSettings = async (companyCode) => {
     .ref(companyPath(companyCode, "attendance/settings"))
     .once("value");
   const stored = snapshot.val() || {};
-  return { ...normalizeWorkRules(stored), timezone: stored.timezone || DEFAULT_TIMEZONE };
+  return { ...normalizeWorkRules(stored), timezone: safeTimeZone(stored.timezone) };
+};
+
+/*
+ * A stored timezone Intl does not know would make resolvePunchInStatus throw a
+ * RangeError (500 on every punch). Validated once here so every consumer of
+ * `settings.timezone` gets a usable value.
+ */
+const safeTimeZone = (value) => {
+  const candidate = String(value || DEFAULT_TIMEZONE);
+  try {
+    new Intl.DateTimeFormat("en-US", { timeZone: candidate });
+    return candidate;
+  } catch {
+    return DEFAULT_TIMEZONE;
+  }
 };
 
 /*
@@ -452,9 +492,23 @@ const assertEmployeeScope = async (
     throw serviceError("Employees can only access their own attendance.", 403, "ACCESS_DENIED");
   }
 
+  const isSelf = getUserEmployeeId(user) === id;
+
+  // Nobody but the owner decides their own day: HR's attendance goes to the
+  // owner and a manager's to HR, the same as their leave.
+  if (approverOnly && isSelf && role !== ROLES.OWNER) {
+    throw serviceError("You cannot approve or correct your own attendance.", 403, "SELF_APPROVAL_NOT_ALLOWED");
+  }
+
   const employment = await loadEmployment(companyCode, id);
   if (!employment) {
     throw serviceError("Employee not found.", 404, "EMPLOYEE_NOT_FOUND");
+  }
+
+  // A user may always act on their own record, even a manager whose own
+  // department is run by somebody else.
+  if (isSelf) {
+    return { employeeId: id };
   }
 
   if ([ROLES.OWNER, ROLES.HR, ROLES.EMPLOYEE].includes(role)) {
@@ -492,6 +546,24 @@ const buildRecord = ({ employeeId, date, punchIn = null, punchOut = null,
   ...approval,
   createdAt,
 });
+
+/*
+ * A timestamp written onto `date`'s record has to fall on that date (in the
+ * company timezone). Punch out may also fall on the next day, for a shift
+ * that runs past midnight. Without this a record could carry a punch from a
+ * different month and report nonsense times and working hours.
+ */
+const nextDateKey = (dateKey) => {
+  const { year, month, day } = parseDateKey(dateKey);
+  return new Date(Date.UTC(year, month - 1, day + 1)).toISOString().slice(0, 10);
+};
+
+const assertPunchOnDate = (timestamp, date, timezone, field, { allowNextDay = false } = {}) => {
+  if (!timestamp) return;
+  const actual = getDateKey(timestamp, timezone);
+  if (actual === date || (allowNextDay && actual === nextDateKey(date))) return;
+  throw serviceError(`${field} must fall on ${date}.`, 400, "INVALID_PUNCH_TIME");
+};
 
 const sanitizeLocation = (location, timestamp) => {
   if (location == null) return null;
@@ -560,8 +632,21 @@ const preparePunch = async (companyCode, payload, user, imageFile) => {
   // Cheap, synchronous checks first so a bad request costs no reads.
   validateAttendanceImage(imageFile);
 
+  /*
+   * A punch is always the signed in user's own. The id comes from the token,
+   * never from the body - otherwise HR / a manager could punch in for anybody
+   * in scope (proxy attendance) with any photo and any location.
+   */
+  const selfId = getUserEmployeeId(user);
+  if (!selfId) {
+    throw serviceError("Only an employee account can punch attendance.", 403, "ACCESS_DENIED");
+  }
+  if (payload?.employeeId && normalizeId(payload.employeeId) !== selfId) {
+    throw serviceError("You can only punch your own attendance.", 403, "ACCESS_DENIED");
+  }
+
   const [{ employeeId }, settings] = await Promise.all([
-    assertEmployeeScope(companyCode, payload?.employeeId, user),
+    assertEmployeeScope(companyCode, selfId, user),
     loadAttendanceSettings(companyCode),
   ]);
 
@@ -865,18 +950,24 @@ const saveManualAttendance = async (companyCode, payload, user) => {
   const punchOut = parsePunchTime(payload?.punchOut, "Punch out");
   if (punchOut && !punchIn) throw serviceError("Punch in is required when punch out is provided.", 400, "INVALID_PUNCH_TIME");
   if (punchOut && punchOut <= punchIn) throw serviceError("Punch out must be after punch in.", 400, "INVALID_PUNCH_TIME");
+  assertPunchOnDate(punchIn, date, settings.timezone, "Punch in");
+  assertPunchOnDate(punchOut, date, settings.timezone, "Punch out", { allowNextDay: true });
 
   const now = Date.now();
   const ref = db.ref(recordPath(companyCode, date, employeeId));
-  const transaction = await ref.transaction((existing) =>
-    buildRecord({
+  // Spread the existing record first: a manual fix replaces the times and the
+  // status, but must not throw away the punch photos, GPS evidence or the
+  // leave link that a later leave cancellation looks for.
+  const transaction = await ref.transaction((existing) => ({
+    ...(existing || {}),
+    ...buildRecord({
       employeeId, date, punchIn, punchOut, status,
       remarks: String(payload?.remarks || "").trim().slice(0, 1000),
       settings,
       createdAt: existing?.createdAt || now,
       approval: makeApproval({ status: "Approved", by: mutationActor(user), at: now }),
-    })
-  );
+    }),
+  }));
 
   if (!transaction.committed) throw serviceError("Unable to save attendance.", 409, "ATTENDANCE_WRITE_FAILED");
 
@@ -903,6 +994,11 @@ const updateAttendanceCorrection = async (companyCode, payload, user) => {
   const reqOut = parsePunchTime(payload?.requestedPunchOut, "Punch out");
   if (!reqIn && !reqOut) throw serviceError("A corrected punch time is required.", 400, "INVALID_PUNCH_TIME");
 
+  // The corrected times must belong to the day being corrected: punch in on
+  // that date, punch out on that date or the next (an overnight shift).
+  assertPunchOnDate(reqIn, date, settings.timezone, "Punch in");
+  assertPunchOnDate(reqOut, date, settings.timezone, "Punch out", { allowNextDay: true });
+
   const now = Date.now();
   let rejected;
   const ref = db.ref(recordPath(companyCode, date, employeeId));
@@ -921,7 +1017,8 @@ const updateAttendanceCorrection = async (companyCode, payload, user) => {
 
     if (!current) {
       return buildRecord({
-        employeeId, date, punchIn, punchOut, status: "Present",
+        employeeId, date, punchIn, punchOut,
+        status: resolvePunchInStatus(punchIn, settings),
         remarks: String(payload?.reason || "").trim().slice(0, 1000),
         settings,
         approval: makeApproval({ status: "Approved", by: mutationActor(user), at: now }),
@@ -936,7 +1033,11 @@ const updateAttendanceCorrection = async (companyCode, payload, user) => {
       punchOut,
       punchOutTime: punchOut ? formatTime(punchOut, settings.timezone) : "",
       workingHours: calculateWorkingHours(punchIn, punchOut),
-      ...(reqIn ? { status: "Present" } : {}),
+      // A corrected punch in is graded like a real one (Present / Late). A
+      // leave status is the leave's to change, not a time correction's.
+      ...(reqIn && !LEAVE_STATUSES.has(current.status)
+        ? { status: resolvePunchInStatus(punchIn, settings) }
+        : {}),
       ...makeApproval({ status: "Approved", by: mutationActor(user), at: now }),
     };
   });
@@ -944,7 +1045,7 @@ const updateAttendanceCorrection = async (companyCode, payload, user) => {
   if (rejected) throw rejected;
   if (!transaction.committed) throw serviceError("Unable to apply attendance correction.", 409, "ATTENDANCE_WRITE_FAILED");
   if (!transaction.snapshot.exists()) {
-    throw serviceError("A punch in time is required to create attendance.", 404, "ATTENDANCE_NOT_FOUND");
+    throw serviceError("A punch in time is required to create attendance.", 400, "ATTENDANCE_NOT_FOUND");
   }
 
   return { success: true };
@@ -1013,17 +1114,18 @@ const setAttendanceApproval = async (companyCode, payload, user) => {
     );
   }
 
-  const updatedRecord = {
-    ...current,
-    ...makeApproval({
-      status,
-      by: mutationActor(user),
-      remarks,
-      at: now,
-    }),
-  };
+  const approval = makeApproval({
+    status,
+    by: mutationActor(user),
+    remarks,
+    at: now,
+  });
 
-  await ref.set(updatedRecord);
+  // Only the approval fields are written. A `set()` of the copy read above
+  // would put back a stale record and wipe a punch out made in between.
+  await ref.update(approval);
+
+  const updatedRecord = { ...current, ...approval };
 
   return {
     success: true,
@@ -1045,10 +1147,19 @@ const approveAttendanceDay = async (companyCode, date, employeeIds = [], user) =
     throw serviceError("Provide between 1 and 500 employee IDs.", 400, "INVALID_EMPLOYEE_IDS");
   }
 
-  const uniqueIds = [...new Set(employeeIds.map(normalizeId))];
-  if (uniqueIds.some((id) => !EMPLOYEE_ID_PATTERN.test(id))) {
+  const requestedIds = [...new Set(employeeIds.map(normalizeId))];
+  if (requestedIds.some((id) => !EMPLOYEE_ID_PATTERN.test(id))) {
     throw serviceError("Invalid employee ID.", 400, "INVALID_EMPLOYEE_ID");
   }
+
+  // "Approve the whole day" from HR / a manager should not fail because their
+  // own row is on the sheet - their own day is simply left for someone else.
+  const selfId = getUserEmployeeId(user);
+  const uniqueIds = getUserRole(user) === ROLES.OWNER
+    ? requestedIds
+    : requestedIds.filter((id) => id !== selfId);
+
+  if (uniqueIds.length === 0) return { approved: 0 };
 
   const scopeCache = {};
   await Promise.all(
@@ -1111,6 +1222,8 @@ const applyLeaveAttendance = async (companyCode, payload, user) => {
 
     const d = dates[i];
     updates[`${getMonthPath(d)}/${d}/${employeeId}`] = {
+      // Keep photos / location / anything else already on the day.
+      ...(current || {}),
       ...buildRecord({
         employeeId, date: d,
         punchIn: current?.punchIn || null,
@@ -1171,7 +1284,13 @@ const clearLeaveAttendance = async (companyCode, payload, user) => {
       return;
     }
 
+    // The punched day comes back as it was before the leave: same photos and
+    // location, original status, and pending review again. Only the leave
+    // markers are dropped.
+    const { leaveRequestId: _leaveId, leaveStatusBefore: _before, ...rest } = current;
+
     updates[path] = {
+      ...rest,
       ...buildRecord({
         employeeId, date: d,
         punchIn: current.punchIn,
@@ -1181,7 +1300,6 @@ const clearLeaveAttendance = async (companyCode, payload, user) => {
         approval: makeApproval(),
         createdAt: current.createdAt || Date.now(),
       }),
-      ...(current.location ? { location: current.location } : {}),
     };
   });
 

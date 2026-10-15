@@ -4,6 +4,17 @@ const {
   applyLeaveAttendance,
   clearLeaveAttendance,
 } = require("./attendanceService");
+const holidayService = require("./holidayService");
+const { getDateKey } = require("../utils/attendanceDate");
+
+/*
+| Days of the week that are never worked, as `getUTCDay()` numbers. Mirrors
+| WEEKLY_OFF_DAYS in frontend/src/utils/holiday/holidayConstants.js - change
+| both together, or the balance the modal shows and the one charged drift.
+*/
+const WEEKLY_OFF_DAYS = [0];
+
+const EMPLOYEE_ID_PATTERN = /^[A-Za-z0-9_-]{1,50}$/;
 
 const LEAVE_ROOT = "leave";
 const DEFAULT_SETTINGS = {
@@ -45,11 +56,19 @@ function attendanceMonthPath(dateKey) {
   return `${year}/${MONTHS[month - 1]}/${dateKey}`;
 }
 
-function localDateKey(date = new Date()) {
+// Formats a Date built from calendar parts (see inclusiveDateKeys). Not for
+// "today": the server clock may be UTC, which is yesterday in India until
+// 05:30 - use todayKey() for that.
+function localDateKey(date) {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");
   const day = String(date.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
+}
+
+// Today in the company's timezone (Asia/Kolkata), whatever the server runs on.
+function todayKey() {
+  return getDateKey(Date.now());
 }
 
 function parseDateKey(value) {
@@ -128,13 +147,8 @@ function validateDates(request, { allowPast = false } = {}) {
 
   if (to < from) fail("The end date cannot be before the start date.");
 
-  if (!allowPast && localDateKey(from) < localDateKey()) {
+  if (!allowPast && localDateKey(from) < todayKey()) {
     fail("Leave cannot be requested for a past date.");
-  }
-
-  if (request.requestType !== "Multiple Day" && request.toDate &&
-      request.requestType !== "Half Day") {
-    // Single-day requests are normalized to one date.
   }
 
   if (request.requestType === "Multiple Day") {
@@ -142,7 +156,64 @@ function validateDates(request, { allowPast = false } = {}) {
   }
 }
 
-function normalizeRequest(input, { allowPast = false, validateReasonText = true } = {}) {
+/*
+|--------------------------------------------------------------------------
+| Working days
+|--------------------------------------------------------------------------
+| A declared holiday or a weekly off inside a range is not charged as leave
+| and not written onto attendance as "Leave" - the office was shut anyway.
+| This is the same rule the apply modal prices with (calculateLeaveDays), and
+| the server is now the one that decides: the client's `days` is ignored.
+*/
+
+function isWeeklyOff(dateKey) {
+  const { year, month, day } = parseDateKey(dateKey);
+  return WEEKLY_OFF_DAYS.includes(new Date(Date.UTC(year, month - 1, day)).getUTCDay());
+}
+
+async function loadHolidayDates(companyCode, dateKeys) {
+  const years = [...new Set(dateKeys.map((key) => key.slice(0, 4)))];
+
+  const lists = await Promise.all(
+    years.map((year) =>
+      holidayService.listHolidays(companyCode, year).catch((error) => {
+        // Same stance as the frontend: an unreadable holiday calendar must
+        // not block leave, it just prices the range without holidays.
+        console.error("Leave: failed to load holidays:", error?.message);
+        return [];
+      })
+    )
+  );
+
+  return new Set(lists.flat().map((holiday) => holiday?.date).filter(Boolean));
+}
+
+async function getWorkingDateKeys(companyCode, fromDate, toDate = fromDate) {
+  const keys = inclusiveDateKeys(fromDate, toDate);
+  const holidays = await loadHolidayDates(companyCode, keys);
+  return keys.filter((key) => !holidays.has(key) && !isWeeklyOff(key));
+}
+
+async function calculateWorkingDays(companyCode, request) {
+  // Validates the type and the half-day session.
+  calculateDays(request);
+
+  const working = await getWorkingDateKeys(companyCode, request.fromDate, request.toDate);
+
+  if (request.requestType === "Half Day") return working.length ? 0.5 : 0;
+
+  return working.length;
+}
+
+/*
+| Only the fields a leave request is made of are kept. Spreading the client's
+| body onto the stored record let anything it sent be written to the database.
+*/
+async function normalizeRequest(
+  companyCode,
+  input,
+  { allowPast = false, validateReasonText = true } = {}
+) {
   const requestType = input.requestType;
   const fromDate = input.fromDate;
   const toDate = requestType === "Multiple Day" ? input.toDate : fromDate;
@@ -154,18 +225,20 @@ function normalizeRequest(input, { allowPast = false, validateReasonText = true 
     : String(input.reason || "").trim();
 
   const normalized = {
-    ...input,
     requestType,
     fromDate,
     toDate,
+    halfDaySession: requestType === "Half Day" ? String(input.halfDaySession || "") : "",
     reason,
   };
 
   validateDates(normalized, { allowPast });
 
-  normalized.days = Number(input.days) || calculateDays(normalized);
+  normalized.days = await calculateWorkingDays(companyCode, normalized);
 
-  if (normalized.days <= 0) fail("Leave duration must be greater than zero.");
+  if (normalized.days <= 0) {
+    fail("The selected range has no working days. Holidays and weekly offs do not need a leave request.");
+  }
 
   return normalized;
 }
@@ -177,6 +250,18 @@ function normalizeRole(user) {
 function requireRole(user, allowed) {
   if (!user || !allowed.includes(normalizeRole(user))) {
     fail("You are not authorized to perform this action.", 403);
+  }
+}
+
+function isSameEmployee(a, b) {
+  return Boolean(a && b) && String(a).toUpperCase() === String(b).toUpperCase();
+}
+
+// Nobody but the owner decides their own leave: HR's goes to the owner and a
+// manager's to HR. The attendance sync enforces the same rule.
+function assertNotSelfApproval(user, employeeId) {
+  if (normalizeRole(user) !== "owner" && isSameEmployee(employeeId, user?.employeeId)) {
+    fail("You cannot approve, reject or remove your own approved leave.", 403);
   }
 }
 
@@ -199,26 +284,29 @@ function makeRequestRef(companyCode, appliedDate, employeeId, requestId) {
   );
 }
 
-let requestsCache = {
-  companyCode: null,
-  timestamp: 0,
-  data: null,
-};
-
-let settingsCache = {
-  companyCode: null,
-  timestamp: 0,
-  data: null,
-};
+/*
+| Short-lived read caches, one entry per company. A single shared slot was
+| thrown away whenever a second company made a request, so with two busy
+| companies neither ever hit the cache.
+*/
+const requestsCache = new Map(); // companyCode -> { timestamp, data }
+const settingsCache = new Map(); // companyCode -> { timestamp, data }
 
 const CACHE_TTL_MS = 4000;
 
-function invalidateRequestsCache() {
-  requestsCache = { companyCode: null, timestamp: 0, data: null };
+const readCache = (cache, companyCode) => {
+  const entry = cache.get(companyCode);
+  return entry && Date.now() - entry.timestamp < CACHE_TTL_MS ? entry.data : null;
+};
+
+function invalidateRequestsCache(companyCode) {
+  if (companyCode) requestsCache.delete(companyCode);
+  else requestsCache.clear();
 }
 
-function invalidateSettingsCache() {
-  settingsCache = { companyCode: null, timestamp: 0, data: null };
+function invalidateSettingsCache(companyCode) {
+  if (companyCode) settingsCache.delete(companyCode);
+  else settingsCache.clear();
 }
 
 function sanitizeApprover(approvedBy, ownerName = "Owner") {
@@ -270,14 +358,8 @@ async function getApproverIdentity(companyCode, user, payload = {}) {
 }
 
 async function readAllRequests(companyCode) {
-  const now = Date.now();
-  if (
-    requestsCache.companyCode === companyCode &&
-    requestsCache.data &&
-    now - requestsCache.timestamp < CACHE_TTL_MS
-  ) {
-    return requestsCache.data;
-  }
+  const cached = readCache(requestsCache, companyCode);
+  if (cached) return cached;
 
   const [snapshot, ownerSnap] = await Promise.all([
     db.ref(leavePath(companyCode, "requests")).once("value"),
@@ -360,11 +442,7 @@ async function readAllRequests(companyCode) {
     }
   }
 
-  requestsCache = {
-    companyCode,
-    timestamp: Date.now(),
-    data: results,
-  };
+  requestsCache.set(companyCode, { timestamp: Date.now(), data: results });
 
   return results;
 }
@@ -386,14 +464,8 @@ async function findRequest(companyCode, requestId, employeeId) {
 }
 
 async function getSettings(companyCode) {
-  const now = Date.now();
-  if (
-    settingsCache.companyCode === companyCode &&
-    settingsCache.data &&
-    now - settingsCache.timestamp < CACHE_TTL_MS
-  ) {
-    return settingsCache.data;
-  }
+  const cached = readCache(settingsCache, companyCode);
+  if (cached) return cached;
 
   const ref = db.ref(leavePath(companyCode, "settings"));
   const snapshot = await ref.once("value");
@@ -407,11 +479,7 @@ async function getSettings(companyCode) {
     settings = { ...DEFAULT_SETTINGS, ...(snapshot.val() || {}) };
   }
 
-  settingsCache = {
-    companyCode,
-    timestamp: Date.now(),
-    data: settings,
-  };
+  settingsCache.set(companyCode, { timestamp: Date.now(), data: settings });
 
   return settings;
 }
@@ -430,13 +498,14 @@ async function getUsage(companyCode, year, employeeId) {
 }
 
 function earnedLeave(settings, year) {
-  const currentYear = new Date().getFullYear();
+  // Year and month in IST, so accrual does not lag a month on the 1st on a
+  // UTC server.
+  const [currentYear, monthNumber] = todayKey().split("-").map(Number);
 
   if (Number(year) < currentYear || Number(year) > currentYear) {
     return Number(settings.annualLeaves) || 0;
   }
 
-  const monthNumber = new Date().getMonth() + 1;
   return Math.min(
     Number(settings.annualLeaves) || 0,
     monthNumber * (Number(settings.monthlyAccrual) || 0)
@@ -553,11 +622,21 @@ async function createLeaveRequest({ companyCode, user, payload }) {
 
   if (!employeeId) fail("An employee is required to raise a leave request.");
 
+  // The id becomes part of the database path, so it must be a plain id.
+  if (!EMPLOYEE_ID_PATTERN.test(String(employeeId))) {
+    fail("A valid employee ID is required.");
+  }
+
+  // Raising leave for somebody else is an approver's act, inside their scope.
+  if (!isSameEmployee(employeeId, user.employeeId)) {
+    await validateApproverScope(companyCode, user, employeeId);
+  }
+
   const allowPast = ["owner", "hr", "manager"].includes(role);
-  const normalized = normalizeRequest(payload, { allowPast });
+  const normalized = await normalizeRequest(companyCode, payload, { allowPast });
   await assertBalance(companyCode, employeeId, normalized);
 
-  const appliedDate = localDateKey();
+  const appliedDate = todayKey();
   const generatedKey = db.ref().push().key;
   const requestId = `REQ_${generatedKey}`;
 
@@ -575,7 +654,7 @@ async function createLeaveRequest({ companyCode, user, payload }) {
 
   const ref = makeRequestRef(companyCode, appliedDate, employeeId, requestId);
   await ref.set(request);
-  invalidateRequestsCache();
+  invalidateRequestsCache(companyCode);
 
   return { success: true, requestId, request };
 }
@@ -593,7 +672,8 @@ async function updateLeaveRequest({ companyCode, user, requestId, payload }) {
   }
 
   const allowPast = ["owner", "hr", "manager"].includes(role);
-  const normalized = normalizeRequest(
+  const normalized = await normalizeRequest(
+    companyCode,
     {
       ...item.request,
       ...payload,
@@ -615,7 +695,7 @@ async function updateLeaveRequest({ companyCode, user, requestId, payload }) {
   };
 
   await item.ref.update(updates);
-  invalidateRequestsCache();
+  invalidateRequestsCache(companyCode);
 
   const updatedSnap = await item.ref.once("value");
   return { success: true, request: updatedSnap.val() };
@@ -667,11 +747,32 @@ async function changeUsageOnce(companyCode, year, employeeId, requestId, days, a
   return result.snapshot.val();
 }
 
+/*
+| Changes a request's status atomically, so two approvers acting at once
+| cannot both succeed (one approves while the other rejects).
+|
+| `callback(current)` returns the next record, or throws to refuse. The Admin
+| SDK first runs the handler against its local cache, which is null for a
+| node nobody listens to; returning null there lets the server answer with
+| the real value instead of aborting (see punchOutEmployee).
+*/
 async function transitionRequest(item, callback) {
+  let refused = null;
+
   const result = await item.ref.transaction((current) => {
-    if (!current) return;
-    return callback(current);
+    refused = null;
+    if (current === null) return null;
+    try {
+      return callback(current);
+    } catch (error) {
+      refused = error;
+      return; // abort
+    }
   });
+
+  if (refused) throw refused;
+
+  if (!result.snapshot.exists()) fail("Leave request not found.", 404);
 
   if (!result.committed) {
     fail("The leave request was changed by another user. Refresh and retry.", 409);
@@ -679,6 +780,12 @@ async function transitionRequest(item, callback) {
 
   return result.snapshot.val();
 }
+
+const requirePending = (action) => (current) => {
+  if (requestStatus(current) !== "Pending") {
+    fail(`Only pending leave requests can be ${action}. Refresh and retry.`, 409);
+  }
+};
 
 async function validateApproverScope(companyCode, user, employeeId) {
   const role = normalizeRole(user);
@@ -699,6 +806,7 @@ async function validateApproverScope(companyCode, user, employeeId) {
 async function approveLeaveRequest({ companyCode, user, requestId, payload = {} }) {
   const remarks = payload.remarks || "";
   const item = await findRequest(companyCode, requestId);
+  assertNotSelfApproval(user, item.employeeId);
   await validateApproverScope(companyCode, user, item.employeeId);
 
   const request = item.request;
@@ -706,7 +814,9 @@ async function approveLeaveRequest({ companyCode, user, requestId, payload = {} 
     fail("Only pending leave requests can be approved.", 409);
   }
 
-  const normalized = normalizeRequest(request, {
+  // Days are re-priced on the server at approval time (holidays may have
+  // been declared since the request was raised).
+  const normalized = await normalizeRequest(companyCode, request, {
     allowPast: true,
     validateReasonText: false,
   });
@@ -715,20 +825,36 @@ async function approveLeaveRequest({ companyCode, user, requestId, payload = {} 
   // Re-check balance at approval time, excluding this request from pending days.
   await assertBalance(companyCode, item.employeeId, normalized, item.requestId);
 
+  // Attendance is marked only on working days: a holiday or weekly off inside
+  // the range was not charged, so it is not written as "Leave" either.
+  // Rollback / clear still uses the full range - clearing only touches days
+  // that carry this request's id.
   const dateKeys = inclusiveDateKeys(normalized.fromDate, normalized.toDate);
+  const workingDateKeys = await getWorkingDateKeys(
+    companyCode,
+    normalized.fromDate,
+    normalized.toDate
+  );
   let usageApplied = false;
+  let statusChanged = false;
 
   const approverName = await getApproverIdentity(companyCode, user, payload);
 
   try {
-    await item.ref.update({
-      status: "Approved",
-      approvedBy: approverName,
-      approvedAt: Date.now(),
-      remarks: String(remarks || "").trim(),
-      approvalState: "complete",
-      approvalCompletedAt: Date.now(),
+    await transitionRequest(item, (current) => {
+      requirePending("approved")(current);
+      return {
+        ...current,
+        days: normalized.days,
+        status: "Approved",
+        approvedBy: approverName,
+        approvedAt: Date.now(),
+        remarks: String(remarks || "").trim(),
+        approvalState: "complete",
+        approvalCompletedAt: Date.now(),
+      };
     });
+    statusChanged = true;
 
     await changeUsageOnce(
       companyCode,
@@ -744,7 +870,7 @@ async function approveLeaveRequest({ companyCode, user, requestId, payload = {} 
       companyCode,
       {
         employeeId: item.employeeId,
-        dateKeys,
+        dateKeys: workingDateKeys,
         leaveRequestId: item.requestId,
         status: normalized.requestType === "Half Day" ? "Half Day" : "Leave",
         remarks: normalized.requestType === "Half Day"
@@ -755,9 +881,15 @@ async function approveLeaveRequest({ companyCode, user, requestId, payload = {} 
     );
 
     const updatedSnap = await item.ref.once("value");
-    invalidateRequestsCache();
+    invalidateRequestsCache(companyCode);
     return { success: true, request: updatedSnap.val() };
   } catch (error) {
+    // Lost the race to another approver: nothing of ours was written.
+    if (!statusChanged) {
+      invalidateRequestsCache(companyCode);
+      throw error;
+    }
+
     try {
       await clearLeaveAttendance(
         companyCode,
@@ -789,13 +921,14 @@ async function approveLeaveRequest({ companyCode, user, requestId, payload = {} 
       });
     } catch (_) {}
 
-    invalidateRequestsCache();
+    invalidateRequestsCache(companyCode);
     throw error;
   }
 }
 
 async function rejectLeaveRequest({ companyCode, user, requestId, payload = {}, remarks }) {
   const item = await findRequest(companyCode, requestId);
+  assertNotSelfApproval(user, item.employeeId);
   await validateApproverScope(companyCode, user, item.employeeId);
 
   const rejectionRemarks = String(payload.remarks || remarks || "").trim();
@@ -809,16 +942,22 @@ async function rejectLeaveRequest({ companyCode, user, requestId, payload = {}, 
 
   const approverName = await getApproverIdentity(companyCode, user, payload);
 
-  await item.ref.update({
-    status: "Rejected",
-    approvedBy: approverName,
-    approvedAt: Date.now(),
-    remarks: rejectionRemarks,
-  });
+  try {
+    const updated = await transitionRequest(item, (current) => {
+      requirePending("rejected")(current);
+      return {
+        ...current,
+        status: "Rejected",
+        approvedBy: approverName,
+        approvedAt: Date.now(),
+        remarks: rejectionRemarks,
+      };
+    });
 
-  const updatedSnap = await item.ref.once("value");
-  invalidateRequestsCache();
-  return { success: true, request: updatedSnap.val() };
+    return { success: true, request: updated };
+  } finally {
+    invalidateRequestsCache(companyCode);
+  }
 }
 
 async function deleteLeaveRequest({ companyCode, user, requestId }) {
@@ -838,7 +977,7 @@ async function deleteLeaveRequest({ companyCode, user, requestId }) {
 
   if (status === "Pending" || status === "Rejected") {
     await item.ref.remove();
-    invalidateRequestsCache();
+    invalidateRequestsCache(companyCode);
     return { success: true, deleted: true };
   }
 
@@ -846,7 +985,9 @@ async function deleteLeaveRequest({ companyCode, user, requestId }) {
     fail("This request cannot be deleted in its current state.", 409);
   }
 
-  // Approved deletion is restricted to authorized approvers.
+  // Approved deletion is restricted to authorized approvers - and, like
+  // approving, not on one's own leave (it hands the days back).
+  assertNotSelfApproval(user, item.employeeId);
   await validateApproverScope(companyCode, user, item.employeeId);
 
   const fromDate = request.fromDate;
@@ -880,7 +1021,7 @@ async function deleteLeaveRequest({ companyCode, user, requestId }) {
     usageReleased = true;
 
     await item.ref.remove();
-    invalidateRequestsCache();
+    invalidateRequestsCache(companyCode);
     return { success: true, deleted: true };
   } catch (error) {
     // Restore the accounting and attendance when possible.
@@ -915,7 +1056,7 @@ async function deleteLeaveRequest({ companyCode, user, requestId }) {
       } catch (_) {}
     }
 
-    invalidateRequestsCache();
+    invalidateRequestsCache(companyCode);
     throw error;
   }
 }
@@ -937,7 +1078,7 @@ async function updateLeaveSettings({ companyCode, user, payload }) {
   next.allowCarryForward = Boolean(next.allowCarryForward);
 
   await db.ref(leavePath(companyCode, "settings")).update(next);
-  invalidateSettingsCache();
+  invalidateSettingsCache(companyCode);
   return { success: true, settings: next };
 }
 
@@ -948,7 +1089,11 @@ async function getLeaveUsage({ companyCode, user, year, employeeId }) {
 
   if (!targetEmployeeId) fail("Employee ID is required.");
 
-  if (normalizeRole(user) === "manager") {
+  // A manager reading their own balance needs no department scope.
+  if (
+    normalizeRole(user) === "manager" &&
+    !isSameEmployee(targetEmployeeId, user.employeeId)
+  ) {
     await validateApproverScope(companyCode, user, targetEmployeeId);
   }
 

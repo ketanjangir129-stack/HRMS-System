@@ -13,10 +13,10 @@ const { requirePermission } = require("../middleware/permissionMiddleware");
 const { isOwnerRole } = require("../utils/permissions");
 const upload = require("../middleware/uploadMiddleware");
 
-// Profile page har role khol sakta hai (bina employees.details ke), isliye
-// apni photo ka save yahin allow hota hai — sirf self + sirf photo key.
-// Baaki sab pehle jaisa employees.details maangta hai.
-const allowSelfPhotoOrRequireDetails = async (req, res, next) => {
+// Profile page har role khol sakta hai (bina employees.details ke).
+// User apna personalInfo, bankInfo, aur documents khud edit kar sakta hai.
+// EmploymentInfo, account, aur doosre employees ke record ke liye employees.details permission zaroori hai.
+const allowSelfEditOrRequireDetails = async (req, res, next) => {
   try {
     const { role, employeeId: actorId } = req.user || {};
     const targetId = String(req.params.employeeId ?? "").trim().toUpperCase();
@@ -24,25 +24,18 @@ const allowSelfPhotoOrRequireDetails = async (req, res, next) => {
 
     if (isOwnerRole(role)) return next();
 
+    const allowedSelfSections = ["personalInfo", "bankInfo", "documents"];
+
     if (actor && targetId && actor === targetId) {
-      let section = req.body?.section;
-      let data = req.body?.data;
-      if (typeof data === "string") {
-        try { data = JSON.parse(data); } catch { data = null; }
-      }
-      if (
-        section === "personalInfo" &&
-        data && typeof data === "object" && !Array.isArray(data) &&
-        Object.keys(data).length > 0 &&
-        Object.keys(data).every((k) => k === "photo")
-      ) {
+      const section = req.body?.section;
+      if (allowedSelfSections.includes(section)) {
         return next();
       }
     }
 
     return requirePermission("employees.details")(req, res, next);
   } catch (error) {
-    console.error("Self photo permission check error:", error);
+    console.error("Self edit permission check error:", error);
     return res.status(500).json({ success: false, message: "Unable to verify permissions." });
   }
 };
@@ -80,7 +73,7 @@ const router = express.Router();
       }
       next();
     },
-    allowSelfPhotoOrRequireDetails,
+    allowSelfEditOrRequireDetails,
     updateEmployee
   );
 

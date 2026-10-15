@@ -1,37 +1,31 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-import { subscribeHolidays } from "../services/holidayServices/holidayService";
+import { getUpcomingHolidays as fetchUpcomingHolidays } from "../services/holidayServices/holidayService";
 import { getDateKey } from "../utils/attendance/attendanceDate";
 import { UPCOMING_HOLIDAYS } from "../utils/holiday/holidayConstants";
-import {
-  getHolidayYear,
-  getUpcomingHolidays,
-} from "../utils/holiday/holidayUtils";
+import { getUpcomingHolidays } from "../utils/holiday/holidayUtils";
 
 /*
 |--------------------------------------------------------------------------
-| Upcoming Holidays (live)
+| Upcoming Holidays (kept fresh)
 |--------------------------------------------------------------------------
-| The same list `useUpcomingHolidays` returns, kept open instead of read once.
+| The same list `useUpcomingHolidays` returns, kept current on a screen that
+| is left open all day.
 |
-| The dashboard is the screen that is left sitting on a second monitor all
-| day, so a holiday declared this morning has to reach it on its own. A read
-| that only runs on mount cannot do that, which is why this hook exists
-| alongside the one shot version rather than replacing it: the holiday screen
-| is opened to be read and closed again, and re-reading a year it is actively
-| editing would fight its own refresh.
+| It used to listen to two whole years of the holidays tree in Firebase. Only
+| the owner signs in to Firebase, so for everybody else that listener either
+| failed or relied on the database being readable without a login. It now
+| reads the backend's /holidays/upcoming endpoint, which already crosses into
+| next year on its own, and re-reads it:
 |
-| Two years are listened to, not one. Late in December the year on screen has
-| nothing left to show and the next holiday is in January, so the list would
-| empty out exactly when it is most useful.
-|
-| The day itself is state as well. "Upcoming" is measured from today, and a
-| tab left open across midnight would otherwise keep yesterday's date and go
-| on calling a holiday that has passed "Today".
+|   - at midnight, because "upcoming" is measured from today;
+|   - every REFRESH_MS while the tab is visible;
+|   - when the tab becomes visible again.
 |--------------------------------------------------------------------------
 */
 
 const DAY_MS = 24 * 60 * 60 * 1000;
+const REFRESH_MS = 15 * 60 * 1000;
 
 /*
 | Milliseconds until the next midnight, so the day can be re-read the moment
@@ -52,29 +46,24 @@ const msUntilTomorrow = () => {
 
 };
 
-/*
-| What the listeners have delivered, stamped with the subscription it belongs
-| to.
-|
-| The stamp is what lets a company or a year change without clearing anything
-| first: a delivery from the old subscription no longer matches, so it is
-| replaced rather than merged, and the card reads as loading again until the
-| new listeners answer.
-*/
-
-const EMPTY_FEED = {
-  key: "",
-  byYear: {},
-  waiting: [],
-  error: "",
-};
-
 function useLiveUpcomingHolidays(
   companyCode,
   limit = UPCOMING_HOLIDAYS
 ) {
 
   const [today, setToday] = useState(() => getDateKey());
+
+  const [holidays, setHolidays] = useState([]);
+
+  const [loading, setLoading] = useState(true);
+
+  const [error, setError] = useState("");
+
+  const [reloadKey, setReloadKey] = useState(0);
+
+  const reload = useCallback(() => {
+    setReloadKey((key) => key + 1);
+  }, []);
 
   /*
   | One timer at a time, re-armed after every midnight. The date is re-read
@@ -94,101 +83,80 @@ function useLiveUpcomingHolidays(
 
   }, [today]);
 
-  const year = getHolidayYear(today);
+  // Periodic refresh while visible, and an immediate one on returning.
+  useEffect(() => {
 
-  const [feed, setFeed] = useState(EMPTY_FEED);
+    if (!companyCode) return undefined;
 
-  const [reloadKey, setReloadKey] = useState(0);
+    const interval = setInterval(() => {
+      if (document.visibilityState === "visible") reload();
+    }, REFRESH_MS);
 
-  // No company or no year means there is nothing to listen to at all.
-  const subscriptionKey =
-    companyCode && year
-      ? `${companyCode}:${year}:${reloadKey}`
-      : "";
+    const onVisible = () => {
+      if (document.visibilityState === "visible") reload();
+    };
+
+    document.addEventListener("visibilitychange", onVisible);
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+
+  }, [companyCode, reload]);
 
   useEffect(() => {
 
-    if (!subscriptionKey) return;
+    let cancelled = false;
 
-    const years = [year, year + 1];
+    const load = async () => {
 
-    /*
-    | Every update is folded onto the feed of this subscription. Anything
-    | left from a previous one is dropped here rather than in a cleanup, so
-    | the listeners are the only thing that ever writes state.
-    */
+      if (!companyCode) {
+        setHolidays([]);
+        setLoading(false);
+        return;
+      }
 
-    const applyUpdate = (updater) =>
+      // Background refreshes keep the current list on screen.
+      if (reloadKey === 0) setLoading(true);
 
-      setFeed((current) =>
-        updater(
-          current.key === subscriptionKey
-            ? current
-            : {
-                key: subscriptionKey,
-                byYear: {},
-                waiting: years,
-                error: "",
-              }
-        )
-      );
+      try {
 
-    const unsubscribes = years.map((listenYear) =>
+        const data = await fetchUpcomingHolidays(companyCode, {
+          from: today,
+          limit,
+        });
 
-      subscribeHolidays(
-        companyCode,
-        listenYear,
+        if (cancelled) return;
 
-        (list) =>
+        setHolidays(data);
+        setError("");
 
-          applyUpdate((current) => ({
-            ...current,
-            byYear: {
-              ...current.byYear,
-              [listenYear]: list,
-            },
-            // Answered, so it is no longer one of the years being waited on.
-            waiting: current.waiting.filter(
-              (pending) => pending !== listenYear
-            ),
-            error: "",
-          })),
+      } catch (loadError) {
 
-        (listenError) => {
+        if (cancelled) return;
 
-          console.error(
-            "Failed to load upcoming holidays:",
-            listenError
-          );
+        console.error("Failed to load upcoming holidays:", loadError);
 
-          applyUpdate((current) => ({
-            ...current,
-            waiting: [],
-            error:
-              listenError.message ||
-              "Failed to load upcoming holidays.",
-          }));
+        setError(
+          loadError.message || "Failed to load upcoming holidays."
+        );
 
-        }
-      )
+      } finally {
 
-    );
+        if (!cancelled) setLoading(false);
 
-    return () =>
-      unsubscribes.forEach((unsubscribe) => unsubscribe());
+      }
 
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [subscriptionKey]);
+    };
 
-  // A feed stamped with an older subscription is not this one's answer yet.
-  const current =
-    feed.key === subscriptionKey ? feed : null;
+    load();
 
-  const loading =
-    Boolean(subscriptionKey) &&
-    (!current || (current.waiting.length > 0 && !current.error));
+    return () => {
+      cancelled = true;
+    };
 
-  const error = current?.error || "";
+  }, [companyCode, today, limit, reloadKey]);
 
   /*
   | Sorted and stamped with the days remaining, so a card can say "Tomorrow"
@@ -197,25 +165,12 @@ function useLiveUpcomingHolidays(
 
   const upcoming = useMemo(
     () =>
-      getUpcomingHolidays(
-        Object.values(current?.byYear || {}).flat(),
-        {
-          from: today,
-          limit,
-        }
-      ),
-    [current, today, limit]
+      getUpcomingHolidays(holidays, {
+        from: today,
+        limit,
+      }),
+    [holidays, today, limit]
   );
-
-  /*
-  | A dropped connection is retried by Firebase on its own. This is for what
-  | it will not recover from by itself, such as a permission denied that a
-  | role change has since fixed.
-  */
-
-  const reload = useCallback(() => {
-    setReloadKey((key) => key + 1);
-  }, []);
 
   return {
 

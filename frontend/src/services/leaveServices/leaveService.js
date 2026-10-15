@@ -147,16 +147,18 @@ export const getLeaveUsage = async (
     return cached.pending;
   }
 
+  /*
+  | A failure is thrown, not answered with zeros: "0 used" looks like a real
+  | balance, and the hook shows an error state for a throw. The pending entry
+  | is always cleared, so one failed call is not handed back to every later
+  | caller for the rest of the session.
+  */
   const promise = (async () => {
     try {
       const result = await getLeaveUsageApi(year, employeeId);
 
       if (!result || result.success === false) {
-        return {
-          used: 0,
-          lwp: 0,
-          carryForward: 0,
-        };
+        throw new Error(result?.message || "Failed to load leave usage.");
       }
 
       const usage = {
@@ -175,11 +177,12 @@ export const getLeaveUsage = async (
       return usage;
     } catch (error) {
       console.error("Failed to fetch leave usage:", error);
-      return {
-        used: 0,
-        lwp: 0,
-        carryForward: 0,
-      };
+      throw error;
+    } finally {
+      const entry = usageCache.get(cacheKey);
+      if (entry?.pending === promise) {
+        usageCache.set(cacheKey, { ...entry, pending: null });
+      }
     }
   })();
 
@@ -190,13 +193,6 @@ export const getLeaveUsage = async (
   });
 
   return promise;
-};
-
-export const updateLeaveUsage = async () => {
-  return {
-    success: false,
-    message: "Direct leave usage updates are disabled. Use an authorized backend operation.",
-  };
 };
 
 /*
@@ -241,19 +237,18 @@ export const createLeaveRequest = async (
 
     invalidateLeaveCache();
 
-    // Trigger leave application notification like previous version
-    try {
-      await notifyLeaveApprovers(
-        companyCode,
-        createdRequest,
-        requestId
-      );
-    } catch (notificationError) {
+    // Sent in the background: the request is already saved, so the Apply
+    // button does not wait on the notification writes.
+    notifyLeaveApprovers(
+      companyCode,
+      createdRequest,
+      requestId
+    ).catch((notificationError) => {
       console.error(
         "Leave application notification failed:",
         notificationError
       );
-    }
+    });
 
     return {
       success: true,
@@ -288,8 +283,9 @@ export const getLeaveRequests = async (_companyCode, { forceRefresh = false } = 
     try {
       const result = await getLeaveRequestsApi();
 
+      // Thrown so the page shows "failed to load" instead of "no requests".
       if (!result || result.success === false) {
-        return [];
+        throw new Error(result?.message || "Failed to load leave requests.");
       }
 
       const requests = Array.isArray(result)
@@ -303,7 +299,7 @@ export const getLeaveRequests = async (_companyCode, { forceRefresh = false } = 
       return requests;
     } catch (error) {
       console.error("Get Leave Requests Error:", error);
-      return [];
+      throw error;
     } finally {
       requestsCache.pending = null;
     }
@@ -352,20 +348,18 @@ export const approveLeaveRequest = async (
 
     invalidateLeaveCache();
 
-    // Trigger leave approval notification like previous version
-    try {
-      await notifyLeaveApproved(
-        companyCode,
-        request,
-        requestId,
-        approver
-      );
-    } catch (notificationError) {
+    // Background, as above.
+    notifyLeaveApproved(
+      companyCode,
+      request,
+      requestId,
+      approver
+    ).catch((notificationError) => {
       console.error(
         "Leave approval notification failed:",
         notificationError
       );
-    }
+    });
 
     return {
       success: true,
@@ -424,20 +418,18 @@ export const rejectLeaveRequest = async (
 
     invalidateLeaveCache();
 
-    // Trigger leave rejection notification like previous version
-    try {
-      await notifyLeaveRejected(
-        companyCode,
-        request,
-        requestId,
-        approver
-      );
-    } catch (notificationError) {
+    // Background, as above.
+    notifyLeaveRejected(
+      companyCode,
+      request,
+      requestId,
+      approver
+    ).catch((notificationError) => {
       console.error(
         "Leave rejection notification failed:",
         notificationError
       );
-    }
+    });
 
     return {
       success: true,

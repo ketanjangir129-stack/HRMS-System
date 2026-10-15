@@ -46,6 +46,53 @@ const DEFAULTS = {
   payroll: {
     enabled: { hr: true, manager: false, employee: false },
   },
+
+  // Attendance aur Leave bhi registry me hone chahiye — warna `if (!page)
+  // return true` har role ko allow kar deta aur Roles & Access ignore hota.
+  attendance: {
+    enabled: { hr: true, manager: true, employee: true },
+    summary: { hr: true, manager: true, employee: true },
+    today: { hr: true, manager: true, employee: false },
+    calendar: { hr: true, manager: true, employee: true },
+    recentActivity: { hr: true, manager: true, employee: true },
+    analytics: { hr: true, manager: true, employee: false },
+    requests: { hr: true, manager: true, employee: true },
+    myAttendance: { hr: true, manager: true, employee: true },
+    daily: { hr: true, manager: true, employee: false },
+    approvals: { hr: true, manager: true, employee: false },
+    monthly: { hr: true, manager: true, employee: false },
+    regularization: { hr: true, manager: true, employee: true },
+    reports: { hr: true, manager: true, employee: false },
+    import: { hr: false, manager: false, employee: false },
+    settings: { hr: false, manager: false, employee: false },
+  },
+
+  leave: {
+    enabled: { hr: true, manager: true, employee: true },
+    balance: { hr: true, manager: true, employee: true },
+    calendar: { hr: true, manager: true, employee: true },
+    history: { hr: true, manager: true, employee: true },
+    apply: { hr: true, manager: true, employee: true },
+    approvals: { hr: true, manager: true, employee: false },
+  },
+
+  holidays: {
+    enabled: { hr: true, manager: true, employee: true },
+    calendar: { hr: true, manager: true, employee: true },
+    upcoming: { hr: true, manager: true, employee: true },
+    list: { hr: true, manager: true, employee: true },
+    add: { hr: true, manager: false, employee: false },
+    edit: { hr: true, manager: false, employee: false },
+    delete: { hr: true, manager: false, employee: false },
+  },
+
+  onboarding: {
+    enabled: { hr: true, manager: false, employee: false },
+    create: { hr: true, manager: false, employee: false },
+    requests: { hr: true, manager: false, employee: false },
+    history: { hr: true, manager: false, employee: false },
+  },
+
 };
 
 const isOwnerRole = (role) => role === OWNER_ROLE;

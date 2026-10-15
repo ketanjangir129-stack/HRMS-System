@@ -137,6 +137,47 @@ const PERSONAL_FIELDS = [
   { key: "address", label: "Address", icon: MapPin, full: true },
 ];
 
+const BANK_FIELDS = [
+  { key: "accountHolderName", label: "Account Holder Name", icon: UserRound },
+  { key: "bankName", label: "Bank Name", icon: Landmark },
+  { key: "branch", label: "Branch", icon: MapPin },
+  {
+    key: "accountNumber",
+    label: "Account Number",
+    icon: CreditCard,
+    masked: true,
+  },
+  { key: "ifsc", label: "IFSC Code", icon: Hash },
+];
+
+const DOCUMENT_FIELDS = [
+  {
+    key: "aadhaar",
+    label: "Aadhaar Number",
+    icon: IdCard,
+    masked: true,
+  },
+  {
+    key: "pan",
+    label: "PAN Number",
+    icon: CreditCard,
+    masked: true,
+  },
+  {
+    key: "uan",
+    label: "UAN Number",
+    icon: Hash,
+    masked: true,
+  },
+  {
+    key: "esic",
+    label: "ESIC Number",
+    icon: ShieldCheck,
+    masked: true,
+  },
+  { key: "resume", label: "Resume", icon: FileText, type: "file" },
+];
+
 function Profile() {
   const { currentUser, company, updateCompanyProfile } = useAuth();
   const navigate = useNavigate();
@@ -160,8 +201,41 @@ function Profile() {
   const [errors, setErrors] = useState({});
   const [saving, setSaving] = useState(false);
 
+  // Documents card mein chuni hui PDF — Save par hi upload hoti hai
+  const [resumeFile, setResumeFile] = useState(null);
+
   // Save fail hone par upar dikhne wala banner (alert ki jagah)
   const [actionError, setActionError] = useState("");
+
+  const MAX_RESUME_SIZE = 5 * 1024 * 1024;
+
+  const getResumeError = (file) => {
+    const isPdf =
+      file.type === "application/pdf" || /\.pdf$/i.test(file.name);
+
+    if (!isPdf) {
+      return "Only PDF file upload allowed (.pdf).";
+    }
+
+    if (file.size > MAX_RESUME_SIZE) {
+      return "Resume must be smaller than 5 MB.";
+    }
+
+    return "";
+  };
+
+  const handleResumeChange = (e) => {
+    const file = e.target.files?.[0];
+
+    if (!file) {
+      setResumeFile(null);
+      setErrors((prev) => ({ ...prev, resume: "" }));
+      return;
+    }
+
+    setResumeFile(file);
+    setErrors((prev) => ({ ...prev, resume: getResumeError(file) }));
+  };
 
   /*
   | Resignation. The button lives here rather than only on the exit module's
@@ -304,15 +378,27 @@ function Profile() {
   // createdAt epoch milliseconds me store hota hai (createCompany → Date.now())
   const registeredOn = company?.createdAt
     ? new Date(company.createdAt).toLocaleDateString("en-IN", {
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-      })
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    })
     : "";
 
   // Purane records me kuch fields dusre naam se save hue the — dono padho
-  const bank = employee?.bankInfo || {};
-  const documents = employee?.documents || {};
+  const bank = {
+    accountHolderName: employee?.bankInfo?.accountHolderName || "",
+    bankName: employee?.bankInfo?.bankName || "",
+    branch: employee?.bankInfo?.branch || employee?.bankInfo?.branchName || "",
+    accountNumber: employee?.bankInfo?.accountNumber || "",
+    ifsc: employee?.bankInfo?.ifsc || employee?.bankInfo?.ifscCode || "",
+  };
+  const documents = {
+    aadhaar: employee?.documents?.aadhaar || employee?.documents?.aadhaarNumber || "",
+    pan: employee?.documents?.pan || employee?.documents?.panNumber || "",
+    uan: employee?.documents?.uan || employee?.documents?.uanNumber || "",
+    esic: employee?.documents?.esic || employee?.documents?.esicNumber || "",
+    resume: employee?.documents?.resume || "",
+  };
 
   const personal = employee?.personalInfo || {};
 
@@ -329,8 +415,8 @@ function Profile() {
     address: personal.address || currentUser?.address || "",
   };
 
-  // Employee/HR apna personalInfo card edit karte hain
-  const canEditPersonal = Boolean(employee && employeeId && companyCode);
+  // Employee/HR can edit their own personalInfo, bankInfo, and documents
+  const canEditSelf = Boolean(employee && employeeId && companyCode);
 
   // Owner apne dono card edit karta hai — dono company details par likhte hain
   const canEditCompany = Boolean(isOwner && companyCode);
@@ -431,7 +517,7 @@ function Profile() {
       title: "Personal Information",
       subtitle: "Identity, contact and address details.",
       accent: "bg-blue-50 text-blue-600",
-      editable: canEditPersonal,
+      editable: canEditSelf,
       fields: PERSONAL_FIELDS.map((field) => ({
         ...field,
         value: personalValues[field.key],
@@ -494,22 +580,11 @@ function Profile() {
       title: "Bank Information",
       subtitle: "Account used for salary disbursement.",
       accent: "bg-sky-50 text-sky-600",
-      fields: [
-        {
-          label: "Account Holder Name",
-          value: bank.accountHolderName,
-          icon: UserRound,
-        },
-        { label: "Bank Name", value: bank.bankName, icon: Landmark },
-        { label: "Branch", value: bank.branch || bank.branchName, icon: MapPin },
-        {
-          label: "Account Number",
-          value: bank.accountNumber,
-          icon: CreditCard,
-          masked: true,
-        },
-        { label: "IFSC Code", value: bank.ifsc || bank.ifscCode, icon: Hash },
-      ],
+      editable: canEditSelf,
+      fields: BANK_FIELDS.map((field) => ({
+        ...field,
+        value: bank[field.key] || "",
+      })),
     },
     {
       id: "documents",
@@ -517,35 +592,12 @@ function Profile() {
       title: "Documents",
       subtitle: "Statutory numbers and uploaded resume.",
       accent: "bg-rose-50 text-rose-600",
-      fields: [
-        {
-          label: "Aadhaar Number",
-          value: documents.aadhaar || documents.aadhaarNumber,
-          icon: IdCard,
-          masked: true,
-        },
-        {
-          label: "PAN Number",
-          value: documents.pan || documents.panNumber,
-          icon: CreditCard,
-          masked: true,
-        },
-        {
-          label: "UAN Number",
-          value: documents.uan || documents.uanNumber,
-          icon: Hash,
-          masked: true,
-        },
-        {
-          label: "ESIC Number",
-          value: documents.esic || documents.esicNumber,
-          icon: ShieldCheck,
-          masked: true,
-        },
-        { label: "Resume", value: documents.resume, icon: FileText, type: "file" },
-      ],
+      editable: canEditSelf,
+      fields: DOCUMENT_FIELDS.map((field) => ({
+        ...field,
+        value: documents[field.key] || "",
+      })),
     },
-
   ];
 
   // Bina filter wali list — startEdit isi se draft banata hai, warna jo field
@@ -563,8 +615,8 @@ function Profile() {
         section.editable && editingSection === section.id
           ? section.fields
           : section.fields.filter(
-              (field) => String(field.value ?? "").trim() !== ""
-            ),
+            (field) => String(field.value ?? "").trim() !== ""
+          ),
     }))
     // Editable card hamesha rehta hai — sab fields khaali hon to bhi Edit
     // button chahiye, warna user apna record kabhi bhar hi nahi sakta.
@@ -588,33 +640,33 @@ function Profile() {
   const headerChips = (
     isOwner
       ? [
-          {
-            label: company?.companyCode,
-            className: "bg-blue-50 text-blue-700",
-          },
-          {
-            label: role,
-            className: "bg-slate-100 capitalize text-slate-600",
-          },
-        ]
+        {
+          label: company?.companyCode,
+          className: "bg-blue-50 text-blue-700",
+        },
+        {
+          label: role,
+          className: "bg-slate-100 capitalize text-slate-600",
+        },
+      ]
       : [
-          {
-            label: employee?.employmentInfo?.employeeId,
-            className: "bg-blue-50 text-blue-700",
-          },
-          {
-            label: employee?.employmentInfo?.designation,
-            className: "bg-slate-100 text-slate-600",
-          },
-          {
-            label: employee?.employmentInfo?.department,
-            className: "bg-slate-100 text-slate-600",
-          },
-          {
-            label: role,
-            className: "bg-slate-100 capitalize text-slate-600",
-          },
-        ]
+        {
+          label: employee?.employmentInfo?.employeeId,
+          className: "bg-blue-50 text-blue-700",
+        },
+        {
+          label: employee?.employmentInfo?.designation,
+          className: "bg-slate-100 text-slate-600",
+        },
+        {
+          label: employee?.employmentInfo?.department,
+          className: "bg-slate-100 text-slate-600",
+        },
+        {
+          label: role,
+          className: "bg-slate-100 capitalize text-slate-600",
+        },
+      ]
   ).filter((chip) => chip.label);
 
   // Header ke right side ki quick info — icon tile + value + label
@@ -642,7 +694,7 @@ function Profile() {
         {/* Edit button har editable card ke apne header me hai. Ye badge tab
             dikhta hai jab kuch bhi edit karne ko nahi bacha — tabhi user ko
             pata chalta hai ki Edit button dhoondna bekaar hai. */}
-        {!canEditPersonal && !canEditCompany && (
+        {!canEditSelf && !canEditCompany && (
           <span className="inline-flex shrink-0 items-center gap-1.5 rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-500">
             <Lock className="h-3.5 w-3.5" />
             View Only
@@ -678,48 +730,48 @@ function Profile() {
 
           <div className="flex min-w-0 flex-col gap-4 sm:flex-row sm:items-center">
 
-          {isOwner ? (
-  <AvatarUpload
-    photoUrl={company?.ownerPhoto || null}
-    name={name}
-    folder={`company/${companyCode}/owner/photo`}
-    canEdit={true}
-    onUploaded={async (url) => {
-      const result = await updateCompanyProfile({ ownerPhoto: url });
-      if (!result?.success) throw new Error(result?.message || "Failed to save photo.");
-    }}
-    className="h-20 w-20 shrink-0 rounded-2xl bg-blue-600 text-2xl font-bold text-white shadow-md shadow-blue-600/25"
-  />
-) : (
-  <AvatarUpload
-    photoUrl={employee?.personalInfo?.photo}
-    name={name}
-    employeeId={employeeId}
-    canEdit={true}
-    onUploaded={async (url) => {
-      const result = await saveEmployeeSection(employeeId, "personalInfo", { photo: url });
-      if (!result?.success) throw new Error(result?.message || "Failed to save photo.");
-      const nextPhoto = result.data?.photo ?? url;
-      setEmployee((prev) => ({
-        ...prev,
-        personalInfo: { ...prev?.personalInfo, photo: nextPhoto },
-      }));
-      // Login snapshot bhi taaza rakho — navbar/drawer reload ke baad bhi photo dikhe
-      try {
-        const stored = JSON.parse(localStorage.getItem("currentUser") || "null");
-        if (stored) {
-          localStorage.setItem(
-            "currentUser",
-            JSON.stringify({ ...stored, personalInfo: { ...(stored.personalInfo || {}), photo: nextPhoto } })
-          );
-        }
-      } catch {
-        // Snapshot sync optional hai — save already ho chuka hai
-      }
-    }}
-    className="h-20 w-20 shrink-0 rounded-2xl bg-blue-600 text-2xl font-bold text-white shadow-md shadow-blue-600/25"
-  />
-  )}
+            {isOwner ? (
+              <AvatarUpload
+                photoUrl={company?.ownerPhoto || null}
+                name={name}
+                folder={`company/${companyCode}/owner/photo`}
+                canEdit={true}
+                onUploaded={async (url) => {
+                  const result = await updateCompanyProfile({ ownerPhoto: url });
+                  if (!result?.success) throw new Error(result?.message || "Failed to save photo.");
+                }}
+                className="h-20 w-20 shrink-0 rounded-2xl bg-blue-600 text-2xl font-bold text-white shadow-md shadow-blue-600/25"
+              />
+            ) : (
+              <AvatarUpload
+                photoUrl={employee?.personalInfo?.photo}
+                name={name}
+                employeeId={employeeId}
+                canEdit={true}
+                onUploaded={async (url) => {
+                  const result = await saveEmployeeSection(employeeId, "personalInfo", { photo: url });
+                  if (!result?.success) throw new Error(result?.message || "Failed to save photo.");
+                  const nextPhoto = result.data?.photo ?? url;
+                  setEmployee((prev) => ({
+                    ...prev,
+                    personalInfo: { ...prev?.personalInfo, photo: nextPhoto },
+                  }));
+                  // Login snapshot bhi taaza rakho — navbar/drawer reload ke baad bhi photo dikhe
+                  try {
+                    const stored = JSON.parse(localStorage.getItem("currentUser") || "null");
+                    if (stored) {
+                      localStorage.setItem(
+                        "currentUser",
+                        JSON.stringify({ ...stored, personalInfo: { ...(stored.personalInfo || {}), photo: nextPhoto } })
+                      );
+                    }
+                  } catch {
+                    // Snapshot sync optional hai — save already ho chuka hai
+                  }
+                }}
+                className="h-20 w-20 shrink-0 rounded-2xl bg-blue-600 text-2xl font-bold text-white shadow-md shadow-blue-600/25"
+              />
+            )}
 
             <div className="min-w-0">
 
@@ -731,16 +783,14 @@ function Profile() {
 
                 {status && (
                   <span
-                    className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ${
-                      isActive
+                    className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ${isActive
                         ? "bg-emerald-50 text-emerald-700"
                         : "bg-rose-50 text-rose-700"
-                    }`}
+                      }`}
                   >
                     <span
-                      className={`h-1.5 w-1.5 rounded-full ${
-                        isActive ? "bg-emerald-500" : "bg-rose-500"
-                      }`}
+                      className={`h-1.5 w-1.5 rounded-full ${isActive ? "bg-emerald-500" : "bg-rose-500"
+                        }`}
                     />
                     {status}
                   </span>
@@ -899,91 +949,123 @@ function Profile() {
 
         </div>
 
-        <div
-          className={`grid grid-cols-1 gap-x-6 px-5 sm:px-6 ${gridCols} ${
-            isEditing ? "gap-y-5 py-6" : "pb-0 pt-1"
-          }`}
-        >
+        {section.fields.length === 0 && !isEditing ? (
+          <div className="py-8 text-center text-sm text-slate-400">
+            No details added yet. Click{" "}
+            <button
+              type="button"
+              onClick={() => startEdit(section.id)}
+              className="font-semibold text-blue-600 hover:underline"
+            >
+              Edit
+            </button>{" "}
+            to add {section.title.toLowerCase()}.
+          </div>
+        ) : (
+          <div
+            className={`grid grid-cols-1 gap-x-6 px-5 sm:px-6 ${gridCols} ${isEditing ? "gap-y-5 py-6" : "pb-0 pt-1"
+              }`}
+          >
 
-          {section.fields.map((field) => {
-            const fieldId = `${section.id}.${field.label}`;
-            const isHidden = field.masked && !revealed[fieldId];
-            const FieldIcon = field.icon;
+            {section.fields.map((field) => {
+              const fieldId = `${section.id}.${field.label}`;
+              const isHidden = field.masked && !revealed[fieldId];
+              const FieldIcon = field.icon;
 
-            /*
-            | `key` hi decide karta hai ki field badli ja sakti hai ya nahi.
-            | Owner ke cards me kuch fields jaan-boojh kar bina key ke hain
-            | (email = login, company code = DB path) — edit mode me wo input
-            | nahi, ek locked box banti hain taaki dikhein to sahi, par user
-            | unhe badal na sake.
-            */
-            const isFieldEditing = isEditing && Boolean(field.key);
+              /*
+              | `key` hi decide karta hai ki field badli ja sakti hai ya nahi.
+              | Owner ke cards me kuch fields jaan-boojh kar bina key ke hain
+              | (email = login, company code = DB path) — edit mode me wo input
+              | nahi, ek locked box banti hain taaki dikhein to sahi, par user
+              | unhe badal na sake.
+              */
+              const isFieldEditing = isEditing && Boolean(field.key);
 
-            return (
-              <div
-                key={fieldId}
-                className={`flex min-w-0 ${
-                  isEditing
-                    ? "flex-col gap-2"
-                    : "items-start gap-3 border-b border-slate-100 py-3.5"
-                } ${field.full ? fullSpan : ""}`}
-              >
+              return (
+                <div
+                  key={fieldId}
+                  className={`flex min-w-0 ${isEditing
+                      ? "flex-col gap-2"
+                      : "items-start gap-3 border-b border-slate-100 py-3.5"
+                    } ${field.full ? fullSpan : ""}`}
+                >
 
-                {!isEditing && FieldIcon && (
-                  <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-slate-50 text-slate-400">
-                    <FieldIcon className="h-3.5 w-3.5" />
-                  </span>
-                )}
+                  {!isEditing && FieldIcon && (
+                    <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-slate-50 text-slate-400">
+                      <FieldIcon className="h-3.5 w-3.5" />
+                    </span>
+                  )}
 
-                <div className="flex min-w-0 flex-1 flex-col gap-1">
+                  <div className="flex min-w-0 flex-1 flex-col gap-1">
 
-                  <p className="truncate text-xs font-medium text-slate-400">
-                    {field.label}
-                  </p>
+                    <p className="truncate text-xs font-medium text-slate-400">
+                      {field.label}
+                    </p>
 
-                  {isFieldEditing ? (
-                    <>
-                      {field.type === "select" ? (
-                        <select
-                          value={formData[field.key] || ""}
-                          onChange={(e) =>
-                            handleFieldChange(field.key, e.target.value)
-                          }
-                          className={`w-full cursor-pointer rounded-xl border bg-white px-4 py-2.5 text-sm text-slate-800 outline-none transition focus:ring-2 ${
-                            errors[field.key]
-                              ? "border-red-400 focus:border-red-400 focus:ring-red-100"
-                              : "border-slate-200 focus:border-blue-500 focus:ring-blue-100"
-                          }`}
-                        >
-                          <option value="">Select {field.label}</option>
-                          {field.options.map((option) => (
-                            <option key={option} value={option}>
-                              {option}
-                            </option>
-                          ))}
-                        </select>
-                      ) : (
-                        <input
-                          type={field.type === "date" ? "date" : "text"}
-                          max={field.key === "dob" ? today : undefined}
-                          value={formData[field.key] || ""}
-                          onChange={(e) =>
-                            handleFieldChange(field.key, e.target.value)
-                          }
-                          className={`w-full rounded-xl border bg-white px-4 py-2.5 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:ring-2 ${
-                            errors[field.key]
-                              ? "border-red-400 focus:border-red-400 focus:ring-red-100"
-                              : "border-slate-200 focus:border-blue-500 focus:ring-blue-100"
-                          }`}
-                        />
-                      )}
+                    {isFieldEditing ? (
+                      <>
+                        {field.type === "select" ? (
+                          <select
+                            value={formData[field.key] || ""}
+                            onChange={(e) =>
+                              handleFieldChange(field.key, e.target.value)
+                            }
+                            className={`w-full cursor-pointer rounded-xl border bg-white px-4 py-2.5 text-sm text-slate-800 outline-none transition focus:ring-2 ${errors[field.key]
+                                ? "border-red-400 focus:border-red-400 focus:ring-red-100"
+                                : "border-slate-200 focus:border-blue-500 focus:ring-blue-100"
+                              }`}
+                          >
+                            <option value="">Select {field.label}</option>
+                            {field.options.map((option) => (
+                              <option key={option} value={option}>
+                                {option}
+                              </option>
+                            ))}
+                          </select>
+                        ) : field.type === "file" ? (
+                          <>
+                            <input
+                              type="file"
+                              onChange={handleResumeChange}
+                              className={`w-full cursor-pointer rounded-xl border bg-white text-sm text-slate-600 outline-none transition file:mr-3 file:cursor-pointer file:rounded-l-xl file:border-0 file:bg-slate-50 file:px-4 file:py-2.5 file:text-sm file:font-semibold file:text-slate-700 hover:file:bg-blue-50 hover:file:text-blue-600 ${errors[field.key]
+                                  ? "border-red-400"
+                                  : "border-slate-200"
+                                }`}
+                            />
+                            <p
+                              className={`truncate text-xs ${resumeFile && errors[field.key]
+                                  ? "text-red-500"
+                                  : "text-slate-400"
+                                }`}
+                            >
+                              {resumeFile
+                                ? resumeFile.name
+                                : formData[field.key]
+                                  ? `Uploaded: ${decodeURIComponent(String(formData[field.key]).split("/").pop() || formData[field.key])} — selecting a new PDF will replace it.`
+                                  : "PDF only, up to 5 MB."}
+                            </p>
+                          </>
+                        ) : (
+                          <input
+                            type={field.type === "date" ? "date" : "text"}
+                            max={field.key === "dob" ? today : undefined}
+                            value={formData[field.key] || ""}
+                            onChange={(e) =>
+                              handleFieldChange(field.key, e.target.value)
+                            }
+                            className={`w-full rounded-xl border bg-white px-4 py-2.5 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:ring-2 ${errors[field.key]
+                                ? "border-red-400 focus:border-red-400 focus:ring-red-100"
+                                : "border-slate-200 focus:border-blue-500 focus:ring-blue-100"
+                              }`}
+                          />
+                        )}
 
-                      {errors[field.key] && (
-                        <p className="text-xs font-medium text-red-500">
-                          {errors[field.key]}
-                        </p>
-                      )}
-                    </>
+                        {errors[field.key] && (
+                          <p className="text-xs font-medium text-red-500">
+                            {errors[field.key]}
+                          </p>
+                        )}
+                      </>
                   ) : isEditing ? (
                     // Editable card ka wo field jise badla nahi ja sakta —
                     // input jaisi hi jagah leta hai taaki grid tedhi na ho
@@ -997,62 +1079,60 @@ function Profile() {
 
                     </div>
                   ) : (
-                  <div className="flex min-h-6 min-w-0 items-center justify-between gap-2">
+                    <div className="flex min-h-6 min-w-0 items-center justify-between gap-2">
 
-                    <p
-                      className={`min-w-0 wrap-break-word text-sm font-semibold text-slate-900 ${
-                        isHidden ? "tracking-widest" : ""
-                      } ${field.capitalize ? "capitalize" : ""}`}
-                    >
-                      
-                      {field.type === "file" && /^https?:\/\//.test(field.value) ? (
-                       <> <a
-                          href={field.value}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="inline-flex items-center gap-1.5 rounded-lg bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-600 transition-colors hover:bg-blue-100"
-                        >
-                          <FileText className="h-3.5 w-3.5" />
-                          View Resume (PDF)
-                        </a>
-                        <span className="block max-w-full truncate text-xs text-slate-500">
-                          {decodeURIComponent(String(field.value).split("/").pop() || "")}
-                        </span>
-                        </>
-                        
-                      ) : isHidden ? (
-                        maskValue(field.value)
-                      ) : field.pill ? (
-                        <span
-                          className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${
-                            String(field.value).toLowerCase() === "active"
-                              ? "bg-emerald-50 text-emerald-700"
-                              : "bg-rose-50 text-rose-700"
-                          }`}
-                        >
-                          {field.value}
-                        </span>
-                      ) : (
-                        field.value
-                      )}
-                    </p>
-
-                    {field.masked && (
-                      <button
-                        type="button"
-                        onClick={() => toggleReveal(fieldId)}
-                        aria-label={isHidden ? "Show value" : "Hide value"}
-                        className="flex h-7 w-7 shrink-0 cursor-pointer items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-100 hover:text-blue-600"
+                      <p
+                        className={`min-w-0 wrap-break-word text-sm font-semibold text-slate-900 ${isHidden ? "tracking-widest" : ""
+                          } ${field.capitalize ? "capitalize" : ""}`}
                       >
-                        {isHidden ? (
-                          <Eye className="h-4 w-4" />
-                        ) : (
-                          <EyeOff className="h-4 w-4" />
-                        )}
-                      </button>
-                    )}
 
-                  </div>
+                        {field.type === "file" && /^https?:\/\//.test(field.value) ? (
+                          <> <a
+                            href={field.value}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex items-center gap-1.5 rounded-lg bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-600 transition-colors hover:bg-blue-100"
+                          >
+                            <FileText className="h-3.5 w-3.5" />
+                            View Resume (PDF)
+                          </a>
+                            <span className="block max-w-full truncate text-xs text-slate-500">
+                              {decodeURIComponent(String(field.value).split("/").pop() || "")}
+                            </span>
+                          </>
+
+                        ) : isHidden ? (
+                          maskValue(field.value)
+                        ) : field.pill ? (
+                          <span
+                            className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${String(field.value).toLowerCase() === "active"
+                                ? "bg-emerald-50 text-emerald-700"
+                                : "bg-rose-50 text-rose-700"
+                              }`}
+                          >
+                            {field.value}
+                          </span>
+                        ) : (
+                          field.value
+                        )}
+                      </p>
+
+                      {field.masked && (
+                        <button
+                          type="button"
+                          onClick={() => toggleReveal(fieldId)}
+                          aria-label={isHidden ? "Show value" : "Hide value"}
+                          className="flex h-7 w-7 shrink-0 cursor-pointer items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-100 hover:text-blue-600"
+                        >
+                          {isHidden ? (
+                            <Eye className="h-4 w-4" />
+                          ) : (
+                            <EyeOff className="h-4 w-4" />
+                          )}
+                        </button>
+                      )}
+
+                    </div>
                   )}
 
                   {/* Hint sirf edit mode me — wahi jagah hai jahan user ye
@@ -1070,6 +1150,7 @@ function Profile() {
           })}
 
         </div>
+        )}
 
         {isEditing && (
           <div className="flex items-center justify-end gap-3 border-t border-slate-200 bg-slate-50/60 px-6 py-4">
@@ -1114,13 +1195,17 @@ function Profile() {
 
     if (!section) return;
 
-    const draft =
-      section.id === "personalInfo"
-        ? {
-            ...personalValues,
-            name: personal.name || employee?.employmentInfo?.name || "",
-          }
-        : {};
+    let draft = {};
+    if (section.id === "personalInfo") {
+      draft = {
+        ...personalValues,
+        name: personal.name || employee?.employmentInfo?.name || "",
+      };
+    } else if (section.id === "bankInfo") {
+      draft = { ...bank };
+    } else if (section.id === "documents") {
+      draft = { ...documents };
+    }
 
     // Har editable key form me honi chahiye — jo key hi na ho uski required
     // validation kabhi chalti nahi aur khaali field chupke se save ho jaata.
@@ -1131,6 +1216,7 @@ function Profile() {
 
     setFormData(draft);
     setErrors({});
+    setResumeFile(null);
     setActionError("");
     setEditingSection(section.id);
   }
@@ -1139,6 +1225,7 @@ function Profile() {
     setEditingSection(null);
     setFormData({});
     setErrors({});
+    setResumeFile(null);
   }
 
   /*
@@ -1203,12 +1290,25 @@ function Profile() {
     const isCompanySection =
       editingSection === "ownerInfo" || editingSection === "companyInfo";
 
-    const validationErrors = {};
+    const hasNewResume = editingSection === "documents" && !!resumeFile;
 
-    Object.keys(formData).forEach((key) => {
+    if (hasNewResume) {
+      const resumeError = getResumeError(resumeFile);
+      if (resumeError) {
+        setErrors((prev) => ({ ...prev, resume: resumeError }));
+        return;
+      }
+    }
+
+    const validationErrors = {};
+    const dataToValidate = hasNewResume
+      ? { ...formData, resume: resumeFile.name }
+      : formData;
+
+    Object.keys(dataToValidate).forEach((key) => {
       if (!rules[key]) return; // is field ka koi rule nahi → skip
 
-      const value = formData[key];
+      const value = dataToValidate[key];
       const isEmpty = !String(value ?? "").trim();
 
       // Optional field (rule required nahi) khaali ho to validate mat karo
@@ -1218,7 +1318,7 @@ function Profile() {
         key,
         value,
         // Teesra argument sirf un rules ke liye hai jo doosri field dekhte hain
-        isCompanySection ? formData : { ...employee, personalInfo: formData }
+        isCompanySection ? formData : { ...employee, [editingSection]: dataToValidate }
       );
 
       if (error) validationErrors[key] = error;
@@ -1253,18 +1353,11 @@ function Profile() {
         return;
       }
 
-      // personalInfo node poora replace hota hai, isliye formData me record ki
-      // baaki keys bhi rehti hain (startEdit poora personalInfo copy karta hai).
-      // const result = await updateEmployeeSection(
-      //   companyCode,
-      //   employeeId,
-      //   "personalInfo",
-      //   formData
-      // );
-      const result = saveEmployeeSection(
+      const result = await saveEmployeeSection(
         employeeId,
-        "personalInfo",
-        formData
+        editingSection,
+        formData,
+        hasNewResume ? resumeFile : null
       );
 
       // Email/mobile kisi aur employee ka nikla — us field par error dikhao
@@ -1273,8 +1366,27 @@ function Profile() {
         return;
       }
 
-      setEmployee((prev) => ({ ...prev, personalInfo: result.data }));
+      setEmployee((prev) => ({ ...prev, [editingSection]: result.data }));
+
+      if (editingSection === "personalInfo") {
+        try {
+          const stored = JSON.parse(localStorage.getItem("currentUser") || "null");
+          if (stored) {
+            localStorage.setItem(
+              "currentUser",
+              JSON.stringify({
+                ...stored,
+                personalInfo: { ...(stored.personalInfo || {}), ...result.data },
+              })
+            );
+          }
+        } catch {
+          // ignore
+        }
+      }
+
       setEditingSection(null);
+      setResumeFile(null);
       setErrors({});
     } catch (error) {
       console.error("Failed to save profile:", error);

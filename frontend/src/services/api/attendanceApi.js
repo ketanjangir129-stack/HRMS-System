@@ -83,7 +83,5 @@ export const setAttendanceApprovalApi = (payload) =>
   mutateAttendance("/attendance/approval", "PATCH", payload);
 export const approveAttendanceDayApi = (payload) =>
   mutateAttendance("/attendance/approval/bulk", "PATCH", payload);
-export const applyLeaveAttendanceApi = (payload) =>
-  mutateAttendance("/attendance/leave/sync", "POST", payload);
-export const clearLeaveAttendanceApi = (payload) =>
-  mutateAttendance("/attendance/leave/sync", "DELETE", payload);
+// Leave <-> attendance sync happens on the server when leave is approved or
+// deleted; there is no client endpoint for it.

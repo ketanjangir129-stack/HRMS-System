@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import {
   createHoliday as createHolidayRecord,
@@ -33,6 +33,9 @@ function useHolidays(companyCode, year) {
 
   const [reloadKey, setReloadKey] = useState(0);
 
+  // The reload key the last load already honoured with a forced fetch.
+  const forcedReloadKey = useRef(0);
+
   /*
   |--------------------------------------------------------------------------
   | Load Holidays
@@ -57,7 +60,15 @@ function useHolidays(companyCode, year) {
 
       try {
 
-        const data = await getHolidays(companyCode, year);
+        /*
+        | Skip the cache only for the load a reload asked for. `reloadKey > 0`
+        | stayed true for good after the first save, so every later year
+        | switch went to the network for a year already cached.
+        */
+        const force = reloadKey !== forcedReloadKey.current;
+        forcedReloadKey.current = reloadKey;
+
+        const data = await getHolidays(companyCode, year, { force });
 
         if (cancelled) return;
 
@@ -124,7 +135,12 @@ function useHolidays(companyCode, year) {
       holiday
     );
 
-    if (result?.success && Number(result.year) === Number(year)) {
+    // A range can start in another year and run into this one.
+    const touchedYears = Array.isArray(result?.years)
+      ? result.years.map(Number)
+      : [Number(result?.year)];
+
+    if (result?.success && touchedYears.includes(Number(year))) {
       reload();
     }
 

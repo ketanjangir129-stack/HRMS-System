@@ -1,70 +1,35 @@
-import { db } from "../firebase/firebase";
-import { ref, get } from "firebase/database";
+import { getIdentityIndexApi } from "./api/onboardingApi";
 
 /*
 |--------------------------------------------------------------------------
 | Identity index
 |--------------------------------------------------------------------------
-| The employee ids, emails and mobiles already spoken for, read once.
-|
-| A single on-boarding invite can afford to re-read the company on every
-| check, but a bulk import of two hundred rows cannot: it would be two
-| hundred reads of the same two lists. So the lookup is built once, handed
-| around, and added to as records are written — which is also what stops a
-| file from on-boarding the same person twice inside one run.
+| The employee ids, emails and mobiles already spoken for.
+| Fetched via the backend API rather than raw database reads.
 |--------------------------------------------------------------------------
 */
 
 const normalize = (value) => String(value ?? "").trim().toLowerCase();
 
 export const buildEmployeeIdentityIndex = async (companyCode) => {
-
-  // Check against both active employees and pending onboarding requests.
-  const [employeeSnapshot, onboardingSnapshot] = await Promise.all([
-    get(ref(db, `companies/${companyCode}/employees`)),
-    get(ref(db, `companies/${companyCode}/onboardingRequests`)),
-  ]);
-
-  const employees = employeeSnapshot.exists()
-    ? employeeSnapshot.val()
-    : {};
-
-  const requests = onboardingSnapshot.exists()
-    ? onboardingSnapshot.val()
-    : {};
-
-  const records = [
-    ...Object.values(employees),
-    ...Object.values(requests),
-  ];
-
-  const index = {
-    employeeIds: new Set(),
-    emails: new Set(),
-    mobiles: new Set(),
-  };
-
-  records.forEach((record) => {
-
-    const employment = record.employmentInfo || {};
-    const personal = record.personalInfo || {};
-
-    // employeeId always lives in employmentInfo.
-    // Active employees store contact in personalInfo; onboarding requests
-    // store it in employmentInfo. Check both.
-    addToIdentityIndex(index, {
-      employeeId: employment.employeeId,
-      email: personal.email || employment.email,
-      mobile: personal.mobile || employment.mobile,
-    });
-
-  });
-
-  return index;
+  try {
+    const data = await getIdentityIndexApi();
+    return {
+      employeeIds: new Set(data.employeeIds || []),
+      emails: new Set(data.emails || []),
+      mobiles: new Set(data.mobiles || []),
+    };
+  } catch (error) {
+    console.error("Failed to fetch identity index from API:", error);
+    return {
+      employeeIds: new Set(),
+      emails: new Set(),
+      mobiles: new Set(),
+    };
+  }
 };
 
 export const addToIdentityIndex = (index, employee = {}) => {
-
   const employeeId = normalize(employee.employeeId);
   const email = normalize(employee.email);
   const mobile = normalize(employee.mobile);
@@ -82,7 +47,6 @@ export const addToIdentityIndex = (index, employee = {}) => {
 | input it belongs to.
 */
 export const findIdentityConflict = (index, employee = {}) => {
-
   const employeeId = normalize(employee.employeeId);
   const email = normalize(employee.email);
   const mobile = normalize(employee.mobile);
@@ -115,9 +79,7 @@ export const checkEmployeeUniqueness = async (
   companyCode,
   employee
 ) => {
-
   const index = await buildEmployeeIdentityIndex(companyCode);
-
   const conflict = findIdentityConflict(index, employee);
 
   if (conflict) {

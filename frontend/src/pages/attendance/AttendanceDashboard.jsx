@@ -137,7 +137,10 @@ function AttendanceDashboard() {
     loading: requestsLoading,
     approve,
     reject,
-  } = useAttendanceRequests(companyCode);
+  } = useAttendanceRequests(
+    // The whole requests tree is only listened to when its panel is shown.
+    showRequests ? companyCode : ""
+  );
 
   // No calendar on screen → no history listeners.
   const { history, loading: calendarLoading } = useAttendanceHistory(
@@ -211,24 +214,22 @@ function AttendanceDashboard() {
     pendingDays
   );
 
-  const applyHolidayDates = useHolidayDates(
-    companyCode,
-    useMemo(() => [currentYear, currentYear + 1], [currentYear])
-  ).holidayDates;
-
   /*
-  | Today is used for the notices; the calendar's year can be browsed
-  | independently, so both years are loaded for holiday tiles.
+  | One holiday read for the whole page: this year and next for the apply
+  | modal (a December leave can run into January), plus whichever year the
+  | calendar is browsing. Two separate hooks used to fetch this year twice.
   */
   const holidayYears = useMemo(
-    () => [today.getFullYear(), calendarMonth.year],
-    [today, calendarMonth.year]
+    () => [currentYear, currentYear + 1, calendarMonth.year],
+    [currentYear, calendarMonth.year]
   );
 
   const { holidayMap, holidayDates } = useHolidayDates(
     companyCode,
     holidayYears
   );
+
+  const applyHolidayDates = holidayDates;
 
   const todayKey = getDateKey();
 

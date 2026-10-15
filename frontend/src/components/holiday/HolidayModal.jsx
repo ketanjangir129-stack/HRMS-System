@@ -14,6 +14,7 @@ import {
 } from "../../utils/holiday/holidayConstants";
 import {
   findHolidayConflict,
+  findHolidayRangeConflict,
   formatHolidayDateWithDay,
   getDayName,
   isWeekend,
@@ -79,6 +80,8 @@ function HolidayForm({
   const [form, setForm] = useState(() => ({
     name: holiday?.name || "",
     date: holiday?.date || "",
+    endDate: holiday?.date || "",
+    isMultiDay: false,
     type: holiday?.type || HOLIDAY_TYPE.NATIONAL,
     description: holiday?.description || "",
     isOptional: Boolean(holiday?.isOptional),
@@ -127,16 +130,24 @@ function HolidayForm({
 
   };
 
+  const multiDayCount =
+    form.isMultiDay && form.date && form.endDate && form.endDate >= form.date
+      ? Math.round(
+          (new Date(`${form.endDate}T00:00:00Z`).getTime() -
+            new Date(`${form.date}T00:00:00Z`).getTime()) /
+            (24 * 60 * 60 * 1000)
+        ) + 1
+      : 1;
+
   /*
   | A live conflict warning while typing, so a duplicate is visible before the
   | save button is ever pressed.
   */
 
   const conflict =
-    form.date || form.name
+    form.date
       ? findHolidayConflict(holidays, {
           date: form.date,
-          name: form.name,
           ignoreId: holiday?.holidayId || "",
         })
       : null;
@@ -156,23 +167,51 @@ function HolidayForm({
     }
 
     /*
-    | The clash is re-derived from the current values rather than read from
-    | the render above, so a field changed in the same tick cannot slip past.
+    | Multi-day range conflict check
     */
+    if (form.isMultiDay && form.endDate && form.endDate !== form.date) {
 
+      const clash = findHolidayRangeConflict(holidays, {
+        startDate: form.date,
+        endDate: form.endDate,
+        ignoreId: holiday?.holidayId || "",
+      });
+
+      if (clash) {
+
+        toast.error(
+          `Conflict: ${clash.name} is already recorded on ${clash.date}.`
+        );
+
+        return;
+
+      }
+
+      await onSubmit({
+        name: form.name.trim(),
+        date: form.date,
+        endDate: form.endDate,
+        isMultiDay: true,
+        type: form.type,
+        description: form.description.trim(),
+        isOptional: form.isOptional,
+      });
+
+      return;
+
+    }
+
+    /*
+    | Single day conflict check
+    */
     const clash = findHolidayConflict(holidays, {
       date: form.date,
-      name: form.name,
       ignoreId: holiday?.holidayId || "",
     });
 
     if (clash) {
 
-      toast.error(
-        clash.date === form.date
-          ? `${clash.name} is already recorded on this date.`
-          : `A holiday named "${clash.name}" already exists.`
-      );
+      toast.error(`${clash.name} is already recorded on this date.`);
 
       return;
 
@@ -267,45 +306,128 @@ function HolidayForm({
 
           </div>
 
-          {/* Date */}
+          {/* Multi-Day Festival Toggle (Only when creating a new holiday) */}
+          {!isEdit && (
+            <div className="flex items-center justify-between rounded-xl border border-line bg-surface-muted px-4 py-3 sm:px-5">
+              <div>
+                <span className="block text-sm font-semibold text-ink">
+                  Multi-Day Holiday / Festival
+                </span>
+                <span className="text-xs text-ink-subtle">
+                  Declare multiple consecutive holiday dates (e.g. Diwali, Eid break).
+                </span>
+              </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={form.isMultiDay}
+                onClick={() => {
+                  const nextState = !form.isMultiDay;
+                  setField("isMultiDay", nextState);
+                  if (nextState && (!form.endDate || form.endDate < form.date)) {
+                    setField("endDate", form.date || "");
+                  }
+                }}
+                className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full transition-colors ${
+                  form.isMultiDay ? "bg-blue-600" : "bg-slate-300"
+                }`}
+              >
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
+                    form.isMultiDay ? "translate-x-6" : "translate-x-1"
+                  }`}
+                />
+              </button>
+            </div>
+          )}
 
-          <div>
+          {/* Date Selection: Range vs Single */}
+          {form.isMultiDay ? (
+            <div className="space-y-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div>
+                  <label
+                    htmlFor="holiday-start-date"
+                    className="ui-eyebrow mb-1.5 block"
+                  >
+                    Start Date <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    id="holiday-start-date"
+                    type="date"
+                    value={form.date}
+                    onChange={(event) => {
+                      const newStart = event.target.value;
+                      setField("date", newStart);
+                      if (form.endDate && form.endDate < newStart) {
+                        setField("endDate", newStart);
+                      }
+                    }}
+                    className={`${fieldClass(errors.date)} cursor-pointer`}
+                  />
+                  <FieldError message={errors.date} />
+                </div>
 
-            <label
-              htmlFor="holiday-date"
-              className="ui-eyebrow mb-1.5 block"
-            >
-              Holiday Date <span className="text-red-500">*</span>
-            </label>
+                <div>
+                  <label
+                    htmlFor="holiday-end-date"
+                    className="ui-eyebrow mb-1.5 block"
+                  >
+                    End Date <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    id="holiday-end-date"
+                    type="date"
+                    value={form.endDate}
+                    min={form.date || undefined}
+                    onChange={(event) =>
+                      setField("endDate", event.target.value)
+                    }
+                    className={`${fieldClass(errors.endDate)} cursor-pointer`}
+                  />
+                  <FieldError message={errors.endDate} />
+                </div>
+              </div>
 
-            <input
-              id="holiday-date"
-              type="date"
-              value={form.date}
-              onChange={(event) =>
-                setField("date", event.target.value)
-              }
-              className={`${fieldClass(errors.date)} cursor-pointer`}
-            />
+              {form.date && form.endDate && form.endDate >= form.date && (
+                <div className="rounded-xl border border-blue-200 bg-blue-50/70 p-3 text-xs text-blue-800">
+                  <span className="font-semibold">
+                    {multiDayCount} {multiDayCount === 1 ? "day" : "consecutive days"}
+                  </span>{" "}
+                  selected ({form.date} to {form.endDate}). Each day will be registered with individual dates for proper attendance & leave tracking.
+                </div>
+              )}
+            </div>
+          ) : (
+            <div>
+              <label
+                htmlFor="holiday-date"
+                className="ui-eyebrow mb-1.5 block"
+              >
+                Holiday Date <span className="text-red-500">*</span>
+              </label>
 
-            <FieldError message={errors.date} />
+              <input
+                id="holiday-date"
+                type="date"
+                value={form.date}
+                onChange={(event) =>
+                  setField("date", event.target.value)
+                }
+                className={`${fieldClass(errors.date)} cursor-pointer`}
+              />
 
-            {/*
-            | The day of the week the chosen date falls on, because a holiday
-            | that lands on a weekly off costs the company nothing and is
-            | worth noticing before it is saved.
-            */}
-            {!errors.date && form.date && (
+              <FieldError message={errors.date} />
 
-              <p className="mt-1.5 text-xs text-ink-faint">
-                {formatHolidayDateWithDay(form.date)}
-                {isWeekend(form.date) &&
-                  ` · ${getDayName(form.date)} is a weekend`}
-              </p>
-
-            )}
-
-          </div>
+              {!errors.date && form.date && (
+                <p className="mt-1.5 text-xs text-ink-faint">
+                  {formatHolidayDateWithDay(form.date)}
+                  {isWeekend(form.date) &&
+                    ` · ${getDayName(form.date)} is a weekend`}
+                </p>
+              )}
+            </div>
+          )}
 
           {/* Type */}
 
@@ -442,9 +564,7 @@ function HolidayForm({
 
               <FiAlertCircle className="mt-0.5 shrink-0" />
 
-              {conflict.date === form.date
-                ? `${conflict.name} is already recorded on ${formatHolidayDateWithDay(conflict.date)}.`
-                : `A holiday named "${conflict.name}" already exists on ${formatHolidayDateWithDay(conflict.date)}.`}
+              {`${conflict.name} is already recorded on ${formatHolidayDateWithDay(conflict.date)}.`}
 
             </p>
 

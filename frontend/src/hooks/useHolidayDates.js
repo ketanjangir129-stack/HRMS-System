@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { getHolidaysForYears } from "../services/holidayServices/holidayService";
 import {
@@ -38,6 +38,8 @@ function useHolidayDates(companyCode, years = []) {
 
   const [reloadKey, setReloadKey] = useState(0);
 
+  const forcedReloadKey = useRef(0);
+
   const yearKey = useMemo(
     () =>
       [
@@ -72,9 +74,15 @@ function useHolidayDates(companyCode, years = []) {
 
       try {
 
+        // A Refresh button really refreshes: the reload it triggered skips
+        // the cache, while ordinary mounts and year changes use it.
+        const force = reloadKey !== forcedReloadKey.current;
+        forcedReloadKey.current = reloadKey;
+
         const data = await getHolidaysForYears(
           companyCode,
-          yearList
+          yearList,
+          { force }
         );
 
         if (cancelled) return;

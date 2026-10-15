@@ -90,14 +90,6 @@ const approveAttendanceDay = runMutation(
   }),
   "Failed to approve attendance."
 );
-const applyLeaveAttendance = runMutation(
-  (req) => attendanceService.applyLeaveAttendance(req.user.companyCode, req.body || {}, req.user),
-  "Failed to synchronize approved leave with attendance."
-);
-const clearLeaveAttendance = runMutation(
-  (req) => attendanceService.clearLeaveAttendance(req.user.companyCode, req.body || {}, req.user),
-  "Failed to clear leave attendance."
-);
 
 const EMPLOYEE_ID_PATTERN = /^[A-Z0-9_-]{1,50}$/;
 const DATE_KEY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
@@ -475,6 +467,4 @@ module.exports = {
   updateAttendanceCorrection,
   setAttendanceApproval,
   approveAttendanceDay,
-  applyLeaveAttendance,
-  clearLeaveAttendance,
 };

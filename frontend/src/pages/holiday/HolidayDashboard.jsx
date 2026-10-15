@@ -34,7 +34,7 @@ import { getHolidayStats } from "../../utils/holiday/holidayUtils";
 
 function HolidayDashboard() {
 
-  const { company, currentUser } = useAuth();
+  const { company } = useAuth();
 
   const { canAccessSection } = useRoleAccess();
 
@@ -73,7 +73,10 @@ function HolidayDashboard() {
     loading: upcomingLoading,
     error: upcomingError,
     reload: reloadUpcoming,
-  } = useUpcomingHolidays(companyCode);
+  } = useUpcomingHolidays(
+    // Not fetched at all for a role that cannot see the panel.
+    showUpcoming ? companyCode : ""
+  );
 
   useEffect(() => {
 
@@ -90,16 +93,6 @@ function HolidayDashboard() {
     () => getHolidayStats(holidays),
     [holidays]
   );
-
-  /*
-  | Who declared the holiday, stored on the record so a company calendar can
-  | be traced back to the person who published it.
-  */
-  const actorName =
-    currentUser?.personalInfo?.name ||
-    currentUser?.name ||
-    currentUser?.email ||
-    "Admin";
 
   const handleRefresh = () => {
     reload();
@@ -163,10 +156,8 @@ function HolidayDashboard() {
 
       const result = editHoliday
         ? await updateHoliday(editHoliday, payload)
-        : await createHoliday({
-            ...payload,
-            createdBy: actorName,
-          });
+        // Who declared it is recorded by the server from the login.
+        : await createHoliday(payload);
 
       if (!result?.success) {
 
@@ -193,7 +184,9 @@ function HolidayDashboard() {
             : "Holiday updated successfully."
           : savedElsewhere
             ? `Holiday added to ${result.year}.`
-            : "Holiday added successfully."
+            : result?.count && result.count > 1
+              ? `${result.count} festival holidays added successfully.`
+              : "Holiday added successfully."
       );
 
       reloadUpcoming();

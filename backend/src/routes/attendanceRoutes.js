@@ -11,15 +11,22 @@ const {
   updateAttendanceCorrection,
   setAttendanceApproval,
   approveAttendanceDay,
-  applyLeaveAttendance,
-  clearLeaveAttendance,
 } = require("../controllers/attendanceController");
 
-const { authenticate } = require("../middleware/authMiddleware");
+const {
+  authenticate,
+  requireActiveAccount,
+} = require("../middleware/authMiddleware");
 const { requirePermission } = require("../middleware/permissionMiddleware");
 const upload = require("../middleware/uploadMiddleware");
 
 const router = express.Router();
+
+// Every attendance endpoint needs a valid token AND an active account, the
+// same as leave and holidays: a deactivated employee's token must not keep
+// punching in until it expires.
+router.use(authenticate);
+router.use(requireActiveAccount);
 
 /*
  * Multer errors (e.g. file too large) otherwise fall through to Express's
@@ -44,19 +51,20 @@ const attendancePhoto = (req, res, next) =>
 |--------------------------------------------------------------------------
 | Monthly Attendance
 |--------------------------------------------------------------------------
+| Reads are gated on the attendance page itself. The registry has no
+| `attendance.view` section, and which rows a role may see is already
+| narrowed by the service (self / managed departments / everyone).
 */
 
 router.get(
   "/monthly",
-  authenticate,
-  requirePermission("attendance.view"),
+  requirePermission("attendance"),
   getMonthlyAttendance
 );
 
 // Mutations use the permission sections already defined in Roles & Access.
 router.post(
   "/punch-in",
-  authenticate,
   requirePermission("attendance.myAttendance"),
   attendancePhoto,
   punchIn
@@ -64,7 +72,6 @@ router.post(
 
 router.post(
   "/punch-out",
-  authenticate,
   requirePermission("attendance.myAttendance"),
   attendancePhoto,
   punchOut
@@ -73,19 +80,20 @@ router.post(
 // Replace today's punch-in / punch-out photo (time and location unchanged).
 router.post(
   "/photo",
-  authenticate,
   requirePermission("attendance.myAttendance"),
   attendancePhoto,
   retakePunchPhoto
 );
 
 
-router.post("/manual", authenticate, requirePermission("attendance.daily"), saveManualAttendance);
-router.patch("/correction", authenticate, requirePermission("attendance.approvals"), updateAttendanceCorrection);
-router.patch("/approval/bulk", authenticate, requirePermission("attendance.approvals"), approveAttendanceDay);
-router.patch("/approval", authenticate, requirePermission("attendance.approvals"), setAttendanceApproval);
-router.post("/leave/sync", authenticate, requirePermission("attendance.approvals"), applyLeaveAttendance);
-router.delete("/leave/sync", authenticate, requirePermission("attendance.approvals"), clearLeaveAttendance);
+router.post("/manual", requirePermission("attendance.daily"), saveManualAttendance);
+router.patch("/correction", requirePermission("attendance.approvals"), updateAttendanceCorrection);
+router.patch("/approval/bulk", requirePermission("attendance.approvals"), approveAttendanceDay);
+router.patch("/approval", requirePermission("attendance.approvals"), setAttendanceApproval);
+
+// Leave <-> attendance sync is internal to leaveService (approve / delete).
+// It is deliberately NOT exposed as a route: a public endpoint let any
+// approver book leave days with no leave request and no balance used.
 
 /*
 |--------------------------------------------------------------------------
@@ -95,8 +103,7 @@ router.delete("/leave/sync", authenticate, requirePermission("attendance.approva
 
 router.get(
   "/daily",
-  authenticate,
-  requirePermission("attendance.view"),
+  requirePermission("attendance"),
   getDailyAttendance
 );
 
@@ -108,8 +115,7 @@ router.get(
 
 router.get(
   "/employee/:employeeId",
-  authenticate,
-  requirePermission("attendance.view"),
+  requirePermission("attendance"),
   getEmployeeAttendance
 );
 

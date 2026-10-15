@@ -1,6 +1,6 @@
 import { db } from "../../firebase/firebase";
 import { ref, onValue } from "firebase/database";
-import { getMonthPath, getMonthDateKeys } from "../../utils/attendance/attendanceDate";
+import { getDateKey, getMonthPath, getMonthDateKeys } from "../../utils/attendance/attendanceDate";
 import { APPROVAL_STATUS } from "../../utils/attendance/attendanceConstants";
 import {
   getMonthlyAttendanceApi,
@@ -13,8 +13,6 @@ import {
   updateAttendanceCorrectionApi,
   setAttendanceApprovalApi,
   approveAttendanceDayApi,
-  applyLeaveAttendanceApi,
-  clearLeaveAttendanceApi,
 } from "../api/attendanceApi";
 
 const recordsPath = (companyCode) => `companies/${companyCode}/attendance/records`;
@@ -24,13 +22,18 @@ const recordPath = (companyCode, date, employeeId) =>
 
 // Non-realtime reads and every attendance mutation use the authenticated API.
 export const getMonthlyAttendanceRecords = async (companyCode, year, month) => {
+  let result;
+
+  // Only a failed request is a connection problem. A server answer such as
+  // 403 or a validation error keeps its own message.
   try {
-    const result = await getMonthlyAttendanceApi(year, month);
-    if (!result?.success) throw new Error(result?.message || "Failed to fetch monthly attendance.");
-    return result?.data?.records || {};
+    result = await getMonthlyAttendanceApi(year, month);
   } catch (error) {
     throw new Error("Unable to connect to the server. Please try again.", { cause: error });
   }
+
+  if (!result?.success) throw new Error(result?.message || "Failed to fetch monthly attendance.");
+  return result?.data?.records || {};
 };
 
 export const getDailyAttendanceRecords = async (date) => {
@@ -125,7 +128,16 @@ export const subscribeToEmployeeDayFields = (
 export const subscribeToEmployeeAttendanceHistory = (
   companyCode, employeeId, year, month, onData, onError
 ) => {
-  const dates = getMonthDateKeys(year, month);
+  /*
+  | Days that have not happened yet cannot hold a record, so they are not
+  | listened to. Tomorrow is kept so a tab left open past midnight still picks
+  | up the new day's punch; the month is re-subscribed whenever it changes.
+  */
+  const now = new Date();
+  const lastDay = getDateKey(
+    new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1)
+  );
+  const dates = getMonthDateKeys(year, month).filter((date) => date <= lastDay);
   const pending = new Set(dates);
   const records = new Map();
   let failed = false;
@@ -156,21 +168,14 @@ export const subscribeToEmployeeAttendanceHistory = (
     )
   );
 
+  // A month entirely in the future has nothing to wait for.
+  if (dates.length === 0) emit();
+
   return () => unsubscribers.forEach((unsubscribe) => unsubscribe());
 };
 
-// Keep the established signatures for callers. Identity and approver fields
-// are intentionally omitted from the request and derived by the backend.
-// export const punchInEmployee = async (_companyCode, employeeId, location = null) => {
-//   if (!employeeId) return { success: false, message: "Employee account not found." };
-//   return punchInAttendanceApi({ employeeId, location });
-// };
-
-// export const punchOutEmployee = async (_companyCode, employeeId, location = null, date = "") => {
-//   if (!employeeId) return { success: false, message: "Employee account not found." };
-//   return punchOutAttendanceApi({ employeeId, location, date });
-// };
-
+// Keep the established signatures for callers. The backend takes the employee
+// from the login token; the id sent here is only checked against it.
 export const punchInEmployee = async (
   _companyCode,
   employeeId,
@@ -226,14 +231,6 @@ export const saveAttendance = async (_companyCode, attendance, _approvedBy = "")
 
 export const updateAttendanceRecord = async (_companyCode, request, _approvedBy = "") =>
   updateAttendanceCorrectionApi(request);
-
-export const applyLeaveAttendance = async (_companyCode, {
-  employeeId, dateKeys = [], status, remarks = "", leaveRequestId = "",
-}) => applyLeaveAttendanceApi({ employeeId, dateKeys, status, remarks, leaveRequestId });
-
-export const clearLeaveAttendance = async (_companyCode, {
-  employeeId, dateKeys = [], leaveRequestId = "",
-}) => clearLeaveAttendanceApi({ employeeId, dateKeys, leaveRequestId });
 
 export const setAttendanceApproval = async (_companyCode, {
   date, employeeId, status, remarks = "",

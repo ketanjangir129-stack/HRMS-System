@@ -129,6 +129,8 @@ function LeaveDashboard() {
         reload: reloadHolidays,
     } = useHolidayDates(
         companyCode,
+        // Next year too: a December leave can run into January, and those
+        // January holidays must not be charged.
         useMemo(() => [year, year + 1], [year])
     );
 
