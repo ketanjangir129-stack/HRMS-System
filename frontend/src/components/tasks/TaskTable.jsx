@@ -141,7 +141,7 @@ function TaskTable({
       value={task.status || TASK_STATUSES[0]}
       onChange={(next) => onStatusChange(task, next)}
       ariaLabel={`Change status of ${task.title}`}
-      className="cursor-pointer rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2"
+      className="cursor-pointer rounded-full transition-shadow focus:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 hover:ring-2 hover:ring-brand/40"
       trigger={<TaskBadge value={task.status || TASK_STATUSES[0]} withCaret />}
     />
   );

@@ -152,25 +152,25 @@ function Pagination({
 
     return (
 
-        <div className="flex flex-col gap-4 border-t border-slate-200 bg-white px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-4 border-t border-line bg-surface px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
 
             {/* Left side */}
 
-            <div className="flex flex-col gap-3 text-sm text-slate-500 sm:flex-row sm:items-center">
+            <div className="flex flex-col gap-3 text-sm text-ink-subtle sm:flex-row sm:items-center">
 
                 {showInfo && (
 
                     <p>
                         Showing{" "}
-                        <span className="font-semibold text-slate-700">
+                        <span className="font-semibold text-ink">
                             {startItem}
                         </span>
                         {" "}to{" "}
-                        <span className="font-semibold text-slate-700">
+                        <span className="font-semibold text-ink">
                             {endItem}
                         </span>
                         {" "}of{" "}
-                        <span className="font-semibold text-slate-700">
+                        <span className="font-semibold text-ink">
                             {totalItems}
                         </span>
                     </p>
@@ -192,7 +192,8 @@ function Pagination({
                                     Number(e.target.value)
                                 )
                             }
-                            className="rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                            aria-label="Rows per page"
+                            className="rounded-lg border border-line bg-surface px-2 py-1.5 text-sm text-ink outline-none transition focus:border-brand focus:ring-3 focus:ring-brand-ring"
                         >
 
                             {pageSizeOptions.map((size) => (
@@ -244,8 +245,8 @@ function Pagination({
                     disabled={currentPage === 1}
                     className={`${buttonBase} ${
                         currentPage === 1
-                            ? "border-slate-200 text-slate-300"
-                            : "border-slate-300 text-slate-600 hover:bg-slate-50"
+                            ? "border-line text-ink-faint"
+                            : "border-line text-ink-muted hover:bg-surface-muted"
                     }`}
                     aria-label="Previous page"
                 >
@@ -264,7 +265,7 @@ function Pagination({
 
                                 <span
                                     key={`ellipsis-${index}`}
-                                    className="flex h-9 min-w-9 items-center justify-center text-slate-400"
+                                    className="flex h-9 min-w-9 items-center justify-center text-ink-faint"
                                 >
                                     ...
                                 </span>
@@ -289,8 +290,8 @@ function Pagination({
                                 }
                                 className={`${buttonBase} ${
                                     active
-                                        ? "border-blue-600 bg-blue-600 text-white shadow-sm"
-                                        : "border-slate-300 text-slate-600 hover:bg-slate-50"
+                                        ? "border-brand bg-brand text-white shadow-sm"
+                                        : "border-line text-ink-muted hover:bg-surface-muted"
                                 }`}
                             >
                                 {page}
@@ -314,8 +315,8 @@ function Pagination({
                     }
                     className={`${buttonBase} ${
                         currentPage === totalPages
-                            ? "border-slate-200 text-slate-300"
-                            : "border-slate-300 text-slate-600 hover:bg-slate-50"
+                            ? "border-line text-ink-faint"
+                            : "border-line text-ink-muted hover:bg-surface-muted"
                     }`}
                     aria-label="Next page"
                 >

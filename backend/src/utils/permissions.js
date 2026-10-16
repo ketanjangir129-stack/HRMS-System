@@ -92,6 +92,20 @@ const DEFAULTS = {
     requests: { hr: true, manager: false, employee: false },
     history: { hr: true, manager: false, employee: false },
   },
+  tasks: {
+    enabled: { hr: true, manager: true, employee: true },
+    viewAll: { hr: true, manager: true, employee: false },
+    progress: { hr: true, manager: true, employee: false },
+    workload: { hr: true, manager: true, employee: false },
+    urgent: { hr: true, manager: true, employee: false },
+    recent: { hr: true, manager: true, employee: false },
+    activity: { hr: true, manager: true, employee: true },
+    create: { hr: true, manager: true, employee: false },
+    createOwn: { hr: true, manager: true, employee: true },
+    update: { hr: true, manager: true, employee: false },
+    updateOwn: { hr: true, manager: true, employee: true },
+    delete: { hr: true, manager: false, employee: false },
+  },
 
 };
 

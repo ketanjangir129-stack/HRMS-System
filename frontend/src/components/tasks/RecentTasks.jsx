@@ -1,4 +1,5 @@
 import { FiClock, FiInbox } from "react-icons/fi";
+import useRoleAccess from "../../hooks/useRoleAccess";
 import { assigneeName, formatDate } from "../../utils/tasks/taskUtils";
 import TaskBadge from "./TaskBadge";
 import TaskSectionCard from "./TaskSectionCard";
@@ -16,10 +17,17 @@ import TaskSectionCard from "./TaskSectionCard";
 */
 
 function RecentTasks({ tasks, employees, onViewAll }) {
+  // AllTasks yahi haq dekhkar list chhaant-ta hai (tasks.viewAll) — subtitle
+  // usi ke hisaab se: sabke tasks dikh rahe hon to company-wide, warna apne.
+  const { canAccessSection } = useRoleAccess();
+  const canViewAll = canAccessSection("tasks.viewAll");
+
   return (
     <TaskSectionCard
       title="Recent tasks"
-      subtitle="Latest activity across the company"
+      subtitle={
+        canViewAll ? "Latest activity across the company" : "Your latest activity"
+      }
       icon={<FiClock />}
       actionLabel="View all"
       onAction={onViewAll}
