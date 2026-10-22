@@ -12,6 +12,7 @@ const onboardingRoutes = require("./src/routes/onboardingRoutes");
 const salaryRoutes = require("./src/routes/salaryRoutes");
 const payrollRoutes = require("./src/routes/payrollRoutes");
 const reimbursementRoutes = require("./src/routes/reimbursementRoutes");
+const taskRoutes = require("./src/routes/taskRoutes");;
 
 const express = require("express");
 const cors = require("cors");
@@ -56,6 +57,7 @@ app.use("/api/onboarding", onboardingRoutes);
 app.use("/api/salary", salaryRoutes);
 app.use("/api/payroll", payrollRoutes);
 app.use("/api/reimbursement", reimbursementRoutes);
+app.use("/api/tasks", taskRoutes);
 
 
 app.listen(PORT,()=>{

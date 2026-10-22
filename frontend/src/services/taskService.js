@@ -1,6 +1,13 @@
+import {
+  createTaskApi,
+  deleteTaskApi,
+  updateTaskApi,
+  updateTaskStatusApi,
+} from "./api/taskApi";
+
+
 import {db} from "../firebase/firebase";
-import {ref, onValue, push, set, update, get} from "firebase/database";
-import {getDateKey, getMonthPath} from "../utils/attendance/attendanceDate";
+import {ref, onValue, update} from "firebase/database";
 import {
   notifyTaskAssigned,
   notifyTaskReassigned,
@@ -85,44 +92,7 @@ const LEGACY_BUCKET = "";
 */
 const UNDATED_NODE = "undated";
 
-/*
-| Khaana us din ka hai jis din task diya gaya — us din ka nahi jis din wo
-| khatam hona hai.
-|
-| Pehle ye dueDate se banta tha, aur wo do wajah se badla gaya:
-|
-|   1. Structure ka matlab. "run/2026/August/2026-08-25" padhne par ab wo
-|      seedha kehta hai "25 August ko ye kaam diya gaya" — ek aisi baat jo
-|      badalti hi nahi. dueDate wala khaana "25 ko due" kehta tha, aur wo
-|      har edit ke saath badal sakta tha.
-|
-|   2. Task ab kabhi hilta nahi. Assign hone ka din ateet hai — use koi
-|      edit nahi badal sakta, isliye task jahan likha gaya wahin poori umar
-|      rehta hai. Pehle due date badalna ek move ban jaata tha: purani
-|      jagah se hatao, nayi par poora record baithao. Wo poora raasta —
-|      aur uske saath do jagah ya kahin nahi hone ka khatra — ab hai hi
-|      nahi.
-|
-| Din ki key sidhe caller se aati hai, timestamp se nahi: createTask ke paas
-| pehle se ek `now` hai jo createdAt mein bhi jaata hai, aur dono ek hi
-| lamhe se banein — warna aadhi raat par task ek din ke khaane mein aur
-| doosre din ke createdAt ke saath baith sakta hai.
-|
-| Month node attendance ke getMonthPath() se banta hai — wahi helper jo
-| attendance, holiday aur leave teenon use karte hain, taaki "August" ek hi
-| jagah tay ho. Wo galat date par khaali string deta hai, aur wahi is jagah
-| ka pehredaar hai: bina date, aadhi date ya bakwaas date — sab undated
-| mein jaate hain, `run/undefined/undefined/...` kabhi nahi banta.
-|
-| Date khud parse nahi ki jaati (new Date se to bilkul nahi): key pehle se
-| local calendar din hai, aur usme se saal-mahina nikalna hi ek tarika hai
-| jisme timezone ghus hi nahi sakta.
-*/
-const taskBucket = (dateKey) => {
-  const monthPath = getMonthPath(dateKey);
 
-  return monthPath ? `${monthPath}/${dateKey}` : UNDATED_NODE;
-};
 
 /*
 | Task ka path, tasksPath ke sapeksh. Multi-path update ki keys isi se
@@ -176,32 +146,7 @@ const stripReadFields = (task) => {
   return persisted;
 };
 
-/*
-| Sirf id se task ka khaana dhoondho.
-|
-| Ye tabhi chalta hai jab caller ne poora task nahi, sirf id di ho —
-| deleteTask ki purani shakal. Ek read lagti hai, par delete user khud
-| confirm karke karta hai, isliye ek round trip yahan mehnga nahi.
-|
-| Na mile to null — khaali string nahi. Dono mein farak hai: khaali string
-| ek asli jagah hai (legacy), aur null ka matlab hai "aisi koi task hai hi
-| nahi". Pehle dono ek hi jawab dete the, aur us soorat mein likhne wala
-| ek na-maujood task ke naam par legacy path par kuch bhi likh sakta tha.
-| Ab har caller khud tay karta hai: delete ke liye legacy maan lena
-| bekhatar hai (null likhna waise bhi kuch nahi karta), likhne ke liye
-| nahi.
-*/
-const lookupBucket = async (companyCode, taskId) => {
-  const snapshot = await get(ref(db, runPath(companyCode)));
 
-  if (!snapshot.exists()) return null;
-
-  const found = flattenRun(snapshot.val()).find(
-    (task) => task.id === taskId
-  );
-
-  return found ? found[BUCKET_FIELD] : null;
-};
 
 /*
 |--------------------------------------------------------------------------
@@ -486,24 +431,7 @@ const actionUserKeyOf = (value) => {
   return key.replace(/[.#$[\]/]/g, "_");
 };
 
-/*
-| actionUser { id, name } page se aata hai — service currentUser padh nahi
-| sakti, bilkul waise hi jaise createdBy/createdById ke saath hota hai.
-|
-| Uski id entry mein nahi jaati: wo path mein hi hai. Waise hi timestamp
-| bhi nahi — wo key hai. actionBy rehta hai kyunki timeline har line par
-| naam dikhati hai, aur Owner employees list mein hota hi nahi — id se
-| uska naam kabhi nikalta nahi.
-|
-| Khaali string isliye ki Firebase undefined leta hi nahi.
-*/
-const activityEntry = (type, from, to, actionUser, extra = {}) => ({
-  type,
-  fromStatus: from,
-  toStatus: to,
-  actionBy: actionUser?.name || "",
-  ...extra,
-});
+
 
 /*
 |--------------------------------------------------------------------------
@@ -535,66 +463,22 @@ const activityEntry = (type, from, to, actionUser, extra = {}) => ({
 | History pehle status change par shuru hoti hai.
 */
 export const createTask = async (companyCode, task) => {
-  /*
-  | Key pehle ki tarah run ke root se banti hai — push sirf ek unique naam
-  | deta hai, jagah nahi. Task uske baad apne khaane mein likha jaata hai.
-  */
-  const taskId = push(ref(db, runPath(companyCode))).key;
-
-  /*
-  | Bina pehchaan ke task banta hi nahi — ownership isi par tiki hai
-  | (isTaskCreator). Khaali chhod dene par har us task ka maalik ek jaisa
-  | ho jaata jiska koi maalik nahi.
-  */
   if (!task.createdById) {
     throw new Error("Cannot create a task without a signed-in user.");
   }
 
-  const now = Date.now();
+  const result = await createTaskApi(stripReadFields(task));
 
-  const newTask = {
-    ...stripReadFields(task),
-    status: DEFAULT_TASKS_STATUS,
-    createdAt: now,
-    updatedAt: now,
-  };
+  if (!result || result.success === false) {
+    throw new Error(result?.message || "Unable to create the task.");
+  }
 
-  /*
-  | Naya task us din ke khaane mein jis din wo diya ja raha hai — yaani aaj.
-  | Khaana record mein nahi jaata: wo path hi hai.
-  |
-  | Din usi `now` se banta hai jo createdAt mein gaya, alag se Date.now()
-  | dobara nahi poochha jaata: aadhi raat ke aas-paas do call do alag din de
-  | sakti hain, aur tab task ek din ke khaane mein baithta par createdAt
-  | doosre din ka hota.
-  |
-  | Undated yahan practically nahi banta — aaj ki key hamesha theek hoti hai
-  | — par taskBucket ka wo pehredaar hataya nahi gaya, kyunki undated node
-  | purane tasks ke liye ab bhi ek asli jagah hai.
-  */
-  const bucket = taskBucket(getDateKey(now));
+  const created = result.task;
 
-  await set(ref(db, taskPath(companyCode, bucket, taskId)), newTask);
-
-  // Khaana lautaye hue task par bhi, taaki jo ise aage badhaye wo bina
-  // dhoondhe likh sake — bilkul waise jaise flattenRun deta hai
-  const created = {id:taskId, ...newTask, [BUCKET_FIELD]: bucket};
-
-  /*
-  | Task pehle banta hai, khabar baad mein — aur khabar na ja paaye to bhi
-  | task bana hua hi rehta hai. Wahi tarika leaveService bhi apnata hai:
-  | notification ki galti user ke kaam ko kabhi nahi rokti, sirf console
-  | tak jaati hai.
-  |
-  | Action user alag se nahi maangte — wo record mein pehle se hai.
-  | createdById/createdBy wahi jodi hai jo getCurrentActionUser() deta hai,
-  | isliye "apne hi liye banaya task" wala case service ke guard mein khud
-  | pakda jaata hai: recipient aur actor dono ek hi id.
-  */
   try {
     await notifyTaskAssigned(companyCode, created, {
-      id: newTask.createdById,
-      name: newTask.createdBy,
+      id: created.createdById,
+      name: created.createdBy,
     });
   } catch (notificationError) {
     console.error("Task assignment notification failed:", notificationError);
@@ -631,85 +515,29 @@ export const updateTask = async (
   previousTask,
   actionUser
 ) => {
-  const updates = { updatedAt: Date.now() };
+  const payload = {};
 
   EDITABLE_FIELDS.forEach((field) => {
     if (task?.[field] !== undefined) {
-      updates[field] = task[field];
+      payload[field] = task[field];
     }
   });
 
-  /*
-  | Task abhi kahan padi hai.
-  |
-  | Purani copy ho to seedha BUCKET_FIELD se — flattenRun ne chipkaya hua.
-  | Na ho to Firebase se dhoondhna padta hai. Pehle us soorat mein legacy
-  | maan liya jaata tha, aur ek dated task par aisa update run/{taskId} par
-  | ek aadha-adhoora node chhod deta: asli task jyon ka tyon, aur uske naam
-  | par ek nakli node jisme sirf abhi bheji gayi fields hotin.
-  |
-  | Na mile to likhte nahi — saaf mana kar dete hain, wahi baat jo moveTask
-  | bhi kehta hai jab purani jagah khaali mile. resolveBucket kabhi null
-  | nahi deta, isliye ye check sirf lookup wale raaste par lagta hai.
-  */
-  const oldBucket = previousTask
-    ? resolveBucket(previousTask)
-    : await lookupBucket(companyCode, taskId);
+  const result = await updateTaskApi(taskId, payload);
 
-  if (oldBucket === null) {
-    throw new Error("This task no longer exists.");
+  if (!result || result.success === false) {
+    throw new Error(result?.message || "Unable to update the task.");
   }
 
-  /*
-  | Seedha partial update, apni hi jagah par — edit se khaana kabhi badalta
-  | nahi.
-  |
-  | Khaana ab assign hone ke din ka hai (taskBucket), aur wo din ateet mein
-  | hai: koi edit use badal nahi sakta. Isliye task jahan likha gaya wahin
-  | rehta hai, aur "kya due date badli" poochhne ki zaroorat hi nahi bachti.
-  |
-  | Pehle ye branch hoti thi. dueDate badalne par task ka path badal jaata
-  | tha, to edit ek move ban jaata: purani jagah se hatao aur nayi jagah par
-  | poora record baithao, dono ek hi update() mein taaki task kabhi do jagah
-  | ya kahin nahi ho. Wo poora khatra ab maujood hi nahi hai — na hi wo
-  | code, jo isi ke saath hataya gaya.
-  */
-  await update(
-    ref(db, taskPath(companyCode, oldBucket, taskId)),
-    updates
-  );
-
-  /*
-  | Bina purani copy ke kuch compare nahi ho sakta — na "assignee badla",
-  | na "kya badla". Us soorat mein edit chup-chaap ho jaata hai.
-  */
   if (!previousTask) return;
 
-  /*
-  | Purani copy par nayi values chadha kar poora task banta hai — service
-  | ko title, due date aur assignee ek saath chahiye, aur id bhi, jo
-  | updates mein kabhi nahi hoti.
-  */
-  const updatedTask = { ...previousTask, ...updates, id: taskId };
+  const updatedTask = { ...result.task, id: taskId };
 
-  /*
-  | Field tabhi hoti hai jab payload mein aayi ho, isliye pehle uska hona
-  | dekhte hain: bina assignedTo wala edit purani value se takra kar jhooti
-  | "reassign" na bana de.
-  */
   const reassigned =
-    updates.assignedTo !== undefined &&
-    previousTask.assignedTo !== updates.assignedTo;
+    payload.assignedTo !== undefined &&
+    previousTask.assignedTo !== updatedTask.assignedTo;
 
   try {
-    /*
-    | Ek edit, ek khabar. Assignee badla to reassign hi jaata hai — us
-    | khabar mein title aur due date pehle se hain, to uske upar "Task
-    | Updated" bhejna wahi baat do baar kehna hoga.
-    |
-    | Warna kya-kya badla ye service khud tay karti hai (title, dueDate,
-    | priority). Sirf description badli ho to wo kuch likhti hi nahi.
-    */
     if (reassigned) {
       await notifyTaskReassigned(
         companyCode,
@@ -765,80 +593,22 @@ export const updateTaskStatus = async (
 
   if (fromStatus === status) return false;
 
-  const now = Date.now();
-  // Kaam karne wale ki key — status likhne se pehle, taaki bina pehchaan
-  // wala change run mein bhi na jaye aur records mein bhi na
-  const actionUserKey = actionUserKeyOf(actionUser?.id);
-  const updates = {};
+  // Bina pehchaan likhte nahi — wahi purana guard, wahi message
+  actionUserKeyOf(actionUser?.id);
 
-  /*
-  | Ek task ka live status + uski entry — dono ek saath, taaki koi jagah
-  | chhoote nahi. Keys tasks node ke sapeksh hain: run/... live data hai,
-  | records/... history.
-  |
-  | Ek hi write ki saari entries ka waqt bhi ek hi rehta hai (now), aur wahi
-  | key bhi banta hai. Do task ek hi millisecond par bhi takraate nahi —
-  | taskId path mein alag hai.
-  */
-  const addChange = (item, type, from, to, extra = {}) => {
-    /*
-    | Har task apne khaane mein. Auto-pause wale doosri taareekh par ho
-    | sakte hain, isliye path har ek ka apna banta hai — ek hi run/{id}
-    | maan lena unme se kisi ko bhi chhoot deta.
-    */
-    const rel = taskRelPath(resolveBucket(item), item.id);
+  // pauseTasks page abhi bhi bhejta hai, par auto-pause backend khud
+  // nikalta hai (usi niyam se) — isliye yaha use nahi hota. Signature
+  // same rakhi hai taaki AllTasks me kuch badalna na pade.
+  void pauseTasks;
 
-    updates[`${rel}/status`] = to;
-    updates[`${rel}/updatedAt`] = now;
-    updates[`records/${item.id}/activity/${actionUserKey}/${now}`] = activityEntry(
-      type,
-      from,
-      to,
-      actionUser,
-      extra
-    );
-  };
+  const result = await updateTaskStatusApi(taskId, status);
 
-  addChange(task, ACTIVITY_TYPE.STATUS_CHANGED, fromStatus, status);
+  if (!result || result.success === false) {
+    throw new Error(result?.message || "Unable to update task status.");
+  }
 
-  pauseTasks.forEach((item) => {
-    // Wahi task dobara pause na ho jaye jise abhi start kar rahe hain
-    if (!item?.id || item.id === taskId) return;
+  if (result.changed === false) return false;
 
-    /*
-    | auto_paused apna alag type hai, aur auto: true bhi rehta hai — purani
-    | entries usi flag se pehchani jaati hain, isliye wo hataya nahi. Action
-    | user phir bhi wahi hai jisne doosra task start kiya — zimmedari usi ki hai.
-    */
-    addChange(
-      item,
-      ACTIVITY_TYPE.AUTO_PAUSED,
-      item.status || IN_PROGRESS_STATUS,
-      PAUSED_STATUS,
-      {
-        auto: true,
-        message: `Paused automatically when "${
-          task.title || "another task"
-        }" was started`,
-      }
-    );
-  });
-
-  await update(ref(db, tasksPath(companyCode)), updates);
-
-  /*
-  | Khabar sirf poora hone par. Task jitni baar shuru-ruka hota hai, utni
-  | baar creator ko batana matlab bell ko shor bana dena — aur jo shor hai
-  | use koi padhta nahi. Kaam kahan tak pahuncha, wo /tasks par hamesha
-  | dikhta hi hai; khatam hona wahi ek mod hai jiska intezaar hota hai.
-  |
-  | Sirf wahi task jise user ne badla. pauseTasks isme nahi aate: unka
-  | status kisi ne chuna nahi, wo "ek waqt par ek kaam" ke niyam ka side
-  | effect hain — aur wo tasks usi employee ke apne hote hain.
-  |
-  | Yahan tak pahunche hain, matlab status sach mein badla hai: upar
-  | fromStatus === status wala check pehle hi false lauta chuka hota.
-  */
   if (status === COMPLETED_STATUS) {
     try {
       await notifyTaskStatusChanged(companyCode, task, status, actionUser);
@@ -864,18 +634,9 @@ export const deleteTask = async (companyCode, task) => {
 
   if (!taskId) return;
 
-  /*
-  | Na mili to legacy — delete ke liye ye bekhatar hai: jo path hai hi
-  | nahi use null karne se kuch nahi hota, aur records/{taskId} phir bhi
-  | saaf ho jaata hai.
-  */
-  const bucket =
-    typeof task === "string"
-      ? (await lookupBucket(companyCode, taskId)) ?? LEGACY_BUCKET
-      : resolveBucket(task);
+  const result = await deleteTaskApi(taskId);
 
-  await update(ref(db, tasksPath(companyCode)), {
-    [taskRelPath(bucket, taskId)]: null,
-    [`records/${taskId}`]: null,
-  });
+  if (!result || result.success === false) {
+    throw new Error(result?.message || "Unable to delete the task.");
+  }
 };

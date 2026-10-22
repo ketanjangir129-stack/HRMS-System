@@ -103,6 +103,7 @@ export const ResignationcreateApi = async (
     reason,
     lastWorkingDay,
     noticePeriodDays,
+    
   }
 ) => {
   if (!companyCode) {

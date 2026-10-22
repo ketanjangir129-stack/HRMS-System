@@ -1,4 +1,5 @@
 import {
+  FiCalendar,
   FiCheckCircle,
   FiLayers,
   FiLoader,
@@ -12,8 +13,8 @@ import {
 | Ginti khud nahi karta — taskUtils.js ke taskSummary() se banaya hua object
 | leta hai.
 |
-| Teen cards wahi hain jo owner ko roz dekhne hote hain: kul kitna kaam hai,
-| kya chal raha hai, aur kitna nipat chuka hai.
+| Chaar cards wahi hain jo owner ko roz dekhne hote hain: kul kitna kaam hai,
+| kya chal raha hai, kitna nipat chuka hai, aur aaj kya due hai.
 | To Do ki poori distribution TaskProgress section mein hai.
 |
 | Panel `.ui-card` hai — wahi jo Dashboard ke cards, Task overview aur baaki
@@ -22,11 +23,11 @@ import {
 |
 | Text ke saare rang tokens se hain (ink / ink-subtle / ink-faint), aur har
 | card ke hue ke liye wahi Tailwind jodi jo project mein har jagah chalti hai
-| — `bg-violet-50 text-violet-600 ring-violet-200`. index.css un teenon ka
+| — `bg-violet-50 text-violet-600 ring-violet-200`. index.css un chaaron ka
 | dark rupantar pehle se rakhta hai, isliye light mein ye halke tinted chip
 | hain aur dark mein gehre.
 |
-| Hue teen hain — violet, blue (project mein indigo par point karta hai,
+| Hue chaar hain — violet, blue (project mein indigo par point karta hai,
 | yaani brand), aur emerald. Rang icon
 | par bhi hai, kone ke wash par bhi aur neeche ki curve par bhi, isliye card
 | ka matlab rang se pehchanne wale ko kuch naya seekhna nahi padta.
@@ -49,10 +50,10 @@ function TaskSummaryCards({ summary }) {
       key: "total",
       title: "Total tasks",
       value: summary.total,
-      percentage: 100,
+      percentage: total ? 100 : 0,
       subtitle: "Total assigned",
       icon: <FiLayers />,
-      // Icon ka chip — teenon ka dark rupantar index.css mein hai
+      // Icon ka chip — chaaron ka dark rupantar index.css mein hai
       iconBg: "bg-violet-50",
       iconColor: "text-violet-600",
       iconRing: "ring-violet-200",
@@ -64,7 +65,7 @@ function TaskSummaryCards({ summary }) {
       glow: "bg-violet-500/15",
       // Sparkline ka stroke — 500 mid-tone hai, dono theme mein padhne layak
       line: "text-violet-500",
-      // Har card ki apni curve — sirf isliye ki teenon ek jaise na dikhein
+      // Har card ki apni curve — sirf isliye ki chaaron ek jaise na dikhein
       path: "M0 26 C 14 20, 24 10, 38 12 S 62 24, 76 15 S 104 6, 120 10",
     },
     {
@@ -94,6 +95,20 @@ function TaskSummaryCards({ summary }) {
       glow: "bg-emerald-500/15",
       line: "text-emerald-500",
       path: "M0 22 C 16 24, 26 12, 40 14 S 62 8, 78 14 S 104 8, 120 4",
+    },
+    {
+      key: "dueToday",
+      title: "Due Today",
+      value: summary.dueToday,
+      percentage: percent(summary.dueToday),
+      subtitle: "Needs attention",
+      icon: <FiCalendar />,
+      iconBg: "bg-amber-50",
+      iconColor: "text-amber-600",
+      iconRing: "ring-amber-200",
+      glow: "bg-amber-500/15",
+      line: "text-amber-500",
+      path: "M0 20 C 14 16, 28 22, 42 14 S 66 18, 80 10 S 102 14, 120 8",
     },
   ];
 
@@ -163,7 +178,7 @@ function TaskSummaryCards({ summary }) {
           </div>
 
           {/*
-            Sajaavati curve. mt-auto isliye ki teenon cards mein ye hamesha
+            Sajaavati curve. mt-auto isliye ki chaaron cards mein ye hamesha
             sabse neeche baithe, chahe upar ka title ek line le ya do.
             -mx-5 -mb-5 se wo card ke kinaron tak jaati hai.
           */}

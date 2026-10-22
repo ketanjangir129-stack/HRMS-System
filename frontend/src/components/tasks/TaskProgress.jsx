@@ -71,15 +71,6 @@ function TaskProgress({ progress }) {
                     </span>
                   </span>
                 </div>
-
-                <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-surface-raised">
-                  <div
-                    style={{ width: `${segment.share}%` }}
-                    className={`h-full rounded-full transition-all duration-500 ${
-                      PROGRESS_BARS[segment.label]
-                    }`}
-                  />
-                </div>
               </div>
             ))}
           </div>
