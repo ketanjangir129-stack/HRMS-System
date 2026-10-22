@@ -4,6 +4,7 @@ import {
   CalendarCheck,
   ChevronLeft,
   ChevronRight,
+  ClipboardCheck,
   LayoutDashboard,
   ListChecks,
   LogOut,
@@ -20,6 +21,8 @@ import {
 import { NavLink } from "react-router-dom";
 import { useMemo } from "react";
 import useRoleAccess from "../hooks/useRoleAccess";
+import useAuth from "../hooks/useAuth";
+import { isFinanceManagerViewer } from "../utils/reimbursement/reimbursementUtils";
 
 /*
 |--------------------------------------------------------------------------
@@ -150,6 +153,19 @@ const menuGroups = [
         icon: ReceiptText,
         permission: "reimbursement",
       },
+      /*
+      | The approvals desk normally carries no role switch, so it is offered
+      | the way the route guard allows it: owner, Finance Manager designation
+      | (membership bypass), or a role that was granted
+      | `reimbursement.approvals` on purpose.
+      */
+      // {
+      //   label: "Claim Approvals",
+      //   path: "/reimbursements/approvals",
+      //   icon: ClipboardCheck,
+      //   permission: "reimbursement.approvals",
+      //   financeManager: true,
+      // },
        {
         label: "Statutory Compliance",
         path: "/statutory-compliance",
@@ -240,6 +256,12 @@ function SidebarSkeleton({ isCollapsed }) {
 function Sidebar({ isCollapsed, onToggle, isMobileOpen = false, onMobileClose }) {
 
   const { canAccessPage, isOwner, loading } = useRoleAccess();
+  const { currentUser } = useAuth();
+
+  // Finance Manager designation decides the bypass below — the same check
+  // reimbursementUtils uses for the page guard, so the menu and the route
+  // cannot disagree about what is offered.
+  const isFinanceManager = isFinanceManagerViewer(currentUser);
 
   /*
   | The permission filter is applied inside each group, and a group left with
@@ -252,11 +274,15 @@ function Sidebar({ isCollapsed, onToggle, isMobileOpen = false, onMobileClose })
         .map((group) => ({
           ...group,
           items: group.items.filter((item) =>
-            item.ownerOnly ? isOwner : canAccessPage(item.permission)
+            item.ownerOnly
+              ? isOwner
+              : item.financeManager
+                ? isOwner || isFinanceManager || canAccessPage(item.permission)
+                : canAccessPage(item.permission)
           ),
         }))
         .filter((group) => group.items.length > 0),
-    [canAccessPage, isOwner]
+    [canAccessPage, isOwner, isFinanceManager]
   );
 
   /*

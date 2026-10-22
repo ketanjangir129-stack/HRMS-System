@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useOutletContext } from "react-router-dom";
+import { useNavigate, useOutletContext } from "react-router-dom";
 import { FiPlus } from "react-icons/fi";
 import { toast } from "react-toastify";
 import useAuth from "../../hooks/useAuth";
@@ -13,11 +13,13 @@ import { REIMBURSEMENT_CATEGORIES } from "../../utils/reimbursement/reimbursemen
 import {
   filterClaims,
   getClaimSummary,
+  isFinanceManagerViewer,
 } from "../../utils/reimbursement/reimbursementUtils";
 
 function ReimbursementDashboard() {
   const { company, currentUser } = useAuth();
-  const { canAccessSection } = useRoleAccess();
+  const { canAccessSection, isOwner } = useRoleAccess();
+  const navigate = useNavigate();
   const { search, setSearch, setSearchPlaceholder } = useOutletContext();
   const { claims, loading, submitClaim } = useReimbursements();
 
@@ -29,6 +31,13 @@ function ReimbursementDashboard() {
   const [typeFilter, setTypeFilter] = useState("");
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
+
+  // The dashboard is every employee's own claims, whoever they are. The
+  // company-wide queue lives on the Approvals page — the header button goes
+  // there for the owner, the Finance Manager, or a granted
+  // `reimbursement.approvals` permission.
+  const canApprove =
+    isOwner || isFinanceManagerViewer(currentUser) || canAccessSection("reimbursement.approvals");
 
   const employeeId = currentUser?.employmentInfo?.employeeId || currentUser?.employeeId || "";
   const ownClaims = useMemo(
@@ -62,6 +71,16 @@ function ReimbursementDashboard() {
   );
 
   const summary = useMemo(() => getClaimSummary(ownClaims), [ownClaims]);
+
+  /*
+  | The badge previews the Approvals page, not the dashboard: claims is
+  | whatever listClaims sent (company-wide for owner / Finance Manager, own
+  | for everyone else), so the count matches the queue the button opens.
+  */
+  const pendingReviewCount = useMemo(
+    () => claims.filter((c) => String(c.status).toLowerCase() === "pending").length,
+    [claims]
+  );
   const canAnalytics = canAccessSection("reimbursement.analytics");
 
   const handleSubmit = async (payload, resetForm) => {
@@ -90,9 +109,25 @@ function ReimbursementDashboard() {
             {company?.companyName ? ` · ${company.companyName}` : ""}
           </p>
         </div>
-        <button type="button" onClick={() => setClaimOpen(true)} className="ui-btn ui-btn-primary font-semibold">
-          <FiPlus size={16} /> Claim
-        </button>
+        <div className="flex flex-wrap gap-2">
+          {canApprove && (
+            <button
+              type="button"
+              onClick={() => navigate("/reimbursements/approvals")}
+              className="ui-btn ui-btn-secondary font-semibold"
+            >
+              Approvals
+              {pendingReviewCount > 0 && (
+                <span className="ml-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-amber-500 px-1.5 text-[11px] font-bold text-white">
+                  {pendingReviewCount}
+                </span>
+              )}
+            </button>
+          )}
+          <button type="button" onClick={() => setClaimOpen(true)} className="ui-btn ui-btn-primary font-semibold">
+            <FiPlus size={16} /> Claim
+          </button>
+        </div>
       </div>
 
       <div className="mt-6 space-y-4 sm:mt-8 sm:space-y-6">
@@ -116,8 +151,11 @@ function ReimbursementDashboard() {
             <option value="single">Single</option>
             <option value="trip">Trip</option>
           </select>
-          <input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} className="rounded-xl border border-line bg-surface px-3 py-2 text-sm text-ink-muted outline-none focus:border-brand" aria-label="From date" />
-          <input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} className="rounded-xl border border-line bg-surface px-3 py-2 text-sm text-ink-muted outline-none focus:border-brand" aria-label="To date" />
+          <label htmlFor="frorim" className="px-3 py-2">From</label>
+          <input type="date" id="frorim" value={fromDate} onChange={(e) => setFromDate(e.target.value)} className="rounded-xl border border-line bg-surface px-3 py-2 text-sm text-ink-muted outline-none focus:border-brand" aria-label="From date" />
+          <label htmlFor="torim" className="px-3 py-2">To</label>
+          <input type="date" id="torim" value={toDate} onChange={(e) => setToDate(e.target.value)} className="rounded-xl border border-line bg-surface px-3 py-2 text-sm text-ink-muted outline-none focus:border-brand" aria-label="To date" />
+
           {(statusFilter || categoryFilter || typeFilter || fromDate || toDate) && (
             <button
               type="button"

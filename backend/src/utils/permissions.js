@@ -122,8 +122,8 @@ const DEFAULTS = {
     enabled: { hr: true, manager: true, employee: true },
     apply: { hr: true, manager: true, employee: true },
     history: { hr: true, manager: true, employee: true },
-    analytics: { hr: true, manager: false, employee: true },
-    approvals: { hr: false, manager: false, employee: false },
+    analytics: { hr: true, manager: true, employee: true },
+    approvals: { hr: true, manager: true, employee: false },
   },
 
 };

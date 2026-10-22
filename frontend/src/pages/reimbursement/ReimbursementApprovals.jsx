@@ -131,7 +131,7 @@ function ReimbursementApprovals() {
       </div>
 
       <div className="mt-6 space-y-4 sm:mt-8 sm:space-y-6">
-        <ReimbursementSummary summary={summary} loading={loading} />
+        {/* <ReimbursementSummary summary={summary} loading={loading} /> */}
 
         <div className="ui-card flex flex-wrap gap-3 p-4">
           <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="rounded-xl border border-line bg-surface px-3 py-2 text-sm font-medium text-ink-muted outline-none focus:border-brand" aria-label="Filter by status">
@@ -150,9 +150,11 @@ function ReimbursementApprovals() {
             <option value="">Single + Trip</option>
             <option value="single">Single</option>
             <option value="trip">Trip</option>
-          </select>
-          <input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} className="rounded-xl border border-line bg-surface px-3 py-2 text-sm text-ink-muted outline-none focus:border-brand" aria-label="From date" />
-          <input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} className="rounded-xl border border-line bg-surface px-3 py-2 text-sm text-ink-muted outline-none focus:border-brand" aria-label="To date" />
+          </select> 
+          <label htmlFor="frorim" className="px-3 py-2">From</label>
+          <input type="date" value={fromDate} id="frorim" onChange={(e) => setFromDate(e.target.value)} className="rounded-xl border border-line bg-surface px-3 py-2 text-sm text-ink-muted outline-none focus:border-brand" aria-label="From date" />
+          <label htmlFor="frorim" className="px-3 py-2">To</label>
+          <input type="date" value={toDate} id="torim" onChange={(e) => setToDate(e.target.value)} className="rounded-xl border border-line bg-surface px-3 py-2 text-sm text-ink-muted outline-none focus:border-brand" aria-label="To date" />
         </div>
 
         <ReimbursementTable
