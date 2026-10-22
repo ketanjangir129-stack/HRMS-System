@@ -1,4 +1,4 @@
-const API_URL = "http://localhost:5000/api";
+import { API_URL } from "./apiConfig";
 import { apiRequest } from "./apiClient";
 export const loginEmployeeApi = async (
     companyCode,
