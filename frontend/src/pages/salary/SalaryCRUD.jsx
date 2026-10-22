@@ -10,7 +10,7 @@ import {
     FiUploadCloud,
 } from "react-icons/fi";
 import { toast } from "react-toastify";
-import { getEmployeeWithSalaryStatus, getAllSalary } from "../../services/SalaryService";
+import { getEmployeeWithSalaryStatus, exportSalaries } from "../../services/SalaryService";
 import { filterData } from "../../utils/search/filterData";
 import { exportSalariesToExcel } from "../../utils/salary/exportSalaries";
 import {
@@ -174,7 +174,10 @@ function SalaryCRUD() {
 
         try {
 
-            const salaries = await getAllSalary(companyCode);
+            const salaries = await exportSalaries(
+                companyCode,
+                filteredEmployees.map((employee) => employee.employeeId)
+            );
 
             exportSalariesToExcel(
                 filteredEmployees,

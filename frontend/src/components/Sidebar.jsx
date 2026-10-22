@@ -9,6 +9,7 @@ import {
   LogOut,
   PartyPopper,
   ReceiptIndianRupee,
+  ReceiptText,
   Settings,
   UserRoundPlus,
   Users,
@@ -142,6 +143,12 @@ const menuGroups = [
         path: "/my-payroll",
         icon: BadgeIndianRupee,
         permission: "myPayroll",
+      },
+      {
+        label: "Reimbursement",
+        path: "/reimbursements",
+        icon: ReceiptText,
+        permission: "reimbursement",
       },
        {
         label: "Statutory Compliance",

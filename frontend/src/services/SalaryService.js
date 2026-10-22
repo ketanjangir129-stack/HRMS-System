@@ -3,6 +3,8 @@ import {
     ref, set, get, update, remove
 } from "firebase/database";
 import {getEmployees} from "./EmployeeService"
+import { createSalaryApi, getSalaryApi, getAllSalariesApi, updateSalaryApi, importSalariesApi, exportSalariesApi, getSalaryRevisionsApi, getSalaryRevisionByIdApi } from "./api/salaryApi";
+
 export const addSalary = async (
     companyCode, 
     salary
@@ -24,34 +26,35 @@ export const getSalary = async (
     companyCode , 
     employeeId
 )=>{
-    const snapshot = await get(
-        ref(
-            db,`companies/${companyCode}/salaries/${employeeId}`
-        )
-    );
-    if(!snapshot.exists()){
+    // Backend read (GET /api/salary/:employeeId). Company comes from the
+    // auth token; companyCode is kept for call-site compatibility.
+    // Returns null when no salary exists, matching the previous
+    // Firebase behaviour that SalaryForm relies on.
+    const result = await getSalaryApi(employeeId);
+
+    if (result?.success) {
+        return result.data;
+    }
+
+    if (result?.code === "SALARY_NOT_FOUND") {
         return null;
     }
-    return snapshot.val();
+
+    throw new Error(result?.message || "Failed to fetch salary.");
 };
 
 export const getAllSalary = async (
     companyCode 
 )=>{
-    const snapshot = await get(
-        ref(
-            db,`companies/${companyCode}/salaries`
-        )
-    );
-    if(!snapshot.exists()){
-        return [];
-    }
-    const data = snapshot.val();
+    // Backend read (GET /api/salary/list). Company comes from the auth
+    // token; companyCode is kept for call-site compatibility.
+    const result = await getAllSalariesApi();
 
-    return  Object.keys(data).map((id)=>({
-        employeeId: id, 
-        ...data[id],
-    }))
+    if (result?.success) {
+        return result.data ?? [];
+    }
+
+    throw new Error(result?.message || "Failed to fetch salaries.");
 };
 
 
@@ -100,55 +103,35 @@ export const createSalary = async (
     companyCode,
     salary
 ) => {
-
-    const exists = await checkSalaryExists(
-        companyCode,
-        salary.employeeId
-    );
-
-    if (exists) {
-
+    // Use the backend API for creating salary — it validates, calculates
+    // statutory deductions server-side, and enforces permissions.
+    try {
+        const result = await createSalaryApi({
+            employeeId: salary.employeeId,
+            earnings: salary.earnings,
+            deductions: salary.deductions,
+            effectiveFrom: salary.effectiveFrom,
+            status: salary.status,
+        });
+        return result;
+    } catch (error) {
+        console.error("Salary creation failed:", error);
         return {
-
             success: false,
-
-            message: "Salary already assigned."
-
+            message: error?.message || "Failed to assign salary.",
         };
-
     }
-
-    await addSalary(
-        companyCode,
-        salary
-    );
-
-    return {
-
-        success: true,
-
-        message: "Salary assigned successfully."
-
-    };
-
 };
 
 /*
 |--------------------------------------------------------------------------
 | Bulk Import
 |--------------------------------------------------------------------------
-| Writes the rows an import has already checked.
-|
-| Nothing is validated here. By the time a row reaches this point it has been
-| read, priced against the Statutory Compliance and shown to somebody who pressed the
-| button, so the only things that can still go wrong are the write itself and
-| the structure having appeared since the file was checked.
-|
-| The rows are written one at a time rather than in a single multi-path
-| update. An employee who already has a structure needs their current one
-| copied into history before it is replaced, which is a read and two writes
-| that cannot be folded into one call - and doing them in turn is what lets
-| the screen count the rows off as they land.
+| Sends the rows an import has already checked to the backend in one call
+| (POST /api/salary/import). The backend revalidates every row, reprices
+| statutory deductions from the stored policy and writes each structure,
+| so the preview totals are never trusted — only earnings, manual
+| deductions, effectiveFrom and status travel.
 |
 | One row failing does not stop the rest. A run that gave up half way would
 | leave somebody guessing which half, so every row is attempted and reported.
@@ -163,96 +146,66 @@ export const importSalaries = async (
     } = {}
 ) => {
 
-    const results = [];
+    // Company comes from the auth token; companyCode is kept for call-site
+    // compatibility.
+    onProgress?.(0, rows.length);
 
-    for (let position = 0; position < rows.length; position += 1) {
+    // Only the inputs travel — the backend reprices and totals server-side.
+    const payload = rows.map((row) => ({
+        employeeId: row.employeeId,
+        earnings: row.earnings,
+        deductions: row.deductions,
+        effectiveFrom: row.effectiveFrom,
+        status: row.status,
+    }));
 
-        const row = rows[position];
+    const response = await importSalariesApi(payload, {
+        updateExisting,
+        updatedBy,
+    });
 
-        const salary = {
-            employeeId: row.employeeId,
-            earnings: row.earnings,
-            deductions: row.deductions,
-            grossSalary: row.grossSalary,
-            totalDeduction: row.totalDeduction,
-            netSalary: row.netSalary,
-            effectiveFrom: row.effectiveFrom,
-            status: row.status,
-        };
-
-        try {
-
-            /*
-            | Asked again here rather than trusted from the preview: the file
-            | may have been checked minutes ago, and somebody else assigning a
-            | salary in between must not have it overwritten by an import that
-            | still believes the employee has none.
-            */
-            const exists = await checkSalaryExists(
-                companyCode,
-                row.employeeId
-            );
-
-            if (exists && !updateExisting) {
-
-                results.push({
-                    ...row,
-                    outcome: "skipped",
-                    message: "Already has a salary structure.",
-                });
-
-            }
-
-            else if (exists) {
-
-                const result = await editSalary(
-                    companyCode,
-                    row.employeeId,
-                    salary,
-                    updatedBy
-                );
-
-                results.push({
-                    ...row,
-                    outcome: result.success ? "updated" : "failed",
-                    message: result.message,
-                });
-
-            }
-
-            else {
-
-                await addSalary(companyCode, salary);
-
-                results.push({
-                    ...row,
-                    outcome: "created",
-                    message: "Salary assigned.",
-                });
-
-            }
-
-        }
-        catch (error) {
-
-            console.error(error);
-
-            results.push({
-                ...row,
-                outcome: "failed",
-                message:
-                    error?.message ||
-                    "Could not save this salary.",
-            });
-
-        }
-
-        onProgress?.(position + 1, rows.length);
-
+    if (!response?.success) {
+        throw new Error(response?.message || "The import could not be completed.");
     }
+
+    const outcomes = new Map(
+        (response.data?.results || []).map((result) => [result.rowIndex, result])
+    );
+
+    const results = rows.map((row, position) => {
+        const result = outcomes.get(position);
+
+        return {
+            ...row,
+            outcome: result?.outcome || "failed",
+            message: result?.message || "Could not save this salary.",
+        };
+    });
+
+    onProgress?.(rows.length, rows.length);
 
     return results;
 
+};
+
+/*
+| Export — same salary record shape as the list read, fetched through the
+| backend so the call is permission-gated. The Excel file itself is still
+| built by `exportSalariesToExcel`, untouched.
+*/
+export const exportSalaries = async (
+    companyCode,
+    employeeIds = []
+) => {
+    // Company comes from the auth token; companyCode is kept for call-site
+    // compatibility.
+    const result = await exportSalariesApi(employeeIds);
+
+    if (result?.success) {
+        return result.data ?? [];
+    }
+
+    throw new Error(result?.message || "Failed to export salaries.");
 };
 
 export const getEmployeeWithSalaryStatus = async (
@@ -307,30 +260,37 @@ export const editSalary = async (
     newSalary,
     updatedBy
 )=>{
-    const currentSalary = await getSalary(
-        companyCode,
-        employeeId
-    );
-    if(!currentSalary){
+    // Backend revision (PATCH /api/salary/:employeeId). Company comes from
+    // the auth token; companyCode is kept for call-site compatibility.
+    // The backend reprices statutory deductions, archives the previous
+    // structure to history, and replaces the live one.
+    try {
+        const result = await updateSalaryApi(employeeId, {
+            earnings: newSalary?.earnings,
+            deductions: newSalary?.deductions,
+            effectiveFrom: newSalary?.effectiveFrom,
+            status: newSalary?.status,
+            updatedBy: updatedBy || null,
+        });
+
+        if (result?.success) {
+            return {
+                success: true,
+                message: result.message || "Salary updated successfully.",
+                data: result.data,
+            };
+        }
+
         return {
             success: false,
-            message : "Salary not found.",
-        }
-    }
-    await addSalaryHistory(
-        companyCode,
-        employeeId,
-        currentSalary,
-        updatedBy
-    );
-    await updateSalary(
-        companyCode,
-        employeeId,
-        newSalary
-    );
-    return{
-        success : true,
-        message : "Salary updated successfully."
+            message: result?.message || "Failed to update salary.",
+        };
+    } catch (error) {
+        console.error("Salary update failed:", error);
+        return {
+            success: false,
+            message: error?.message || "Failed to update salary.",
+        };
     }
 }
 // a history record holds the salary before the change, so the structure a
@@ -338,93 +298,31 @@ export const editSalary = async (
 export const getSalaryRevisions = async (
     companyCode
 ) => {
+    // Backend read (GET /api/salary/revisions). Company comes from the auth
+    // token; companyCode is kept for call-site compatibility. Same enriched
+    // shape the screen already renders.
+    const result = await getSalaryRevisionsApi();
 
-    const [snapshot, salaries, employees] = await Promise.all([
-        get(
-            ref(
-                db,
-                `companies/${companyCode}/salaryHistory`
-            )
-        ),
-        getAllSalary(companyCode),
-        getEmployees(companyCode),
-    ]);
-
-    if (!snapshot.exists()) {
-
-        return [];
-
+    if (result?.success) {
+        return result.data ?? [];
     }
 
-    const historyByEmployee = snapshot.val();
+    throw new Error(result?.message || "Failed to fetch salary revisions.");
+};
 
-    const currentSalaries = {};
+export const getSalaryRevisionById = async (
+    companyCode,
+    employeeId
+) => {
+    // Backend read (GET /api/salary/revisions/:employeeId). Same per-row
+    // shape as getSalaryRevisions, filtered to one employee.
+    const result = await getSalaryRevisionByIdApi(employeeId);
 
-    salaries.forEach((salary) => {
-        currentSalaries[salary.employeeId] = salary;
-    });
+    if (result?.success) {
+        return result.data ?? [];
+    }
 
-    const revisions = [];
-
-    Object.keys(historyByEmployee).forEach((employeeId) => {
-
-        const records = Object.keys(
-            historyByEmployee[employeeId]
-        )
-            .map((id) => ({
-                id,
-                ...historyByEmployee[employeeId][id],
-            }))
-            .sort(
-                (a, b) =>
-                    b.updatedAt - a.updatedAt
-            );
-
-        const employee = employees?.[employeeId];
-
-        records.forEach((record, index) => {
-
-            const current =
-                index === 0
-                    ? currentSalaries[employeeId]
-                    : records[index - 1];
-
-            revisions.push({
-
-                id: `${employeeId}-${record.id}`,
-
-                employeeId,
-
-                employeeName:
-                    employee?.personalInfo?.name || employeeId,
-
-                department:
-                    employee?.employmentInfo?.department || "—",
-
-                designation:
-                    employee?.employmentInfo?.designation || "—",
-
-                revisionNumber: records.length - index,
-
-                updatedAt: record.updatedAt,
-
-                updatedBy: record.updatedBy,
-
-                previous: record,
-
-                current: current || null,
-
-            });
-
-        });
-
-    });
-
-    return revisions.sort(
-        (a, b) =>
-            b.updatedAt - a.updatedAt
-    );
-
+    throw new Error(result?.message || "Failed to fetch salary revisions.");
 };
 export const getSalaryHistory = async (
     companyCode,

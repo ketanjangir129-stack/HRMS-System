@@ -5,6 +5,7 @@ import PageAccessSkeleton from "../components/skeletons/PageAccessSkeleton";
 import useAuth from "../hooks/useAuth";
 import useRoleAccess from "../hooks/useRoleAccess";
 import { isFinanceMember } from "../utils/resignation/resignationUtils";
+import { isFinanceManagerViewer } from "../utils/reimbursement/reimbursementUtils";
 
 /*
 |--------------------------------------------------------------------------
@@ -37,6 +38,9 @@ function PermissionRoute({
   /* Finance members carry no special role, so the two resignation screens
   | they need (queue + settlement) opt into a membership bypass instead. */
   allowFinanceMember = false,
+  /* Reimbursement approvals are stricter: Finance Manager designation only,
+  | not every Finance department member. */
+  allowFinanceManager = false,
   children,
 }) {
 
@@ -67,7 +71,9 @@ function PermissionRoute({
       ? false
       : allowFinanceMember && isFinanceMember(currentUser)
         ? true
-        : !permission || canAccess(permission);
+        : allowFinanceManager && isFinanceManagerViewer(currentUser)
+          ? true
+          : !permission || canAccess(permission);
 
   if (allowed) {
     return children;

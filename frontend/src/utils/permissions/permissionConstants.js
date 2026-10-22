@@ -791,6 +791,50 @@ export const PERMISSION_PAGES = [
 
   },
 
+  /*
+  | Reimbursement - employee expense claims decided by the Finance Manager.
+  |
+  | The page itself is on for everybody: it is where an employee raises their
+  | own claim and watches it move. `approvals` stays off for every managed
+  | role by default — the Finance Manager reaches the queue through the
+  | membership bypass (Finance department + Finance Manager designation),
+  | not through a role switch, exactly like resignation's finance step.
+  */
+  {
+    key: "reimbursement",
+    label: "Reimbursement",
+    description: "Expense claims and finance approvals",
+    path: "/reimbursements",
+    defaults: { hr: true, manager: true, employee: true },
+    sections: [
+      {
+        key: "apply",
+        label: "Raise Claim",
+        description: "Submit a new single or trip expense claim",
+        defaults: { hr: true, manager: true, employee: true },
+      },
+      {
+        key: "history",
+        label: "Claim History",
+        description: "The signed in employee's own claims",
+        defaults: { hr: true, manager: true, employee: true },
+      },
+      {
+        key: "analytics",
+        label: "Claim Analytics",
+        description: "Total claimed, pending, approved and rejected amounts",
+        defaults: { hr: true, manager: false, employee: true },
+      },
+      {
+        key: "approvals",
+        label: "Claim Approvals",
+        description: "Review and decide all employees' claims (Finance Manager)",
+        path: "/reimbursements/approvals",
+        defaults: { hr: false, manager: false, employee: false },
+      },
+    ],
+  },
+
 ];
 
 /*

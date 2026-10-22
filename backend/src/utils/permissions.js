@@ -45,6 +45,17 @@ const DEFAULTS = {
   },
   payroll: {
     enabled: { hr: true, manager: false, employee: false },
+    payslip: { hr: true, manager: false, employee: false },
+    generate: { hr: true, manager: false, employee: false },
+    approve: { hr: false, manager: false, employee: false },
+    lock: { hr: false, manager: false, employee: false },
+  },
+   myPayroll: {
+    enabled: { hr: true, manager: true, employee: true },
+    summary: { hr: true, manager: true, employee: true },
+    currentMonth: { hr: true, manager: true, employee: true },
+    history: { hr: true, manager: true, employee: true },
+    payslip: { hr: true, manager: true, employee: true },
   },
 
   // Attendance aur Leave bhi registry me hone chahiye — warna `if (!page)
@@ -91,6 +102,14 @@ const DEFAULTS = {
     create: { hr: true, manager: false, employee: false },
     requests: { hr: true, manager: false, employee: false },
     history: { hr: true, manager: false, employee: false },
+  },
+
+  reimbursement: {
+    enabled: { hr: true, manager: true, employee: true },
+    apply: { hr: true, manager: true, employee: true },
+    history: { hr: true, manager: true, employee: true },
+    analytics: { hr: true, manager: false, employee: true },
+    approvals: { hr: false, manager: false, employee: false },
   },
 
 };

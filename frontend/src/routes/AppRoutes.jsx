@@ -76,6 +76,8 @@ const Settings = lazy(() => import("../pages/settings/Settings"));
 const Profile = lazy(() => import("../pages/Profile"));
 
 const ResignationDashboard = lazy(() => import("../pages/resignation/ResignationDashboard"));
+const ReimbursementDashboard = lazy(() => import("../pages/reimbursement/ReimbursementDashboard"));
+const ReimbursementApprovals = lazy(() => import("../pages/reimbursement/ReimbursementApprovals"));
 const ResignationApprovals = lazy(() => import("../pages/resignation/ResignationApprovals"));
 const EquipmentSubmission = lazy(() => import("../pages/resignation/EquipmentSubmission"));
 const FnFSettlement = lazy(() => import("../pages/resignation/FnFSettlement"));
@@ -617,6 +619,25 @@ function AppRoutes() {
                             element={
                                 <PermissionRoute permission="tasks">
                                     <AllTasks />
+                                </PermissionRoute>
+                            }
+                        />
+
+                        {/* Reimbursement */}
+                        <Route
+                            path="/reimbursements"
+                            element={
+                                <PermissionRoute permission="reimbursement">
+                                    <ReimbursementDashboard />
+                                </PermissionRoute>
+                            }
+                        />
+
+                        <Route
+                            path="/reimbursements/approvals"
+                            element={
+                                <PermissionRoute permission="reimbursement.approvals" allowFinanceManager>
+                                    <ReimbursementApprovals />
                                 </PermissionRoute>
                             }
                         />

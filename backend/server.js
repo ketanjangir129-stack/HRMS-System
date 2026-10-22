@@ -9,6 +9,9 @@ const leaveRoutes       =   require("./src/routes/leaveRoutes");
 const statutoryComplianceRoutes = require("./src/routes/statutorycomplianceRoutes");
 const holidaysRoutes = require("./src/routes/holidayRoutes");
 const onboardingRoutes = require("./src/routes/onboardingRoutes");
+const salaryRoutes = require("./src/routes/salaryRoutes");
+const payrollRoutes = require("./src/routes/payrollRoutes");
+const reimbursementRoutes = require("./src/routes/reimbursementRoutes");
 
 const express = require("express");
 const cors = require("cors");
@@ -50,6 +53,9 @@ app.use("/api/leave", leaveRoutes);
 app.use("/api/statutory-compliance", statutoryComplianceRoutes);
 app.use("/api/holidays", holidaysRoutes);
 app.use("/api/onboarding", onboardingRoutes);
+app.use("/api/salary", salaryRoutes);
+app.use("/api/payroll", payrollRoutes);
+app.use("/api/reimbursement", reimbursementRoutes);
 
 
 app.listen(PORT,()=>{
