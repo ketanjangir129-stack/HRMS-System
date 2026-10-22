@@ -47,6 +47,50 @@ const officeLocationPath = (companyCode) =>
 export const MIN_RADIUS_METRES = 10;
 export const MAX_RADIUS_METRES = 10000;
 
+const OFFICE_CACHE_TTL_MS = 5 * 60 * 1000;
+const officeCache = new Map(); // companyCode -> { data, expiresAt }
+
+/*
+| The entry is returned, not the value inside it. "This company has no
+| office configured" is a real answer and is cached like any other, so
+| reading the value alone would make a cached null indistinguishable from
+| a cache that was never filled.
+*/
+
+const readOfficeCache = (companyCode) => {
+  const entry = officeCache.get(companyCode);
+  if (!entry) return null;
+
+  if (entry.expiresAt <= Date.now()) {
+    officeCache.delete(companyCode);
+    return null;
+  }
+  return entry;
+};
+
+const writeOfficeCache = (companyCode, data) => {
+  officeCache.set(companyCode, {
+    data,
+    expiresAt: Date.now() +
+      OFFICE_CACHE_TTL_MS,
+  });
+};
+/*
+| Drop one company's entry, or all of them. A logout should call this with
+| no company code, so the next person to sign in on this browser does not
+| inherit the last person's point.
+*/
+
+export const clearOfficeLocationCache = (companyCode) => {
+
+  if (!companyCode) {
+    officeCache.clear();
+    return;
+  }
+
+  officeCache.delete(String(companyCode));
+
+};
 /*
 |--------------------------------------------------------------------------
 | Firebase Errors
@@ -163,19 +207,43 @@ export const sanitizeOfficeLocation = (location) => {
 | point to everything downstream.
 */
 
-export const getOfficeLocation = async (companyCode) => {
+export const getOfficeLocation = async (
+  companyCode,
+  { forceRefresh = false } = {}
+) => {
 
   try {
 
     if (!companyCode) return null;
 
+   
+
+    const key = String(companyCode);
+    /*
+        | The entry is checked, not the value inside it: a cached null means
+        | "this company has no office configured", which is a real answer.
+        */
+
+    const entry = readOfficeCache(key);
+
+    if (!forceRefresh && entry) {
+      console.log("🟢 getOfficeLocation → CACHE HIT");
+      return entry.data;
+    }
+
+    console.log("🔵 getOfficeLocation → Firebase read (MISS)");
+
     const snapshot = await get(
       ref(db, officeLocationPath(companyCode))
     );
 
-    if (!snapshot.exists()) return null;
+    const office = snapshot.exists()
+      ? sanitizeOfficeLocation(snapshot.val())
+      : null;
 
-    return sanitizeOfficeLocation(snapshot.val());
+    writeOfficeCache(key, office);
+
+    return office;
 
   } catch (error) {
 
@@ -188,101 +256,106 @@ export const getOfficeLocation = async (companyCode) => {
   }
 
 };
+    /*
+    |--------------------------------------------------------------------------
+    | Save Office Location
+    |--------------------------------------------------------------------------
+    | The point replaced outright, so the node always holds exactly three keys.
+    |
+    | `set` rather than `update`: a partial write would leave a stale radius
+    | beside a new coordinate, and a half configured office is worse than none
+    | because it still reads as configured.
+    |
+    | An invalid point is refused here rather than thrown. The caller is a form,
+    | and a message it can show beside the fields is more use to it than an
+    | exception it has to catch and translate.
+    */
 
-/*
-|--------------------------------------------------------------------------
-| Save Office Location
-|--------------------------------------------------------------------------
-| The point replaced outright, so the node always holds exactly three keys.
-|
-| `set` rather than `update`: a partial write would leave a stale radius
-| beside a new coordinate, and a half configured office is worse than none
-| because it still reads as configured.
-|
-| An invalid point is refused here rather than thrown. The caller is a form,
-| and a message it can show beside the fields is more use to it than an
-| exception it has to catch and translate.
-*/
+    export const saveOfficeLocation = async (companyCode, location) => {
 
-export const saveOfficeLocation = async (companyCode, location) => {
+      try {
 
-  try {
+        if (!companyCode) {
+          return {
+            success: false,
+            message: "Company not found.",
+          };
+        }
 
-    if (!companyCode) {
-      return {
-        success: false,
-        message: "Company not found.",
-      };
-    }
+        const office = sanitizeOfficeLocation(location);
 
-    const office = sanitizeOfficeLocation(location);
+        if (!office) {
+          return {
+            success: false,
+            message:
+              `Enter a valid latitude (-90 to 90), longitude (-180 to 180) and radius (${MIN_RADIUS_METRES} to ${MAX_RADIUS_METRES} metres).`,
+          };
+        }
 
-    if (!office) {
-      return {
-        success: false,
-        message:
-          `Enter a valid latitude (-90 to 90), longitude (-180 to 180) and radius (${MIN_RADIUS_METRES} to ${MAX_RADIUS_METRES} metres).`,
-      };
-    }
+       
+await set(
+          ref(db, officeLocationPath(companyCode)),
+          office
+        );
 
-    await set(
-      ref(db, officeLocationPath(companyCode)),
-      office
-    );
+        // Write-through: jo abhi store hua, wo hi sabse fresh value hai
+        writeOfficeCache(String(companyCode), office);
 
-    return {
-      success: true,
-      officeLocation: office,
+        return {
+          success: true,
+          officeLocation: office,
+        };
+
+      } catch (error) {
+
+        throw failWith(
+          error,
+          "Save Office Location Error",
+          "Failed to save the office location. Please try again."
+        );
+
+      }
+
     };
 
-  } catch (error) {
+    /*
+    |--------------------------------------------------------------------------
+    | Clear Office Location
+    |--------------------------------------------------------------------------
+    | The node removed, which returns the company to having no office configured.
+    |
+    | Removing it is not the same as storing zeroes: 0,0 is a real coordinate in
+    | the Atlantic, and a company that wants to stop using the feature must be
+    | able to say so without leaving a point behind that still reads as one.
+    */
 
-    throw failWith(
-      error,
-      "Save Office Location Error",
-      "Failed to save the office location. Please try again."
-    );
+    export const clearOfficeLocation = async (companyCode) => {
 
-  }
+      try {
 
-};
+        if (!companyCode) {
+          return {
+            success: false,
+            message: "Company not found.",
+          };
+        }
 
-/*
-|--------------------------------------------------------------------------
-| Clear Office Location
-|--------------------------------------------------------------------------
-| The node removed, which returns the company to having no office configured.
-|
-| Removing it is not the same as storing zeroes: 0,0 is a real coordinate in
-| the Atlantic, and a company that wants to stop using the feature must be
-| able to say so without leaving a point behind that still reads as one.
-*/
+        await remove(
+          ref(db, officeLocationPath(companyCode))
+        );
+        // office configure nahi hai ab sahi jawab hai, to wahi cache karo
+        writeOfficeCache(String(companyCode), null);
 
-export const clearOfficeLocation = async (companyCode) => {
+        return { success: true };
 
-  try {
+      } catch (error) {
 
-    if (!companyCode) {
-      return {
-        success: false,
-        message: "Company not found.",
-      };
-    }
+        throw failWith(
+          error,
+          "Clear Office Location Error",
+          "Failed to remove the office location. Please try again."
+        );
 
-    await remove(
-      ref(db, officeLocationPath(companyCode))
-    );
+      }
 
-    return { success: true };
-
-  } catch (error) {
-
-    throw failWith(
-      error,
-      "Clear Office Location Error",
-      "Failed to remove the office location. Please try again."
-    );
-
-  }
-
-};
+    };
