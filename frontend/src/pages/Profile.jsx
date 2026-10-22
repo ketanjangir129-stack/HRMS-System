@@ -375,7 +375,7 @@ function Profile() {
 
   const isActive = status.toLowerCase() === "active";
 
-  // createdAt epoch milliseconds me store hota hai (createCompany → Date.now())
+  // createdAt epoch milliseconds me store hota hai (registerCompany → Date.now())
   const registeredOn = company?.createdAt
     ? new Date(company.createdAt).toLocaleDateString("en-IN", {
       day: "2-digit",

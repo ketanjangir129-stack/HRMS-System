@@ -1,11 +1,7 @@
 import { useState } from "react";
 import { validateField } from "../../utils/validation/validateField"
 import { validateForm } from "../../utils/validation/validateForm";
-import { registerCompany } from "../../services/authService";
-import {
-    checkCompanyCodeExists,
-    createCompany,
-} from "../../services/companyService";
+import { registerCompanyApi } from "../../services/api/authApi";
 import { toast } from "react-toastify";
 import { useNavigate } from "react-router-dom";
 import { Eye, EyeOff } from "lucide-react"; 
@@ -57,49 +53,26 @@ const handleSubmit = async (e) => {
     setLoading(true);
 
     try {
-      // Convert company code to uppercase
-      const companyCode = formData.companyCode.trim().toUpperCase();
-      // Check company code
-      const exists = await checkCompanyCodeExists(companyCode);
-
-      if (exists) {
-        setErrors({
-          companyCode: "Company Code already exists.",
-        });
-        return;
-      }
-
-      // Firebase Authentication
-      const authResult = await registerCompany(
-        formData.email,
-        formData.password
-      );
-      
-      if (!authResult.success) {
-        alert(authResult.message);
-        return;
-      }
-
-      // Company Data
-      const companyData = {
-        ownerUid: authResult.user.uid,
+      // Code check, owner ka Auth account aur company record — teeno backend
+      // ek hi request me karta hai
+      const result = await registerCompanyApi({
         companyName: formData.companyName.trim(),
-        companyCode,
+        companyCode: formData.companyCode.trim().toUpperCase(),
         ownerName: formData.ownerName.trim(),
         email: formData.email.trim(),
+        password: formData.password,
         mobile: formData.mobile.trim(),
         address: formData.address.trim(),
-      };
+      });
 
-      // Save Company
-      const companyResult = await createCompany(companyData);
-
-      if (!companyResult.success) {
-        alert(companyResult.message);
+      if (!result.success) {
+        if (result.errors) {
+          setErrors(result.errors);
+        }
+        toast.error(result.message || "Company registration failed.");
         return;
       }
 
-    //   alert("Company Registered Successfully.");
       toast.success("Company Registered Successfully.");
 
       await new Promise((resolve) => setTimeout(resolve, 700));
