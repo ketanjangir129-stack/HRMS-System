@@ -129,6 +129,14 @@ const useOfficeLocationEditor = () => {
   // Forces the read to run again after nothing else has changed
   const [reloadKey, setReloadKey] = useState(0);
 
+    /*
+  | A manual reload must not be answered from the cache - that is the whole
+  | point of asking for one. A ref, not state: flipping it must not re-run
+  | the effect on its own, only the reload below should.
+  */
+
+  const forceRefreshRef = useRef(false);
+
   /*
   | `saving` is state, so two clicks landing in the same tick would both read
   | it as false and both write. The ref is what actually blocks the second.
@@ -153,7 +161,13 @@ const useOfficeLocationEditor = () => {
 
     let active = true;
 
-    getOfficeLocation(companyCode)
+    // Read and reset in one go : the flag belongs to one read, not to the hook 
+    const forceRefresh = 
+    forceRefreshRef.current;
+    forceRefreshRef.current = false;
+
+    getOfficeLocation(companyCode, {
+      forceRefresh  })
       .then((office) => {
 
         if (!active) return;
@@ -386,9 +400,10 @@ const useOfficeLocationEditor = () => {
 
   }, [companyCode]);
 
-  const reload = useCallback(() => {
+const reload = useCallback(() => {
 
     setPending(true);
+    forceRefreshRef.current = true;
     setReloadKey((key) => key + 1);
 
   }, []);
