@@ -27,8 +27,11 @@ import { getDateKey } from "../../utils/attendance/attendanceDate";
 import { attachEmployeeDetails } from "../../utils/attendance/attendanceUtils";
 import { isWeeklyOff } from "../../utils/holiday/holidayUtils";
 import {
+  isApprovedLeave,
   isPendingLeave,
   filterLeaveRequestsByYear,
+  getLeaveAttendanceStatus,
+  getLeaveDateKeys,
   getPendingLeaveDays,
 } from "../../utils/leave/leaveUtils";
 import {
@@ -143,7 +146,11 @@ function AttendanceDashboard() {
   );
 
   // No calendar on screen → no history listeners.
-  const { history, loading: calendarLoading } = useAttendanceHistory(
+  const {
+    history,
+    loading: calendarLoading,
+    error: calendarError,
+  } = useAttendanceHistory(
     companyCode,
     showCalendar ? employeeId : "",
     calendarMonth.year,
@@ -184,6 +191,26 @@ function AttendanceDashboard() {
         : ownLeaveRequests,
     [filterRows, leaveRequests, directory, currentUser, ownLeaveRequests]
   );
+
+  /*
+  | Approved leave days for the calendar. Approval normally writes the
+  | attendance row itself; this covers a day whose row is not there yet, so
+  | it reads as leave rather than as an absence.
+  */
+  const calendarLeaveMap = useMemo(() => {
+
+    const map = {};
+
+    ownLeaveRequests.filter(isApprovedLeave).forEach((request) => {
+      const status = getLeaveAttendanceStatus(request);
+      getLeaveDateKeys(request).forEach((dateKey) => {
+        map[dateKey] = status;
+      });
+    });
+
+    return map;
+
+  }, [ownLeaveRequests]);
 
   const pendingLeaveCount = useMemo(
     () => scopedLeaveRequests.filter(isPendingLeave).length,
@@ -426,9 +453,14 @@ function AttendanceDashboard() {
           {showCalendar && (
             <div className="min-w-0 xl:col-span-6">
               <AttendanceCalendar
+                year={calendarMonth.year}
+                month={calendarMonth.month}
                 history={history}
-                holidayDates={holidayDates}
+                holidayMap={holidayMap}
+                leaveMap={calendarLeaveMap}
+                joiningDate={currentUser?.employmentInfo?.joiningDate}
                 loading={calendarLoading}
+                error={calendarError}
                 onMonthChange={handleMonthChange}
               />
             </div>

@@ -707,32 +707,102 @@ const toTileClass = (status) =>
         .toLowerCase()
         .replace(/\s+/g, "-");
 
-export const getAttendanceCalendar = (
+/*
+| One day of the employee's month, resolved to exactly one status in this
+| order of strength:
+|
+|   1. A record. A rejected record is an absence, the same way every summary
+|      counts it; a pending one keeps its status and carries the pending mark.
+|   2. A declared holiday.
+|   3. A weekly off.
+|   4. An approved leave whose attendance row has not been written yet
+|      (`leaveMap` is `{ [YYYY-MM-DD]: "Leave" | "Half Day" }`).
+|   5. A finished working day with nothing on it: Absent. Absences are never
+|      stored, so without this the month showed a blank tile for every day
+|      somebody did not come in. Today is not a finished day and the days
+|      before the employee joined were never theirs to attend, so neither is
+|      ever turned into an absence.
+|
+| Returns `{ [YYYY-MM-DD]: { status, className } }` for the days of the month
+| that resolve to a status.
+*/
+
+export const getAttendanceCalendar = ({
+    year,
+    month,
     history = [],
-    holidayDates = []
-) => {
+    holidayMap = {},
+    leaveMap = {},
+    joiningDate = "",
+    today = getDateKey(),
+} = {}) => {
 
     const calendar = {};
 
-    holidayDates.forEach((date) => {
+    if (!year || !month) return calendar;
 
-        if (!date) return;
+    const monthPrefix = `${year}-${String(month).padStart(2, "0")}-`;
 
-        calendar[date] = "holiday";
-
-    });
+    const records = new Map();
 
     history.forEach((record) => {
 
-        if (!record?.date || !record?.status) return;
-
-        const status = toTileClass(record.status);
-
-        calendar[record.date] = isPendingApproval(record)
-            ? `${status} pending`
-            : status;
+        if (record?.date?.startsWith(monthPrefix) && record?.status) {
+            records.set(record.date, record);
+        }
 
     });
+
+    const daysInMonth = new Date(year, month, 0).getDate();
+
+    for (let day = 1; day <= daysInMonth; day++) {
+
+        const date = `${monthPrefix}${String(day).padStart(2, "0")}`;
+
+        const record = records.get(date);
+
+        const holiday = holidayMap?.[date];
+
+        let status = "";
+        let pending = false;
+
+        if (record) {
+
+            status = isRejected(record)
+                ? ATTENDANCE_STATUS.ABSENT
+                : record.status;
+
+            pending = isPendingApproval(record);
+
+        } else if (holiday) {
+
+            status = ATTENDANCE_STATUS.HOLIDAY;
+
+        } else if (isWeeklyOff(date)) {
+
+            status = ATTENDANCE_STATUS.WEEKLY_OFF;
+
+        } else if (leaveMap[date]) {
+
+            status = leaveMap[date];
+
+        } else if (
+            date < today &&
+            (!joiningDate || date >= joiningDate)
+        ) {
+
+            status = ATTENDANCE_STATUS.ABSENT;
+
+        }
+
+        if (!status) continue;
+
+        calendar[date] = {
+            status,
+            className: `${toTileClass(status)}${pending ? " pending" : ""}`,
+        };
+
+    }
 
     return calendar;
 

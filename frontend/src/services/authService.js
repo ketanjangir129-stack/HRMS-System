@@ -32,6 +32,7 @@ export const registerCompany = async (email, password) => {
   }
 };
 
+
 // Login
 export const loginCompany = async (email, password) => {
   try {

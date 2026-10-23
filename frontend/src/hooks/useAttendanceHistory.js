@@ -21,7 +21,10 @@ const useAttendanceHistory = (
 
   const [loadedKey, setLoadedKey] = useState("");
 
-  const loading = loadedKey !== requestKey;
+  // A disabled subscription has nothing to wait for.
+  const enabled = Boolean(companyCode && employeeId);
+
+  const loading = enabled && loadedKey !== requestKey;
 
   useEffect(() => {
 
@@ -78,7 +81,8 @@ const useAttendanceHistory = (
   return {
     history,
     loading,
-    error,
+    // An error belongs to the month that raised it, not the one now requested.
+    error: loadedKey === requestKey ? error : "",
   };
 
 };
