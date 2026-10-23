@@ -35,6 +35,32 @@ export const loginEmployeeApi = async (
 };
 
 
+// Company + owner account backend banata hai. Field-wise galtiyan
+// `errors` me aati hain (e.g. { companyCode: "Company Code already exists." }).
+export const registerCompanyApi = async (companyData) => {
+    try {
+        const response = await fetch(
+            `${API_URL}/auth/register-company`,
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify(companyData),
+            }
+        );
+        return await response.json();
+    }
+    catch (error) {
+        console.error("Register company API error:", error);
+
+        return {
+            success: false,
+            message: "Unable to connect to registration server."
+        };
+    }
+};
+
 // Owner: Firebase ID token ke badle backend JWT. Password yahan nahi jaata —
 // Firebase login ho chuka hai, backend sirf us session ko verify karta hai.
 export const ownerTokenExchangeApi = async (idToken, companyCode) => {

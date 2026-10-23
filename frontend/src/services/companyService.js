@@ -1,69 +1,9 @@
-import { ref, set, get, update } from "firebase/database";
+import { ref, get, update } from "firebase/database";
 import { db } from "../firebase/firebase";
 
-//  Register Company
-/*
-| Whether a company code is already taken.
-|
-| The question is answered from one field inside `details` rather than from
-| the company node, because Realtime Database returns everything under the
-| path it is given: asking `companies/{code}` downloaded that company's whole
-| database - employees, attendance, payroll - only to throw all of it away and
-| return a boolean. `details/companyCode` is written by `createCompany` and is
-| never editable (see EDITABLE_COMPANY_FIELDS below), so it is present for
-| exactly the codes that are taken.
-*/
-export const checkCompanyCodeExists = async (companyCode) => {
-    try {
-        const snapshot = await get(
-            ref(db, `companies/${companyCode}/details/companyCode`)
-        );
+// Company registration backend par hoti hai: POST /api/auth/register-company
+// (services/api/authApi.js → registerCompanyApi)
 
-        return snapshot.exists();
-    } catch (error) {
-        throw error;
-    }
-};
-
-
-export const createCompany   = async (companyData) => {
-
-    try {
-        const companyCode = companyData.companyCode.trim().toUpperCase();
-
-        await set(
-            ref(db, `companies/${companyCode}`),
-            {
-                details: {
-                    ownerUid: companyData.ownerUid,
-                    companyCode,
-                    companyName: companyData.companyName,
-                    ownerName: companyData.ownerName,
-                    email: companyData.email,
-                    mobile: companyData.mobile,
-                    address: companyData.address,
-                    status: "active",
-                    createdAt: Date.now(),
-                },
-
-                hrs: {},
-                employees: {},
-                tasks: {},
-            }
-        );
-        return {
-            success: true,
-        };
-
-    } catch (error) {
-        return {
-            success: false,
-            message: error.message,
-        };
-
-    }
-
-}
 export const getCompanyByCode = async (companyCode) => {
   try {
     const code = companyCode.trim().toUpperCase();

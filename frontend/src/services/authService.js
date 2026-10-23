@@ -1,6 +1,5 @@
 import {
   signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
   sendPasswordResetEmail,
   verifyPasswordResetCode,
   confirmPasswordReset,
@@ -10,27 +9,7 @@ import { auth } from "../firebase/firebase";
 import { db } from "../firebase/firebase";
 import { ref, get } from "firebase/database";
 
-// Register
-export const registerCompany = async (email, password) => {
-  try {
-    const credential = await createUserWithEmailAndPassword(
-      auth,
-      email,
-      password
-    );
-
-    return {
-      success: true,
-      user: credential.user,
-    };
-  } catch (error) {
-    return {
-      success: false,
-      message: error.message,
-      code: error.code,
-    };
-  }
-};
+// Register: backend karta hai — services/api/authApi.js registerCompanyApi
 
 
 // Login
@@ -302,7 +281,7 @@ export const loginUser = async (
         | reach one field downloaded the entire database on every owner login,
         | and the amount grew with every day the company used the product.
         |
-        | `details` is written by `createCompany` alongside the node itself, so
+        | `details` is written by company registration alongside the node itself, so
         | a company that exists always has one: the "not found" branch is
         | reached in exactly the cases it was reached in before.
         */

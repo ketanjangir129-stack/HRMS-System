@@ -171,8 +171,120 @@ const verifyOwner = async (idToken, companyCode) => {
   };
 };
 
+/*
+| Company registration. Owner ka Firebase Auth account aur company ka
+| `details` node dono yahin bante hain — pehle ye browser me teen alag steps
+| the (code check, Auth signup, DB write), aur beech me fail hone par ya do log
+| ek hi code ek saath lene par aadha-adhoora data reh jaata tha.
+|
+| Code ka claim transaction se hota hai: `details` sirf tab likha jaata hai
+| jab wo khaali ho, isliye do requests me se ek hi jeetegi. Haarne wale ka
+| Auth user turant delete hota hai, taaki wo email dobara use ho sake.
+*/
+const registerCompany = async ({
+  companyCode,
+  companyName,
+  ownerName,
+  email,
+  password,
+  mobile,
+  address,
+}) => {
+  const detailsRef = db.ref(`companies/${companyCode}/details`);
+
+  // Jaldi mana kar do — warna Auth user bana kar turant delete karna padta
+  const existing = await detailsRef.child("companyCode").once("value");
+
+  if (existing.exists()) {
+    return {
+      success: false,
+      status: 409,
+      field: "companyCode",
+      message: "Company Code already exists.",
+    };
+  }
+
+  let ownerUser;
+
+  try {
+    ownerUser = await getAuth().createUser({
+      email,
+      password,
+      displayName: ownerName,
+    });
+  } catch (error) {
+    if (error.code === "auth/email-already-exists") {
+      return {
+        success: false,
+        status: 409,
+        field: "email",
+        message: "An account with this email already exists.",
+      };
+    }
+
+    if (
+      error.code === "auth/invalid-email" ||
+      error.code === "auth/invalid-password"
+    ) {
+      return {
+        success: false,
+        status: 400,
+        field: error.code === "auth/invalid-email" ? "email" : "password",
+        message: error.message,
+      };
+    }
+
+    throw error;
+  }
+
+  const details = {
+    ownerUid: ownerUser.uid,
+    companyCode,
+    companyName,
+    ownerName,
+    email,
+    mobile,
+    address,
+    status: "active",
+    createdAt: Date.now(),
+  };
+
+  let claimed = false;
+
+  try {
+    const { committed } = await detailsRef.transaction((current) =>
+      current === null ? details : undefined
+    );
+
+    claimed = committed;
+  } finally {
+    if (!claimed) {
+      await getAuth()
+        .deleteUser(ownerUser.uid)
+        .catch((error) =>
+          console.error("Failed to roll back owner account:", error)
+        );
+    }
+  }
+
+  if (!claimed) {
+    return {
+      success: false,
+      status: 409,
+      field: "companyCode",
+      message: "Company Code already exists.",
+    };
+  }
+
+  return {
+    success: true,
+    company: details,
+  };
+};
+
 module.exports = {
   loginEmployee,
   getEmployeeProfile,
   verifyOwner,
+  registerCompany,
 };
