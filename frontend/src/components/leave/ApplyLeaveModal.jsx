@@ -17,10 +17,10 @@ import {
 } from "../../utils/leave/leaveConstants";
 import {
   calculateLeaveDays,
-  calculateRemainingBalance,
   formatLeaveDuration,
   getLeaveDaysBreakdown,
   getTodayLeaveDate,
+  splitLeaveDaysByMonth,
   validateLeaveRequest,
 } from "../../utils/leave/leaveUtils";
 
@@ -35,9 +35,9 @@ import {
 | The duration and the balance preview are recomputed on every keystroke, so
 | the employee sees what the request costs before submitting it.
 |
-| The applied balance is `available`, not `remaining`: days already sitting
-| in pending requests are spoken for even though they have not been approved
-| yet, and counting them twice would let the balance be overdrawn.
+| Paid leave is month-wise (1 per month). The preview prices each working
+| day against its own month; days beyond that are flagged as unpaid (LWP),
+| never refused - the approver decides.
 |
 | Declared holidays and weekly offs inside the range are not charged, and the
 | preview says how many were skipped: a five day range that costs three days
@@ -125,13 +125,28 @@ function ApplyLeaveForm({
 
   const availableBalance = balance?.available ?? 0;
 
-  const remainingBalance = calculateRemainingBalance(
-    availableBalance,
-    leaveDays
+  const monthlyLimit = balance?.monthlyLimit ?? 0;
+
+  /*
+  | Paid leave is month-wise (1 per month), so each working day is priced
+  | against its own month. Leave beyond that is not refused, only flagged:
+  | the approver decides, and those days are unpaid (LWP) if approved.
+  */
+  const { paid: paidDays, unpaid: unpaidDays } = splitLeaveDaysByMonth(
+    breakdown.workingDays,
+    requestType === LEAVE_REQUEST_TYPE.HALF_DAY ? 0.5 : 1,
+    balance
   );
 
   const isOverdrawn =
-    leaveDays > availableBalance;
+    unpaidDays > 0;
+
+  /*
+  | A single day is always one day and a half day always half, which the
+  | selected type already says, so the duration is only shown for a range.
+  */
+  const showDuration =
+    requestType === LEAVE_REQUEST_TYPE.MULTIPLE_DAY;
 
   /*
   | Switching the type clears the fields the new type does not use, so a
@@ -174,8 +189,6 @@ function ApplyLeaveForm({
       halfDaySession,
 
       reason,
-
-      availableBalance,
 
       holidayDates,
 
@@ -447,7 +460,9 @@ function ApplyLeaveForm({
 
           {/* Duration & Balance */}
 
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
+          <div className={`grid grid-cols-1 gap-3 sm:gap-4 ${showDuration ? "sm:grid-cols-2" : ""}`}>
+
+            {showDuration && (
 
             <div className="rounded-2xl border border-line bg-surface-muted p-4 sm:p-5">
 
@@ -500,10 +515,12 @@ function ApplyLeaveForm({
 
             </div>
 
+            )}
+
             <div
               className={`rounded-2xl border p-4 transition-colors sm:p-5 ${
                 isOverdrawn
-                  ? "border-red-100 bg-red-50"
+                  ? "border-amber-100 bg-amber-50"
                   : "border-blue-100 bg-blue-50"
               }`}
             >
@@ -512,7 +529,7 @@ function ApplyLeaveForm({
 
                 <div
                   className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-surface shadow-sm ${
-                    isOverdrawn ? "text-red-600" : "text-blue-600"
+                    isOverdrawn ? "text-amber-600" : "text-blue-600"
                   }`}
                 >
                   {isOverdrawn ? <FiAlertCircle /> : <FiCalendar />}
@@ -521,15 +538,17 @@ function ApplyLeaveForm({
                 <div className="min-w-0">
 
                   <p className="ui-eyebrow">
-                    Remaining Balance
+                    {leaveDays > 0 ? "Paid Leave" : "Paid Leave This Month"}
                   </p>
 
                   <h3
                     className={`mt-1 text-lg font-bold sm:text-xl ${
-                      isOverdrawn ? "text-red-700" : "text-blue-700"
+                      isOverdrawn ? "text-amber-700" : "text-blue-700"
                     }`}
                   >
-                    {remainingBalance} Days
+                    {leaveDays > 0
+                      ? `${paidDays} Paid${unpaidDays > 0 ? ` · ${unpaidDays} Unpaid` : ""}`
+                      : `${availableBalance} of ${monthlyLimit} left`}
                   </h3>
 
                 </div>
@@ -538,8 +557,8 @@ function ApplyLeaveForm({
 
               <p className="mt-3 text-xs text-ink-subtle">
                 {isOverdrawn
-                  ? `Only ${availableBalance} day(s) available to apply.`
-                  : `Remaining after approval · ${availableBalance} available now`}
+                  ? `Only ${monthlyLimit} paid leave per month · ${unpaidDays} day(s) will be unpaid (LWP) if approved.`
+                  : `${monthlyLimit} paid leave per month · unused leave does not carry over`}
               </p>
 
             </div>

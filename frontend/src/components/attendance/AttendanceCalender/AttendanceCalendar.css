@@ -113,8 +113,8 @@
   opacity: 0.6;
 }
 
-/* Today: brand tint. Selected: brand outline (outline, so it never fights
-   the pending ring, which is a box-shadow). */
+/* Today: brand tint. Selected: brand outline, except on a pending day,
+   which shows only its amber ring (see "Selected AND pending" below). */
 
 .attendance-calendar .react-calendar__tile--now abbr {
   background: color-mix(in oklab, var(--color-brand) 14%, transparent);
@@ -182,6 +182,13 @@
 
 .attendance-calendar .pending abbr {
   box-shadow: 0 0 0 2px var(--color-surface), 0 0 0 3.5px #f59e0b;
+}
+
+/* Selected AND pending: the selection outline sat exactly on the amber ring
+   (both 2-4px out) and hid it, so a pending day shows only its amber ring. */
+
+.attendance-calendar .react-calendar__tile--active.pending abbr {
+  outline: none;
 }
 
 /* Weekly off: the absence of a working day, so dimmed rather than filled. */

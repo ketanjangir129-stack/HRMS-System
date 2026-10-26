@@ -56,7 +56,8 @@ const HOURS_PER_DAY = DEFAULT_WORK_DAY_MINUTES / 60;
 | The days of the month that are not paid for.
 |
 | Absences and unpaid leave cost a full day each. A half day costs half of
-| one: the other half was worked and is paid for.
+| one: the other half was worked and is paid for - unless that missing half
+| was an approved paid half-day leave (`paidHalfDayLeave`), which costs none.
 |
 | Paid leave, holidays and weekly offs are all absent from this on purpose.
 | Late days are too - arriving late is an attendance matter, and deducting a
@@ -66,7 +67,10 @@ const HOURS_PER_DAY = DEFAULT_WORK_DAY_MINUTES / 60;
 export const calculateLossOfPayDays = (summary = {}) =>
   (Number(summary.absent) || 0) +
   (Number(summary.unpaidLeave) || 0) +
-  (Number(summary.halfDay) || 0) * HALF_DAY_LOP;
+  Math.max(
+    0,
+    (Number(summary.halfDay) || 0) - (Number(summary.paidHalfDayLeave) || 0)
+  ) * HALF_DAY_LOP;
 
 export const calculatePayroll = (
   salary,

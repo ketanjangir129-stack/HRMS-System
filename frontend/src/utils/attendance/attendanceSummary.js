@@ -56,10 +56,9 @@ import {
 /*
 | Paid or unpaid?
 |
-| A leave day booked by an approved request carries the id of that request,
-| and the leave module refuses to approve a request the balance cannot cover.
-| So a linked leave day has already been charged to the entitlement, and it is
-| paid.
+| A leave day booked by an approved request carries the id of that request.
+| Days the paid balance covered are paid; days approved beyond it carry
+| `leavePaid: false` and are leave without pay.
 |
 | A day HR typed in by hand as "Leave" carries no request, so nothing was
 | charged against any balance - it is leave without pay. A company that would
@@ -67,7 +66,7 @@ import {
 */
 
 const isPaidLeave = (record, manualLeaveIsPaid) =>
-  Boolean(record?.leaveRequestId) || manualLeaveIsPaid;
+  record?.leaveRequestId ? record.leavePaid !== false : manualLeaveIsPaid;
 
 /*
 | Hours worked past a full day. Only whole minutes are counted, because that
@@ -103,6 +102,8 @@ export const buildMonthlyAttendanceSummary = ({
     absent: 0,
     late: 0,
     halfDay: 0,
+    // Half days that were a paid half-day leave plus a worked half (no LOP).
+    paidHalfDayLeave: 0,
     holiday: 0,
     weeklyOff: 0,
     overtimeHours: 0,
@@ -170,6 +171,11 @@ export const buildMonthlyAttendanceSummary = ({
 
       case ATTENDANCE_STATUS.HALF_DAY:
         summary.halfDay++;
+        // Paid half-day leave and the other half worked: nothing to deduct.
+        // Without a punch the worked half was missed and stays deducted.
+        if (record.leaveRequestId && isPaidLeave(record, false) && record.punchIn) {
+          summary.paidHalfDayLeave++;
+        }
         break;
 
       case ATTENDANCE_STATUS.LEAVE:

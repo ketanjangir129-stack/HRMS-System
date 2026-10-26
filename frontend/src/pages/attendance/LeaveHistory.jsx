@@ -25,7 +25,6 @@ import { LEAVE_STATUS } from "../../utils/leave/leaveConstants";
 import {
   filterLeaveRequestsByYear,
   formatLeaveRange,
-  getLeaveWorkingDateKeys,
   getPendingLeaveDays,
   isApprovedLeave,
   isPendingLeave,
@@ -140,32 +139,23 @@ function LeaveHistory() {
   );
 
   /*
-  | Month-wise roll-up of the user's own approved leave: what accrued and
-  | what was charged, month by month. Charged days are the working days the
-  | request actually cost, the same keys the attendance sheet was written
-  | from, so the table and the balance cards cannot disagree.
+  | Month-wise paid leave: every month has its own paid allowance and what is
+  | not used lapses at month end, so each month is shown on its own - nothing
+  | is summed into a running "net" balance.
+  |
+  | Paid and unpaid (LWP) days per month are read straight from the server's
+  | usage record (`balance.monthsUsed` / `balance.lwpMonths`), where approval
+  | booked them. Nothing is recomputed from the requests here, so this table
+  | cannot disagree with what was actually charged.
   */
+  const monthlyLimit =
+    balance?.monthlyLimit ?? Number(settings?.monthlyAccrual ?? 1);
+
   const monthRows = useMemo(() => {
 
-    const usedByMonth = {};
-
-    ownRequests.forEach((request) => {
-
-      if (!isApprovedLeave(request)) return;
-
-      getLeaveWorkingDateKeys(request, holidayDates).forEach((dateKey) => {
-
-        if (dateKey.slice(0, 4) !== String(year)) return;
-
-        const monthIndex = Number(dateKey.slice(5, 7)) - 1;
-
-        usedByMonth[monthIndex] = (usedByMonth[monthIndex] || 0) + 1;
-
-      });
-
-    });
-
-    const monthlyAccrual = settings?.monthlyAccrual ?? 1;
+    const sameYear = balance?.year === year;
+    const monthsUsed = sameYear ? balance.monthsUsed || {} : {};
+    const lwpMonths = sameYear ? balance.lwpMonths || {} : {};
 
     const nowMonth = new Date().getMonth();
 
@@ -173,41 +163,54 @@ function LeaveHistory() {
 
     return MONTH_LABELS.map((label, monthIndex) => {
       const isCurrent = year === nowYear && monthIndex === nowMonth;
-      const isFuture = year === nowYear && monthIndex > nowMonth;
+      const isFuture =
+        year > nowYear || (year === nowYear && monthIndex > nowMonth);
 
-      const entitled =
-        year < nowYear
-          ? monthlyAccrual
-          : year > nowYear
-            ? 0
-            : monthIndex <= nowMonth
-              ? monthlyAccrual
-              : 0;
+      const monthKey = String(monthIndex + 1).padStart(2, "0");
 
-      const used = usedByMonth[monthIndex] || 0;
+      const paid = Number(monthsUsed[monthKey]) || 0;
+
+      const lwp = Number(lwpMonths[monthKey]) || 0;
+
+      const left = Math.max(0, monthlyLimit - paid);
+
+      /*
+      | Past month: its unused paid leave is gone ("Lapsed").
+      | Current month: what can still be taken as paid.
+      */
+      const status = isFuture
+        ? "upcoming"
+        : isCurrent
+          ? "current"
+          : left > 0
+            ? "lapsed"
+            : "used";
 
       return {
         label,
         monthIndex,
         isCurrent,
         isFuture,
-        entitled,
-        used,
-        net: entitled - used,
+        paid,
+        lwp,
+        left,
+        status,
       };
     });
-  }, [ownRequests, year, holidayDates, settings]);
+  }, [year, balance, monthlyLimit]);
 
   const monthTotals = useMemo(() => {
     return monthRows.reduce(
       (acc, row) => ({
-        entitled: acc.entitled + row.entitled,
-        used: acc.used + row.used,
-        net: acc.net + row.net,
+        paid: acc.paid + row.paid,
+        lwp: acc.lwp + row.lwp,
+        lapsed: acc.lapsed + (row.status === "lapsed" ? row.left : 0),
       }),
-      { entitled: 0, used: 0, net: 0 }
+      { paid: 0, lwp: 0, lapsed: 0 }
     );
   }, [monthRows]);
+
+  const currentMonthRow = monthRows.find((row) => row.isCurrent);
 
   /*
   | Who took how many days, for the reviewer's scope. Only approved days
@@ -437,25 +440,27 @@ function LeaveHistory() {
                     Month-wise Balance
                   </h3>
                   <p className="text-xs text-ink-subtle">
-                    Accrued vs. charged leave across {year}
+                    {monthlyLimit} paid leave per month · unused leave lapses at month end
                   </p>
                 </div>
 
                 {/* Quick Summary Stat Chips */}
                 <div className="flex flex-wrap items-center gap-2">
-                  <div className="flex items-center gap-1.5 rounded-lg border border-line-subtle bg-surface-muted/60 px-2.5 py-1 text-xs text-ink-muted">
-                    <span className="text-ink-subtle">Entitled:</span>
-                    <span className="font-semibold text-ink">{monthTotals.entitled}d</span>
-                  </div>
+                  {currentMonthRow && (
+                    <div className="flex items-center gap-1.5 rounded-lg border border-emerald-200/50 bg-emerald-500/10 px-2.5 py-1 text-xs text-emerald-700 dark:border-emerald-900/40 dark:text-emerald-400">
+                      <span className="opacity-80">This month:</span>
+                      <span className="font-semibold">{currentMonthRow.left}d left</span>
+                    </div>
+                  )}
 
                   <div className="flex items-center gap-1.5 rounded-lg border border-amber-200/50 bg-amber-500/10 px-2.5 py-1 text-xs text-amber-700 dark:border-amber-900/40 dark:text-amber-400">
-                    <span className="opacity-80">Used:</span>
-                    <span className="font-semibold">{monthTotals.used}d</span>
+                    <span className="opacity-80">Paid used:</span>
+                    <span className="font-semibold">{monthTotals.paid}d</span>
                   </div>
 
-                  <div className="flex items-center gap-1.5 rounded-lg border border-emerald-200/50 bg-emerald-500/10 px-2.5 py-1 text-xs text-emerald-700 dark:border-emerald-900/40 dark:text-emerald-400">
-                    <span className="opacity-80">Net:</span>
-                    <span className="font-semibold">+{monthTotals.net}d</span>
+                  <div className="flex items-center gap-1.5 rounded-lg border border-red-200/50 bg-red-500/10 px-2.5 py-1 text-xs text-red-700 dark:border-red-900/40 dark:text-red-400">
+                    <span className="opacity-80">LWP:</span>
+                    <span className="font-semibold">{monthTotals.lwp}d</span>
                   </div>
                 </div>
               </div>
@@ -465,9 +470,10 @@ function LeaveHistory() {
                   <thead>
                     <tr className="border-b border-line bg-surface-muted/30 text-left text-[11px] font-semibold uppercase tracking-wider text-ink-subtle">
                       <th className="px-4 py-2.5 sm:px-5">Month</th>
-                      <th className="px-4 py-2.5 text-right">Entitled</th>
-                      <th className="px-4 py-2.5 text-right">Used</th>
-                      <th className="px-4 py-2.5 text-right sm:px-5">Net</th>
+                      <th className="px-4 py-2.5 text-right">Paid Limit</th>
+                      <th className="px-4 py-2.5 text-right">Paid Used</th>
+                      <th className="px-4 py-2.5 text-right">LWP</th>
+                      <th className="px-4 py-2.5 text-right sm:px-5">Status</th>
                     </tr>
                   </thead>
 
@@ -502,13 +508,23 @@ function LeaveHistory() {
                         </td>
 
                         <td className="px-4 py-2 text-right text-xs text-ink-muted sm:text-sm">
-                          {row.entitled}
+                          {monthlyLimit}
                         </td>
 
                         <td className="px-4 py-2 text-right text-xs sm:text-sm">
-                          {row.used > 0 ? (
+                          {row.paid > 0 ? (
                             <span className="inline-flex items-center rounded-full bg-amber-500/15 px-2 py-0.5 text-xs font-semibold text-amber-700 dark:text-amber-400">
-                              {row.used}
+                              {row.paid}
+                            </span>
+                          ) : (
+                            <span className="text-ink-faint">0</span>
+                          )}
+                        </td>
+
+                        <td className="px-4 py-2 text-right text-xs sm:text-sm">
+                          {row.lwp > 0 ? (
+                            <span className="inline-flex items-center rounded-full bg-red-500/15 px-2 py-0.5 text-xs font-semibold text-red-700 dark:text-red-400">
+                              {row.lwp}
                             </span>
                           ) : (
                             <span className="text-ink-faint">0</span>
@@ -516,13 +532,27 @@ function LeaveHistory() {
                         </td>
 
                         <td className="px-4 py-2 text-right sm:px-5">
-                          {row.net > 0 ? (
+                          {row.status === "current" && (
                             <span className="inline-flex items-center rounded-full bg-emerald-500/15 px-2 py-0.5 text-xs font-semibold text-emerald-700 dark:text-emerald-400">
-                              +{row.net}
+                              {row.left} left
                             </span>
-                          ) : (
+                          )}
+                          {row.status === "used" && (
+                            <span className="inline-flex items-center rounded-full bg-amber-500/15 px-2 py-0.5 text-xs font-semibold text-amber-700 dark:text-amber-400">
+                              Used
+                            </span>
+                          )}
+                          {row.status === "lapsed" && (
+                            <span
+                              title="Unused paid leave does not carry over"
+                              className="inline-flex items-center rounded-full bg-surface-muted px-2 py-0.5 text-xs font-medium text-ink-subtle"
+                            >
+                              Lapsed
+                            </span>
+                          )}
+                          {row.status === "upcoming" && (
                             <span className="text-xs font-medium text-ink-faint">
-                              {row.net}
+                              --
                             </span>
                           )}
                         </td>
@@ -536,13 +566,16 @@ function LeaveHistory() {
                         Total ({year})
                       </td>
                       <td className="px-4 py-2.5 text-right text-xs sm:text-sm">
-                        {monthTotals.entitled}
+                        {monthlyLimit * 12}
                       </td>
                       <td className="px-4 py-2.5 text-right text-xs text-amber-700 dark:text-amber-400 sm:text-sm">
-                        {monthTotals.used}
+                        {monthTotals.paid}
                       </td>
-                      <td className="px-4 py-2.5 text-right text-xs text-emerald-700 dark:text-emerald-400 sm:px-5 sm:text-sm">
-                        +{monthTotals.net}
+                      <td className="px-4 py-2.5 text-right text-xs text-red-700 dark:text-red-400 sm:text-sm">
+                        {monthTotals.lwp}
+                      </td>
+                      <td className="px-4 py-2.5 text-right text-xs text-ink-subtle sm:px-5 sm:text-sm">
+                        {monthTotals.lapsed > 0 ? `${monthTotals.lapsed} lapsed` : "--"}
                       </td>
                     </tr>
                   </tfoot>

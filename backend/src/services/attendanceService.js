@@ -1236,6 +1236,8 @@ const applyLeaveAttendance = async (companyCode, payload, user) => {
       }),
       ...(current?.location ? { location: current.location } : {}),
       leaveRequestId,
+      // false = approved beyond the paid balance (LWP); payroll deducts it.
+      leavePaid: payload?.paid !== false,
       leaveStatusBefore: current?.status || "",
     };
   });
@@ -1287,7 +1289,7 @@ const clearLeaveAttendance = async (companyCode, payload, user) => {
     // The punched day comes back as it was before the leave: same photos and
     // location, original status, and pending review again. Only the leave
     // markers are dropped.
-    const { leaveRequestId: _leaveId, leaveStatusBefore: _before, ...rest } = current;
+    const { leaveRequestId: _leaveId, leaveStatusBefore: _before, leavePaid: _paid, ...rest } = current;
 
     updates[path] = {
       ...rest,

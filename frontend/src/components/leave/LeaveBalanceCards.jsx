@@ -65,23 +65,23 @@ function LeaveBalanceCards({
   }
 
   const annual = balance.annualLeave || 0;
+  const monthly = balance.monthlyLimit || 0;
 
   /*
-  | Every card's bar is measured against the annual allocation: a full year
-  | allocated counts as the whole track on the first card, and the others
-  | read as what share of that allocation they represent.
+  | Paid leave is month-wise. The year cards are measured against the year's
+  | twelve monthly allowances; "This Month" against one month's allowance.
   */
-  const share = (value) =>
-    annual > 0
-      ? Math.min(100, Math.round((value / annual) * 100))
+  const share = (value, of = annual) =>
+    of > 0
+      ? Math.min(100, Math.round((value / of) * 100))
       : 0;
 
   const cards = [
 
     {
-      title: "Annual Leave",
-      value: balance.annualLeave,
-      subtitle: "Allocated this year",
+      title: "Monthly Paid Leave",
+      value: monthly,
+      subtitle: `${monthly} paid per month · no carry over`,
       icon: <FiCalendar />,
       iconBg: "bg-blue-50",
       iconColor: "text-blue-600",
@@ -90,20 +90,20 @@ function LeaveBalanceCards({
     },
 
     {
-      title: "Earned",
-      value: balance.earned,
-      subtitle: "1 day accrued per month",
+      title: "This Month",
+      value: balance.available,
+      subtitle: `${balance.available} of ${monthly} paid leave left`,
       icon: <FiTrendingUp />,
       iconBg: "bg-emerald-50",
       iconColor: "text-emerald-600",
       bar: "bg-emerald-500",
-      percentage: share(balance.earned),
+      percentage: share(balance.available, monthly),
     },
 
     {
-      title: "Used",
+      title: "Paid Used",
       value: balance.used,
-      subtitle: "Leaves taken",
+      subtitle: "Paid leave taken this year",
       icon: <FiCheckCircle />,
       iconBg: "bg-amber-50",
       iconColor: "text-amber-600",
@@ -112,22 +112,14 @@ function LeaveBalanceCards({
     },
 
     {
-      title: "Remaining",
-      value: balance.remaining,
-      /*
-      | Pending days are still part of the remaining balance, but they are
-      | already spoken for. Saying so here stops the card and the apply modal
-      | from looking like they disagree.
-      */
-      subtitle:
-        balance.pending > 0
-          ? `${balance.available} available · ${balance.pending} pending`
-          : "Available balance",
+      title: "Pending",
+      value: balance.pending,
+      subtitle: "Awaiting approval",
       icon: <FiClock />,
       iconBg: "bg-violet-50",
       iconColor: "text-violet-600",
       bar: "bg-violet-500",
-      percentage: share(balance.remaining),
+      percentage: share(balance.pending),
     },
 
     {

@@ -497,35 +497,63 @@ async function getUsage(companyCode, year, employeeId) {
   };
 }
 
-function earnedLeave(settings, year) {
-  // Year and month in IST, so accrual does not lag a month on the 1st on a
-  // UTC server.
-  const [currentYear, monthNumber] = todayKey().split("-").map(Number);
-
-  if (Number(year) < currentYear || Number(year) > currentYear) {
-    return Number(settings.annualLeaves) || 0;
-  }
-
-  return Math.min(
-    Number(settings.annualLeaves) || 0,
-    monthNumber * (Number(settings.monthlyAccrual) || 0)
-  );
+/*
+|--------------------------------------------------------------------------
+| Month-wise paid leave
+|--------------------------------------------------------------------------
+| Every month has its own paid allowance (`monthlyAccrual`, 1 by default).
+| A leave day is paid while its own month still has room for it (a whole day,
+| or half a day for a half-day leave); every other day is leave without pay.
+| Unused allowance lapses at month end - it does not move to the next month.
+|
+| Paid days per month are kept in usage/{year}/{employeeId}/months/{MM} and
+| unpaid (LWP) days in .../lwpMonths/{MM}. These are the single source of
+| truth for the month-wise view - the UI reads them, it does not recompute.
+*/
+function monthlyPaidLimit(settings) {
+  return Math.max(0, Number(settings?.monthlyAccrual) || 0);
 }
 
-function availableBalance(settings, usage, year) {
-  const carryForward = settings.allowCarryForward
-    ? Math.min(
-        Number(usage.carryForward) || 0,
-        Number(settings.maxCarryForward) || 0
-      )
-    : 0;
+const monthOf = (dateKey) => dateKey.slice(5, 7);
 
-  return Math.max(
-    0,
-    earnedLeave(settings, year) +
-      carryForward -
-      (Number(usage.used) || 0)
-  );
+function splitByMonth(dateKeys, dayCost, usedByMonth, limit) {
+  const used = { ...(usedByMonth || {}) };
+  const paidKeys = [];
+  const unpaidKeys = [];
+
+  for (const key of dateKeys) {
+    const month = monthOf(key);
+    const spent = Number(used[month]) || 0;
+
+    if (limit - spent >= dayCost) {
+      paidKeys.push(key);
+      used[month] = spent + dayCost;
+    } else {
+      unpaidKeys.push(key);
+    }
+  }
+
+  return { paidKeys, unpaidKeys };
+}
+
+// Paid leave still free in the current month (IST), for the given year.
+function currentMonthAvailable(settings, usage, year) {
+  const [currentYear, currentMonth] = todayKey().split("-");
+  const limit = monthlyPaidLimit(settings);
+
+  if (Number(year) !== Number(currentYear)) return limit;
+
+  return Math.max(0, limit - (Number(usage?.months?.[currentMonth]) || 0));
+}
+
+function groupByYear(dateKeys) {
+  const groups = new Map();
+  for (const key of dateKeys) {
+    const year = Number(key.slice(0, 4));
+    if (!groups.has(year)) groups.set(year, []);
+    groups.get(year).push(key);
+  }
+  return groups;
 }
 
 async function pendingDaysForYear(companyCode, employeeId, year, excludeId) {
@@ -542,23 +570,12 @@ async function pendingDaysForYear(companyCode, employeeId, year, excludeId) {
   }, 0);
 }
 
-async function assertBalance(companyCode, employeeId, request, excludeId) {
-  const year = parseDateKey(request.fromDate).year;
-  const settings = await getSettings(companyCode);
-  const usage = await getUsage(companyCode, year, employeeId);
-  const pending = await pendingDaysForYear(
-    companyCode,
-    employeeId,
-    year,
-    excludeId
-  );
-
-  const available = Math.max(0, availableBalance(settings, usage, year) - pending);
-
-  if (request.days > available) {
-    fail(`Insufficient leave balance. Available balance: ${available} day(s).`, 409);
-  }
-}
+/*
+| Leave is never refused for want of balance: the employee may apply for as
+| many days as they need and the approver decides. On approval each day is
+| paid if its month still has paid leave left, otherwise it is leave without
+| pay (LWP) - see splitByMonth.
+*/
 
 async function getLeaveRequests(companyCode, user) {
   const requests = await readAllRequests(companyCode);
@@ -634,7 +651,6 @@ async function createLeaveRequest({ companyCode, user, payload }) {
 
   const allowPast = ["owner", "hr", "manager"].includes(role);
   const normalized = await normalizeRequest(companyCode, payload, { allowPast });
-  await assertBalance(companyCode, employeeId, normalized);
 
   const appliedDate = todayKey();
   const generatedKey = db.ref().push().key;
@@ -682,8 +698,6 @@ async function updateLeaveRequest({ companyCode, user, requestId, payload }) {
     { allowPast }
   );
 
-  await assertBalance(companyCode, item.employeeId, normalized, item.requestId);
-
   const updates = {
     requestType: normalized.requestType,
     fromDate: normalized.fromDate,
@@ -703,10 +717,31 @@ async function updateLeaveRequest({ companyCode, user, requestId, payload }) {
 
 // Usage and idempotency marker are stored in the SAME usage node.
 // Repeated calls for the same request will not apply the delta twice.
-async function changeUsageOnce(companyCode, year, employeeId, requestId, days, action) {
+//
+// One call per year node: a range crossing 31 Dec is booked in both years.
+//
+// On "apply" the month-wise paid / unpaid split is decided inside the
+// transaction, from the months as they stand at that moment, so two
+// approvals at once cannot both spend the same month's paid leave. `split`
+// fixes it instead (used to restore a split that was released). `legacyDays`
+// releases a marker written before month-wise booking. Returns this
+// request's marker in this year, or null.
+async function changeUsageOnce(
+  companyCode,
+  year,
+  employeeId,
+  requestId,
+  action,
+  { dateKeys = [], dayCost = 1, settings = null, split = null, legacyDays = 0 } = {}
+) {
   const ref = db.ref(leavePath(companyCode, `usage/${year}/${employeeId}`));
 
   const result = await ref.transaction((current) => {
+    const existing = current?.transactions?.[requestId];
+
+    // Nothing of this request was booked in this year.
+    if (action === "release" && !existing && !legacyDays) return current;
+
     const usage = {
       used: 0,
       lwp: 0,
@@ -714,14 +749,40 @@ async function changeUsageOnce(companyCode, year, employeeId, requestId, days, a
       ...(current || {}),
     };
 
-    usage.transactions = usage.transactions || {};
+    usage.transactions = { ...(usage.transactions || {}) };
+    usage.months = { ...(usage.months || {}) };
+    usage.lwpMonths = { ...(usage.lwpMonths || {}) };
     const marker = usage.transactions[requestId];
+
+    const addTo = (bucket, keys, delta) => keys.forEach((key) => {
+      const month = monthOf(key);
+      bucket[month] = Math.max(0, (Number(bucket[month]) || 0) + delta);
+    });
 
     if (action === "apply") {
       if (marker?.applied) return usage;
-      usage.used = Math.max(0, Number(usage.used) + Number(days));
+
+      const { paidKeys, unpaidKeys } = split
+        || (settings
+          ? splitByMonth(dateKeys, dayCost, usage.months, monthlyPaidLimit(settings))
+          : { paidKeys: dateKeys, unpaidKeys: [] });
+
+      addTo(usage.months, paidKeys, dayCost);
+      addTo(usage.lwpMonths, unpaidKeys, dayCost);
+
+      // A restored pre-month-wise marker has totals but no dates.
+      const paid = split?.paid != null ? Number(split.paid) || 0 : paidKeys.length * dayCost;
+      const unpaid = split?.unpaid != null ? Number(split.unpaid) || 0 : unpaidKeys.length * dayCost;
+
+      usage.used = Math.max(0, Number(usage.used) + paid);
+      usage.lwp = Math.max(0, (Number(usage.lwp) || 0) + unpaid);
       usage.transactions[requestId] = {
-        days: Number(days),
+        days: paid + unpaid,
+        paid,
+        unpaid,
+        dayCost,
+        paidKeys,
+        unpaidKeys,
         applied: true,
         updatedAt: Date.now(),
       };
@@ -730,10 +791,30 @@ async function changeUsageOnce(companyCode, year, employeeId, requestId, days, a
 
     if (action === "release") {
       if (marker && marker.applied === false) return usage;
-      const releaseDays = Number(marker?.days || days);
-      usage.used = Math.max(0, Number(usage.used) - releaseDays);
+
+      const cost = Number(marker?.dayCost) || dayCost;
+      const paidKeys = marker?.paidKeys || [];
+      const unpaidKeys = marker?.unpaidKeys || [];
+      const isMonthWise = Boolean(marker?.paidKeys || marker?.unpaidKeys);
+
+      // Markers from before month-wise booking only carry totals.
+      const paid = isMonthWise
+        ? paidKeys.length * cost
+        : Number(marker?.paid ?? marker?.days ?? legacyDays) || 0;
+      const unpaid = isMonthWise
+        ? unpaidKeys.length * cost
+        : Number(marker?.unpaid) || 0;
+
+      addTo(usage.months, paidKeys, -cost);
+      addTo(usage.lwpMonths, unpaidKeys, -cost);
+
+      usage.used = Math.max(0, Number(usage.used) - paid);
+      usage.lwp = Math.max(0, (Number(usage.lwp) || 0) - unpaid);
       usage.transactions[requestId] = {
-        days: releaseDays,
+        ...(marker || {}),
+        days: paid + unpaid,
+        paid,
+        unpaid,
         applied: false,
         updatedAt: Date.now(),
       };
@@ -744,7 +825,37 @@ async function changeUsageOnce(companyCode, year, employeeId, requestId, days, a
   });
 
   if (!result.committed) fail("Leave usage could not be updated. Please retry.", 409);
-  return result.snapshot.val();
+  return result.snapshot.val()?.transactions?.[requestId] || null;
+}
+
+// Writes the paid and the unpaid days separately, so each record says which
+// it is and payroll can deduct the unpaid ones.
+async function bookLeaveAttendance(companyCode, user, { employeeId, requestId, request, paidKeys, unpaidKeys }) {
+  const isHalfDay = request.requestType === "Half Day";
+  const base = {
+    employeeId,
+    leaveRequestId: requestId,
+    status: isHalfDay ? "Half Day" : "Leave",
+  };
+  const label = isHalfDay
+    ? `half day leave · ${request.halfDaySession || ""}`
+    : "leave";
+
+  if (paidKeys.length) {
+    await applyLeaveAttendance(
+      companyCode,
+      { ...base, dateKeys: paidKeys, paid: true, remarks: `Approved ${label}` },
+      user
+    );
+  }
+
+  if (unpaidKeys.length) {
+    await applyLeaveAttendance(
+      companyCode,
+      { ...base, dateKeys: unpaidKeys, paid: false, remarks: `Approved ${label} (unpaid - LWP)` },
+      user
+    );
+  }
 }
 
 /*
@@ -820,10 +931,8 @@ async function approveLeaveRequest({ companyCode, user, requestId, payload = {} 
     allowPast: true,
     validateReasonText: false,
   });
-  const year = parseDateKey(normalized.fromDate).year;
-
-  // Re-check balance at approval time, excluding this request from pending days.
-  await assertBalance(companyCode, item.employeeId, normalized, item.requestId);
+  const settings = await getSettings(companyCode);
+  const dayCost = normalized.requestType === "Half Day" ? 0.5 : 1;
 
   // Attendance is marked only on working days: a holiday or weekly off inside
   // the range was not charged, so it is not written as "Leave" either.
@@ -835,7 +944,7 @@ async function approveLeaveRequest({ companyCode, user, requestId, payload = {} 
     normalized.fromDate,
     normalized.toDate
   );
-  let usageApplied = false;
+  const appliedYears = [];
   let statusChanged = false;
 
   const approverName = await getApproverIdentity(companyCode, user, payload);
@@ -856,29 +965,36 @@ async function approveLeaveRequest({ companyCode, user, requestId, payload = {} 
     });
     statusChanged = true;
 
-    await changeUsageOnce(
-      companyCode,
-      year,
-      item.employeeId,
-      item.requestId,
-      normalized.days,
-      "apply"
-    );
-    usageApplied = true;
+    // Month-wise: each day is paid only while its month has paid leave left.
+    const paidKeys = [];
+    const unpaidKeys = [];
 
-    await applyLeaveAttendance(
-      companyCode,
-      {
-        employeeId: item.employeeId,
-        dateKeys: workingDateKeys,
-        leaveRequestId: item.requestId,
-        status: normalized.requestType === "Half Day" ? "Half Day" : "Leave",
-        remarks: normalized.requestType === "Half Day"
-          ? `Approved half day leave · ${normalized.halfDaySession}`
-          : "Approved leave",
-      },
-      user
-    );
+    for (const [year, keys] of groupByYear(workingDateKeys)) {
+      const marker = await changeUsageOnce(
+        companyCode,
+        year,
+        item.employeeId,
+        item.requestId,
+        "apply",
+        { dateKeys: keys, dayCost, settings }
+      );
+      appliedYears.push(year);
+      paidKeys.push(...(marker?.paidKeys || []));
+      unpaidKeys.push(...(marker?.unpaidKeys || []));
+    }
+
+    await item.ref.update({
+      paidDays: paidKeys.length * dayCost,
+      unpaidDays: unpaidKeys.length * dayCost,
+    });
+
+    await bookLeaveAttendance(companyCode, user, {
+      employeeId: item.employeeId,
+      requestId: item.requestId,
+      request: normalized,
+      paidKeys,
+      unpaidKeys,
+    });
 
     const updatedSnap = await item.ref.once("value");
     invalidateRequestsCache(companyCode);
@@ -898,15 +1014,15 @@ async function approveLeaveRequest({ companyCode, user, requestId, payload = {} 
       );
     } catch (_) {}
 
-    if (usageApplied) {
+    for (const year of appliedYears) {
       try {
         await changeUsageOnce(
           companyCode,
           year,
           item.employeeId,
           item.requestId,
-          normalized.days,
-          "release"
+          "release",
+          { dayCost }
         );
       } catch (_) {}
     }
@@ -916,6 +1032,8 @@ async function approveLeaveRequest({ companyCode, user, requestId, payload = {} 
         status: "Pending",
         approvedBy: "",
         approvedAt: null,
+        paidDays: null,
+        unpaidDays: null,
         approvalState: "failed",
         approvalErrorAt: Date.now(),
       });
@@ -993,14 +1111,16 @@ async function deleteLeaveRequest({ companyCode, user, requestId }) {
   const fromDate = request.fromDate;
   const toDate =
     request.requestType === "Multiple Day" ? request.toDate : fromDate;
-  const year = parseDateKey(fromDate).year;
+  const fromYear = parseDateKey(fromDate).year;
   const dateKeys = inclusiveDateKeys(fromDate, toDate);
   const days =
     Number(request.days) ||
     (request.requestType === "Half Day" ? 0.5 : dateKeys.length);
+  const dayCost = request.requestType === "Half Day" ? 0.5 : 1;
+  const years = [...groupByYear(dateKeys).keys()];
 
   let attendanceCleared = false;
-  let usageReleased = false;
+  const released = []; // { year, marker }
 
   try {
     await clearLeaveAttendance(
@@ -1010,49 +1130,62 @@ async function deleteLeaveRequest({ companyCode, user, requestId }) {
     );
     attendanceCleared = true;
 
-    await changeUsageOnce(
-      companyCode,
-      year,
-      item.employeeId,
-      item.requestId,
-      days,
-      "release"
-    );
-    usageReleased = true;
+    for (const year of years) {
+      const marker = await changeUsageOnce(
+        companyCode,
+        year,
+        item.employeeId,
+        item.requestId,
+        "release",
+        // Leave approved before markers existed is all in its start year.
+        { dayCost, legacyDays: year === fromYear ? days : 0 }
+      );
+      released.push({ year, marker });
+    }
 
     await item.ref.remove();
     invalidateRequestsCache(companyCode);
     return { success: true, deleted: true };
   } catch (error) {
     // Restore the accounting and attendance when possible.
-    if (usageReleased) {
+    const paidKeys = [];
+    const unpaidKeys = [];
+    let monthWise = false;
+
+    for (const { year, marker } of released) {
+      if (!marker) continue;
+      const isMonthWise = Boolean(marker.paidKeys || marker.unpaidKeys);
+      monthWise = monthWise || isMonthWise;
+      paidKeys.push(...(marker.paidKeys || []));
+      unpaidKeys.push(...(marker.unpaidKeys || []));
+
       try {
         await changeUsageOnce(
           companyCode,
           year,
           item.employeeId,
           item.requestId,
-          days,
-          "apply"
+          "apply",
+          {
+            dayCost: Number(marker.dayCost) || dayCost,
+            split: isMonthWise
+              ? { paidKeys: marker.paidKeys || [], unpaidKeys: marker.unpaidKeys || [] }
+              : { paidKeys: [], unpaidKeys: [], paid: marker.paid ?? marker.days ?? days, unpaid: marker.unpaid ?? 0 },
+          }
         );
       } catch (_) {}
     }
 
     if (attendanceCleared) {
       try {
-        await applyLeaveAttendance(
-          companyCode,
-          {
-            employeeId: item.employeeId,
-            dateKeys,
-            leaveRequestId: item.requestId,
-            status: request.requestType === "Half Day" ? "Half Day" : "Leave",
-            remarks: request.requestType === "Half Day"
-              ? `Approved half day leave · ${request.halfDaySession || ""}`
-              : "Approved leave",
-          },
-          user
-        );
+        await bookLeaveAttendance(companyCode, user, {
+          employeeId: item.employeeId,
+          requestId: item.requestId,
+          request,
+          // Pre-month-wise leave kept no dates: book the range as paid.
+          paidKeys: monthWise ? paidKeys : dateKeys,
+          unpaidKeys: monthWise ? unpaidKeys : [],
+        });
       } catch (_) {}
     }
 
@@ -1110,7 +1243,9 @@ async function getLeaveUsage({ companyCode, user, year, employeeId }) {
     usage,
     settings,
     pendingDays,
-    available: Math.max(0, availableBalance(settings, usage, year) - pendingDays),
+    monthlyLimit: monthlyPaidLimit(settings),
+    // Paid leave still free in the current month (month-wise allowance).
+    available: currentMonthAvailable(settings, usage, year),
   };
 }
 
@@ -1124,4 +1259,13 @@ module.exports = {
   getSettings,
   updateLeaveSettings,
   getLeaveUsage,
+  // For scripts/rebuildMonthlyLeaveUsage.js - the same rules approval uses.
+  monthWise: {
+    getWorkingDateKeys,
+    splitByMonth,
+    monthlyPaidLimit,
+    monthOf,
+    groupByYear,
+    leavePath,
+  },
 };

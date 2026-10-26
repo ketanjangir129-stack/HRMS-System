@@ -123,13 +123,15 @@ const countDaysInclusive = (fromDate, toDate) => {
 |--------------------------------------------------------------------------
 | Calculate Leave Balance
 |--------------------------------------------------------------------------
-| Leaves accrue month by month, so in the running year only the months that
-| have already started are earned. A past or future year is shown with the
-| full annual allocation.
+| Paid leave is month-wise: every month has its own allowance
+| (`monthlyAccrual`, 1 by default) and what is not used lapses at month end.
+| `usage.months` holds the paid days already booked per month ("01".."12").
 |
-| `pendingDays` is the total of the requests that are still awaiting review.
-| They have not been deducted from `used` yet, so without subtracting them an
-| employee could keep applying against a balance that is already spoken for.
+| `available` is what is still free in the current month. For a past or
+| future year it is the plain monthly allowance.
+|
+| `pendingDays` is the total of the requests still awaiting review. It is
+| shown, not subtracted: the approval decides which days end up paid.
 */
 
 export const calculateLeaveBalance = (
@@ -139,73 +141,104 @@ export const calculateLeaveBalance = (
   pendingDays = 0
 ) => {
 
-  const today = new Date();
+  const monthlyLimit =
+    Math.max(0, Number(settings.monthlyAccrual) || 0);
 
-  const currentYear = today.getFullYear();
+  const monthsUsed =
+    usage.months || {};
 
-  let earned = settings.annualLeaves;
+  // Unpaid (LWP) days per month, as booked by the server at approval.
+  const lwpMonths =
+    usage.lwpMonths || {};
 
-  if (year === currentYear) {
+  const todayKey = getDateKey();
+  const currentYear = Number(todayKey.slice(0, 4));
+  const currentMonth = todayKey.slice(5, 7);
 
-    earned = Math.min(
-      settings.annualLeaves,
-      (today.getMonth() + 1) *
-        settings.monthlyAccrual
-    );
+  const thisMonthUsed =
+    Number(year) === currentYear
+      ? Number(monthsUsed[currentMonth]) || 0
+      : 0;
 
-  }
-
-  /*
-  | Carry forward is capped by the company settings, so a balance written by
-  | an earlier rollover can never exceed the limit that is configured today.
-  */
-
-  const carryForward =
-    settings.allowCarryForward === false
-      ? 0
-      : Math.min(
-          usage.carryForward || 0,
-          settings.maxCarryForward ?? Infinity
-        );
-
-  const used =
-    usage.used || 0;
-
-  const lwp =
-    usage.lwp || 0;
-
-  const remaining =
-    earned +
-    carryForward -
-    used;
+  const available =
+    Math.max(0, monthlyLimit - thisMonthUsed);
 
   return {
 
+    year: Number(year),
+
+    monthlyLimit,
+
+    monthsUsed,
+
+    lwpMonths,
+
+    thisMonthUsed,
+
     annualLeave:
-      settings.annualLeaves,
+      monthlyLimit * 12,
 
-    earned,
+    used:
+      usage.used || 0,
 
-    carryForward,
+    remaining: available,
 
-    used,
-
-    remaining,
-
-    lwp,
+    lwp:
+      usage.lwp || 0,
 
     pending: pendingDays,
 
-    /*
-    | What may actually be applied for right now: the remaining balance minus
-    | everything already waiting for approval.
-    */
-    available: Math.max(
-      0,
-      remaining - pendingDays
-    ),
+    available,
 
   };
+
+};
+
+/*
+| Which working days of a request would be paid under the month-wise rule:
+| a day is paid while its month still has room for it, every other day is
+| leave without pay. Mirrors the server, which decides at approval.
+|
+| Months outside the balance's year are taken as unused, so a range running
+| into January previews its January days as paid if there is room.
+*/
+
+export const splitLeaveDaysByMonth = (
+  dateKeys = [],
+  dayCost = 1,
+  balance = null
+) => {
+
+  const limit = Number(balance?.monthlyLimit) || 0;
+
+  const used = {};
+
+  let paid = 0;
+  let unpaid = 0;
+
+  dateKeys.forEach((dateKey) => {
+
+    const year = Number(dateKey.slice(0, 4));
+    const month = dateKey.slice(5, 7);
+    const key = `${year}-${month}`;
+
+    if (used[key] === undefined) {
+      used[key] =
+        year === balance?.year
+          ? Number(balance?.monthsUsed?.[month]) || 0
+          : 0;
+    }
+
+    if (limit - used[key] >= dayCost) {
+      used[key] += dayCost;
+      paid += dayCost;
+    } else {
+      unpaid += dayCost;
+    }
+
+  });
+
+  return { paid, unpaid };
 
 };
 
@@ -339,7 +372,6 @@ export const validateLeaveRequest = ({
   durationType,
   halfDaySession,
   reason,
-  availableBalance,
   holidayDates = null,
 }) => {
 
@@ -429,9 +461,11 @@ export const validateLeaveRequest = ({
 
   }
 
-  if (days > availableBalance) {
-    return "Insufficient leave balance.";
-  }
+  /*
+  | No balance check: leave beyond the paid balance may still be applied for.
+  | The approver decides, and days beyond each month's paid leave are booked
+  | as leave without pay (see splitLeaveDaysByMonth).
+  */
 
   return null;
 

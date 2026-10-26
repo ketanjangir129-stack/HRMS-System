@@ -13,6 +13,8 @@ dist-ssr
 *.local
 .env
 serviceAccountKey.json
+# Database backups contain employee data
+backend/backups/
 
 # Editor directories and files
 .vscode/*

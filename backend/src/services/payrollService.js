@@ -221,8 +221,9 @@ const toHolidaySet = (holidays) => {
   return new Set(Object.keys(holidays));
 };
 
+// Approved leave is paid unless it was booked beyond the balance (LWP).
 const isPaidLeave = (record, manualLeaveIsPaid) =>
-  Boolean(record?.leaveRequestId) || manualLeaveIsPaid;
+  record?.leaveRequestId ? record.leavePaid !== false : manualLeaveIsPaid;
 
 const overtimeMinutesOf = (workedMinutes) =>
   Math.max(0, workedMinutes - DEFAULT_WORK_DAY_MINUTES);
@@ -250,6 +251,8 @@ const buildMonthlyAttendanceSummary = ({
     absent: 0,
     late: 0,
     halfDay: 0,
+    // Half days that were a paid half-day leave plus a worked half (no LOP).
+    paidHalfDayLeave: 0,
     holiday: 0,
     weeklyOff: 0,
     overtimeHours: 0,
@@ -306,6 +309,11 @@ const buildMonthlyAttendanceSummary = ({
         break;
       case ATTENDANCE_STATUS.HALF_DAY:
         summary.halfDay += 1;
+        // Paid half-day leave and the other half worked: nothing to deduct.
+        // Without a punch the worked half was missed and stays deducted.
+        if (record.leaveRequestId && isPaidLeave(record, false) && record.punchIn) {
+          summary.paidHalfDayLeave += 1;
+        }
         break;
       case ATTENDANCE_STATUS.LEAVE:
         if (isPaidLeave(record, manualLeaveIsPaid)) {
@@ -366,7 +374,10 @@ const buildMonthlyAttendanceSummaries = ({
 const calculateLossOfPayDays = (summary = {}) =>
   (Number(summary.absent) || 0) +
   (Number(summary.unpaidLeave) || 0) +
-  (Number(summary.halfDay) || 0) * HALF_DAY_LOP;
+  Math.max(
+    0,
+    (Number(summary.halfDay) || 0) - (Number(summary.paidHalfDayLeave) || 0)
+  ) * HALF_DAY_LOP;
 
 const calculatePayroll = (
   salary,

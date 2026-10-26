@@ -184,6 +184,15 @@ function LeaveRequestDetailModal({
               value={formatLeaveDuration(request.days)}
             />
 
+            {/* Set on approval when part of the leave went beyond the paid balance. */}
+            {Number(request.unpaidDays) > 0 && (
+              <DetailRow
+                icon={<FiClock />}
+                label="Paid / Unpaid (LWP)"
+                value={`${Number(request.paidDays) || 0} paid · ${request.unpaidDays} unpaid`}
+              />
+            )}
+
           </div>
 
           <div className="rounded-xl border border-line bg-surface-muted p-3 sm:p-4">
