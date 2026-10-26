@@ -571,6 +571,49 @@ async function pendingDaysForYear(companyCode, employeeId, year, excludeId) {
 }
 
 /*
+| The same day cannot be taken twice. Two requests clash when their date
+| ranges share a day - except two half days on one date in different
+| sessions (Before Lunch + After Lunch), which together make one full day.
+|
+| `statuses` are the requests that block: pending and approved when applying
+| or editing, approved only when approving (a pending duplicate raised before
+| this check existed must not be approvable over an approved leave).
+*/
+function requestsClash(a, b) {
+  const aTo = a.requestType === "Multiple Day" ? a.toDate : a.fromDate;
+  const bTo = b.requestType === "Multiple Day" ? b.toDate : b.fromDate;
+
+  if (!(a.fromDate <= bTo && b.fromDate <= aTo)) return false;
+
+  const bothHalfDays = a.requestType === "Half Day" && b.requestType === "Half Day";
+  return !(bothHalfDays && a.halfDaySession !== b.halfDaySession);
+}
+
+async function assertNoOverlap(companyCode, employeeId, request, { excludeId, statuses }) {
+  const requests = await readAllRequests(companyCode);
+
+  const clash = requests.find((item) =>
+    item.employeeId === employeeId &&
+    item.requestId !== excludeId &&
+    statuses.includes(requestStatus(item.request)) &&
+    requestsClash(request, item.request)
+  );
+
+  if (clash) {
+    const { fromDate, toDate, requestType } = clash.request;
+    const range = requestType === "Multiple Day" && toDate !== fromDate
+      ? `${fromDate} to ${toDate}`
+      : fromDate;
+    fail(
+      `You already have ${requestStatus(clash.request).toLowerCase()} leave for ${range}. ` +
+      "Withdraw or edit that request instead of applying again.",
+      409,
+      "LEAVE_OVERLAP"
+    );
+  }
+}
+
+/*
 | Leave is never refused for want of balance: the employee may apply for as
 | many days as they need and the approver decides. On approval each day is
 | paid if its month still has paid leave left, otherwise it is leave without
@@ -652,6 +695,10 @@ async function createLeaveRequest({ companyCode, user, payload }) {
   const allowPast = ["owner", "hr", "manager"].includes(role);
   const normalized = await normalizeRequest(companyCode, payload, { allowPast });
 
+  await assertNoOverlap(companyCode, employeeId, normalized, {
+    statuses: ["Pending", "Approved"],
+  });
+
   const appliedDate = todayKey();
   const generatedKey = db.ref().push().key;
   const requestId = `REQ_${generatedKey}`;
@@ -697,6 +744,11 @@ async function updateLeaveRequest({ companyCode, user, requestId, payload }) {
     },
     { allowPast }
   );
+
+  await assertNoOverlap(companyCode, item.employeeId, normalized, {
+    excludeId: item.requestId,
+    statuses: ["Pending", "Approved"],
+  });
 
   const updates = {
     requestType: normalized.requestType,
@@ -931,6 +983,11 @@ async function approveLeaveRequest({ companyCode, user, requestId, payload = {} 
     allowPast: true,
     validateReasonText: false,
   });
+  await assertNoOverlap(companyCode, item.employeeId, normalized, {
+    excludeId: item.requestId,
+    statuses: ["Approved"],
+  });
+
   const settings = await getSettings(companyCode);
   const dayCost = normalized.requestType === "Half Day" ? 0.5 : 1;
 
