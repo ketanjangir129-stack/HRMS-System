@@ -388,7 +388,7 @@ const EDITABLE_FIELDS = {
   documents: ["aadhaar", "pan", "resume", "uan", "esic"],
 };
 
-const updateEmployee = async (companyCode, employeeId, section, data, resumeFile = null) => {
+const updateEmployee = async (companyCode, employeeId, section, data, documentsFiles = null) => {
   const employeeRef = db.ref(`companies/${companyCode}/employees/${employeeId}`);
   const snapshot = await employeeRef.once("value");
 
@@ -405,46 +405,62 @@ const updateEmployee = async (companyCode, employeeId, section, data, resumeFile
       .map((key) => [key, String(data[key] ?? "").trim()])
   );
 
-  // Resume file tabhi process karo jab documents section ke saath aaya ho.
-  // URL hi documents.resume me jaata hai — Firebase structure wahi rahta hai.
-  if (section === "documents" && resumeFile) {
-    if (resumeFile.mimetype !== "application/pdf") {
-      return {
-        success: false,
-        status: 400,
-        field: "resume",
-        message: "Only PDF resume is allowed.",
-      };
-    }
+  // Document files tabhi process karo jab documents section ke saath aaye ho.
+  // URL hi documents.resume/aadhaarCard/panCard/passportPhoto me jaata hai —
+  // Firebase structure wahi rahta hai.
+  // keepExisting: true — nayi file par purani uploaded file storage me
+  // delete/replace NAHI hoti, wo waise hi rehti hai.
+  if (section === "documents" && documentsFiles) {
+    const DOCUMENT_FILE_FIELDS = [
+      { key: "resume", folder: "resume", onlyPdf: true },
+      { key: "aadhaarCard", folder: "documents", onlyPdf: false },
+      { key: "panCard", folder: "documents", onlyPdf: false },
+      { key: "passportPhoto", folder: "documents", onlyPdf: false },
+    ];
 
-    if (resumeFile.size > 5 * 1024 * 1024) {
-      return {
-        success: false,
-        status: 400,
-        field: "resume",
-        message: "Resume must be smaller than 5 MB.",
-      };
-    }
+    for (const { key, folder, onlyPdf } of DOCUMENT_FILE_FIELDS) {
+      const file = documentsFiles?.[key]?.[0];
+      if (!file) continue;
 
-    let uploadResult;
-    try {
-      uploadResult = await uploadFile(resumeFile.buffer, {
-        folder: `companies/${companyCode}/employees/${employeeId}/resume`,
-        resourceType: "auto",
-        maxBytes: 5 * 1024 * 1024,
-        fileName: resumeFile.originalname,
-      });
-    } catch (uploadError) {
-      console.error("Resume upload error:", uploadError);
-      return {
-        success: false,
-        status: 502,
-        field: "resume",
-        message: "Failed to upload resume to storage.",
-      };
-    }
+      if (onlyPdf && file.mimetype !== "application/pdf") {
+        return {
+          success: false,
+          status: 400,
+          field: key,
+          message: "Only PDF resume is allowed.",
+        };
+      }
 
-    fields.resume = uploadResult.url;
+      if (file.size > 5 * 1024 * 1024) {
+        return {
+          success: false,
+          status: 400,
+          field: key,
+          message: "File must be smaller than 5 MB.",
+        };
+      }
+
+      let uploadResult;
+      try {
+        uploadResult = await uploadFile(file.buffer, {
+          folder: `companies/${companyCode}/employees/${employeeId}/${folder}`,
+          resourceType: "auto",
+          maxBytes: 5 * 1024 * 1024,
+          fileName: file.originalname,
+          keepExisting: true,
+        });
+      } catch (uploadError) {
+        console.error(`Document upload error (${key}):`, uploadError);
+        return {
+          success: false,
+          status: 502,
+          field: key,
+          message: "Failed to upload document to storage.",
+        };
+      }
+
+      fields[key] = uploadResult.url;
+    }
   }
 
   if (section === "personalInfo") {

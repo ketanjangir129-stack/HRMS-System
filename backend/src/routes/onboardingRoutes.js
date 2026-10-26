@@ -1,4 +1,5 @@
 const express = require("express");
+const upload = require("../middleware/uploadMiddleware");
 
 const {
   getPublicRequest,
@@ -32,7 +33,27 @@ const router = express.Router();
 // Public routes (Candidate self-service)
 // ==========================================
 router.get("/public/:companyCode/:employeeId", getPublicRequest);
-router.post("/public/:companyCode/:employeeId/submit", submitPublicForm);
+router.post(
+  "/public/:companyCode/:employeeId/submit",
+  upload.fields([
+    { name: "aadhaarCard" },
+    { name: "panCard" },
+    { name: "resume" },
+    { name: "passportPhoto" },
+  ]),
+  (err, req, res, next) => {
+    if (err) {
+      return res.status(400).json({
+        success: false,
+        message: err.code === "LIMIT_FILE_SIZE"
+          ? "Each document must be smaller than 5 MB."
+          : "Invalid document upload.",
+      });
+    }
+    next();
+  },
+  submitPublicForm
+);
 
 // ==========================================
 // Protected routes (HR & Admin)

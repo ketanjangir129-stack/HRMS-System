@@ -63,7 +63,12 @@ const router = express.Router();
   router.patch(
     "/update/:employeeId",
     authenticate,
-    upload.single("resume"),   //multer
+    upload.fields([
+      { name: "resume" },       //multer
+      { name: "aadhaarCard" },  //documents section ke updates
+      { name: "panCard" },
+      { name: "passportPhoto" },
+    ]),
     (err, req, res, next) => {
       if (err) {
         return res.status(400).json({

@@ -8,6 +8,7 @@ const uploadFile = (
     // allowedTypes = [],
     maxBytes = 5 * 1024 * 1024,    //default maximum size 5 MB
     fileName,   //uploaded original file ka naam (optional) — URL me wahi dikhega
+    keepExisting = false, //true: purani file cloudinary par waise hi rehti hai (replace nahi hoti), nayi file unique naam se jati hai
   }
 ) => {
   return new Promise((resolve, reject) => {
@@ -36,9 +37,15 @@ const uploadFile = (
       resource_type: resourceType,
     };
     if (publicId) {
-      uploadOptions.public_id = publicId;
-      uploadOptions.overwrite = true;   // dobara same naam upload ho to replace ho
-      uploadOptions.invalidate = true;  // CDN cache bhi naye file se refresh ho
+      if (keepExisting) {
+        // Purani wali file delete/replace na ho — isi folder me unique naam
+        // se upload karo (originalname + timestamp), wo alag asset rahega.
+        uploadOptions.public_id = `${publicId}_${Date.now()}`;
+      } else {
+        uploadOptions.public_id = publicId;
+        uploadOptions.overwrite = true;   // dobara same naam upload ho to replace ho
+        uploadOptions.invalidate = true;  // CDN cache bhi naye file se refresh ho
+      }
     }
 
     cloudinary.uploader

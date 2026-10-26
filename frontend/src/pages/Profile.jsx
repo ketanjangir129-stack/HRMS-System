@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
   AlertTriangle,
@@ -152,16 +152,34 @@ const BANK_FIELDS = [
 
 const DOCUMENT_FIELDS = [
   {
+    key: "passportPhoto",
+    label: "Passport Photo",
+    icon: UserRound,
+    type: "file",
+  },
+  {
     key: "aadhaar",
     label: "Aadhaar Number",
     icon: IdCard,
     masked: true,
   },
   {
+    key: "aadhaarCard",
+    label: "Aadhaar Card",
+    icon: IdCard,
+    type: "file",
+  },
+  {
     key: "pan",
     label: "PAN Number",
     icon: CreditCard,
     masked: true,
+  },
+  {
+    key: "panCard",
+    label: "PAN Card",
+    icon: CreditCard,
+    type: "file",
   },
   {
     key: "uan",
@@ -201,40 +219,63 @@ function Profile() {
   const [errors, setErrors] = useState({});
   const [saving, setSaving] = useState(false);
 
-  // Documents card mein chuni hui PDF — Save par hi upload hoti hai
-  const [resumeFile, setResumeFile] = useState(null);
+  // Documents card me stage hui nayi files ({ resume: File, aadhaarCard:
+  // File, ... }) — Save par hi upload hoti hain, aur sirf edit-icon se chuni
+  // jaati hain; inline file input nahi hota.
+  const [pendingFiles, setPendingFiles] = useState({});
+  // Kaun si document file replace karne wale hain — hidden input isi ke liye
+  const [replaceFieldKey, setReplaceFieldKey] = useState(null);
+  const documentFileInputRef = useRef(null);
 
   // Save fail hone par upar dikhne wala banner (alert ki jagah)
   const [actionError, setActionError] = useState("");
 
   const MAX_RESUME_SIZE = 5 * 1024 * 1024;
 
-  const getResumeError = (file) => {
+  // Documents: resume sirf PDF, sabhi files 5 MB tak
+  const getDocumentError = (file, fieldKey) => {
     const isPdf =
       file.type === "application/pdf" || /\.pdf$/i.test(file.name);
 
-    if (!isPdf) {
+    if (fieldKey === "resume" && !isPdf) {
       return "Only PDF file upload allowed (.pdf).";
     }
 
     if (file.size > MAX_RESUME_SIZE) {
-      return "Resume must be smaller than 5 MB.";
+      return "Document must be smaller than 5 MB.";
     }
 
     return "";
   };
 
-  const handleResumeChange = (e) => {
-    const file = e.target.files?.[0];
+  // Document row ke edit-icon par file picker kholte hain — edit mode me
+  // file row sirf view hoti hai (link), update sirf isi icon se hota hai
+  const startDocumentReplace = (fieldKey) => {
+    setReplaceFieldKey(fieldKey);
+    documentFileInputRef.current?.click();
+  };
 
-    if (!file) {
-      setResumeFile(null);
-      setErrors((prev) => ({ ...prev, resume: "" }));
-      return;
+  // Nayi file chuni — purani wali hai to pehle confirm: OK par file stage
+  // ho (Save par hi update hoga), No par kuch mat badlo — sab pehle jaisa
+  const handleDocumentFileSelect = (e) => {
+    const fieldKey = replaceFieldKey;
+    setReplaceFieldKey(null);
+    const file = e.target.files?.[0];
+    // Wahi input me dobara wahi file select kar sake — reset
+    e.target.value = null;
+
+    if (!file || !fieldKey) return;
+
+    const previousUrl = documents?.[fieldKey];
+    if (previousUrl) {
+      const confirmed = window.confirm(
+        "Your previous Uploaded document going to updated."
+      );
+      if (!confirmed) return; // cancel — koi change nahi
     }
 
-    setResumeFile(file);
-    setErrors((prev) => ({ ...prev, resume: getResumeError(file) }));
+    setPendingFiles((prev) => ({ ...prev, [fieldKey]: file }));
+    setErrors((prev) => ({ ...prev, [fieldKey]: "" }));
   };
 
   /*
@@ -398,6 +439,9 @@ function Profile() {
     uan: employee?.documents?.uan || employee?.documents?.uanNumber || "",
     esic: employee?.documents?.esic || employee?.documents?.esicNumber || "",
     resume: employee?.documents?.resume || "",
+    aadhaarCard: employee?.documents?.aadhaarCard || "",
+    panCard: employee?.documents?.panCard || "",
+    passportPhoto: employee?.documents?.passportPhoto || "",
   };
 
   const personal = employee?.personalInfo || {};
@@ -590,7 +634,7 @@ function Profile() {
       id: "documents",
       icon: FileText,
       title: "Documents",
-      subtitle: "Statutory numbers and uploaded resume.",
+      subtitle: "Statutory numbers and uploaded documents.",
       accent: "bg-rose-50 text-rose-600",
       editable: canEditSelf,
       fields: DOCUMENT_FIELDS.map((field) => ({
@@ -678,6 +722,14 @@ function Profile() {
 
   return (
     <div className="p-2 space-y-5">
+
+      {/* Document edit-icon se khulta hai — yahan kabhi dikhta nahi */}
+      <input
+        type="file"
+        ref={documentFileInputRef}
+        onChange={handleDocumentFileSelect}
+        className="hidden"
+      />
 
       {/* Toolbar */}
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm sm:px-5">
@@ -972,14 +1024,17 @@ function Profile() {
               const isHidden = field.masked && !revealed[fieldId];
               const FieldIcon = field.icon;
 
+              const isFileRow = field.type === "file";
               /*
               | `key` hi decide karta hai ki field badli ja sakti hai ya nahi.
               | Owner ke cards me kuch fields jaan-boojh kar bina key ke hain
               | (email = login, company code = DB path) — edit mode me wo input
               | nahi, ek locked box banti hain taaki dikhein to sahi, par user
               | unhe badal na sake.
+              | File rows edit mode me bhi view hi rehti hain — document update
+              | sirf row ke pencil-icon se hota hai (EmployeesDetails jaisa).
               */
-              const isFieldEditing = isEditing && Boolean(field.key);
+              const isFieldEditing = isEditing && Boolean(field.key) && !isFileRow;
 
               return (
                 <div
@@ -1022,29 +1077,6 @@ function Profile() {
                               </option>
                             ))}
                           </select>
-                        ) : field.type === "file" ? (
-                          <>
-                            <input
-                              type="file"
-                              onChange={handleResumeChange}
-                              className={`w-full cursor-pointer rounded-xl border bg-white text-sm text-slate-600 outline-none transition file:mr-3 file:cursor-pointer file:rounded-l-xl file:border-0 file:bg-slate-50 file:px-4 file:py-2.5 file:text-sm file:font-semibold file:text-slate-700 hover:file:bg-blue-50 hover:file:text-blue-600 ${errors[field.key]
-                                  ? "border-red-400"
-                                  : "border-slate-200"
-                                }`}
-                            />
-                            <p
-                              className={`truncate text-xs ${resumeFile && errors[field.key]
-                                  ? "text-red-500"
-                                  : "text-slate-400"
-                                }`}
-                            >
-                              {resumeFile
-                                ? resumeFile.name
-                                : formData[field.key]
-                                  ? `Uploaded: ${decodeURIComponent(String(formData[field.key]).split("/").pop() || formData[field.key])} — selecting a new PDF will replace it.`
-                                  : "PDF only, up to 5 MB."}
-                            </p>
-                          </>
                         ) : (
                           <input
                             type={field.type === "date" ? "date" : "text"}
@@ -1066,6 +1098,50 @@ function Profile() {
                           </p>
                         )}
                       </>
+                  ) : isEditing && isFileRow ? (
+                    /*
+                    | Edit mode ki file row: sirf link + filename dikhata hai —
+                    | update row ke pencil-icon se hota hai, inline input nahi.
+                    */
+                    <div className="flex min-h-6 min-w-0 items-center justify-between gap-2">
+                      <p className="min-w-0 wrap-break-word text-sm font-semibold text-slate-900">
+                        {/^https?:\/\//.test(String(field.value)) ? (
+                          <>
+                            <a
+                              href={field.value}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="inline-flex items-center gap-1.5 rounded-lg bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-600 transition-colors hover:bg-blue-100"
+                            >
+                              <FileText className="h-3.5 w-3.5" />
+                              View {field.label}
+                            </a>
+                            <span className="block max-w-full truncate text-xs text-slate-500">
+                              {decodeURIComponent(String(field.value).split("/").pop() || "")}
+                            </span>
+                            {pendingFiles?.[field.key] && (
+                              <span className="block max-w-full truncate text-xs font-medium text-amber-600">
+                                New file: {pendingFiles[field.key].name} — Save to update.
+                              </span>
+                            )}
+                          </>
+                        ) : (
+                          <span className="text-slate-400">
+                            No document uploaded.
+                          </span>
+                        )}
+                      </p>
+
+                      <button
+                        type="button"
+                        onClick={() => startDocumentReplace(field.key)}
+                        title={`Update ${field.label}`}
+                        aria-label={`Update ${field.label}`}
+                        className="flex h-7 w-7 shrink-0 cursor-pointer items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-blue-50 hover:text-blue-600"
+                      >
+                        <Pencil className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
                   ) : isEditing ? (
                     // Editable card ka wo field jise badla nahi ja sakta —
                     // input jaisi hi jagah leta hai taaki grid tedhi na ho
@@ -1094,11 +1170,16 @@ function Profile() {
                             className="inline-flex items-center gap-1.5 rounded-lg bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-600 transition-colors hover:bg-blue-100"
                           >
                             <FileText className="h-3.5 w-3.5" />
-                            View Resume (PDF)
+                            View {field.label}
                           </a>
                             <span className="block max-w-full truncate text-xs text-slate-500">
                               {decodeURIComponent(String(field.value).split("/").pop() || "")}
                             </span>
+                            {pendingFiles?.[field.key] && (
+                              <span className="block max-w-full truncate text-xs font-medium text-amber-600">
+                                New file: {pendingFiles[field.key].name} — Save to update.
+                              </span>
+                            )}
                           </>
 
                         ) : isHidden ? (
@@ -1216,7 +1297,8 @@ function Profile() {
 
     setFormData(draft);
     setErrors({});
-    setResumeFile(null);
+    setPendingFiles({});
+    setReplaceFieldKey(null);
     setActionError("");
     setEditingSection(section.id);
   }
@@ -1225,7 +1307,8 @@ function Profile() {
     setEditingSection(null);
     setFormData({});
     setErrors({});
-    setResumeFile(null);
+    setPendingFiles({});
+    setReplaceFieldKey(null);
   }
 
   /*
@@ -1290,20 +1373,29 @@ function Profile() {
     const isCompanySection =
       editingSection === "ownerInfo" || editingSection === "companyInfo";
 
-    const hasNewResume = editingSection === "documents" && !!resumeFile;
+    const stagedEntries = (editingSection === "documents" && pendingFiles)
+      ? Object.entries(pendingFiles).filter(
+        ([, file]) => file instanceof File
+      )
+      : [];
 
-    if (hasNewResume) {
-      const resumeError = getResumeError(resumeFile);
-      if (resumeError) {
-        setErrors((prev) => ({ ...prev, resume: resumeError }));
+    // Galat files jo stage hui hain unhe Save par dobara check — warna
+    // non-PDF resume ya 5 MB se badi file upload ho jaati
+    for (const [key, file] of stagedEntries) {
+      const fileError = getDocumentError(file, key);
+      if (fileError) {
+        setErrors((prev) => ({ ...prev, [key]: fileError }));
         return;
       }
     }
 
+    // Nayi files chuni hain to purane link ki jagah unke naam validate karo
+    const dataToValidate = { ...formData };
+    stagedEntries.forEach(([key, file]) => {
+      dataToValidate[key] = file.name;
+    });
+
     const validationErrors = {};
-    const dataToValidate = hasNewResume
-      ? { ...formData, resume: resumeFile.name }
-      : formData;
 
     Object.keys(dataToValidate).forEach((key) => {
       if (!rules[key]) return; // is field ka koi rule nahi → skip
@@ -1357,7 +1449,7 @@ function Profile() {
         employeeId,
         editingSection,
         formData,
-        hasNewResume ? resumeFile : null
+        Object.fromEntries(stagedEntries)
       );
 
       // Email/mobile kisi aur employee ka nikla — us field par error dikhao
@@ -1386,7 +1478,7 @@ function Profile() {
       }
 
       setEditingSection(null);
-      setResumeFile(null);
+      setPendingFiles({});
       setErrors({});
     } catch (error) {
       console.error("Failed to save profile:", error);

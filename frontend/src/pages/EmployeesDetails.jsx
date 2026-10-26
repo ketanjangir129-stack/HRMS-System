@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import AvatarUpload from "../components/common/AvatarUpload";
 import {
@@ -25,6 +25,7 @@ import useRoleAccess from "../hooks/useRoleAccess";
 import useManagerScope from "../hooks/useManagerScope";
 import Loader from "../components/common/Loader";
 import EditRoleModal from "../components/employees/EditRoleModal";
+import ReplaceDocumentModal from "../components/employees/ReplaceDocumentModal";
 import {
     AlertTriangle,
     ArrowLeft,
@@ -116,8 +117,16 @@ function EmployeesDetails() {
     const [formData, setFormData] = useState({});
     const [saving, setSaving] = useState(false);
 
-    // Documents card mein chuni hui PDF — Save par hi upload hoti hai
-    const [resumeFile, setResumeFile] = useState(null);
+    // Documents card me stage hui nayi files ({ resume: File, aadhaarCard:
+    // File, ... }) — Save par hi upload hoti hain, aur sirf endEdit-icon se
+    // chuni jaati hain; inline file input se nahi.
+    const [pendingFiles, setPendingFiles] = useState({});
+    // Kaun si document file replace karne wale hain — hidden input isi ke liye
+    const [replaceFieldKey, setReplaceFieldKey] = useState(null);
+    const documentFileInputRef = useRef(null);
+    // Purani file pehle se ho to nayi file yahan rukti hai jab tak user
+    // ReplaceDocumentModal me confirm na kare — { fieldKey, file }
+    const [pendingReplace, setPendingReplace] = useState(null);
     const [errors, setErrors] = useState({});
     const [loadError, setLoadError] = useState("");
     // Retry isi ko badhata hai — listener band hokar dobara lagta hai
@@ -335,7 +344,8 @@ function EmployeesDetails() {
         setFormData({ ...(employee[sectionId] || {}) });
         setEditingSection(sectionId);
         setErrors({});
-        setResumeFile(null);
+        setPendingFiles({});
+        setReplaceFieldKey(null);
         setActionError("");
     };
 
@@ -343,42 +353,72 @@ function EmployeesDetails() {
         setEditingSection(null);
         setFormData({});
         setErrors({});
-        setResumeFile(null);
+        setPendingFiles({});
+        setReplaceFieldKey(null);
+        setPendingReplace(null);
     };
 
-    // Resume sirf PDF, 5 MB tak
+    // Documents: resume sirf PDF, sabhi files 5 MB tak
     const MAX_RESUME_SIZE = 5 * 1024 * 1024;
 
     // Galat file ko hataate nahi — chuni hui file rehne dete hain aur uske
     // neeche error dikhate hain, taaki user ko dikhe usne kya chuna tha
-    const getResumeError = (file) => {
+    const getDocumentError = (file, fieldKey) => {
         const isPdf =
             file.type === "application/pdf" || /\.pdf$/i.test(file.name);
 
-        if (!isPdf) {
+        if (fieldKey === "resume" && !isPdf) {
             return "Only PDF file upload allowed (.pdf).";
         }
 
         if (file.size > MAX_RESUME_SIZE) {
-            return "Resume must be smaller than 5 MB.";
+            return "Document must be smaller than 5 MB.";
         }
 
         return "";
     };
 
-    const handleResumeChange = (e) => {
-        const file = e.target.files?.[0];
+    // Document row ke edit-icon par file picker kholte hain. Edit mode ke
+    // andar file row sirf view hoti hai (link) — update sirf isi icon se.
+    const startDocumentReplace = (fieldKey) => {
+        setReplaceFieldKey(fieldKey);
+        documentFileInputRef.current?.click();
+    };
 
-        if (!file) {
-            setResumeFile(null);
-            setErrors((prev) => ({ ...prev, resume: "" }));
+    // Nayi file chuni — purani wali hai to pehle confirm: OK par file stage
+    // ho (Save par hi update hoga), No par kuch mat badlo — sab pehle jaisa.
+    const handleDocumentFileSelect = (e) => {
+        const fieldKey = replaceFieldKey;
+        setReplaceFieldKey(null);
+        const file = e.target.files?.[0];
+        // Wahi input me dobara wahi file select kar sake — reset
+        e.target.value = null;
+
+        if (!file || !fieldKey) return;
+
+        // Purani file hai to pehle modal me confirm — warna seedha stage
+        if (employee?.documents?.[fieldKey]) {
+            setPendingReplace({ fieldKey, file });
             return;
         }
 
-        // Pehle file bhar jaati hai, phir validation error dikhta hai
-        setResumeFile(file);
-        setErrors((prev) => ({ ...prev, resume: getResumeError(file) }));
+        stageDocumentFile(fieldKey, file);
     };
+
+    const stageDocumentFile = (fieldKey, file) => {
+        setPendingFiles((prev) => ({ ...prev, [fieldKey]: file }));
+        setErrors((prev) => ({ ...prev, [fieldKey]: "" }));
+    };
+
+    const confirmDocumentReplace = () => {
+        if (pendingReplace) {
+            stageDocumentFile(pendingReplace.fieldKey, pendingReplace.file);
+        }
+        setPendingReplace(null);
+    };
+
+    // "Keep Current" — koi change nahi
+    const closeDocumentReplace = useCallback(() => setPendingReplace(null), []);
 
     const handleFieldChange = (key, value) => {
         setFormData((prev) => ({ ...prev, [key]: value }));
@@ -443,23 +483,34 @@ function EmployeesDetails() {
 };
 
     const saveSection = async (sectionId) => {
-        const hasNewResume = sectionId === "documents" && !!resumeFile;
+        const stagedEntries = Object.entries(pendingFiles || {}).filter(
+            ([, file]) => file instanceof File
+        );
 
-        // Galat file ab input mein padi reh sakti hai, isliye Save par dobara
-        // check — warna non-PDF ya 5 MB se badi file upload ho jaati
-        if (hasNewResume) {
-            const resumeError = getResumeError(resumeFile);
-            if (resumeError) {
-                setErrors((prev) => ({ ...prev, resume: resumeError }));
+        // Galat files jo stage hui hain unhe Save par dobara check — warna
+        // non-PDF resume ya 5 MB se badi file upload ho jaati
+        for (const [key, file] of stagedEntries) {
+            const fileError = getDocumentError(file, key);
+            if (fileError) {
+                setErrors((prev) => ({ ...prev, [key]: fileError }));
                 return;
             }
         }
 
-        // Nayi PDF chuni hai to purane link ki jagah uska naam validate karo
-        const validationErrors = validateSection(
-            sectionId,
-            hasNewResume ? { ...formData, resume: resumeFile.name } : formData
-        );
+        // Nayi files chuni hain to purane link ki jagah unke naam validate karo.
+        // Jo file field nahi badla uska purana (saved) link validate mat karo —
+        // Cloudinary URL hamesha ".pdf" par khatam nahi hota, aur wo error
+        // read-only row me dikhta bhi nahi tha, isliye Save chupchaap ruk jaata.
+        const section = sections.find((item) => item.section === sectionId);
+        const fileKeys = (section?.fields || [])
+            .filter((field) => field.type === "file")
+            .map((field) => field.key);
+        const dataToValidate = { ...formData };
+        fileKeys.forEach((key) => delete dataToValidate[key]);
+        stagedEntries.forEach(([key, file]) => {
+            dataToValidate[key] = file.name;
+        });
+        const validationErrors = validateSection(sectionId, dataToValidate);
         if (Object.keys(validationErrors).length > 0) {
             setErrors(validationErrors);
             return; // galti hai to save mat karo
@@ -470,12 +521,13 @@ function EmployeesDetails() {
         try {
             const sectionData = { ...formData };
 
-            // Resume bhi isi PATCH request ke saath FormData ke roop mein backend ko jaata hai (alag generic upload route ab use nahi hota).
+            // Staged document files isi PATCH ke saath FormData ke roop me
+            // backend ko jaati hain (alag generic upload route ab use nahi hota).
             const result = await saveEmployeeSection(
                 id,
                 sectionId,
                 sectionData,
-                hasNewResume ? resumeFile : null
+                pendingFiles || {}
             );
 
             // Email/mobile kisi aur employee ka nikla — us field par error dikhao
@@ -486,7 +538,7 @@ function EmployeesDetails() {
 
             setEmployee((prev) => ({ ...prev, [sectionId]: result.data }));
             setEditingSection(null);
-            setResumeFile(null);
+            setPendingFiles({});
             setErrors({});
         } catch (error) {
             console.error(error);
@@ -788,10 +840,13 @@ function EmployeesDetails() {
             icon: FileText,
             title: "Documents",
             tabLabel: "Documents",
-            subtitle: "Statutory numbers and uploaded resume.",
+            subtitle: "Statutory numbers and uploaded documents.",
             accent: "bg-rose-50 text-rose-600",
             fields: [
-                { key: "resume", label: "Resume", icon: FileText, type: "file" },
+                { key: "resume", label: "Resume", icon: FileText, type: "file", readOnly: true, action: { onClick: () => startDocumentReplace("resume"), label: "Update Resume", requiresEdit: true } },
+                { key: "aadhaarCard", label: "Aadhaar Card", icon: IdCard, type: "file", readOnly: true, action: { onClick: () => startDocumentReplace("aadhaarCard"), label: "Update Aadhaar Card", requiresEdit: true } },
+                { key: "panCard", label: "PAN Card", icon: CreditCard, type: "file", readOnly: true, action: { onClick: () => startDocumentReplace("panCard"), label: "Update PAN Card", requiresEdit: true } },
+                { key: "passportPhoto", label: "Passport Photo", icon: UserRound, type: "file", readOnly: true, action: { onClick: () => startDocumentReplace("passportPhoto"), label: "Update Passport Photo", requiresEdit: true } },
                 { key: "aadhaar", label: "Aadhaar Number", icon: IdCard, masked: true },
                 { key: "pan", label: "PAN Number", icon: CreditCard, masked: true },
                 { key: "uan", label: "UAN Number", icon: Hash, masked: true },
@@ -862,6 +917,28 @@ function EmployeesDetails() {
 
     return (
         <div className="p-0 space-y-4 sm:p-2 sm:space-y-5">
+
+            {/* Document edit-icon se khulta hai — yahan kabhi dikhta nahi */}
+            <input
+                type="file"
+                ref={documentFileInputRef}
+                onChange={handleDocumentFileSelect}
+                className="hidden"
+            />
+
+            <ReplaceDocumentModal
+                open={Boolean(pendingReplace)}
+                file={pendingReplace?.file}
+                previousUrl={employee?.documents?.[pendingReplace?.fieldKey]}
+                documentLabel={
+                    sections
+                        .find((item) => item.section === "documents")
+                        ?.fields.find((field) => field.key === pendingReplace?.fieldKey)
+                        ?.label || "Document"
+                }
+                onConfirm={confirmDocumentReplace}
+                onClose={closeDocumentReplace}
+            />
 
             {/* Toolbar */}
             <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white px-3 py-3 shadow-sm sm:px-5">
@@ -1313,32 +1390,7 @@ function EmployeesDetails() {
 
                                         {editable ? (
                                             <>
-                                                {field.type === "file" ? (
-                                                    <>
-                                                        {/* accept nahi lagaya — user koi bhi file
-                                                                        chun sake, galti PDF check batayega */}
-                                                        <input
-                                                            type="file"
-                                                            onChange={handleResumeChange}
-                                                            className={`w-full cursor-pointer rounded-xl border bg-white text-sm text-slate-600 outline-none transition file:mr-3 file:cursor-pointer file:rounded-l-xl file:border-0 file:bg-slate-50 file:px-4 file:py-2.5 file:text-sm file:font-semibold file:text-slate-700 hover:file:bg-blue-50 hover:file:text-blue-600 ${errors[field.key]
-                                                                    ? "border-red-400"
-                                                                    : "border-slate-200"
-                                                                }`}
-                                                        />
-                                                        <p
-                                                            className={`truncate text-xs ${resumeFile && errors[field.key]
-                                                                    ? "text-red-500"
-                                                                    : "text-slate-400"
-                                                                }`}
-                                                        >
-                                                            {resumeFile
-                                                                ? resumeFile.name
-                                                                : formData[field.key]
-                                                                    ? `Uploaded: ${decodeURIComponent(String(formData[field.key]).split("/").pop() || formData[field.key])} — nayi PDF chunne par wo replace ho jayegi.`
-                                                                    : "Sirf PDF, 5 MB tak."}
-                                                        </p>
-                                                    </>
-                                                ) : field.type === "select" ? (
+                                                {field.type === "select" ? (
                                                     <select
                                                         value={formData[field.key] || ""}
                                                         onChange={handleSelectChange}
@@ -1402,7 +1454,7 @@ function EmployeesDetails() {
                                                                 className="inline-flex items-center gap-1.5 rounded-lg bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-600 transition-colors hover:bg-blue-100"
                                                             >
                                                                 <FileText className="h-3.5 w-3.5" />
-                                                                View Resume (PDF)
+                                                                View {field.label}
                                                             </a>
                                                             <span className="block max-w-full truncate text-xs text-slate-500">
                                                                 {decodeURIComponent(value.split("/").pop() || "")}
@@ -1438,6 +1490,18 @@ function EmployeesDetails() {
                                                     ) : (
                                                         <span className="text-slate-300">—</span>
                                                     )}
+                                                    {/* File rows read-only hain — staged file aur uska
+                                                        error yahin dikhao, warna Save bina wajah bataye ruk jaata */}
+                                                    {field.type === "file" && pendingFiles?.[field.key] && (
+                                                        <span className="block max-w-full truncate text-xs font-medium text-amber-600">
+                                                            New file: {pendingFiles[field.key].name} — Save to update.
+                                                        </span>
+                                                    )}
+                                                    {field.type === "file" && errors[field.key] && (
+                                                        <span className="block text-xs font-medium text-red-500">
+                                                            {errors[field.key]}
+                                                        </span>
+                                                    )}
                                                 </p>
                                                 {/*
                                                             | A field on a view only card that can still be
@@ -1445,7 +1509,7 @@ function EmployeesDetails() {
                                                             | uses. Only the Role field carries one, and only
                                                             | for somebody entitled to change it.
                                                             */}
-                                                {field.action && (
+                                                {field.action && (!field.action.requiresEdit || isEditing) && (
                                                     <button
                                                         onClick={field.action.onClick}
                                                         title={field.action.label}

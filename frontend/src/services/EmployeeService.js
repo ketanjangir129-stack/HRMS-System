@@ -416,17 +416,27 @@ export const createEmployee = async (companyCode, employee) => {
 
 
 //updating employee section — backend (PATCH /api/employees/update/:employeeId) karta hai. Response ka shape wahi hai jo form pehle se samajhta hai.
-export const saveEmployeeSection = async (employeeId, sectionId, sectionData, resumeFile = null) => {
+export const saveEmployeeSection = async (employeeId, sectionId, sectionData, files = {}) => {
   let result;
   try {
-    if (resumeFile) {
-      // Resume bhi isi PATCH request ke saath jaata hai — alag generic upload
-      // route ab use nahi hota. Backend multer se capture karke Cloudinary pe
-      // bhejta hai aur URL documents.resume me save karta hai.
+    // Jo bhi documents files stage hui hain (resume/aadhaarCard/panCard/
+    // passportPhoto) wo sab isi PATCH ke saath FormData ke roop me jaati hain
+    // — backend multer se capture karke Cloudinary pe bhejta hai. Nayi file
+    // par purani file storage me delete nahi hoti (keepExisting).
+    // Pehle yahan sirf resumeFile (File) aata tha — Profile.jsx ab bhi aisa
+    // bhejta hai, to usko { resume: file } jaisa treat karo.
+    const fileMap = files instanceof File ? { resume: files } : files ?? {};
+    const fileEntries = Object.entries(fileMap).filter(
+      ([, file]) => file instanceof File
+    );
+
+    if (fileEntries.length > 0) {
       const formData = new FormData();
       formData.append("section", sectionId);
       formData.append("data", JSON.stringify(sectionData));
-      formData.append("resume", resumeFile);
+      fileEntries.forEach(([key, file]) =>
+        formData.append(key, file, file.name)
+      );
       result = await updateEmployeeApi(employeeId, sectionId, formData);
     } else {
       result = await updateEmployeeApi(employeeId, sectionId, sectionData);

@@ -68,6 +68,7 @@ const submitPublicForm = async (req, res) => {
   try {
     const { companyCode, employeeId } = req.params;
     const formData = req.body || {};
+    const files = req.files || {};
 
     if (!companyCode || !employeeId) {
       return res.status(400).json({
@@ -79,7 +80,8 @@ const submitPublicForm = async (req, res) => {
     const result = await onboardingService.submitOnboardingForm(
       companyCode,
       employeeId,
-      formData
+      formData,
+      files
     );
 
     return sendResult(res, result);

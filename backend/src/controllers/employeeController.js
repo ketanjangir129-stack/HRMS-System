@@ -135,7 +135,8 @@ const updateEmployee = async (req, res) => {
   const { companyCode } = req.user;
   const employeeId = String(req.params.employeeId ?? "").trim().toUpperCase();
   const { section, data } = req.body || {};
-  const resumeFile = req.file || null;
+  // upload.fields ka result: { resume: [File], aadhaarCard: [File], ... }
+  const documentsFiles = req.files || null;
 
   if (!EMPLOYEE_ID_PATTERN.test(employeeId)) {
     return res.status(400).json({ success: false, field: "employeeId", message: "A valid employee ID is required." });
@@ -162,7 +163,7 @@ const updateEmployee = async (req, res) => {
 
   try {
     const { status, ...result } = await employeeService.updateEmployee(
-      companyCode, employeeId, section, parsedData, resumeFile
+      companyCode, employeeId, section, parsedData, documentsFiles
     );
     res.status(status).json(result);
   } catch (error) {

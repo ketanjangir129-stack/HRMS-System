@@ -664,8 +664,9 @@ export const getResignationSummary = (resignations = []) =>
 
 /*
 | Search across the fields somebody would actually type: the name, the id,
-| the department and the designation. The same shape `searchEmployees` uses,
-| so the resignation queue filters the way the directory does.
+| the department, the designation and the resignation status. The same shape
+| `searchEmployees` uses, so the resignation queue filters the way the
+| directory does.
 */
 
 export const searchResignations = (resignations = [], term = "") => {
@@ -680,6 +681,7 @@ export const searchResignations = (resignations = [], term = "") => {
       resignation?.employeeId,
       resignation?.department,
       resignation?.designation,
+      resignation?.status,
     ]
       .filter(Boolean)
       .some((field) => String(field).toLowerCase().includes(query))

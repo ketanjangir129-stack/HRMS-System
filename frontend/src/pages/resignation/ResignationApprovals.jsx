@@ -1,8 +1,8 @@
-import { useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { toast } from "react-toastify";
+import {useState, useEffect, useMemo } from "react";
+import { useNavigate, useOutletContext } from "react-router-dom";
+import { toast } from "react-toastify"; 
 
-import { ArrowLeft, Search } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 
 import useAuth from "../../hooks/useAuth";
 import useResignations from "../../hooks/useResignations";
@@ -93,7 +93,14 @@ function ResignationApprovals() {
 
   const [tab, setTab] = useState("mine");
 
-  const [search, setSearch] = useState("");
+  /*
+  | Search is not a page-local widget anymore — the pinia of this app's
+  | search is the navbar input, whose state DashboardLayout shares with the
+  | routed page through the outlet context. Same bar every other list page
+  | uses, so an employee landing here can search the queue the way they
+  | search the directory — by name, id, department, designation or status.
+  */
+  const { search, setSearch, setSearchPlaceholder } = useOutletContext();
 
   const [selected, setSelected] = useState(null);
 
@@ -101,6 +108,21 @@ function ResignationApprovals() {
   const [decision, setDecision] = useState(null);
 
   const [submitting, setSubmitting] = useState(false);
+
+  // Navbar ka placeholder isi page ke liye bolo, page chhodo to wapas lo
+  useEffect(() => {
+    setSearchPlaceholder("Search employee, department or status here...");
+    return () => {
+      setSearchPlaceholder("Search...");
+    };
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      setSearch("");
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const actor = useMemo(
     () => ({
@@ -132,6 +154,13 @@ function ResignationApprovals() {
     initialPageSize: 10,
     pageSizeOptions: [10, 25, 50],
   });
+
+  // Navbar se aane wali search badle to list ke sath page number bhi shuru
+  // se — warna filtered chhoti list par bada page number reh jaata hai
+  useEffect(() => {
+    pagination.resetPagination();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search]);
 
   /*
   | The word a row offers this reader. It is the same set of checks that
@@ -397,24 +426,6 @@ function ResignationApprovals() {
             </p>
 
           </div>
-
-        </div>
-
-        <div className="relative shrink-0 lg:w-72">
-
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-faint" />
-
-          <input
-            type="search"
-            value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
-              pagination.resetPagination();
-            }}
-            placeholder="Search name, ID or department"
-            aria-label="Search resignations"
-            className="ui-field pl-9"
-          />
 
         </div>
 

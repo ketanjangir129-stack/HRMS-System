@@ -1,4 +1,5 @@
 const db = require("../config/firebase");
+const { uploadFile } = require("./uploadServices");
 const {
   loadDepartments,
   toDepartmentRefs,
@@ -344,7 +345,7 @@ const notifyOnboardingSubmittedInBackend = async (companyCode, request, employee
   }
 };
 
-const submitOnboardingForm = async (companyCode, employeeId, formData) => {
+const submitOnboardingForm = async (companyCode, employeeId, formData, files = {}) => {
   const cleanId = String(employeeId || "").trim().toUpperCase();
   const requestRef = db.ref(`companies/${companyCode}/onboardingRequests/${cleanId}`);
   const snapshot = await requestRef.once("value");
@@ -366,6 +367,31 @@ const submitOnboardingForm = async (companyCode, employeeId, formData) => {
       success: false,
       message: "Onboarding form already submitted.",
     };
+  }
+
+  // Upload provided documents to storage (Cloudinary) — files are optional
+  const DOCUMENT_UPLOAD_FIELDS = ["aadhaarCard", "panCard", "resume", "passportPhoto"];
+  const documentUploads = {};
+  for (const field of DOCUMENT_UPLOAD_FIELDS) {
+    const file = files?.[field]?.[0];
+    if (!file || !file.buffer || file.buffer.length === 0) continue;
+    try {
+      const uploadResult = await uploadFile(file.buffer, {
+        folder: `companies/${companyCode}/onboarding/${cleanId}`,
+        resourceType: "auto",
+        maxBytes: 5 * 1024 * 1024,
+        fileName: file.originalname,
+      });
+      documentUploads[`${field}Url`] = uploadResult.url;
+    } catch (uploadError) {
+      console.error(`Onboarding document upload error (${field}):`, uploadError);
+      return {
+        success: false,
+        status: 502,
+        field,
+        message: "Failed to upload document to storage.",
+      };
+    }
   }
 
   const updatedRecord = {
@@ -393,10 +419,12 @@ const submitOnboardingForm = async (companyCode, employeeId, formData) => {
       branchName: formData.branchName || "",
     },
     documents: {
+      ...existingData.documents,
       aadhaarNumber: formData.aadhaarNumber || "",
       panNumber: formData.panNumber || "",
       uanNumber: formData.uanNumber || "",
       esicNumber: formData.esicNumber || "",
+      ...documentUploads,
     },
     status: "Pending Approval",
     submittedAt: Date.now(),
@@ -458,6 +486,13 @@ const toEmployeeRecord = (request, employeeId, departmentRefs) => {
       pan: documents.pan || documents.panNumber || "",
       uan: documents.uan || documents.uanNumber || "",
       esic: documents.esic || documents.esicNumber || "",
+      // Onboarding form par upload huye documents ke Cloudinary links bhi
+      // employee record tak le jaao (resumeUrl/aadhaarCardUrl/panCardUrl/
+      // passportPhotoUrl submitOnboardingForm me save hote hain).
+      resume: documents.resume || documents.resumeUrl || "",
+      aadhaarCard: documents.aadhaarCard || documents.aadhaarCardUrl || "",
+      panCard: documents.panCard || documents.panCardUrl || "",
+      passportPhoto: documents.passportPhoto || documents.passportPhotoUrl || "",
     },
     account: {
       ...(request.account || {}),

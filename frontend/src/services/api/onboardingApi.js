@@ -21,10 +21,28 @@ export const getPublicOnboardingRequestApi = async (companyCode, employeeId) => 
 
 export const submitPublicOnboardingFormApi = async (companyCode, employeeId, formData) => {
   const url = `${API_URL}/onboarding/public/${encodeURIComponent(companyCode)}/${encodeURIComponent(employeeId)}/submit`;
+
+  const form = new FormData();
+  const data = formData ?? {};
+
+  // Text fields (File objects are appended below under their own field names)
+  Object.entries(data).forEach(([key, value]) => {
+    if (value === null || value === undefined || typeof value === "object") return;
+    form.append(key, String(value));
+  });
+
+  // File uploads: aadhaarCard, panCard, resume, passportPhoto
+  const files = data.files ?? {};
+  Object.entries(files).forEach(([key, file]) => {
+    if (file instanceof File) {
+      form.append(key, file, file.name);
+    }
+  });
+
+  // No Content-Type header — browser sets multipart/form-data with boundary
   const response = await fetch(url, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(formData ?? {}),
+    body: form,
   });
   return await response.json();
 };
