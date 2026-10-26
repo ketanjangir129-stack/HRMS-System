@@ -135,6 +135,11 @@ function MonthlyAttendance() {
 
   };
 
+  const handleMonthSelect = (nextYear, nextMonth) => {
+    setYear(nextYear);
+    setMonth(nextMonth);
+  };
+
   const handleRetry = () => {
     reloadDirectory();
     reloadRecords();
@@ -221,6 +226,9 @@ function MonthlyAttendance() {
           currentLabel={currentLabel}
           onMonthChange={handleMonthChange}
           disableNextMonth={isCurrentMonth}
+          year={year}
+          month={month}
+          onMonthSelect={handleMonthSelect}
         />
 
       </div>

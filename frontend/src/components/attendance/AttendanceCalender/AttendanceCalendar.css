@@ -191,6 +191,39 @@
   font-weight: 500;
 }
 
+/*
+| Month picker (year view) and year picker (decade view), opened from the
+| title. A month name does not fit the 30px day circle, so it becomes a pill;
+| a year tile has no <abbr>, so the tile itself carries the hover and the
+| current year. The `!important`s out-rank the transparent pin above.
+*/
+
+.attendance-calendar .react-calendar__year-view .react-calendar__tile abbr {
+  width: auto;
+  min-width: 72px;
+  padding: 0 12px;
+}
+
+.attendance-calendar .react-calendar__decade-view .react-calendar__tile {
+  border-radius: 10px;
+}
+
+.attendance-calendar .react-calendar__decade-view .react-calendar__tile:enabled:hover {
+  background: var(--color-surface-raised) !important;
+}
+
+.attendance-calendar .react-calendar__decade-view .react-calendar__tile--now {
+  color: var(--color-brand);
+  font-weight: 700;
+}
+
+.attendance-calendar .react-calendar__year-view .react-calendar__tile:disabled,
+.attendance-calendar .react-calendar__decade-view .react-calendar__tile:disabled {
+  color: var(--color-ink-faint);
+  opacity: 0.5;
+  cursor: default;
+}
+
 /* Small screens: seven columns must fit, so the row and circle shrink. */
 
 @media (max-width: 480px) {

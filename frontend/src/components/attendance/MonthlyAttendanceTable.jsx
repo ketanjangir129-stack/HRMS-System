@@ -122,6 +122,10 @@ function MonthlyAttendanceTable({
   currentLabel,
   onMonthChange,
   disableNextMonth = false,
+  // With `onMonthSelect`, the month label opens the month picker.
+  year,
+  month,
+  onMonthSelect,
   title = "Employee Monthly Attendance",
 }) {
 
@@ -374,6 +378,9 @@ function MonthlyAttendanceTable({
                 label={currentLabel}
                 onChange={onMonthChange}
                 disableNext={disableNextMonth}
+                year={year}
+                month={month}
+                onSelect={onMonthSelect}
               />
             )}
 

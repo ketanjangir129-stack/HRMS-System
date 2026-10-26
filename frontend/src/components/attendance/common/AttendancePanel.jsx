@@ -1,9 +1,13 @@
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import {
+  FiChevronDown,
   FiChevronLeft,
   FiChevronRight,
   FiDownload,
   FiFilter,
 } from "react-icons/fi";
+import { MONTHS } from "../../../utils/attendance/attendanceConstants";
 
 /*
 |--------------------------------------------------------------------------
@@ -183,9 +187,203 @@ export function ExportButton({ onClick, disabled = false, label = "Export" }) {
 |--------------------------------------------------------------------------
 | Month Navigator
 |--------------------------------------------------------------------------
+| The arrows step one month. Passing `year`, `month` and `onSelect` also turns
+| the label into a picker - a year stepper over a grid of the twelve months -
+| so a month a year back is two clicks rather than twelve.
+|
+| Months after the current one are never offered, matching the arrows: no
+| attendance exists for them yet. `min` ({ year, month }) bounds the other
+| end, for a view that has nothing before a certain month (an employee's
+| joining month), and also stops the previous arrow there.
+|
+| The panel is portalled and fixed against the label, the same way
+| `ActionMenu` is: the tables this sits in clip their own overflow.
 */
 
-export function MonthNavigator({ label, onChange, disableNext = false }) {
+const PICKER_WIDTH = 256;
+const PICKER_HEIGHT = 232;
+const PICKER_GAP = 6;
+
+const toMonthIndex = (year, month) => year * 12 + (month - 1);
+
+function MonthPicker({ anchorRef, year, month, min, onSelect, onClose }) {
+
+  const today = new Date();
+  const maxIndex = toMonthIndex(today.getFullYear(), today.getMonth() + 1);
+  const minIndex = min ? toMonthIndex(min.year, min.month) : -Infinity;
+
+  const [viewYear, setViewYear] = useState(year);
+  const [style, setStyle] = useState(null);
+
+  const panelRef = useRef(null);
+
+  useLayoutEffect(() => {
+
+    const rect = anchorRef.current?.getBoundingClientRect();
+    if (!rect) return;
+
+    const left = Math.min(
+      Math.max(PICKER_GAP, rect.left + rect.width / 2 - PICKER_WIDTH / 2),
+      window.innerWidth - PICKER_WIDTH - PICKER_GAP
+    );
+
+    const openUp =
+      window.innerHeight - rect.bottom < PICKER_HEIGHT && rect.top > PICKER_HEIGHT;
+
+    setStyle({
+      position: "fixed",
+      left,
+      width: PICKER_WIDTH,
+      ...(openUp
+        ? { bottom: window.innerHeight - rect.top + PICKER_GAP }
+        : { top: rect.bottom + PICKER_GAP }),
+    });
+
+  }, [anchorRef]);
+
+  useEffect(() => {
+
+    const handlePointerDown = (event) => {
+      if (anchorRef.current?.contains(event.target)) return;
+      if (panelRef.current?.contains(event.target)) return;
+      onClose();
+    };
+
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape") onClose();
+    };
+
+    // The label moves with the page behind it, so the panel is dismissed.
+    const handleScroll = (event) => {
+      if (panelRef.current?.contains(event.target)) return;
+      onClose();
+    };
+
+    document.addEventListener("mousedown", handlePointerDown);
+    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("scroll", handleScroll, true);
+    window.addEventListener("resize", onClose);
+
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("scroll", handleScroll, true);
+      window.removeEventListener("resize", onClose);
+    };
+
+  }, [anchorRef, onClose]);
+
+  if (!style) return null;
+
+  const canPrevYear = toMonthIndex(viewYear - 1, 12) >= minIndex;
+  const canNextYear = toMonthIndex(viewYear + 1, 1) <= maxIndex;
+
+  const yearButtonClass =
+    "flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg text-ink-muted transition-colors hover:bg-surface-muted hover:text-ink disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent";
+
+  return createPortal(
+    <div
+      ref={panelRef}
+      role="dialog"
+      aria-label="Choose month"
+      style={style}
+      className="z-50 rounded-xl border border-line bg-surface p-3 shadow-lg shadow-slate-900/10"
+    >
+
+      <div className="mb-2 flex items-center justify-between">
+
+        <button
+          type="button"
+          onClick={() => setViewYear((value) => value - 1)}
+          disabled={!canPrevYear}
+          aria-label="Previous year"
+          className={yearButtonClass}
+        >
+          <FiChevronLeft size={16} />
+        </button>
+
+        <span className="text-sm font-semibold text-ink">{viewYear}</span>
+
+        <button
+          type="button"
+          onClick={() => setViewYear((value) => value + 1)}
+          disabled={!canNextYear}
+          aria-label="Next year"
+          className={yearButtonClass}
+        >
+          <FiChevronRight size={16} />
+        </button>
+
+      </div>
+
+      <div className="grid grid-cols-3 gap-1.5">
+
+        {MONTHS.map((name, index) => {
+
+          const monthNumber = index + 1;
+          const monthIndex = toMonthIndex(viewYear, monthNumber);
+          const disabled = monthIndex > maxIndex || monthIndex < minIndex;
+          const selected = viewYear === year && monthNumber === month;
+          const current = monthIndex === maxIndex;
+
+          return (
+            <button
+              key={name}
+              type="button"
+              disabled={disabled}
+              aria-pressed={selected}
+              aria-label={`${name} ${viewYear}`}
+              onClick={() => {
+                onSelect(viewYear, monthNumber);
+                onClose();
+              }}
+              className={`h-9 cursor-pointer rounded-lg text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-35 ${
+                selected
+                  ? "bg-brand text-white"
+                  : `hover:bg-surface-muted disabled:hover:bg-transparent ${
+                      current
+                        ? "text-brand ring-1 ring-inset ring-brand"
+                        : "text-ink-muted hover:text-ink"
+                    }`
+              }`}
+            >
+              {name.slice(0, 3)}
+            </button>
+          );
+
+        })}
+
+      </div>
+
+    </div>,
+    document.body
+  );
+
+}
+
+export function MonthNavigator({
+  label,
+  onChange,
+  disableNext = false,
+  year,
+  month,
+  onSelect,
+  min,
+}) {
+
+  const [open, setOpen] = useState(false);
+
+  const close = useCallback(() => setOpen(false), []);
+
+  const labelRef = useRef(null);
+
+  const canPick = Boolean(year && month && onSelect);
+
+  const disablePrev = Boolean(
+    min && year && month &&
+    toMonthIndex(year, month) <= toMonthIndex(min.year, min.month)
+  );
+
   return (
     /*
     | Fills its line on a phone with the two arrows pushed to the edges, which
@@ -197,15 +395,44 @@ export function MonthNavigator({ label, onChange, disableNext = false }) {
       <button
         type="button"
         onClick={() => onChange("prev")}
+        disabled={disablePrev}
         aria-label="Previous month"
-        className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-lg text-ink-muted transition-colors hover:bg-surface-muted hover:text-ink"
+        className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-lg text-ink-muted transition-colors hover:bg-surface-muted hover:text-ink disabled:cursor-not-allowed disabled:opacity-40"
       >
         <FiChevronLeft size={18} />
       </button>
 
-      <span className="min-w-32 text-center text-sm font-semibold text-ink-muted">
-        {label}
-      </span>
+      {canPick ? (
+        <button
+          ref={labelRef}
+          type="button"
+          onClick={() => setOpen((value) => !value)}
+          aria-haspopup="dialog"
+          aria-expanded={open}
+          className="flex h-9 min-w-32 cursor-pointer items-center justify-center gap-1.5 rounded-lg px-2 text-sm font-semibold text-ink-muted transition-colors hover:bg-surface-muted hover:text-ink"
+        >
+          {label}
+          <FiChevronDown
+            size={14}
+            className={`transition-transform ${open ? "rotate-180" : ""}`}
+          />
+        </button>
+      ) : (
+        <span className="min-w-32 text-center text-sm font-semibold text-ink-muted">
+          {label}
+        </span>
+      )}
+
+      {open && canPick && (
+        <MonthPicker
+          anchorRef={labelRef}
+          year={year}
+          month={month}
+          min={min}
+          onSelect={onSelect}
+          onClose={close}
+        />
+      )}
 
       <button
         type="button"

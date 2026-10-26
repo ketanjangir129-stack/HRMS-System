@@ -5,7 +5,11 @@ import {
   formatTime,
 } from "../../../utils/attendance/attendanceDate";
 import { downloadCsv } from "../../../utils/attendance/attendanceTable";
-import { getApprovalLabel } from "../../../utils/attendance/attendanceUtils";
+import {
+  getApprovalLabel,
+  getApproverName,
+} from "../../../utils/attendance/attendanceUtils";
+import useAuth from "../../../hooks/useAuth";
 import {
   AttendancePanel,
   ExportButton,
@@ -58,6 +62,8 @@ function EmployeeReportTable({
   onRetry,
   toolbar,
 }) {
+
+  const { company } = useAuth();
 
   /*
   | The day, its two punches and how it ended up stay at every width; the
@@ -238,7 +244,8 @@ function EmployeeReportTable({
         row.workingHours || "--",
         row.status,
         getApprovalLabel(row) || "--",
-        row.approvedBy || "",
+        // No directory: employee approvers stay as their id, the owner gets a name.
+        getApproverName(row.approvedBy, {}, company),
         row.approvalRemarks || row.remarks || "",
       ])
     );

@@ -283,11 +283,54 @@ export const getEmployeeDetails = (directory = {}, employeeId = "") =>
     };
 
 /*
-| Joins records with the directory. Used everywhere a record has to be shown
-| with the employee it belongs to.
+| Who decided a day, as a name. An employee approver is looked up in the
+| directory. The owner is not an employee: the backend files their decision
+| under their Firebase uid (upper cased) or, on older records, the word
+| "owner", neither of which the directory knows - so both are matched against
+| the company's `ownerUid` and read back as the owner's name. A uid-shaped
+| value that is neither (a company without `ownerUid` on record) is treated
+| the same way, matching the leave module's `sanitizeApprover`.
+|
+| Anything else - a deleted employee's id - is returned as it was stored.
 */
 
-export const attachEmployeeDetails = (records = [], directory = {}) =>
+const UID_PATTERN = /^[A-Z0-9_-]{20,}$/;
+
+export const getApproverName = (approvedBy, directory = {}, company = null) => {
+
+    if (!approvedBy) return "";
+
+    const employeeName = directory?.[approvedBy]?.name;
+
+    if (employeeName) return employeeName;
+
+    const id = String(approvedBy).trim().toUpperCase();
+
+    const ownerUid = String(company?.ownerUid || "").trim().toUpperCase();
+
+    const isOwner =
+        id === "OWNER" ||
+        (ownerUid ? id === ownerUid : UID_PATTERN.test(id));
+
+    if (isOwner) {
+        return company?.ownerName ? `${company.ownerName} (Owner)` : "Owner";
+    }
+
+    return approvedBy;
+
+};
+
+/*
+| Joins records with the directory. Used everywhere a record has to be shown
+| with the employee it belongs to. `company` lets the approver resolve to the
+| owner's name when the owner made the decision.
+*/
+
+export const attachEmployeeDetails = (
+    records = [],
+    directory = {},
+    company = null
+) =>
     records.map((record) => {
 
         const employee = getEmployeeDetails(
@@ -295,16 +338,16 @@ export const attachEmployeeDetails = (records = [], directory = {}) =>
             record.employeeId
         );
 
-        const approver = record.approvedBy
-            ? getEmployeeDetails(directory, record.approvedBy)
-            : null;
-
         return {
             ...record,
             employeeName: employee.name,
             department: employee.department,
             designation: employee.designation,
-            approvedByName: approver?.name || record.approvedBy || "",
+            approvedByName: getApproverName(
+                record.approvedBy,
+                directory,
+                company
+            ),
         };
 
     });
@@ -725,6 +768,10 @@ const toTileClass = (status) =>
 |
 | Returns `{ [YYYY-MM-DD]: { status, className } }` for the days of the month
 | that resolve to a status.
+|
+| `includeAttendance: false` keeps only steps 2 and 3. It is for a login with
+| no employee record - the owner - who never punches: without it every past
+| working day of their month would be drawn as an absence.
 */
 
 export const getAttendanceCalendar = ({
@@ -735,6 +782,7 @@ export const getAttendanceCalendar = ({
     leaveMap = {},
     joiningDate = "",
     today = getDateKey(),
+    includeAttendance = true,
 } = {}) => {
 
     const calendar = {};
@@ -759,7 +807,7 @@ export const getAttendanceCalendar = ({
 
         const date = `${monthPrefix}${String(day).padStart(2, "0")}`;
 
-        const record = records.get(date);
+        const record = includeAttendance ? records.get(date) : undefined;
 
         const holiday = holidayMap?.[date];
 
@@ -781,6 +829,10 @@ export const getAttendanceCalendar = ({
         } else if (isWeeklyOff(date)) {
 
             status = ATTENDANCE_STATUS.WEEKLY_OFF;
+
+        } else if (!includeAttendance) {
+
+            // Nothing else is known about a day for a login that never punches.
 
         } else if (leaveMap[date]) {
 

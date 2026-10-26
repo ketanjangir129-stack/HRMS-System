@@ -292,6 +292,11 @@ function AttendanceReports() {
 
   };
 
+  const handleMonthSelect = (nextYear, nextMonth) => {
+    setYear(nextYear);
+    setMonth(nextMonth);
+  };
+
   const reloadMonthly = () => {
     reloadDirectory();
     reloadMonth();
@@ -303,6 +308,9 @@ function AttendanceReports() {
       label={monthLabel}
       onChange={handleMonthChange}
       disableNext={isCurrentMonth}
+      year={year}
+      month={month}
+      onSelect={handleMonthSelect}
     />
   );
 
@@ -399,6 +407,9 @@ function AttendanceReports() {
             currentLabel={monthLabel}
             onMonthChange={handleMonthChange}
             disableNextMonth={isCurrentMonth}
+            year={year}
+            month={month}
+            onMonthSelect={handleMonthSelect}
             title="Monthly Report"
           />
         )}

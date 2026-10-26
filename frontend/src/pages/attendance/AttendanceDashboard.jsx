@@ -459,6 +459,8 @@ function AttendanceDashboard() {
                 holidayMap={holidayMap}
                 leaveMap={calendarLeaveMap}
                 joiningDate={currentUser?.employmentInfo?.joiningDate}
+                // The owner has no employee record and never punches.
+                showAttendance={Boolean(employeeId)}
                 loading={calendarLoading}
                 error={calendarError}
                 onMonthChange={handleMonthChange}

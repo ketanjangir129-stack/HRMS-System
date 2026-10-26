@@ -10,6 +10,7 @@ import useHolidayDates from "../../hooks/useHolidayDates";
 import {
   getMonthDateKeys,
   getMonthLabel,
+  parseDateKey,
   shiftMonth,
 } from "../../utils/attendance/attendanceDate";
 import { getCurrentEmployeeId } from "../../utils/attendance/attendanceRequestUtils";
@@ -140,6 +141,30 @@ function MyAttendance() {
 
   };
 
+  const handleMonthSelect = (nextYear, nextMonth) => {
+    setYear(nextYear);
+    setMonth(nextMonth);
+  };
+
+  /*
+  | Nothing before the joining month is this employee's: every working day
+  | there would read as an absence. The picker and the previous arrow stop at
+  | it. A missing or unreadable date leaves the past open, as before.
+  */
+  const joiningDate = currentUser?.employmentInfo?.joiningDate;
+
+  const minMonth = useMemo(() => {
+
+    if (!joiningDate) return undefined;
+
+    const joined = parseDateKey(joiningDate) || new Date(joiningDate);
+
+    if (Number.isNaN(joined.getTime())) return undefined;
+
+    return { year: joined.getFullYear(), month: joined.getMonth() + 1 };
+
+  }, [joiningDate]);
+
   /*
   |--------------------------------------------------------------------------
   | No Employee Record
@@ -220,6 +245,10 @@ function MyAttendance() {
               label={monthLabel}
               onChange={handleMonthChange}
               disableNext={isCurrentMonth}
+              year={year}
+              month={month}
+              onSelect={handleMonthSelect}
+              min={minMonth}
             />
           }
         />

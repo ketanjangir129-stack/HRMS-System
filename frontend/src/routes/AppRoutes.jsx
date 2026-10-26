@@ -1,6 +1,6 @@
 import { lazy, Suspense } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
-import Register from "../pages/authenticate/Register";
+import Register from "../pages/authenticate/register";
 import Login from "../pages/authenticate/login";
 import ChangePassword from "../pages/authenticate/ChangePassword";
 import DashboardLayout from "../layouts/DashboardLayout";
@@ -49,7 +49,6 @@ const OnboardingRequests = lazy(() => import("../pages/onboarding/OnboardingRequ
 const Onboardinghistory = lazy(() => import("../pages/onboarding/OnBoardhistory"));
 const ReviewOnboarding = lazy(() => import("../pages/onboarding/ReviewOnboarding"));
 const AttendanceDashboard = lazy(() => import("../pages/attendance/AttendanceDashboard"));
-const DailyAttendance = lazy(() => import("../pages/attendance/DailyAttendance"));
 const MonthlyAttendance = lazy(() => import("../pages/attendance/MonthlyAttendance"));
 const MyAttendance = lazy(() => import("../pages/attendance/MyAttendance"));
 const LeaveHistory = lazy(() => import("../pages/attendance/LeaveHistory"));
@@ -325,18 +324,9 @@ function AppRoutes() {
                             }
                         />
 
-                        <Route
-                            path="/attendance/daily"
-                            element={
-                                <PermissionRoute permission="attendance.daily">
-                                    <DailyAttendance />
-                                </PermissionRoute>
-                            }
-                        />
-
                         {/*
                   The approval desk. Guarded by its own permission rather than
-                  by `attendance.daily`: reading a day and deciding it are two
+                  by `attendance.reports`: reading a day and deciding it are two
                   different rights, and the page also re-asks the department
                   scope before it writes anything.
                 */}

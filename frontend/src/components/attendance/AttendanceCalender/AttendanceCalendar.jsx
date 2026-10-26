@@ -45,6 +45,11 @@ const LEGEND = [
   { label: "Pending Approval", color: "bg-surface ring-2 ring-amber-500" },
 ];
 
+// What a holidays-only calendar (the owner's) can actually show.
+const HOLIDAY_LEGEND = LEGEND.filter(({ label }) =>
+  ["Holiday", "Weekly Off"].includes(label)
+);
+
 const startOfMonth = (date) =>
   new Date(date.getFullYear(), date.getMonth(), 1);
 
@@ -58,6 +63,8 @@ function AttendanceCalendar({
   holidayMap = {},
   leaveMap = {},
   joiningDate = "",
+  // False for a login with no employee record (the owner): holidays only.
+  showAttendance = true,
   loading = false,
   error = "",
   onMonthChange,
@@ -104,8 +111,9 @@ function AttendanceCalendar({
             leaveMap,
             joiningDate: joiningDate ? getDateKey(joiningDate) : "",
             today: todayKey,
+            includeAttendance: showAttendance,
           }),
-    [loading, year, month, history, holidayMap, leaveMap, joiningDate, todayKey]
+    [loading, year, month, history, holidayMap, leaveMap, joiningDate, todayKey, showAttendance]
   );
 
   const goToMonth = useCallback(
@@ -162,7 +170,11 @@ function AttendanceCalendar({
 
         <div>
           <h2 className="ui-card-title">Attendance Calendar</h2>
-          <p className="ui-card-subtitle">Your monthly attendance overview</p>
+          <p className="ui-card-subtitle">
+            {showAttendance
+              ? "Your monthly attendance overview"
+              : "Company holidays and weekly offs"}
+          </p>
         </div>
 
         <button
@@ -194,7 +206,7 @@ function AttendanceCalendar({
           className="attendance-calendar"
           locale="en-IN"
           view={view}
-          minDetail="year"
+          minDetail="decade"
           activeStartDate={activeStartDate}
           onActiveStartDateChange={handleActiveStartDateChange}
           onViewChange={handleViewChange}
@@ -226,7 +238,7 @@ function AttendanceCalendar({
 
       {/* Legend */}
       <ul className="mt-4 flex flex-wrap gap-x-4 gap-y-2 border-t border-line pt-4">
-        {LEGEND.map((item) => (
+        {(showAttendance ? LEGEND : HOLIDAY_LEGEND).map((item) => (
           <li
             key={item.label}
             className="flex items-center gap-1.5 text-[11px] font-medium text-ink-subtle"

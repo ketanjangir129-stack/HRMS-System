@@ -1,6 +1,5 @@
 import {
   FiBarChart2,
-  FiCalendar,
   FiCheckSquare,
   FiFileText,
   FiSettings,
@@ -32,18 +31,10 @@ const ACTIONS = [
     path: "/attendance/my",
     permission: "attendance.myAttendance",
   },
-  {
-    title: "Daily Attendance",
-    description: "View today's attendance",
-    icon: FiCalendar,
-    color: "bg-blue-50 text-blue-600",
-    path: "/attendance/daily",
-    permission: "attendance.daily",
-  },
   /*
-  | Directly after the daily list, because that is the page it was taken off:
-  | signing a day off used to be an extra column beside today's punches, which
-  | meant it could only ever be done for today and one row at a time.
+  | Signing a day off used to be an extra column beside today's punches on the
+  | old daily list, which meant it could only ever be done for today and one
+  | row at a time. A single day is now read on the daily report.
   */
   {
     title: "Attendance Approval",

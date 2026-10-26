@@ -11,7 +11,9 @@ import { downloadCsv, searchRows } from "../../utils/attendance/attendanceTable"
 import {
   getApprovalLabel,
   getApprovalStatus,
+  getApproverName,
 } from "../../utils/attendance/attendanceUtils";
+import useAuth from "../../hooks/useAuth";
 import {
   AttendancePanel,
   ExportButton,
@@ -219,6 +221,8 @@ function AttendanceRecordsTable({
   approval = null,
   emptyMessage = "No employee has punched in for this day.",
 }) {
+
+  const { company } = useAuth();
 
   const [statusFilter, setStatusFilter] = useState("");
   const [departmentFilter, setDepartmentFilter] = useState("");
@@ -507,7 +511,8 @@ function AttendanceRecordsTable({
         record.workingHours || "--",
         record.status,
         getApprovalLabel(record) || "--",
-        record.approvedBy || "",
+        // No directory: employee approvers stay as their id, the owner gets a name.
+        getApproverName(record.approvedBy, {}, company),
         record.approvalRemarks || "",
         record.remarks || "",
       ])

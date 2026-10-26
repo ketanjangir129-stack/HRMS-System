@@ -360,10 +360,14 @@ export const PERMISSION_PAGES = [
         defaults: { hr: true, manager: true, employee: true },
       },
       {
+        /*
+        | There is no daily page any more - a single day is read on the daily
+        | report. The key stays because the server still guards marking a day
+        | by hand with `attendance.daily`.
+        */
         key: "daily",
-        label: "Daily Attendance",
-        description: "Every employee on a chosen day",
-        path: "/attendance/daily",
+        label: "Mark Attendance",
+        description: "Record a day by hand for an employee",
         defaults: { hr: true, manager: true, employee: false },
       },
       {

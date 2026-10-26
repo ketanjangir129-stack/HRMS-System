@@ -195,8 +195,8 @@ function AttendanceApprovals() {
   */
 
   const scoped = useMemo(
-    () => filterRows(attachEmployeeDetails(records, directory)),
-    [filterRows, records, directory]
+    () => filterRows(attachEmployeeDetails(records, directory, company)),
+    [filterRows, records, directory, company]
   );
 
   const inPeriod = useMemo(
@@ -322,6 +322,14 @@ function AttendanceApprovals() {
     const next = shiftMonth(period.year, period.month, direction);
 
     setPeriod({ ...next, ...getMonthRange(next.year, next.month) });
+
+    clearSelection();
+
+  };
+
+  const handleMonthSelect = (year, month) => {
+
+    setPeriod({ year, month, ...getMonthRange(year, month) });
 
     clearSelection();
 
@@ -694,6 +702,9 @@ function AttendanceApprovals() {
               label={monthLabel}
               onChange={handleMonthChange}
               disableNext={isCurrentMonth}
+              year={period.year}
+              month={period.month}
+              onSelect={handleMonthSelect}
             />
 
           </div>
