@@ -10,7 +10,20 @@ import {
     sendApprovalEmail,
 } from "../../services/email/onboardingEmailService";
 import RejectModal from "../../pages/onboarding/RejectModal";
+import OnboardingDocuments from "../../components/onboarding/OnboardingDocuments";
 import { toast } from "react-toastify";
+
+const DetailField = ({ label, value }) => (
+    <div>
+        <label className="block text-sm font-medium text-slate-500 mb-1">
+            {label}
+        </label>
+
+        <div className="w-full border border-slate-200 rounded-lg p-3 bg-slate-50 text-slate-800">
+            {value || "-"}
+        </div>
+    </div>
+);
 
 function ReviewOnboarding() {
     const { requestId } = useParams();
@@ -153,17 +166,6 @@ function ReviewOnboarding() {
             </div>
         );
     }
-    const DetailField = ({ label, value }) => (
-        <div>
-            <label className="block text-sm font-medium text-slate-500 mb-1">
-                {label}
-            </label>
-
-            <div className="w-full border border-slate-200 rounded-lg p-3 bg-slate-50 text-slate-800">
-                {value || "-"}
-            </div>
-        </div>
-    );
 
     return (
         <div className="bg-white rounded-xl shadow p-6">
@@ -361,6 +363,16 @@ function ReviewOnboarding() {
                 </div>
 
             </div>
+
+            {/* Attached documents — the approver checks these against the
+                numbers above before the request is decided. */}
+            <OnboardingDocuments
+                documents={request.documents}
+                submitted={
+                    Boolean(request.submittedAt) ||
+                    request.status === "Pending Approval"
+                }
+            />
 
             <div className="flex justify-end gap-4 mt-8">
                 <button
