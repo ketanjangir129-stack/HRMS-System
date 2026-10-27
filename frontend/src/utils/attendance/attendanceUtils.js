@@ -760,11 +760,10 @@ const toTileClass = (status) =>
 |   3. A weekly off.
 |   4. An approved leave whose attendance row has not been written yet
 |      (`leaveMap` is `{ [YYYY-MM-DD]: "Leave" | "Half Day" }`).
-|   5. A finished working day with nothing on it: Absent. Absences are never
-|      stored, so without this the month showed a blank tile for every day
-|      somebody did not come in. Today is not a finished day and the days
-|      before the employee joined were never theirs to attend, so neither is
-|      ever turned into an absence.
+|   5. A working day up to today with nothing on it: Absent, in every month.
+|      Absences are never stored, so without this the month showed a blank
+|      tile for every day somebody did not come in. Today starts as Absent and
+|      turns into the punch's status once one is recorded.
 |
 | Returns `{ [YYYY-MM-DD]: { status, className } }` for the days of the month
 | that resolve to a status.
@@ -780,7 +779,6 @@ export const getAttendanceCalendar = ({
     history = [],
     holidayMap = {},
     leaveMap = {},
-    joiningDate = "",
     today = getDateKey(),
     includeAttendance = true,
 } = {}) => {
@@ -838,10 +836,7 @@ export const getAttendanceCalendar = ({
 
             status = leaveMap[date];
 
-        } else if (
-            date < today &&
-            (!joiningDate || date >= joiningDate)
-        ) {
+        } else if (date <= today) {
 
             status = ATTENDANCE_STATUS.ABSENT;
 

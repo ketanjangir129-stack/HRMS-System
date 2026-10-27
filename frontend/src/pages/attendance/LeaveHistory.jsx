@@ -2,7 +2,6 @@ import { useMemo, useState } from "react";
 import { FiEdit2, FiEye, FiTrash2, FiUserX } from "react-icons/fi";
 import { toast } from "react-toastify";
 import ConfirmDeleteModal from "../../components/common/ConfirmDeleteModal";
-import DepartmentScopeNotice from "../../components/common/DepartmentScopeNotice";
 import ApplyLeaveModal from "../../components/leave/ApplyLeaveModal";
 import LeaveBalanceCards from "../../components/leave/LeaveBalanceCards";
 import LeaveCalendar from "../../components/leave/LeaveCalendar/LeaveCalendar";
@@ -19,8 +18,9 @@ import { downloadCsv } from "../../utils/attendance/attendanceTable";
 import { attachEmployeeDetails } from "../../utils/attendance/attendanceUtils";
 import {
   getCurrentEmployeeId,
-  isApprover,
+  getUserRole,
 } from "../../utils/attendance/attendanceRequestUtils";
+import { isOwnerRole } from "../../utils/permissions/permissionUtils";
 import { LEAVE_STATUS } from "../../utils/leave/leaveConstants";
 import {
   filterLeaveRequestsByYear,
@@ -43,10 +43,10 @@ const MONTH_LABELS = [
 | The merged home of a person's leave, under Attendance: their own balance,
 | their own calendar and the year's requests.
 |
-| Reviewers additionally get a per-employee roll-up: who took how many days,
-| who is waiting, who was declined. HR and the owner see the whole company;
-| a manager sees only the departments they run, through the same scope rule
-| the approvals page uses.
+| Everyone sees only their own leave here - managers and HR included, since
+| the leave approvals page already holds the history of what they review.
+| The owner alone gets the whole company, plus a per-employee roll-up: who
+| took how many days, who is waiting, who was declined.
 |--------------------------------------------------------------------------
 */
 
@@ -58,7 +58,7 @@ function LeaveHistory() {
 
   const employeeId = getCurrentEmployeeId(currentUser);
 
-  const reviewer = isApprover(currentUser);
+  const companyView = isOwnerRole(getUserRole(currentUser));
 
   const [year, setYear] = useState(() => new Date().getFullYear());
   const [detailRequest, setDetailRequest] = useState(null);
@@ -90,15 +90,14 @@ function LeaveHistory() {
   );
 
   /*
-  | The table follows the same scope rule as the approvals desk: reviewers
-  | read the list narrowed to their departments, everyone else their own.
+  | The owner reads the whole company's list, everyone else their own.
   */
   const scopedRequests = useMemo(
     () =>
-      reviewer
+      companyView
         ? filterRows(attachEmployeeDetails(allRequests, directory))
         : ownRequests,
-    [reviewer, filterRows, allRequests, directory, ownRequests]
+    [companyView, filterRows, allRequests, directory, ownRequests]
   );
 
   const yearRequests = useMemo(
@@ -213,13 +212,13 @@ function LeaveHistory() {
   const currentMonthRow = monthRows.find((row) => row.isCurrent);
 
   /*
-  | Who took how many days, for the reviewer's scope. Only approved days
-  | count as taken; pending and rejected are shown so a manager can see
-  | the queue pressure without it inflating the total.
+  | Who took how many days, for the owner. Only approved days count as
+  | taken; pending and rejected are shown so the owner can see the queue
+  | pressure without it inflating the total.
   */
   const perEmployee = useMemo(() => {
 
-    if (!reviewer) return [];
+    if (!companyView) return [];
 
     const byId = {};
 
@@ -252,7 +251,7 @@ function LeaveHistory() {
       String(a.name).localeCompare(String(b.name))
     );
 
-  }, [reviewer, scopedRequests]);
+  }, [companyView, scopedRequests]);
 
   const handleExportPerEmployee = () => {
     downloadCsv(
@@ -326,13 +325,12 @@ function LeaveHistory() {
 
   /*
   | An account without an employee record has no leave of its own to show, so
-  | unless it is a reviewer (HR, manager, owner) it gets an empty state. A
-  | reviewer with no employee id still sees the company and summary views -
-  | the owner sees everything, the balance cards and the personal calendar
-  | are simply the ones that do not apply to them.
+  | unless it is the owner it gets an empty state. The owner has no employee
+  | id but still sees the company and summary views - the balance cards and
+  | the personal calendar are simply the ones that do not apply to them.
   */
 
-  if (!employeeId && !reviewer) {
+  if (!employeeId && !companyView) {
 
     return (
 
@@ -400,8 +398,6 @@ function LeaveHistory() {
       />
 
       <div className="mt-6 space-y-4 sm:mt-8 sm:space-y-6">
-
-        <DepartmentScopeNotice subject="leave requests" />
 
         {employeeId && (
 
@@ -588,9 +584,9 @@ function LeaveHistory() {
 
         )}
 
-        {/* Who took what: reviewers only */}
+        {/* Who took what: owner only */}
 
-        {reviewer && (
+        {companyView && (
 
           <div className="ui-card overflow-hidden">
 
@@ -689,7 +685,7 @@ function LeaveHistory() {
           loading={loading}
           error={error}
           onRetry={reload}
-          showEmployee={reviewer}
+          showEmployee={companyView}
           subtitle={`Every leave request in ${year}`}
           emptyMessage="Leave requests you submit will appear here."
           renderActions={(request) => (

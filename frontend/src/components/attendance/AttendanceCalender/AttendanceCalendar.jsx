@@ -50,12 +50,6 @@ const HOLIDAY_LEGEND = LEGEND.filter(({ label }) =>
   ["Holiday", "Weekly Off"].includes(label)
 );
 
-const startOfMonth = (date) =>
-  new Date(date.getFullYear(), date.getMonth(), 1);
-
-const endOfMonth = (date) =>
-  new Date(date.getFullYear(), date.getMonth() + 1, 0);
-
 function AttendanceCalendar({
   year,
   month,
@@ -87,17 +81,6 @@ function AttendanceCalendar({
       : yearViewStart;
 
   const [selectedKey, setSelectedKey] = useState(todayKey);
-
-  /*
-  | Navigation bounds: nothing after the current month can hold attendance,
-  | and nothing before the employee joined belongs to them.
-  */
-  const maxDate = useMemo(() => endOfMonth(today), [today]);
-
-  const minDate = useMemo(() => {
-    const joined = joiningDate ? parseDateKey(getDateKey(joiningDate)) : null;
-    return joined ? startOfMonth(joined) : undefined;
-  }, [joiningDate]);
 
   const calendar = useMemo(
     () =>
@@ -141,9 +124,18 @@ function AttendanceCalendar({
 
     setView(nextView);
 
-    if (nextView !== "month") {
-      setYearViewStart(next || new Date(year, 0, 1));
+    /*
+    | Picking January drills down to the date the year view already starts
+    | on, so react-calendar skips onActiveStartDateChange; the month has to be
+    | taken from here or the grid falls back to the previous month.
+    */
+    if (nextView === "month") {
+      setYearViewStart(null);
+      if (next) goToMonth(next);
+      return;
     }
+
+    setYearViewStart(next || new Date(year, 0, 1));
 
   };
 
@@ -210,8 +202,6 @@ function AttendanceCalendar({
           activeStartDate={activeStartDate}
           onActiveStartDateChange={handleActiveStartDateChange}
           onViewChange={handleViewChange}
-          minDate={minDate}
-          maxDate={maxDate}
           value={selectedInMonth ? parseDateKey(selectedKey) : null}
           onClickDay={(date) => {
             setSelectedKey(getDateKey(date));
