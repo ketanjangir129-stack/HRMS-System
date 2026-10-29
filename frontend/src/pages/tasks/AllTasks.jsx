@@ -27,9 +27,6 @@ import {
   ALL_STATUSES,
   EMPTY_TASK_FORM,
   PRIMARY_BUTTON_CLASS,
-  SECTION_ROW_LIMIT,
-  TASK_CONTEXT,
-  TASK_CONTEXT_LABELS,
   TASK_PAGE_SIZE,
   TASK_VIEWS,
 } from "../../utils/tasks/taskConstants";
@@ -42,23 +39,17 @@ import {
   isOverdue,
   isTaskCreator,
   memberIdsOf,
-  recentTasks,
   sortTasks,
-  taskProgress,
   taskSummary,
   teamOf,
   teamWorkload,
   todayInputValue,
-  urgentTasks,
   weekStartKey,
 } from "../../utils/tasks/taskUtils";
 import { getDateKey } from "../../utils/attendance/attendanceDate";
 import TaskPageHeader from "../../components/tasks/TaskPageHeader";
 import TaskSummaryCards from "../../components/tasks/TaskSummaryCards";
-import TaskProgress from "../../components/tasks/TaskProgress";
 import TeamWorkload from "../../components/tasks/TeamWorkload";
-import UrgentTasks from "../../components/tasks/UrgentTasks";
-import RecentTasks from "../../components/tasks/RecentTasks";
 import TaskLayoutSwitch from "../../components/tasks/TaskLayoutSwitch";
 import TaskViewTabs from "../../components/tasks/TaskViewTabs";
 import TaskToolbar from "../../components/tasks/TaskToolbar";
@@ -129,10 +120,7 @@ function AllTasks() {
   const { canAccessSection, role, isOwner } = useRoleAccess();
 
   const canViewAll = canAccessSection("tasks.viewAll");
-  const showProgress = canAccessSection("tasks.progress");
   const showWorkload = canAccessSection("tasks.workload");
-  const showUrgent = canAccessSection("tasks.urgent");
-  const showRecent = canAccessSection("tasks.recent");
   const canCreateTask = canAccessSection("tasks.create");
   const canCreateOwn = canAccessSection("tasks.createOwn");
   const canUpdateTask = canAccessSection("tasks.update");
@@ -195,7 +183,6 @@ function AllTasks() {
   const [drawerTaskId, setDrawerTaskId] = useState(null);
   const [selectedIds, setSelectedIds] = useState(() => new Set());
   const [bulkBusy, setBulkBusy] = useState(false);
-  const [tableContext, setTableContext] = useState(TASK_CONTEXT.ALL);
 
   const tableRef = useRef(null);
   const searchRef = useRef(null);
@@ -393,10 +380,7 @@ function AllTasks() {
   | (viewAll ho to sab, warna jin par wo hai ya jo usne diye).
   */
   const summary = useMemo(() => taskSummary(tasks, today), [tasks, today]);
-  const progress = useMemo(() => taskProgress(summary), [summary]);
   const workload = useMemo(() => teamWorkload(tasks, nameList), [tasks, nameList]);
-  const urgent = useMemo(() => urgentTasks(tasks, today, SECTION_ROW_LIMIT), [tasks, today]);
-  const recent = useMemo(() => recentTasks(tasks, SECTION_ROW_LIMIT), [tasks]);
 
   // Filter ke "Person" dropdown mein wahi log jo in tasks par hain
   const filterPeople = useMemo(() => {
@@ -406,13 +390,10 @@ function AllTasks() {
       .sort((a, b) => a.name.localeCompare(b.name));
   }, [viewTasks, names]);
 
-  /* ── List pipeline: view → section → card → filters → sort ── */
+  /* ── List pipeline: view → card → filters → sort ── */
 
   const visibleTasks = useMemo(() => {
     let list = viewTasks;
-
-    if (tableContext === TASK_CONTEXT.URGENT) list = urgentTasks(list, today, Infinity);
-    if (tableContext === TASK_CONTEXT.RECENT) list = recentTasks(list, Infinity);
 
     const card = CARD_FILTERS[filters.card];
     if (card) list = list.filter((task) => card(task, today));
@@ -428,9 +409,8 @@ function AllTasks() {
       today,
     });
 
-    // "Recent" ka apna kram hai — sort use bigaade nahi
-    return tableContext === TASK_CONTEXT.RECENT ? list : sortTasks(list, filters.sort);
-  }, [viewTasks, tableContext, filters, names, today]);
+    return sortTasks(list, filters.sort);
+  }, [viewTasks, filters, names, today]);
 
   const {
     paginatedData: pageTasks,
@@ -446,7 +426,7 @@ function AllTasks() {
   } = usePagination({ data: visibleTasks, initialPageSize: TASK_PAGE_SIZE });
 
   // Filter badla to list hi nayi hai — page 1, aur purana selection saaf
-  const filterKey = `${view}|${tableContext}|${filters.card}|${filters.search}|${filters.status}|${filters.priority}|${filters.assignee}|${filters.due}|${filters.sort}`;
+  const filterKey = `${view}|${filters.card}|${filters.search}|${filters.status}|${filters.priority}|${filters.assignee}|${filters.due}|${filters.sort}`;
 
   useEffect(() => {
     resetPagination();
@@ -503,14 +483,7 @@ function AllTasks() {
 
   /* ── Actions ── */
 
-  const showTableContext = (context) => {
-    setTableContext(context);
-    setFilters({ view: defaultView, status: ALL_STATUSES, card: "", layout: "list" });
-    tableRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-  };
-
   const pickCard = (key) => {
-    setTableContext(TASK_CONTEXT.ALL);
     setFilters({
       card: filters.card === key ? "" : key,
       view: defaultView,
@@ -875,10 +848,7 @@ function AllTasks() {
                 views={views}
                 active={view}
                 counts={viewCounts}
-                onChange={(next) => {
-                  setTableContext(TASK_CONTEXT.ALL);
-                  setFilters({ view: next, card: "" });
-                }}
+                onChange={(next) => setFilters({ view: next, card: "" })}
               />
 
               {showListTools && (
@@ -886,33 +856,17 @@ function AllTasks() {
                   ref={searchRef}
                   filters={filters}
                   onChange={setFilter}
-                  onClear={() => {
-                    setTableContext(TASK_CONTEXT.ALL);
-                    clearFilters();
-                  }}
+                  onClear={clearFilters}
                   people={filterPeople}
                   showPerson={filterPeople.length > 1}
                 />
               )}
 
-              {(tableContext !== TASK_CONTEXT.ALL || filters.card) && (
+              {filters.card && (
                 <div className="flex flex-wrap items-center gap-2 px-4 pb-3 sm:px-5">
                   <span className="text-sm text-ink-subtle">
                     {visibleTasks.length} task{visibleTasks.length === 1 ? "" : "s"}
                   </span>
-                  {tableContext !== TASK_CONTEXT.ALL && (
-                    <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 py-1 pl-3 pr-1.5 text-xs font-semibold text-blue-700">
-                      Showing: {TASK_CONTEXT_LABELS[tableContext]}
-                      <button
-                        type="button"
-                        onClick={() => setTableContext(TASK_CONTEXT.ALL)}
-                        aria-label="Show all tasks"
-                        className="cursor-pointer rounded-full p-0.5 transition hover:bg-blue-100"
-                      >
-                        <FiX size={14} />
-                      </button>
-                    </span>
-                  )}
                 </div>
               )}
 
@@ -984,44 +938,8 @@ function AllTasks() {
           )}
         </div>
 
-        {/*
-          Insights — list ke baad, upar nahi. Har panel apni permission par;
-          ek chhip jaye to doosra poori chaudai le leta hai.
-        */}
-        {(showProgress || showWorkload) && (
-          <div
-            className={`grid grid-cols-1 items-start gap-4 sm:gap-6 ${
-              showProgress && showWorkload ? "lg:grid-cols-2" : ""
-            }`}
-          >
-            {showProgress && <TaskProgress progress={progress} />}
-            {showWorkload && <TeamWorkload workload={workload} />}
-          </div>
-        )}
-
-        {(showUrgent || showRecent) && (
-          <div
-            className={`grid grid-cols-1 gap-4 sm:gap-6 ${
-              showUrgent && showRecent ? "lg:grid-cols-2" : ""
-            }`}
-          >
-            {showUrgent && (
-              <UrgentTasks
-                tasks={urgent}
-                employees={nameList}
-                today={today}
-                onViewAll={() => showTableContext(TASK_CONTEXT.URGENT)}
-              />
-            )}
-            {showRecent && (
-              <RecentTasks
-                tasks={recent}
-                employees={nameList}
-                onViewAll={() => showTableContext(TASK_CONTEXT.RECENT)}
-              />
-            )}
-          </div>
-        )}
+        {/* Insights — list ke baad, upar nahi. Apni permission par */}
+        {showWorkload && <TeamWorkload workload={workload} />}
       </div>
 
       {/*

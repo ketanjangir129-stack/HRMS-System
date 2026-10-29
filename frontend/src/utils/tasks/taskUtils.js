@@ -546,68 +546,6 @@ export const taskSummary = (tasks, today = todayInputValue()) => ({
 
 /*
 |--------------------------------------------------------------------------
-| Task Progress
-|--------------------------------------------------------------------------
-| Chaaron status ka distribution — inka jod hamesha total hota hai, isliye ye
-| ek hi stacked bar mein aa sakte hain.
-|
-| Overdue ko jaan-boojhkar isse bahar rakha hai: wo chautha status nahi,
-| To Do aur In Progress ke andar ka subset hai. Chaaron ko ek bar mein
-| jodne par total 100% se zyada ho jaata. Isliye uska apna % hai — pending
-| ke against, total ke against nahi.
-|--------------------------------------------------------------------------
-*/
-export const taskProgress = (summary) => {
-  const total = summary.total || 0;
-
-  // Total 0 ho to divide by zero NaN de dega
-  const percent = (value) => (total ? Math.round((value / total) * 100) : 0);
-
-  // Bar ki width ke liye bina round kiya hua share — teen rounded percent
-  // jodne par 99% ya 101% ban jaate hain aur bar mein khaali jagah dikhti hai
-  const share = (value) => (total ? (value / total) * 100 : 0);
-
-  const pending = total - summary.completed;
-
-  return {
-    total,
-    pending,
-    completionRate: percent(summary.completed),
-    segments: [
-      {
-        label: "To Do",
-        value: summary.todo,
-        percent: percent(summary.todo),
-        share: share(summary.todo),
-      },
-      {
-        label: "In Progress",
-        value: summary.active,
-        percent: percent(summary.active),
-        share: share(summary.active),
-      },
-      {
-        label: "Paused",
-        value: summary.paused,
-        percent: percent(summary.paused),
-        share: share(summary.paused),
-      },
-      {
-        label: "Completed",
-        value: summary.completed,
-        percent: percent(summary.completed),
-        share: share(summary.completed),
-      },
-    ],
-    overdue: summary.overdue,
-    overduePercent: pending
-      ? Math.round((summary.overdue / pending) * 100)
-      : 0,
-  };
-};
-
-/*
-|--------------------------------------------------------------------------
 | Team Workload
 |--------------------------------------------------------------------------
 | Employee-wise ginti. Sirf un logon ki row banti hai jinke paas task hai —
@@ -647,42 +585,6 @@ export const teamWorkload = (tasks = [], employees = []) => {
     (a, b) => b.total - a.total || a.name.localeCompare(b.name)
   );
 };
-
-// Overdue ya High priority — jo ho chuka usme urgent kuch nahi, isliye
-// Completed bahar. Overdue pehle, uske baad sabse jaldi wali due date.
-export const urgentTasks = (
-  tasks = [],
-  today = todayInputValue(),
-  limit = 5
-) =>
-  tasks
-    .filter(
-      (task) =>
-        task.status !== COMPLETED_STATUS &&
-        (isOverdue(task, today) || task.priority === "High")
-    )
-    .sort((a, b) => {
-      const aOverdue = isOverdue(a, today);
-      const bOverdue = isOverdue(b, today);
-
-      if (aOverdue !== bOverdue) return aOverdue ? -1 : 1;
-
-      // Bina due date wale sabse aakhir mein
-      if (!a.dueDate) return 1;
-      if (!b.dueDate) return -1;
-
-      return a.dueDate.localeCompare(b.dueDate);
-    })
-    .slice(0, limit);
-
-// Jo sabse haal mein bana ya badla. Service already createAt desc bhejti hai,
-// par edit/status change ke baad updatedAt hi sahi order deta hai.
-const lastTouched = (task) => Math.max(task.updatedAt || 0, task.createdAt || 0);
-
-// Spread zaroori hai — tasks seedha state se aata hai, use sort() se mutate
-// karna React ke liye galat hai
-export const recentTasks = (tasks = [], limit = 5) =>
-  [...tasks].sort((a, b) => lastTouched(b) - lastTouched(a)).slice(0, limit);
 
 /*
 | Due filter ka sawaal — "overdue", "today", "week", "none". Khaali matlab

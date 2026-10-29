@@ -106,10 +106,7 @@ const DEFAULTS = {
   tasks: {
     enabled: { hr: true, manager: true, employee: true },
     viewAll: { hr: true, manager: true, employee: false },
-    progress: { hr: true, manager: true, employee: false },
     workload: { hr: true, manager: true, employee: false },
-    urgent: { hr: true, manager: true, employee: false },
-    recent: { hr: true, manager: true, employee: false },
     activity: { hr: true, manager: true, employee: true },
     create: { hr: true, manager: true, employee: false },
     createOwn: { hr: true, manager: true, employee: true },

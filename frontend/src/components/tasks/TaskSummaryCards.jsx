@@ -15,7 +15,7 @@ import {
 |
 | Paanch cards wahi hain jo roz dekhne hote hain: kitna kaam khula hai, kya
 | chal raha hai, aaj kya due hai, kya late ho chuka, aur is hafte kitna
-| nipta. To Do ki poori distribution TaskProgress section mein hai.
+| nipta.
 |
 | Panel `.ui-card` hai — wahi jo Dashboard ke cards, Task overview aur baaki
 | har section use karta hai. Isliye theme badalne par ye saath badalte hain

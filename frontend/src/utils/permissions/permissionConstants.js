@@ -732,27 +732,9 @@ export const PERMISSION_PAGES = [
         defaults: { hr: true, manager: true, employee: false },
       },
       {
-        key: "progress",
-        label: "Task Progress",
-        description: "Status distribution across tasks",
-        defaults: { hr: true, manager: true, employee: false },
-      },
-      {
         key: "workload",
         label: "Team Workload",
         description: "Assigned work per employee",
-        defaults: { hr: true, manager: true, employee: false },
-      },
-      {
-        key: "urgent",
-        label: "Urgent & Overdue",
-        description: "Overdue and high priority tasks",
-        defaults: { hr: true, manager: true, employee: false },
-      },
-      {
-        key: "recent",
-        label: "Recent Tasks",
-        description: "Latest task activity",
         defaults: { hr: true, manager: true, employee: false },
       },
       {
