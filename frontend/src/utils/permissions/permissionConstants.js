@@ -787,9 +787,15 @@ export const PERMISSION_PAGES = [
       },
       {
         key: "delete",
-        label: "Delete Task",
-        description: "Remove a task",
+        label: "Archive Task",
+        description: "Archive and restore tasks",
         defaults: { hr: true, manager: false, employee: false },
+      },
+      {
+        key: "team",
+        label: "Team View",
+        description: "See who is working on what. Managers see their own department",
+        defaults: { hr: true, manager: true, employee: false },
       },
     ],
 

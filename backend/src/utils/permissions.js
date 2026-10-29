@@ -116,6 +116,7 @@ const DEFAULTS = {
     update: { hr: true, manager: true, employee: false },
     updateOwn: { hr: true, manager: true, employee: true },
     delete: { hr: true, manager: false, employee: false },
+    team: { hr: true, manager: true, employee: false },
   },
 
   reimbursement: {

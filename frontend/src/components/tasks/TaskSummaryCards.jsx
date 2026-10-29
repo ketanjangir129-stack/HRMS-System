@@ -1,9 +1,9 @@
 import {
+  FiAlertTriangle,
   FiCalendar,
   FiCheckCircle,
   FiLayers,
   FiLoader,
-  FiMoreHorizontal,
 } from "react-icons/fi";
 
 /*
@@ -13,9 +13,9 @@ import {
 | Ginti khud nahi karta — taskUtils.js ke taskSummary() se banaya hua object
 | leta hai.
 |
-| Chaar cards wahi hain jo owner ko roz dekhne hote hain: kul kitna kaam hai,
-| kya chal raha hai, kitna nipat chuka hai, aur aaj kya due hai.
-| To Do ki poori distribution TaskProgress section mein hai.
+| Paanch cards wahi hain jo roz dekhne hote hain: kitna kaam khula hai, kya
+| chal raha hai, aaj kya due hai, kya late ho chuka, aur is hafte kitna
+| nipta. To Do ki poori distribution TaskProgress section mein hai.
 |
 | Panel `.ui-card` hai — wahi jo Dashboard ke cards, Task overview aur baaki
 | har section use karta hai. Isliye theme badalne par ye saath badalte hain
@@ -27,8 +27,8 @@ import {
 | dark rupantar pehle se rakhta hai, isliye light mein ye halke tinted chip
 | hain aur dark mein gehre.
 |
-| Hue chaar hain — violet, blue (project mein indigo par point karta hai,
-| yaani brand), aur emerald. Rang icon
+| Hue paanch hain — violet, blue (project mein indigo par point karta hai,
+| yaani brand), amber, red (sirf Overdue — khatra) aur emerald. Rang icon
 | par bhi hai, kone ke wash par bhi aur neeche ki curve par bhi, isliye card
 | ka matlab rang se pehchanne wale ko kuch naya seekhna nahi padta.
 |
@@ -39,7 +39,15 @@ import {
 |--------------------------------------------------------------------------
 */
 
-function TaskSummaryCards({ summary }) {
+/*
+| Har card ab ek filter bhi hai — dabao to list wahi tasks dikhati hai, aur
+| card par ring aa jaati hai. Dobara dabao to filter hat jaata hai.
+| activeKey/onPick page se aate hain; na diye hon to card saada rehta hai.
+|
+| Overdue ka apna card hai — pehle ye ginti sirf Progress panel mein chhupi
+| thi, jabki wahi sabse zaroori number hai.
+*/
+function TaskSummaryCards({ summary, activeKey = "", onPick }) {
   const total = summary.total || 0;
 
   // Kitne percent — total 0 ho to 0, warna divide by zero NaN de dega
@@ -47,11 +55,11 @@ function TaskSummaryCards({ summary }) {
 
   const cards = [
     {
-      key: "total",
-      title: "Total tasks",
-      value: summary.total,
-      percentage: total ? 100 : 0,
-      subtitle: "Total assigned",
+      key: "open",
+      title: "Open tasks",
+      value: summary.open ?? summary.total,
+      percentage: percent(summary.open ?? summary.total),
+      subtitle: `of ${summary.total} total`,
       icon: <FiLayers />,
       // Icon ka chip — chaaron ka dark rupantar index.css mein hai
       iconBg: "bg-violet-50",
@@ -83,22 +91,8 @@ function TaskSummaryCards({ summary }) {
       path: "M0 24 C 18 22, 26 14, 40 16 S 60 10, 76 12 S 100 4, 120 6",
     },
     {
-      key: "completed",
-      title: "Completed",
-      value: summary.completed,
-      percentage: percent(summary.completed),
-      subtitle: "Marked done",
-      icon: <FiCheckCircle />,
-      iconBg: "bg-emerald-50",
-      iconColor: "text-emerald-600",
-      iconRing: "ring-emerald-200",
-      glow: "bg-emerald-500/15",
-      line: "text-emerald-500",
-      path: "M0 22 C 16 24, 26 12, 40 14 S 62 8, 78 14 S 104 8, 120 4",
-    },
-    {
       key: "dueToday",
-      title: "Due Today",
+      title: "Due today",
       value: summary.dueToday,
       percentage: percent(summary.dueToday),
       subtitle: "Needs attention",
@@ -110,21 +104,54 @@ function TaskSummaryCards({ summary }) {
       line: "text-amber-500",
       path: "M0 20 C 14 16, 28 22, 42 14 S 66 18, 80 10 S 102 14, 120 8",
     },
+    {
+      key: "overdue",
+      title: "Overdue",
+      value: summary.overdue,
+      percentage: percent(summary.overdue),
+      subtitle: "Past the due date",
+      icon: <FiAlertTriangle />,
+      iconBg: "bg-red-50",
+      iconColor: "text-red-600",
+      iconRing: "ring-red-200",
+      glow: "bg-red-500/15",
+      line: "text-red-500",
+      path: "M0 18 C 14 22, 26 12, 40 16 S 64 22, 80 14 S 104 18, 120 12",
+    },
+    {
+      key: "doneThisWeek",
+      title: "Done this week",
+      value: summary.doneThisWeek ?? summary.completed,
+      percentage: percent(summary.doneThisWeek ?? summary.completed),
+      subtitle: `${summary.completed} completed in all`,
+      icon: <FiCheckCircle />,
+      iconBg: "bg-emerald-50",
+      iconColor: "text-emerald-600",
+      iconRing: "ring-emerald-200",
+      glow: "bg-emerald-500/15",
+      line: "text-emerald-500",
+      path: "M0 22 C 16 24, 26 12, 40 14 S 62 8, 78 14 S 104 8, 120 4",
+    },
   ];
 
   return (
-    <div className="grid h-full grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 xl:grid-cols-4">
+    <div className="grid h-full grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3 xl:grid-cols-5">
       {cards.map((card) => (
         /*
           `ui-card` + `ui-card-interactive` — wahi panel aur wahi hover jo
-          Dashboard ke tiles par hai, isliye hover ka jhukav poore app mein
-          ek jaisa rehta hai. Padding kit ki `ui-card-body` se nahi li:
-          neeche ki curve ko kinare tak jaana hai, aur uske liye padding ka
-          naap pata hona chahiye (p-5 ↔ -mx-5 -mb-5).
+          Dashboard ke tiles par hai. Ab ye button hai (filter), isliye
+          keyboard se bhi chalta hai; aria-pressed batata hai ki laga hai.
         */
-        <div
+        <button
+          type="button"
           key={card.key}
-          className="ui-card ui-card-interactive group relative flex flex-col overflow-hidden p-5"
+          onClick={() => onPick?.(card.key)}
+          disabled={!onPick}
+          aria-pressed={activeKey === card.key}
+          title={onPick ? `Show ${card.title.toLowerCase()}` : undefined}
+          className={`ui-card ui-card-interactive group relative flex flex-col overflow-hidden p-5 text-left disabled:cursor-default ${
+            onPick ? "cursor-pointer" : ""
+          } ${activeKey === card.key ? `ring-2 ${card.iconRing}` : ""}`}
         >
           {/* Kone par rang ka wash — icon ke peeche se uthta hua */}
           <span
@@ -132,7 +159,7 @@ function TaskSummaryCards({ summary }) {
             className={`pointer-events-none absolute -left-12 -top-16 h-40 w-40 rounded-full opacity-70 blur-3xl transition-opacity duration-300 group-hover:opacity-100 ${card.glow}`}
           />
 
-          {/* Icon + title ek hi kataar mein, decorative menu daayein kinare */}
+          {/* Icon + title ek hi kataar mein */}
           <div className="relative flex items-start justify-between gap-3">
             <div className="flex min-w-0 items-start gap-3">
               <span
@@ -151,14 +178,6 @@ function TaskSummaryCards({ summary }) {
               </div>
             </div>
 
-            {/*
-              Sirf sajaavat — na button hai, na iska koi menu. Isliye
-              aria-hidden: screen reader ke liye yahan kuch hai hi nahi.
-            */}
-            <FiMoreHorizontal
-              aria-hidden="true"
-              className="shrink-0 text-lg text-ink-faint transition-colors group-hover:text-ink-subtle"
-            />
           </div>
 
           {/*
@@ -233,7 +252,7 @@ function TaskSummaryCards({ summary }) {
               />
             </svg>
           </div>
-        </div>
+        </button>
       ))}
     </div>
   );

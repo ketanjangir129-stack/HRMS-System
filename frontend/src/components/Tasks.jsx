@@ -10,15 +10,14 @@ import {
 import useEmployees from "../hooks/useEmployees";
 import useAuth from "../hooks/useAuth";
 import useRoleAccess from "../hooks/useRoleAccess";
-import useTaskDueNotifications from "../hooks/useTaskDueNotifications";
 import { getDateKey } from "../utils/attendance/attendanceDate";
 import { PRIORITY_STYLES } from "../utils/tasks/taskConstants";
 import {
   assigneeName,
   dueLabel,
   filterOwnTasks,
-  getCurrentActionUser,
   getCurrentEmployeeId,
+  isOnTask,
   todayInputValue,
 } from "../utils/tasks/taskUtils";
 
@@ -66,8 +65,9 @@ function EmployeeTasks() {
   */
   const myEmployeeId = getCurrentEmployeeId(currentUser);
 
+  // Team ka koi bhi (owner ya member) — server bhi yahi maanta hai
   const canCompleteTask = (task) =>
-    !isOwner && Boolean(myEmployeeId) && task?.assignedTo === myEmployeeId;
+    !isOwner && Boolean(myEmployeeId) && isOnTask(task, myEmployeeId);
   // Dono mein se koi bhi ho to /tasks par task ban sakta hai — Employee ke
   // paas sirf createOwn hota hai
   const canCreateTask =
@@ -140,33 +140,19 @@ function EmployeeTasks() {
   );
 
   /*
-  | Due/overdue ka sweep yahan bhi — Dashboard hi wo screen hai jo sabse
-  | pehle khulti hai, aur bell bhi wahin hai. Card ki list pehle se chhanti
-  | hui hai (agle 7 din, pending), jisme aaj aur pichhli dono aa jaati hain.
-  |
-  | /tasks par bhi yahi hook lagta hai; dono ek saath khulte nahi (alag
-  | route), aur nishaan waise bhi dobara nahi hone deta.
+  | Due/overdue ki khabar ab server bhejta hai (backend jobs/taskDueJob.js) —
+  | pehle ye card khulne par browser bhejta tha.
   */
-  useTaskDueNotifications(companyCode, tasks);
 
   const completeTask = async (task) => {
     try {
-      /*
-      | Poora task jaata hai, sirf id nahi — service usi se purana status
-      | padhkar activity entry banati hai. actionUser bhi zaroori hai, warna
-      | dashboard se complete kiya task "kisne kiya" ke bina reh jaata.
-      |
-      | Yahan pauseTasks nahi bhejte: complete karne se kisi doosre task ka
-      | chalna nahi rukta.
-      */
-      // Row khud hat jaayegi — listener ko naya status turant mil jaata hai
-      await updateTaskStatus(companyCode, task, COMPLETED_STATUS, {
-        actionUser: getCurrentActionUser(currentUser),
-      });
+      // Kisne kiya, server token se jaanta hai. Row khud hat jaayegi —
+      // list meta/version ke ishaare par dobara aati hai
+      await updateTaskStatus(companyCode, task, COMPLETED_STATUS);
       toast.success("Task marked as completed.");
     } catch (err) {
       console.error("Failed to complete task:", err);
-      toast.error("Unable to update the task.");
+      toast.error(err.message || "Unable to update the task.");
     }
   };
 

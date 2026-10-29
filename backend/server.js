@@ -13,9 +13,12 @@ const salaryRoutes = require("./src/routes/salaryRoutes");
 const payrollRoutes = require("./src/routes/payrollRoutes");
 const reimbursementRoutes = require("./src/routes/reimbursementRoutes");
 const taskRoutes = require("./src/routes/taskRoutes");;
+const taskDueJob = require("./src/jobs/taskDueJob");
+const taskWorkJob = require("./src/jobs/taskWorkJob");
 
 const express = require("express");
 const cors = require("cors");
+const compression = require("compression");
 
 const app = express();
 
@@ -59,9 +62,15 @@ app.use("/api/onboarding", onboardingRoutes);
 app.use("/api/salary", salaryRoutes);
 app.use("/api/payroll", payrollRoutes);
 app.use("/api/reimbursement", reimbursementRoutes);
-app.use("/api/tasks", taskRoutes);
+// Task list poori company ki hoti hai aur har badlaav par dobara aati hai —
+// gzip se JSON 5-10 guna chhota (1KB se chhote jawab waise hi jaate hain)
+app.use("/api/tasks", compression(), taskRoutes);
 
 
 app.listen(PORT,()=>{
     console.log(`Hrms Backend running on http://localhost:${PORT}`);
+    // Task due/overdue khabrein — har ghante, browser ke bina
+    taskDueJob.start();
+    // 10 ghante se zyada chal rahe (bhoole hue) timer band
+    taskWorkJob.start();
 });

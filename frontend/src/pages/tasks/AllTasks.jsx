@@ -1,22 +1,28 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { FiCheckSquare, FiPlus, FiX } from "react-icons/fi";
 import { toast } from "react-toastify";
 import {
+  archiveTask,
+  COMPLETED_STATUS,
   createTask,
-  deleteTask,
+  deleteTaskPermanently,
+  fetchTaskTeam,
   IN_PROGRESS_STATUS,
-  subscribeTaskActivity,
+  restoreTask,
+  setTaskWork,
   subscribeTasks,
+  subscribeTaskVersion,
   updateTask,
   updateTaskStatus,
 } from "../../services/taskService";
 import useEmployees from "../../hooks/useEmployees";
-import { ROLE } from "../../utils/attendance/attendanceConstants";
-import { validateField } from "../../utils/validation/validateField";
+import useDepartments from "../../hooks/useDepartments";
 import useAuth from "../../hooks/useAuth";
 import useRoleAccess from "../../hooks/useRoleAccess";
 import usePagination from "../../hooks/usePagination";
-import useTaskDueNotifications from "../../hooks/useTaskDueNotifications";
+import useTaskFilters from "../../hooks/useTaskFilters";
+import { ROLE } from "../../utils/attendance/attendanceConstants";
+import { validateField } from "../../utils/validation/validateField";
 import {
   ALL_STATUSES,
   EMPTY_TASK_FORM,
@@ -24,36 +30,48 @@ import {
   SECTION_ROW_LIMIT,
   TASK_CONTEXT,
   TASK_CONTEXT_LABELS,
+  TASK_PAGE_SIZE,
+  TASK_VIEWS,
 } from "../../utils/tasks/taskConstants";
 import {
   filterOwnTasks,
   filterTasks,
   getCurrentActionUser,
   getCurrentEmployeeId,
+  isOnTask,
+  isOverdue,
   isTaskCreator,
+  memberIdsOf,
   recentTasks,
-  runningTasksOf,
-  taskActivityList,
+  sortTasks,
   taskProgress,
   taskSummary,
+  teamOf,
   teamWorkload,
   todayInputValue,
   urgentTasks,
+  weekStartKey,
 } from "../../utils/tasks/taskUtils";
+import { getDateKey } from "../../utils/attendance/attendanceDate";
 import TaskPageHeader from "../../components/tasks/TaskPageHeader";
 import TaskSummaryCards from "../../components/tasks/TaskSummaryCards";
 import TaskProgress from "../../components/tasks/TaskProgress";
 import TeamWorkload from "../../components/tasks/TeamWorkload";
 import UrgentTasks from "../../components/tasks/UrgentTasks";
 import RecentTasks from "../../components/tasks/RecentTasks";
-import TaskFilters from "../../components/tasks/TaskFilters";
+import TaskLayoutSwitch from "../../components/tasks/TaskLayoutSwitch";
+import TaskViewTabs from "../../components/tasks/TaskViewTabs";
+import TaskToolbar from "../../components/tasks/TaskToolbar";
+import TaskBulkBar from "../../components/tasks/TaskBulkBar";
 import TaskTable from "../../components/tasks/TaskTable";
+import TaskBoard from "../../components/tasks/TaskBoard";
+import TaskTeamView from "../../components/tasks/TaskTeamView";
+import TaskListSkeleton from "../../components/tasks/TaskListSkeleton";
+import TaskWorkingBar from "../../components/tasks/TaskWorkingBar";
+import TaskDrawer from "../../components/tasks/TaskDrawer";
 import CreateTaskModal from "../../components/tasks/CreateTaskModal";
 import DeleteTaskModal from "../../components/tasks/DeleteTaskModal";
-import TaskDetailsModal from "../../components/tasks/TaskDetailsModal";
-import TaskActivityModal from "../../components/tasks/TaskActivityModal";
 import Pagination from "../../components/common/pagination/Pagination";
-import Loader from "../../components/common/Loader";
 
 /*
 |--------------------------------------------------------------------------
@@ -61,41 +79,25 @@ import Loader from "../../components/common/Loader";
 |--------------------------------------------------------------------------
 | Poori company ke tasks. Ye page sirf teen kaam karta hai:
 |   1. state rakhna
-|   2. Firebase se baat karna (service ke through)
+|   2. server se baat karna (service ke through)
 |   3. components ko jodna
 | Dikhne ka saara kaam components/tasks/ mein hai.
+|
+| Banawat: header → summary cards (filter bhi) → tasks (List / Board /
+| Team) → insights. Pehle tasks ki list cards aur panels ke beech dabi thi;
+| ab wahi sabse upar hai, kyunki page isi ke liye khulta hai.
 |--------------------------------------------------------------------------
 */
 
 /*
-|--------------------------------------------------------------------------
-| Kaun kisko task de sakta hai
-|--------------------------------------------------------------------------
-| Har role ke saamne wo roles jinke logon ko wo task NAHI de sakta. Jo yahan
-| nahi likha wo de sakta hai, aur apne aap ko har koi de sakta hai - self
-| wali chhoot filter mein alag se lagti hai.
+| Kaun kisko task de sakta hai — sirf dropdown chhantne ke liye. Asli rok
+| ab server par hai (backend utils/taskRules.js, wahi list); yahan galat
+| naam chun bhi liya to save par server mana kar deta hai.
 |
-|   Owner    - is list mein hai hi nahi, matlab kisi par rok nahi. Poori
-|              company uski hai.
-|
-|   Manager  - HR aur Employee dono ko de sakta hai; doosre Manager ko nahi.
-|              Manager yahan department-wise hai, to ek Manager doosre
-|              Manager ka kaam tay nahi karta - wo faisla unke upar wale ka
-|              hai.
-|
-|   HR       - sirf Employee ko. Doosra HR uska peer hai, aur Manager apne
-|              department ka malik hai - dono ka kaam tay karna HR ke apne
-|              level se upar ka faisla hai, to wo Owner ke paas rehta hai.
-|
-|   Employee - jaisa pehle tha, waisa hi. Waise bhi yahan tak pahunchta
-|              nahi: uske paas `tasks.create` nahi hota, `tasks.createOwn`
-|              hota hai, aur wo raasta dropdown chhode bina seedha khud ko
-|              assign karta hai.
-|
-| Roken ki list rakhi hai, de-sakta-hai ki nahi - kyunki jis employee ka
-| account role blank hai (`role: ""`) wo kisi bhi allow-list se bahar reh
-| jaata aur dropdown se gayab ho jaata. Rok ki list mein blank kabhi match
-| hi nahi karta, to aisa record pehle ki tarah dikhta rehta hai.
+|   Owner    - koi rok nahi
+|   Manager  - doosre Manager ko nahi
+|   HR       - doosre HR aur Manager ko nahi
+|   Employee - HR ko nahi (waise bhi sirf khud ko deta hai)
 */
 const BLOCKED_ASSIGNEE_ROLES = {
   [ROLE.HR]: [ROLE.HR, ROLE.MANAGER],
@@ -103,12 +105,28 @@ const BLOCKED_ASSIGNEE_ROLES = {
   [ROLE.EMPLOYEE]: [ROLE.HR],
 };
 
+// Summary card → list ka sawaal
+const CARD_FILTERS = {
+  open: (task) => task.status !== COMPLETED_STATUS,
+  active: (task) => task.status === IN_PROGRESS_STATUS,
+  dueToday: (task, today) => task.status !== COMPLETED_STATUS && task.dueDate === today,
+  overdue: (task, today) => isOverdue(task, today),
+  doneThisWeek: (task, today) =>
+    task.status === COMPLETED_STATUS &&
+    getDateKey(task.completedAt || task.updatedAt || 0) >= weekStartKey(today),
+};
+
+// Kisi input mein likh rahe ho to "/" aur "n" shortcut nahi chalte
+const isTyping = (target) =>
+  target instanceof HTMLElement &&
+  (target.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName));
+
 function AllTasks() {
   const companyCode = localStorage.getItem("companyCode");
   const { currentUser } = useAuth();
 
   // Owner Settings se ye sab on/off karta hai. Owner ke liye hamesha true.
-  const { canAccessSection, role } = useRoleAccess();
+  const { canAccessSection, role, isOwner } = useRoleAccess();
 
   const canViewAll = canAccessSection("tasks.viewAll");
   const showProgress = canAccessSection("tasks.progress");
@@ -119,127 +137,145 @@ function AllTasks() {
   const canCreateOwn = canAccessSection("tasks.createOwn");
   const canUpdateTask = canAccessSection("tasks.update");
   const canUpdateOwn = canAccessSection("tasks.updateOwn");
-  const canDeleteTask = canAccessSection("tasks.delete");
-  // Activity sirf padhne wali cheez hai — uska haq edit/delete se bilkul
-  // alag chalta hai, isliye Actions column se bahar apna column
+  const canArchive = canAccessSection("tasks.delete");
   const canViewActivity = canAccessSection("tasks.activity");
+  const canSeeTeam = canAccessSection("tasks.team");
 
-  // Ownership isi se tay hoti hai — createdBy (naam) se nahi
   const myEmployeeId = getCurrentEmployeeId(currentUser);
-
-  /*
-  | Jisko kisi ko assign karne ka haq nahi par apne liye bana sakta hai —
-  | uska assignee khud tay hota hai, form mein choice nahi milti. Yahi leave
-  | module karta hai: ApplyLeaveModal mein employee selector hai hi nahi.
-  |
-  | Employee record zaroori hai, warna assignedTo khaali reh jaata.
-  */
-  const selfAssignOnly =
-    !canCreateTask && canCreateOwn && Boolean(myEmployeeId);
-
-  const canOpenCreate = canCreateTask || selfAssignOnly;
-
-  // Owner/HR har task edit karte hain, baaki sirf apna banaya hua.
-  // Per-row check — ek global boolean se kaam nahi chalta.
-  const canEditTask = (task) =>
-    canUpdateTask || (canUpdateOwn && isTaskCreator(task, myEmployeeId));
-
-  // Actions column ka faisla — kisi bhi task par kuch kar sakte ho ya nahi.
-  // Filtered list se nahi nikalte, warna column aata-jaata rehta.
-  const canActOnTasks = canUpdateTask || canUpdateOwn || canDeleteTask;
-
-  // Naam chahiye Assignee column, workload aur assign dropdown ke liye
-  const needsEmployees = canViewAll || showWorkload || canCreateTask;
-
-  /*
-  | Kisne kaam kiya — createdBy/createdById par bhi yahi jaata hai aur
-  | activity entries par bhi, isliye ek hi jagah se aana chahiye. Chain
-  | pehle yahin khuli padi thi; ab taskUtils mein hai taaki dashboard card
-  | bhi wahi naam likhe.
-  */
   const actionUser = getCurrentActionUser(currentUser);
 
-  // Toggle tabhi, jab sabke tasks dekh sakte ho AUR apna employee record ho.
-  // Owner ka record hota hi nahi — uske liye toggle bekaar hai.
-  const canSeeOwnTasks = canViewAll && Boolean(myEmployeeId);
+  // Jise doosron ko task dene ka haq nahi par apne liye bana sakta hai —
+  // uska assignee khud tay hota hai, form mein choice nahi milti
+  const selfAssignOnly = !canCreateTask && canCreateOwn && Boolean(myEmployeeId);
+  const canOpenCreate = canCreateTask || selfAssignOnly;
+
+  /*
+  | Per-task haq — server ke niyam ka aaina (taskRules.js). Button wahi
+  | dikhte hain jo server maanega; galti se dikh bhi jaye to server rok deta.
+  */
+  const canEditTask = useCallback(
+    (task) => canUpdateTask || (canUpdateOwn && isTaskCreator(task, myEmployeeId)),
+    [canUpdateTask, canUpdateOwn, myEmployeeId]
+  );
+  const canChangeStatusOf = useCallback(
+    (task) => canEditTask(task) || isOnTask(task, myEmployeeId),
+    [canEditTask, myEmployeeId]
+  );
+  const canManageMembersOf = (task) =>
+    canCreateTask && (canEditTask(task) || task?.assignedTo === myEmployeeId);
+
+  // Naam chahiye Team column, workload aur assign dropdown ke liye
+  const needsEmployees = canViewAll || showWorkload || canCreateTask;
+
+  const defaultView = canViewAll ? "all" : "mine";
+  const { filters, setFilter, setFilters, clearFilters } = useTaskFilters(defaultView);
 
   const [tasks, setTasks] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(""); // page-level error
-  const [errors, setErrors] = useState({}); // form ke field-wise errors
+  const [people, setPeople] = useState({});
+  const [loading, setLoading] = useState(Boolean(companyCode));
+  const [error, setError] = useState(companyCode ? "" : "Company code not found. Please log in again.");
+  const [archivedTasks, setArchivedTasks] = useState({ loaded: false, list: [] });
+  const [team, setTeam] = useState({ loaded: false, members: [], error: "" });
+  const [teamReload, setTeamReload] = useState(0);
+  const [now, setNow] = useState(() => Date.now());
+
+  const [errors, setErrors] = useState({});
   const [saving, setSaving] = useState(false);
   const [showForm, setShowForm] = useState(false);
-  // Kaunsa task edit ho raha hai — null matlab naya task ban raha hai
+  // "form" (create/edit) ya "members" (sirf team)
+  const [formMode, setFormMode] = useState("form");
   const [editingTask, setEditingTask] = useState(null);
-  // Kaunsa task delete hone ja raha hai — null matlab modal band
-  const [taskToDelete, setTaskToDelete] = useState(null);
-  // Sirf id — poora object rakhte to modal purani copy par atak jaata
-  const [viewingTaskId, setViewingTaskId] = useState(null);
-  // Activity modal bhi sirf id rakhta hai — poora object rakhte to modal
-  // khula rehte hue nayi entry usme nahi pahunchti
-  const [activityTaskId, setActivityTaskId] = useState(null);
-  /*
-  | Khule hue task ki history — records se alag aati hai, task ke saath
-  | nahi. taskId saath rakhte hain taaki pata rahe ki ye kis task ki hai:
-  | modal badalte hi purani history ek pal ke liye dikh jaati, aur "aa chuki
-  | hai ya nahi" ka bhi koi pata na chalta.
-  */
-  const [activity, setActivity] = useState(null);
-  const [deleting, setDeleting] = useState(false);
-  const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState(ALL_STATUSES);
-  // "all" ya "mine" — sirf manager ke liye, employee ko hamesha apne hi dikhte hain
-  const [scope, setScope] = useState("all");
-  // Kaunse section ka "View all" daba — khaali matlab poori list
-  const [tableContext, setTableContext] = useState(TASK_CONTEXT.ALL);
   const [formData, setFormData] = useState(EMPTY_TASK_FORM);
 
-  // Dashboard sections ka "View all" isi table par scroll karta hai —
-  // naya page nahi khulta, wahi list neeche pehle se maujood hai
+  // Archive / delete — { tasks, permanent }. null matlab modal band
+  const [archiveTarget, setArchiveTarget] = useState(null);
+  const [archiving, setArchiving] = useState(false);
+
+  // Sirf id — task list badle to drawer naya task padhta hai, purani copy nahi
+  const [drawerTaskId, setDrawerTaskId] = useState(null);
+  const [selectedIds, setSelectedIds] = useState(() => new Set());
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const [tableContext, setTableContext] = useState(TASK_CONTEXT.ALL);
+
   const tableRef = useRef(null);
+  const searchRef = useRef(null);
 
-  // Tasks realtime — create/edit/delete ke baad list khud update ho jaati hai,
-  // aur doosre user ka change bhi bina refresh dikh jaata hai.
+  const layout = filters.layout === "team" && !canSeeTeam ? "list" : filters.layout;
+
+  /*
+  | Tasks — server se, sirf wahi jo is user ko dikhne chahiye. Koi bhi kahin
+  | bhi likhe (meta/version badle) to list apne aap dobara aati hai.
+  */
   useEffect(() => {
-    if (!companyCode) {
-      setError("Company code not found. Please log in again.");
-      setLoading(false);
-      return;
-    }
+    if (!companyCode) return undefined;
 
-    const unsubscribe = subscribeTasks(
+    return subscribeTasks(
       companyCode,
-      (data) => {
+      (data, names) => {
         setTasks(data);
+        setPeople((previous) => ({ ...previous, ...names }));
         setError("");
         setLoading(false);
       },
       (err) => {
         console.error("Failed to load tasks:", err);
-        setError("Unable to load tasks.");
+        setError(err.message || "Unable to load tasks.");
         setLoading(false);
       }
     );
-
-    // Page chhodte hi listener band — warna wo chalta rehta hai
-    return unsubscribe;
   }, [companyCode]);
 
+  // Archived tab — sirf jab khula ho, aur sirf tasks.delete wale ke liye
+  const wantsArchived = filters.view === "archived" && canArchive;
+
+  useEffect(() => {
+    if (!companyCode || !wantsArchived) return undefined;
+
+    return subscribeTasks(
+      companyCode,
+      (data, names) => {
+        setArchivedTasks({ loaded: true, list: data });
+        setPeople((previous) => ({ ...previous, ...names }));
+      },
+      (err) => {
+        console.error("Failed to load archived tasks:", err);
+        setArchivedTasks({ loaded: true, list: [] });
+      },
+      { archived: true }
+    );
+  }, [companyCode, wantsArchived]);
+
+  // Team view — sirf khula ho tab, aur har badlaav par taaza
+  const wantsTeam = layout === "team";
+
+  useEffect(() => {
+    if (!companyCode || !wantsTeam) return undefined;
+
+    return subscribeTaskVersion(companyCode, async () => {
+      try {
+        const members = await fetchTaskTeam();
+        setTeam({ loaded: true, members, error: "" });
+      } catch (err) {
+        setTeam((previous) => ({ ...previous, loaded: true, error: err.message }));
+      }
+    });
+  }, [companyCode, wantsTeam, teamReload]);
+
+  // Chalte timer ("1h 20m") aage badhte rahein — har 30 second
+  useEffect(() => {
+    const timer = setInterval(() => setNow(Date.now()), 30000);
+    return () => clearInterval(timer);
+  }, []);
+
   /*
-  | Employees dropdown, Assignee column aur workload ke liye — shared store
-  | se, apna download nahi. Jise inme se kuch nahi dikhta uske liye
-  | enabled: false, to listener lagta hi nahi — Employee role ke paas poori
-  | company ki list pehle bhi nahi aati thi, ab bhi nahi aati.
-  |
-  | Fail ho to page-level error nahi — task list to theek hai. Error store
-  | khud console par likh deta hai.
+  | Employees — Team column, workload aur assign dropdown ke liye. Shared
+  | store se, apna download nahi. Employee role ke liye listener lagta hi
+  | nahi; uske teammates ke naam API ke people se aate hain.
   */
   const { employees: employeeRecords } = useEmployees(companyCode, {
     enabled: needsEmployees,
   });
 
-  // Firebase ki key hi employeeId hai. role saath aata hai kyunki "kisko
-  // assign kar sakte ho" usi par tika hai — HR doosre HR ko nahi de sakta.
   const employees = useMemo(
     () =>
       Object.entries(employeeRecords)
@@ -247,108 +283,157 @@ function AllTasks() {
           id,
           name: employee.personalInfo?.name || id,
           role: employee.account?.role || "",
+          departmentId: employee.employmentInfo?.departmentId || "",
         }))
         .sort((a, b) => a.name.localeCompare(b.name)),
     [employeeRecords]
   );
 
   /*
-  | Assign dropdown ki list. Assignee column aur workload poori list se
-  | chalte hain (naam to sabke dikhne chahiye), par dena kisko hai — wo
-  | dekhne wale ke role par tika hai, aur wo table upar likhi hai.
-  |
-  | Khud hamesha list mein rehta hai, apne role ki rok se pehle. Isi se HR
-  | apne liye task bana leta hai jabki doosre HR uski list se hat jaate
-  | hain, aur Manager ke saath bhi wahi hota hai.
-  |
-  | Owner is list mein aata hi nahi — uska employee record hota hi nahi,
-  | isliye "Assign to Owner" ka sawaal hi nahi uthta.
+  | Manager sirf apne department ko task de / team mein jod sakta hai —
+  | wahi niyam jo server (managerScopeIds) aur attendance lagate hain:
+  | jin departments ka wo manager hai, unke log, aur wo khud.
   */
+  const isManager = role === ROLE.MANAGER;
+  const { departments } = useDepartments(companyCode, { enabled: needsEmployees && isManager });
+
+  const managedDepartmentIds = useMemo(() => {
+    const me = String(myEmployeeId || "").trim().toUpperCase();
+    return new Set(
+      Object.entries(departments)
+        .filter(([, department]) => String(department?.manager?.employeeId || "").trim().toUpperCase() === me)
+        .map(([id]) => id)
+    );
+  }, [departments, myEmployeeId]);
+
   const assignableEmployees = useMemo(() => {
-
     const blocked = BLOCKED_ASSIGNEE_ROLES[role] || [];
-
-    if (!blocked.length) return employees;
-
     return employees.filter(
       (employee) =>
-        employee.id === myEmployeeId || !blocked.includes(employee.role)
+        employee.id === myEmployeeId ||
+        (!blocked.includes(employee.role) &&
+          (!isManager || managedDepartmentIds.has(employee.departmentId)))
     );
-
-  }, [employees, role, myEmployeeId]);
-
-  // tasks.viewAll na ho to hamesha sirf apne tasks. Ho to sab, jab tak khud
-  // "My tasks" na chune. Filter browser mein hota hai — attendance requests
-  // module bhi yahi karta hai (filterOwnRequests).
-  const showOnlyMine = !canViewAll || scope === "mine";
-  const roleTasks = useMemo(
-    () => (showOnlyMine ? filterOwnTasks(tasks, currentUser) : tasks),
-    [showOnlyMine, tasks, currentUser]
-  );
+  }, [employees, role, myEmployeeId, isManager, managedDepartmentIds]);
 
   /*
-  | Due aur overdue ki khabar — roleTasks par, poori list par nahi. Employee
-  | ko sirf apne tasks dikhte hain, to uska sweep bhi utna hi hai; viewAll
-  | wale ka sabke liye.
+  | Form ki list — jo log pehle se is task par hain (HR ne bahar se joda ho)
+  | wo bhi, taaki "Add people" kholne par unke naam dikhein aur galti se
+  | hat na jaayein. Naye sirf assignableEmployees mein se.
   */
-  useTaskDueNotifications(companyCode, roleTasks);
+  const formEmployees = useMemo(() => {
+    if (!editingTask) return assignableEmployees;
+    const team = new Set([editingTask.assignedTo, ...memberIdsOf(editingTask)]);
+    const listed = new Set(assignableEmployees.map((employee) => employee.id));
+    const extra = employees.filter((employee) => team.has(employee.id) && !listed.has(employee.id));
+    return extra.length ? [...assignableEmployees, ...extra] : assignableEmployees;
+  }, [assignableEmployees, employees, editingTask]);
 
-  // Local "today" — todayInputValue() timezone sambhaal leta hai
+  // id → naam: API ke people + employees list (dono mein se jo mile)
+  const names = useMemo(
+    () => ({
+      ...people,
+      ...Object.fromEntries(employees.map((employee) => [employee.id, employee.name])),
+    }),
+    [people, employees]
+  );
+
+  // Purane panels { id, name } list maangte hain
+  const nameList = useMemo(
+    () => Object.entries(names).map(([id, name]) => ({ id, name })),
+    [names]
+  );
+
   const today = todayInputValue();
 
+  /* ── Views ── */
+
+  const views = useMemo(
+    () =>
+      TASK_VIEWS.filter((view) => {
+        if (view.needs === "viewAll") return canViewAll;
+        if (view.needs === "employee") return Boolean(myEmployeeId);
+        if (view.needs === "create") return canCreateTask;
+        if (view.needs === "archive") return canArchive;
+        return true;
+      }),
+    [canViewAll, myEmployeeId, canCreateTask, canArchive]
+  );
+
+  const view = views.some((item) => item.key === filters.view) ? filters.view : views[0]?.key;
+  const archivedMode = view === "archived";
+
+  const viewTasks = useMemo(() => {
+    const byView = {
+      all: () => tasks,
+      mine: () => filterOwnTasks(tasks, currentUser),
+      assigned: () => tasks.filter((task) => task.createdById === actionUser.id),
+      overdue: () => tasks.filter((task) => isOverdue(task, today)),
+      completed: () => tasks.filter((task) => task.status === COMPLETED_STATUS),
+      archived: () => archivedTasks.list,
+    };
+    return (byView[view] || byView.all)();
+  }, [view, tasks, archivedTasks.list, currentUser, actionUser.id, today]);
+
+  const viewCounts = useMemo(
+    () => ({
+      all: tasks.length,
+      mine: filterOwnTasks(tasks, currentUser).length,
+      assigned: tasks.filter((task) => task.createdById === actionUser.id).length,
+      overdue: tasks.filter((task) => isOverdue(task, today)).length,
+      completed: tasks.filter((task) => task.status === COMPLETED_STATUS).length,
+      ...(archivedTasks.loaded ? { archived: archivedTasks.list.length } : {}),
+    }),
+    [tasks, archivedTasks, currentUser, actionUser.id, today]
+  );
+
   /*
-  | Dashboard ka saara data yahin se banta hai — usi roleTasks se jo table
-  | use karta hai, isliye cards aur table kabhi alag baat nahi kehte.
-  |
-  | useMemo isliye ki subscribeTasks realtime listener hai: har chhote update
-  | par ye ginti dobara na ho.
+  | Dashboard ka saara data — summary aur panels usi list se jo table use
+  | karta hai. List server se pehle hi user ke daayre mein chhanti aati hai
+  | (viewAll ho to sab, warna jin par wo hai ya jo usne diye).
   */
-  const summary = useMemo(() => taskSummary(roleTasks, today), [roleTasks, today]);
+  const summary = useMemo(() => taskSummary(tasks, today), [tasks, today]);
   const progress = useMemo(() => taskProgress(summary), [summary]);
-  const workload = useMemo(
-    () => teamWorkload(roleTasks, employees),
-    [roleTasks, employees]
-  );
-  const urgent = useMemo(
-    () => urgentTasks(roleTasks, today, SECTION_ROW_LIMIT),
-    [roleTasks, today]
-  );
-  const recent = useMemo(
-    () => recentTasks(roleTasks, SECTION_ROW_LIMIT),
-    [roleTasks]
-  );
+  const workload = useMemo(() => teamWorkload(tasks, nameList), [tasks, nameList]);
+  const urgent = useMemo(() => urgentTasks(tasks, today, SECTION_ROW_LIMIT), [tasks, today]);
+  const recent = useMemo(() => recentTasks(tasks, SECTION_ROW_LIMIT), [tasks]);
 
-  /*
-  | Table ke liye wahi do helpers, bas bina limit — Infinity se slice poori
-  | list de deta hai. Section aur table ek hi definition par chalte hain,
-  | isliye "View all" mein sach mein wahi tasks dikhte hain.
-  */
-  const contextTasks = useMemo(() => {
-    if (tableContext === TASK_CONTEXT.URGENT) {
-      return urgentTasks(roleTasks, today, Infinity);
-    }
+  // Filter ke "Person" dropdown mein wahi log jo in tasks par hain
+  const filterPeople = useMemo(() => {
+    const ids = new Set(viewTasks.flatMap((task) => teamOf(task)));
+    return [...ids]
+      .map((id) => ({ id, name: names[id] || id }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [viewTasks, names]);
 
-    if (tableContext === TASK_CONTEXT.RECENT) {
-      return recentTasks(roleTasks, Infinity);
-    }
+  /* ── List pipeline: view → section → card → filters → sort ── */
 
-    return roleTasks;
-  }, [tableContext, roleTasks, today]);
+  const visibleTasks = useMemo(() => {
+    let list = viewTasks;
 
-  // Search aur status filter context ke upar lagte hain, uski jagah nahi
-  const visibleTasks = filterTasks(contextTasks, {
-    search,
-    statusFilter,
-    employees,
-    allStatuses: ALL_STATUSES,
-  });
+    if (tableContext === TASK_CONTEXT.URGENT) list = urgentTasks(list, today, Infinity);
+    if (tableContext === TASK_CONTEXT.RECENT) list = recentTasks(list, Infinity);
 
-  /*
-  | Table sirf ek page ki rows dikhata hai — wahi common pagination jo
-  | Employees page use karta hai (usePagination + Pagination).
-  */
+    const card = CARD_FILTERS[filters.card];
+    if (card) list = list.filter((task) => card(task, today));
+
+    list = filterTasks(list, {
+      search: filters.search,
+      statusFilter: filters.status,
+      allStatuses: ALL_STATUSES,
+      priority: filters.priority,
+      assignee: filters.assignee,
+      due: filters.due,
+      names,
+      today,
+    });
+
+    // "Recent" ka apna kram hai — sort use bigaade nahi
+    return tableContext === TASK_CONTEXT.RECENT ? list : sortTasks(list, filters.sort);
+  }, [viewTasks, tableContext, filters, names, today]);
+
   const {
-    paginatedData: paginatedTasks,
+    paginatedData: pageTasks,
     currentPage,
     totalPages,
     totalItems,
@@ -358,104 +443,94 @@ function AllTasks() {
     goToPage,
     changePageSize,
     resetPagination,
-  } = usePagination({
-    data: visibleTasks,
-    initialPageSize: 5,
-  });
+  } = usePagination({ data: visibleTasks, initialPageSize: TASK_PAGE_SIZE });
 
-  // Filter/scope/context badla to list hi nayi hai — page 1 par wapas
+  // Filter badla to list hi nayi hai — page 1, aur purana selection saaf
+  const filterKey = `${view}|${tableContext}|${filters.card}|${filters.search}|${filters.status}|${filters.priority}|${filters.assignee}|${filters.due}|${filters.sort}`;
+
   useEffect(() => {
     resetPagination();
-  }, [search, statusFilter, scope, tableContext]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filterKey]);
 
-  // roleTasks se — jo dikhta nahi uski detail bhi nahi khulni chahiye
-  const viewingTask = useMemo(
-    () => roleTasks.find((task) => task.id === viewingTaskId) || null,
-    [roleTasks, viewingTaskId]
+  const [selectionKey, setSelectionKey] = useState(filterKey);
+  if (selectionKey !== filterKey) {
+    // Render ke dauraan hi — effect mein setState se ek faltu render bachta hai
+    setSelectionKey(filterKey);
+    setSelectedIds(new Set());
+  }
+
+  // Main abhi kis task par hoon — upar ki "Working on" patti ke liye
+  const myWork = useMemo(
+    () => (myEmployeeId ? tasks.find((task) => Number.isFinite(task.working?.[myEmployeeId])) : null),
+    [tasks, myEmployeeId]
   );
 
-  /*
-  | Activity bhi wahi jodi — id se har render par taaza task nikalta hai,
-  | isliye modal khula rehte hue koi status badle to nayi entry apne aap
-  | list mein aa jaati hai. Task delete ho jaye to null, aur modal khud
-  | band ho jaata hai.
-  */
-  const activityTask = useMemo(
-    () => roleTasks.find((task) => task.id === activityTaskId) || null,
-    [roleTasks, activityTaskId]
+  const allTasks = useMemo(() => [...tasks, ...archivedTasks.list], [tasks, archivedTasks.list]);
+  const drawerTask = useMemo(
+    () => allTasks.find((task) => task.id === drawerTaskId) || null,
+    [allTasks, drawerTaskId]
   );
 
-  /*
-  | History ab task ke andar nahi aati — wo records mein alag padi hai,
-  | isliye uska apna listener hai. Chalta sirf tab hai jab modal khula ho,
-  | aur band karte hi ruk jaata hai: jitne tasks hain utni history har baar
-  | utaarna bekaar hai, jab ek waqt par ek hi dikhti hai.
-  |
-  | Realtime isliye rakha hai ki modal khula rehte hue koi status badle to
-  | nayi line apne aap upar aa jaaye — wahi behaviour jo pehle tha.
-  |
-  | State par taskId chipka kar bhejte hain — jab tak wo khule hue task se
-  | mel na khaye, modal loading dikhata hai. Effect khud state saaf nahi
-  | karta: uska kaam sirf subscribe karna hai.
-  */
+  /* ── Keyboard: "/" search, "n" naya task ── */
+
+  const anyModalOpen = showForm || Boolean(archiveTarget) || Boolean(drawerTaskId);
+
+  const openCreateForm = useCallback(() => {
+    setEditingTask(null);
+    setFormMode("form");
+    setFormData({ ...EMPTY_TASK_FORM, assignedTo: selfAssignOnly ? myEmployeeId : "" });
+    setErrors({});
+    setShowForm(true);
+  }, [selfAssignOnly, myEmployeeId]);
+
   useEffect(() => {
-    if (!companyCode || !activityTaskId) return;
+    const onKeyDown = (event) => {
+      if (anyModalOpen || isTyping(event.target) || event.ctrlKey || event.metaKey || event.altKey) return;
 
-    const unsubscribe = subscribeTaskActivity(
-      companyCode,
-      activityTaskId,
-      (data) => setActivity({ taskId: activityTaskId, data }),
-      (err) => {
-        console.error("Failed to load task activity:", err);
-        // Page-level error nahi — baaki list theek hai. Modal khaali
-        // timeline dikha dega.
-        setActivity({ taskId: activityTaskId, data: {} });
+      if (event.key === "/") {
+        event.preventDefault();
+        searchRef.current?.focus();
+      } else if ((event.key === "n" || event.key === "N") && canOpenCreate) {
+        event.preventDefault();
+        openCreateForm();
       }
-    );
+    };
 
-    return unsubscribe;
-  }, [companyCode, activityTaskId]);
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [anyModalOpen, canOpenCreate, openCreateForm]);
 
-  // Doosre task ki history apne aap chhoot jaati hai — id milti hi nahi
-  const activityLoaded = Boolean(activity && activity.taskId === activityTaskId);
+  /* ── Actions ── */
 
-  const activityEntries = useMemo(
-    () => (activityLoaded ? taskActivityList(activity.data) : []),
-    [activityLoaded, activity]
-  );
-
-  // "View all" — us section ka context lagao, status filter hatao, table par jao
   const showTableContext = (context) => {
     setTableContext(context);
-    setStatusFilter(ALL_STATUSES);
+    setFilters({ view: defaultView, status: ALL_STATUSES, card: "", layout: "list" });
     tableRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
-  // Ek field badle to uska error hata do
+  const pickCard = (key) => {
+    setTableContext(TASK_CONTEXT.ALL);
+    setFilters({
+      card: filters.card === key ? "" : key,
+      view: defaultView,
+      layout: layout === "team" ? "list" : layout,
+    });
+  };
+
   const updateField = (field, value) => {
     setFormData((current) => ({ ...current, [field]: value }));
     setErrors((current) => ({ ...current, [field]: "" }));
   };
 
-  // Naya task — khaali form. Self-assign wale ka assignee pehle se bhara,
-  // taaki required validation pass ho jaye (form mein field dikhti hi nahi).
-  const openCreateForm = () => {
-    setEditingTask(null);
-    setFormData({
-      ...EMPTY_TASK_FORM,
-      assignedTo: selfAssignOnly ? myEmployeeId : "",
-    });
-    setErrors({});
-    setShowForm(true);
-  };
-
-  // Edit — task ki maujooda values form mein bhar do
   const openEditForm = (task) => {
     setEditingTask(task);
+    setFormMode("form");
     setFormData({
       title: task.title || "",
       description: task.description || "",
       assignedTo: task.assignedTo || "",
+      members: memberIdsOf(task),
       dueDate: task.dueDate || "",
       priority: task.priority || EMPTY_TASK_FORM.priority,
     });
@@ -463,154 +538,257 @@ function AllTasks() {
     setShowForm(true);
   };
 
-  const closeForm = () => {
+  const openMembersForm = (task) => {
+    openEditForm(task);
+    setFormMode("members");
+  };
+
+  const closeForm = useCallback(() => {
     setShowForm(false);
     setEditingTask(null);
     setErrors({});
-  };
+  }, []);
 
-  // Create aur Edit dono yahi se — sirf aakhri call alag hai
+  const sameMembers = (a = [], b = []) =>
+    a.length === b.length && a.every((id) => b.includes(id));
+
   const handleSubmit = async () => {
-    // rules.js se validation
-    const fieldErrors = {
-      title: validateField("taskTitle", formData.title),
-      description: validateField("taskDescription", formData.description),
-      assignedTo: validateField("taskAssignee", formData.assignedTo),
-      dueDate: validateField("taskDueDate", formData.dueDate),
-    };
+    const membersOnly = formMode === "members";
 
-    // Edit mein purani due date wale task ko "past date" kehkar rok dena galat
-    // hoga — isliye date na badli ho to wo check chhod dete hain
-    if (editingTask && formData.dueDate === editingTask.dueDate) {
-      fieldErrors.dueDate = "";
+    if (!membersOnly) {
+      const fieldErrors = {
+        title: validateField("taskTitle", formData.title),
+        description: validateField("taskDescription", formData.description),
+        assignedTo: validateField("taskAssignee", formData.assignedTo),
+        dueDate: validateField("taskDueDate", formData.dueDate),
+      };
+
+      // Edit mein date na badli ho to "past" ka check nahi
+      if (editingTask && formData.dueDate === editingTask.dueDate) fieldErrors.dueDate = "";
+
+      if (Object.values(fieldErrors).some(Boolean)) {
+        setErrors(fieldErrors);
+        return;
+      }
     }
 
-    // Koi bhi error hai to ruk jao
-    if (Object.values(fieldErrors).some(Boolean)) {
-      setErrors(fieldErrors);
-      return;
-    }
-
-    /*
-    | assignedTo yahan force hota hai, sirf UI prefill par bharosa nahi.
-    | Jise assign karne ka haq nahi uska task hamesha uske hi naam par
-    | jaata hai — create par bhi, edit par bhi.
-    */
-    const payload = {
-      ...formData,
-      title: formData.title.trim(),
-      description: formData.description.trim(),
-      assignedTo: selfAssignOnly ? myEmployeeId : formData.assignedTo,
-    };
+    const members = canCreateTask ? formData.members || [] : [];
 
     setSaving(true);
     try {
       if (editingTask) {
-        // Audit fields nahi bhejte — updateTask khud sirf editable fields
-        // chhaanta hai, to createdBy/createdById/createdAt bache rehte hain
-        // Purani copy saath jaati hai — assignee badla ya nahi, service usi
-        // se tay karti hai. actionUser wahi jo create aur activity par jaata hai.
-        await updateTask(
-          companyCode,
-          editingTask.id,
-          payload,
-          editingTask,
-          actionUser
-        );
+        const changes = membersOnly
+          ? { members }
+          : {
+              title: formData.title.trim(),
+              description: formData.description.trim(),
+              assignedTo: selfAssignOnly ? myEmployeeId : formData.assignedTo,
+              dueDate: formData.dueDate,
+              priority: formData.priority,
+              ...(canManageMembersOf(editingTask) && !sameMembers(members, memberIdsOf(editingTask))
+                ? { members }
+                : {}),
+            };
+
+        // Jo updatedAt dekh kar form khula tha — beech mein kisi ne badla to server rokega
+        await updateTask(companyCode, editingTask.id, {
+          ...changes,
+          expectedUpdatedAt: editingTask.updatedAt,
+        });
       } else {
         await createTask(companyCode, {
-          ...payload,
-          createdBy: actionUser.name,
-          createdById: actionUser.id,
+          ...formData,
+          title: formData.title.trim(),
+          description: formData.description.trim(),
+          assignedTo: selfAssignOnly ? myEmployeeId : formData.assignedTo,
+          members,
         });
       }
 
-      // List khud update ho jaayegi — subscribeTasks listener se
-
       setFormData(EMPTY_TASK_FORM);
-      setErrors({});
-      setShowForm(false);
-      setEditingTask(null);
+      closeForm();
       toast.success(
-        editingTask ? "Task updated successfully." : "Task created successfully.",
+        membersOnly ? "Team updated." : editingTask ? "Task updated successfully." : "Task created successfully."
       );
     } catch (err) {
       console.error("Failed to save task:", err);
-      toast.error(
-        editingTask ? "Unable to update the task." : "Unable to create the task.",
-      );
+      toast.error(err.message || (editingTask ? "Unable to update the task." : "Unable to create the task."));
     } finally {
       setSaving(false);
     }
   };
 
   /*
-  | Ek employee ek waqt par ek hi task par kaam kar sakta hai. Isliye task
-  | start karte waqt uske baaki chal rahe tasks Paused ho jaate hain — user
-  | ko pehle unhe khud rokna nahi padta.
+  | Status — list turant badal jaati hai (optimistic), server baad mein
+  | haan kehta hai. Mana kare to purana status wapas, aur wajah toast mein.
   |
-  | Dono badlaav service ek hi write mein bhejti hai, isliye list kabhi do
-  | task In Progress dikhati nahi.
+  | Jinka kaam apne aap ruka (ek insaan, ek waqt, ek kaam) unke naam bhi
+  | toast mein — warna lagta hai list apne aap badal gayi.
+  |
+  | Team ka banda Paused chune aur baaki kaam kar rahe hon to server sirf
+  | uska kaam rokta hai (onlyMine) — task In Progress hi rehta hai.
   */
   const changeStatus = async (task, status) => {
-    const running =
-      status === IN_PROGRESS_STATUS
-        ? runningTasksOf(tasks, task.assignedTo, task.id)
-        : [];
+    if (task.status === status) return;
+
+    const previous = task.status;
+    setTasks((list) => list.map((item) => (item.id === task.id ? { ...item, status } : item)));
 
     try {
-      const changed = await updateTaskStatus(companyCode, task, status, {
-        actionUser,
-        pauseTasks: running,
-      });
+      const { changed, paused, onlyMine } = await updateTaskStatus(companyCode, task, status);
 
-      // Wahi status dobara chuna gaya — kuch likha hi nahi gaya, to kehne
-      // ko bhi kuch nahi
+      /*
+      | Team ke baaki abhi kaam kar rahe hain — server ne sirf mera kaam
+      | roka, task In Progress hi hai. List ko wapas karo, aur saaf batao.
+      */
+      if (onlyMine) {
+        setTasks((list) => list.map((item) => (item.id === task.id ? { ...item, status: previous } : item)));
+        if (changed) toast.success("You stopped your work. The task stays In Progress for your teammates.");
+        else toast.info("Your teammates are still working, so the task stays In Progress.");
+        return;
+      }
+
       if (!changed) return;
 
-      // Kaunsa task apne aap ruka, ye batana zaroori hai — warna user ko
-      // lagta hai list apne aap badal gayi
       toast.success(
-        running.length === 1
-          ? `Task moved to ${status}. "${running[0].title}" paused.`
-          : running.length > 1
-            ? `Task moved to ${status}. ${running.length} tasks paused.`
+        paused.length === 1
+          ? `Task moved to ${status}. "${paused[0]}" paused.`
+          : paused.length > 1
+            ? `Task moved to ${status}. ${paused.length} tasks paused.`
             : `Task moved to ${status}.`
       );
     } catch (err) {
       console.error("Failed to update task status:", err);
-      toast.error("Unable to update task status.");
+      setTasks((list) => list.map((item) => (item.id === task.id ? { ...item, status: previous } : item)));
+      toast.error(err.message || "Unable to update task status.");
     }
   };
 
-  const confirmDelete = async () => {
-    if (!taskToDelete) return;
-
-    setDeleting(true);
+  const changeWork = async (task, action) => {
     try {
-      await deleteTask(companyCode, taskToDelete.id);
-      setTaskToDelete(null);
-      toast.success("Task deleted successfully.");
+      const { changed, paused } = await setTaskWork(task, action);
+      if (!changed) return;
+      toast.success(
+        action === "start"
+          ? paused.length
+            ? `You joined the work. "${paused[0]}" paused.`
+            : "You joined the work."
+          : "You stopped working on this task."
+      );
     } catch (err) {
-      console.error("Failed to delete task:", err);
-      toast.error("Unable to delete the task.");
-    } finally {
-      setDeleting(false);
+      toast.error(err.message || "Unable to update your work.");
     }
   };
 
-  if (loading) return <Loader text="Loading tasks..." />;
+  const confirmArchive = async () => {
+    if (!archiveTarget) return;
+
+    const { tasks: targets, permanent } = archiveTarget;
+    setArchiving(true);
+
+    let failed = 0;
+    for (const task of targets) {
+      try {
+        if (permanent) await deleteTaskPermanently(task);
+        else await archiveTask(task);
+      } catch (err) {
+        console.error("Failed to archive task:", err);
+        failed += 1;
+      }
+    }
+
+    setArchiving(false);
+    setArchiveTarget(null);
+    setSelectedIds(new Set());
+    if (drawerTaskId && targets.some((task) => task.id === drawerTaskId)) setDrawerTaskId(null);
+
+    const done = targets.length - failed;
+    if (done) {
+      toast.success(
+        permanent
+          ? "Task deleted permanently."
+          : done === 1
+            ? "Task archived. Restore it from the Archived tab."
+            : `${done} tasks archived.`
+      );
+    }
+    if (failed) toast.error(`${failed} task${failed > 1 ? "s" : ""} could not be ${permanent ? "deleted" : "archived"}.`);
+  };
+
+  const handleRestore = async (task) => {
+    try {
+      await restoreTask(task);
+      toast.success("Task restored.");
+    } catch (err) {
+      toast.error(err.message || "Unable to restore the task.");
+    }
+  };
+
+  /* ── Bulk ── */
+
+  const selectedTasks = pageTasks.filter((task) => selectedIds.has(task.id));
+
+  const toggleOne = (task) =>
+    setSelectedIds((current) => {
+      const next = new Set(current);
+      if (next.has(task.id)) next.delete(task.id);
+      else next.add(task.id);
+      return next;
+    });
+
+  const toggleAll = (checked) =>
+    setSelectedIds(checked ? new Set(pageTasks.map((task) => task.id)) : new Set());
+
+  // Ek-ek karke — ek saath bhejte to "ek insaan, ek kaam" ka auto-pause aapas mein takraata
+  const runBulk = async (label, work, allowed) => {
+    const targets = selectedTasks.filter(allowed);
+    const skipped = selectedTasks.length - targets.length;
+
+    setBulkBusy(true);
+    let failed = 0;
+    for (const task of targets) {
+      try {
+        await work(task);
+      } catch (err) {
+        console.error(`Bulk ${label} failed:`, err);
+        failed += 1;
+      }
+    }
+    setBulkBusy(false);
+    setSelectedIds(new Set());
+
+    const done = targets.length - failed;
+    if (done) toast.success(`${done} task${done > 1 ? "s" : ""} ${label}.`);
+    if (failed || skipped) {
+      toast.error(`${failed + skipped} task${failed + skipped > 1 ? "s were" : " was"} not changed.`);
+    }
+  };
+
+  const bulkStatus = (status) =>
+    runBulk(
+      `moved to ${status}`,
+      (task) => updateTaskStatus(companyCode, task, status),
+      (task) => canChangeStatusOf(task) && task.status !== status
+    );
+
+  const bulkReassign = (employeeId) =>
+    runBulk(
+      `reassigned to ${names[employeeId] || employeeId}`,
+      (task) =>
+        updateTask(companyCode, task.id, {
+          assignedTo: employeeId,
+          expectedUpdatedAt: task.updatedAt,
+        }),
+      (task) => canEditTask(task) && task.assignedTo !== employeeId
+    );
+
+  /* ── Render ── */
+
+  const showTeamColumn = canViewAll || canCreateTask;
+  const showListTools = layout !== "team";
+  const listLoading = loading || (archivedMode && !archivedTasks.loaded);
 
   return (
-    /*
-    | Dashboard ki hi banawat: headline khuli hui page par, uske neeche card.
-    | Na apni padding, na apni max-width — dono DashboardLayout ke <main> se
-    | aate hain (p-4 sm:p-6 lg:p-8, max-w-[1600px]), aur Dashboard.jsx bhi
-    | wahi bharosa karta hai. Pehle yahan p-1 sm:p-2 aur max-w dobara likhi
-    | thi, jisse /tasks ka content baaki pages se thoda andar khisak jaata.
-    |
-    | Gap bhi Dashboard wala: header ke baad 6/8, uske andar cards ke beech 4/6.
-    */
     <div className="min-h-full flex-1 space-y-6 sm:space-y-8">
       <TaskPageHeader
         title="Tasks"
@@ -618,26 +796,28 @@ function AllTasks() {
         subtitle={
           canViewAll
             ? "Plan work, keep ownership clear, and stay ahead of deadlines"
-            : "Everything assigned to you, in one place"
+            : "Everything you are working on, in one place"
         }
         icon={<FiCheckSquare size={14} />}
         action={
-          canOpenCreate && (
-            <button
-              type="button"
-              onClick={openCreateForm}
-              /*
-              | Phone par poori chaudai, sm se apni — wahi jo HolidayHeader ke
-              | "Add Holiday" aur LeaveHeader ke "Apply Leave" par hai.
-              | justify-center saath mein zaroori hai, warna chaudi hui patti
-              | mein icon aur text baayein kinare chipke reh jaate.
-              */
-              className={`${PRIMARY_BUTTON_CLASS} w-full justify-center sm:w-auto`}
-            >
-              <FiPlus />
-              Create task
-            </button>
-          )
+          <>
+            <TaskLayoutSwitch
+              value={layout}
+              onChange={(next) => setFilter("layout", next)}
+              showTeam={canSeeTeam}
+            />
+            {canOpenCreate && (
+              <button
+                type="button"
+                onClick={openCreateForm}
+                title="Create task (N)"
+                className={`${PRIMARY_BUTTON_CLASS} w-full justify-center sm:w-auto`}
+              >
+                <FiPlus />
+                Create task
+              </button>
+            )}
+          </>
         }
       />
 
@@ -656,87 +836,157 @@ function AllTasks() {
           </div>
         )}
 
-        <TaskSummaryCards summary={summary} />
+        <TaskWorkingBar
+          task={myWork}
+          step={myWork?.workingStep?.[myEmployeeId]}
+          since={myWork?.working?.[myEmployeeId]}
+          now={now}
+          onStop={() => changeWork(myWork, "stop")}
+          onOpen={() => setDrawerTaskId(myWork.id)}
+        />
 
-        {/* ref — dono "View all" isi card par scroll karte hain */}
+        <TaskSummaryCards summary={summary} activeKey={filters.card} onPick={pickCard} />
+
         <div ref={tableRef} className="ui-card overflow-hidden">
-          <div className="flex flex-col gap-4 border-b border-line px-6 py-5 lg:flex-row lg:items-center lg:justify-between">
-            <div className="min-w-0">
-              <h2 className="ui-card-title">Task overview</h2>
-
-              <div className="mt-1 flex flex-wrap items-center gap-2">
-                <p className="text-sm text-ink-subtle">
-                  {visibleTasks.length} task
-                  {visibleTasks.length === 1 ? "" : "s"} shown
+          {layout === "team" ? (
+            <>
+              <div className="border-b border-line px-5 py-4">
+                <h2 className="ui-card-title">Team</h2>
+                <p className="ui-card-subtitle">
+                  {isOwner || role === ROLE.HR
+                    ? "Everyone in the company. Click a person to see their tasks."
+                    : "People in the departments you manage. Click a person to see their tasks."}
                 </p>
-
-                {/*
-                  Kaunsa section ka view chal raha hai. Pill ka look
-                  AttendancePanel ke LiveBadge se, aur × wahi jo upar
-                  error banner mein hai.
-                */}
-                {tableContext !== TASK_CONTEXT.ALL && (
-                  <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 py-1 pl-3 pr-1.5 text-xs font-semibold text-blue-700">
-                    Showing: {TASK_CONTEXT_LABELS[tableContext]}
-                    <button
-                      type="button"
-                      onClick={() => setTableContext(TASK_CONTEXT.ALL)}
-                      aria-label="Show all tasks"
-                      title="Show all tasks"
-                      className="cursor-pointer rounded-full p-0.5 transition hover:bg-blue-100"
-                    >
-                      <FiX size={14} />
-                    </button>
-                  </span>
-                )}
               </div>
-            </div>
+              <TaskTeamView
+                members={team.members}
+                loading={!team.loaded}
+                error={team.error}
+                now={now}
+                onRetry={() => setTeamReload((count) => count + 1)}
+                onPick={(employeeId) =>
+                  setFilters({ layout: "list", view: defaultView, assignee: employeeId, card: "" })
+                }
+              />
+            </>
+          ) : (
+            <>
+              <TaskViewTabs
+                views={views}
+                active={view}
+                counts={viewCounts}
+                onChange={(next) => {
+                  setTableContext(TASK_CONTEXT.ALL);
+                  setFilters({ view: next, card: "" });
+                }}
+              />
 
-            <TaskFilters
-            search={search}
-            onSearchChange={setSearch}
-            statusFilter={statusFilter}
-            onStatusChange={setStatusFilter}
-            scope={scope}
-            onScopeChange={setScope}
-            showScope={canSeeOwnTasks}
-          />
-        </div>
+              {showListTools && (
+                <TaskToolbar
+                  ref={searchRef}
+                  filters={filters}
+                  onChange={setFilter}
+                  onClear={() => {
+                    setTableContext(TASK_CONTEXT.ALL);
+                    clearFilters();
+                  }}
+                  people={filterPeople}
+                  showPerson={filterPeople.length > 1}
+                />
+              )}
 
-          <TaskTable
-            tasks={paginatedTasks}
-            employees={employees}
-            hasTasks={contextTasks.length > 0}
-            showAssignee={canViewAll}
-            canUpdate={canEditTask}
-            canDelete={canDeleteTask}
-            showActions={canActOnTasks}
-            showActivity={canViewActivity}
-            onStatusChange={changeStatus}
-            onEdit={openEditForm}
-            onDelete={setTaskToDelete}
-            onRowClick={(task) => setViewingTaskId(task.id)}
-            onActivityClick={(task) => setActivityTaskId(task.id)}
-            onCreate={canOpenCreate ? openCreateForm : undefined}
-          />
+              {(tableContext !== TASK_CONTEXT.ALL || filters.card) && (
+                <div className="flex flex-wrap items-center gap-2 px-4 pb-3 sm:px-5">
+                  <span className="text-sm text-ink-subtle">
+                    {visibleTasks.length} task{visibleTasks.length === 1 ? "" : "s"}
+                  </span>
+                  {tableContext !== TASK_CONTEXT.ALL && (
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 py-1 pl-3 pr-1.5 text-xs font-semibold text-blue-700">
+                      Showing: {TASK_CONTEXT_LABELS[tableContext]}
+                      <button
+                        type="button"
+                        onClick={() => setTableContext(TASK_CONTEXT.ALL)}
+                        aria-label="Show all tasks"
+                        className="cursor-pointer rounded-full p-0.5 transition hover:bg-blue-100"
+                      >
+                        <FiX size={14} />
+                      </button>
+                    </span>
+                  )}
+                </div>
+              )}
 
-          {/* Pagination */}
-          <Pagination
-            currentPage={currentPage}
-            totalPages={totalPages}
-            totalItems={totalItems}
-            startItem={startItem}
-            endItem={endItem}
-            pageSize={pageSize}
-            onPageChange={goToPage}
-            onPageSizeChange={changePageSize}
-          />
+              {layout === "list" && !archivedMode && (
+                <TaskBulkBar
+                  count={selectedTasks.length}
+                  busy={bulkBusy}
+                  people={assignableEmployees}
+                  canChangeStatus={selectedTasks.some(canChangeStatusOf)}
+                  canReassign={canCreateTask && selectedTasks.some(canEditTask)}
+                  canArchive={canArchive}
+                  onStatus={bulkStatus}
+                  onReassign={bulkReassign}
+                  onArchive={() => setArchiveTarget({ tasks: selectedTasks, permanent: false })}
+                  onClear={() => setSelectedIds(new Set())}
+                />
+              )}
+
+              {listLoading ? (
+                <TaskListSkeleton />
+              ) : layout === "board" && !archivedMode ? (
+                <TaskBoard
+                  tasks={visibleTasks}
+                  names={names}
+                  canChangeStatus={canChangeStatusOf}
+                  onStatusChange={changeStatus}
+                  onRowClick={(task) => setDrawerTaskId(task.id)}
+                  onCreate={canOpenCreate ? openCreateForm : undefined}
+                />
+              ) : (
+                <>
+                  <TaskTable
+                    tasks={pageTasks}
+                    names={names}
+                    now={now}
+                    hasTasks={viewTasks.length > 0}
+                    showTeam={showTeamColumn}
+                    archivedMode={archivedMode}
+                    selectable={!archivedMode}
+                    selectedIds={selectedIds}
+                    onToggle={toggleOne}
+                    onToggleAll={toggleAll}
+                    canEdit={canEditTask}
+                    canChangeStatus={canChangeStatusOf}
+                    canArchive={canArchive}
+                    canDeletePermanent={isOwner}
+                    onStatusChange={changeStatus}
+                    onEdit={openEditForm}
+                    onArchive={(task) => setArchiveTarget({ tasks: [task], permanent: false })}
+                    onRestore={handleRestore}
+                    onDeletePermanent={(task) => setArchiveTarget({ tasks: [task], permanent: true })}
+                    onRowClick={(task) => setDrawerTaskId(task.id)}
+                    onCreate={canOpenCreate ? openCreateForm : undefined}
+                  />
+
+                  <Pagination
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    totalItems={totalItems}
+                    startItem={startItem}
+                    endItem={endItem}
+                    pageSize={pageSize}
+                    onPageChange={goToPage}
+                    onPageSizeChange={changePageSize}
+                  />
+                </>
+              )}
+            </>
+          )}
         </div>
 
         {/*
-          Har panel apni permission par. Ek chhip jaye to doosra poori chaudai
-          le leta hai — Dashboard.jsx bhi yahi karta hai.
-          Summary cards bahar hain: unme koi assignee naam nahi aata.
+          Insights — list ke baad, upar nahi. Har panel apni permission par;
+          ek chhip jaye to doosra poori chaudai le leta hai.
         */}
         {(showProgress || showWorkload) && (
           <div
@@ -745,7 +995,6 @@ function AllTasks() {
             }`}
           >
             {showProgress && <TaskProgress progress={progress} />}
-
             {showWorkload && <TeamWorkload workload={workload} />}
           </div>
         )}
@@ -759,16 +1008,15 @@ function AllTasks() {
             {showUrgent && (
               <UrgentTasks
                 tasks={urgent}
-                employees={employees}
+                employees={nameList}
                 today={today}
                 onViewAll={() => showTableContext(TASK_CONTEXT.URGENT)}
               />
             )}
-
             {showRecent && (
               <RecentTasks
                 tasks={recent}
-                employees={employees}
+                employees={nameList}
                 onViewAll={() => showTableContext(TASK_CONTEXT.RECENT)}
               />
             )}
@@ -776,15 +1024,41 @@ function AllTasks() {
         )}
       </div>
 
+      {/*
+        Drawer pehle, modals baad mein — dono z-50 hain, to jo baad mein aata
+        hai wo upar dikhta hai. Drawer se "Edit" dabao to form drawer ke upar
+        khulna chahiye.
+      */}
+      <TaskDrawer
+        open={Boolean(drawerTask)}
+        suspended={showForm || Boolean(archiveTarget)}
+        task={drawerTask}
+        names={names}
+        companyCode={companyCode}
+        myEmployeeId={myEmployeeId}
+        now={now}
+        canChangeStatus={Boolean(drawerTask) && canChangeStatusOf(drawerTask)}
+        canEdit={Boolean(drawerTask) && canEditTask(drawerTask)}
+        canArchive={canArchive}
+        canManageMembers={Boolean(drawerTask) && canManageMembersOf(drawerTask)}
+        canViewActivity={canViewActivity}
+        onClose={() => setDrawerTaskId(null)}
+        onStatusChange={changeStatus}
+        onWork={changeWork}
+        onEdit={openEditForm}
+        onManageMembers={openMembersForm}
+        onArchive={(task) => setArchiveTarget({ tasks: [task], permanent: false })}
+      />
+
       <CreateTaskModal
         open={showForm}
         isEdit={Boolean(editingTask)}
+        mode={formMode}
+        canAddMembers={canCreateTask}
         formData={formData}
         errors={errors}
-        // Sirf wahi log jinhe ye user task de sakta hai — baaki jagah poori
-        // list jaati hai, kyunki wahan naam dikhane ka kaam hai
-        employees={assignableEmployees}
-        // true ho to assignee field dikhti hi nahi — task khud ke naam par
+        // Sirf wahi log jinhe ye user task de sakta hai
+        employees={formEmployees}
         selfAssign={selfAssignOnly}
         saving={saving}
         onChange={updateField}
@@ -792,28 +1066,14 @@ function AllTasks() {
         onClose={closeForm}
       />
 
-      <TaskDetailsModal
-        open={Boolean(viewingTask)}
-        task={viewingTask}
-        employees={employees}
-        showAssignee={canViewAll}
-        onClose={() => setViewingTaskId(null)}
-      />
-
-      <TaskActivityModal
-        open={Boolean(activityTask)}
-        task={activityTask}
-        entries={activityEntries}
-        loading={!activityLoaded}
-        onClose={() => setActivityTaskId(null)}
-      />
-
       <DeleteTaskModal
-        open={Boolean(taskToDelete)}
-        task={taskToDelete}
-        deleting={deleting}
-        onConfirm={confirmDelete}
-        onClose={() => setTaskToDelete(null)}
+        open={Boolean(archiveTarget)}
+        task={archiveTarget?.tasks[0]}
+        count={archiveTarget?.tasks.length || 0}
+        permanent={archiveTarget?.permanent}
+        deleting={archiving}
+        onConfirm={confirmArchive}
+        onClose={() => setArchiveTarget(null)}
       />
     </div>
   );

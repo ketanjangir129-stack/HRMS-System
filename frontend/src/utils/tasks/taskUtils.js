@@ -1,5 +1,4 @@
 import {
-  ACTIVITY_TYPE,
   COMPLETED_STATUS,
   IN_PROGRESS_STATUS,
   PAUSED_STATUS,
@@ -78,14 +77,105 @@ export const getCurrentActionUser = (currentUser) => ({
     "Admin",
 });
 
-// Sirf logged-in employee ke apne tasks — "My Tasks" wala view.
-// Filter browser mein hota hai, isliye Firebase mein index ki zaroorat nahi.
+/*
+|--------------------------------------------------------------------------
+| Team
+|--------------------------------------------------------------------------
+| Ek task par ek owner (assignedTo) aur kai members. Backend ke
+| utils/taskRules.js mein yahi helpers hain — dono jagah ek hi matlab.
+|
+| members Firebase mein { EMP01: true } hai. Owner kabhi members mein
+| nahi gina jaata.
+*/
+export const memberIdsOf = (task) =>
+  Object.keys(task?.members || {}).filter((id) => id && id !== task?.assignedTo);
+
+export const teamOf = (task) =>
+  [...new Set([task?.assignedTo, ...memberIdsOf(task)].filter(Boolean))];
+
+export const isOnTask = (task, employeeId) =>
+  Boolean(employeeId) && teamOf(task).includes(employeeId);
+
+// Abhi kaun kaam kar raha hai. Purane In Progress tasks par working node
+// nahi hota — unke liye owner hi kaam kar raha hai
+export const workingIdsOf = (task) => {
+  if (task?.working && typeof task.working === "object") {
+    return Object.keys(task.working);
+  }
+
+  return task?.status === IN_PROGRESS_STATUS && task?.assignedTo
+    ? [task.assignedTo]
+    : [];
+};
+
+export const isWorkingOn = (task, employeeId) =>
+  Boolean(employeeId) && workingIdsOf(task).includes(employeeId);
+
+/*
+|--------------------------------------------------------------------------
+| Waqt
+|--------------------------------------------------------------------------
+| Server har band session ka waqt task (timeSpent, timeBy) aur step
+| (timeSpent) par jodta hai. Chalta session abhi juda nahi — uska "ab tak"
+| yahin jodte hain: now - working[emp] (session shuru hone ka waqt).
+*/
+const liveMs = (sinceMap = {}, now, onlyId) =>
+  Object.entries(sinceMap || {})
+    .filter(([id, since]) => (!onlyId || id === onlyId) && Number.isFinite(since))
+    .reduce((sum, [, since]) => sum + Math.max(0, now - since), 0);
+
+// Task ka kul waqt — band sessions + abhi chal rahe
+export const taskTimeMs = (task, now = Date.now()) =>
+  (Number(task?.timeSpent) || 0) + liveMs(task?.working, now);
+
+// Ek insaan ka is task par waqt
+export const personTimeMs = (task, employeeId, now = Date.now()) =>
+  (Number(task?.timeBy?.[employeeId]) || 0) + liveMs(task?.working, now, employeeId);
+
+// Step ka waqt — band + jo abhi us step par lage hain
+export const stepTimeMs = (step, now = Date.now()) =>
+  (Number(step?.timeSpent) || 0) + liveMs(step?.workingBy, now);
+
+// 0 ho to "—", warna "2h 10m"
+export const formatTime = (ms) => (ms > 0 ? formatDuration(ms) : "—");
+
+// Andaza minute mein → "4h" / "1h 30m"
+export const formatEstimate = (minutes) =>
+  minutes ? formatDuration(minutes * 60000) : "";
+
+/*
+| Step ke status — status hi timer hai: In Progress par waqt chalta hai,
+| Paused / Done / To Do par rukta hai. Purane steps par sirf done tha — wahi
+| yahan samjha jaata hai (backend ka subtaskStatusOf).
+*/
+export const STEP_STATUSES = ["To Do", "In Progress", "Paused", "Done"];
+
+export const stepStatusOf = (step) =>
+  STEP_STATUSES.includes(step?.status) ? step.status : step?.done ? "Done" : "To Do";
+
+// "Rahul Verma" → "RV". Naam na ho to id ke pehle do akshar
+export const initialsOf = (name = "") => {
+  const parts = String(name).trim().split(/\s+/).filter(Boolean);
+  if (!parts.length) return "?";
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
+};
+
+// id → naam. names page banata hai: API ka people + employees list
+export const personName = (id, names = {}) =>
+  id === OWNER_ROLE ? names[id] || "Owner" : names[id] || id || "Unassigned";
+
+/*
+| "My tasks" wala view — jin tasks par main hoon, owner ya member. List ab
+| server se pehle hi chhanti hui aati hai; ye viewAll wale ke "sirf mere"
+| toggle ke liye hai.
+*/
 export const filterOwnTasks = (tasks = [], currentUser) => {
   const employeeId = getCurrentEmployeeId(currentUser);
 
   if (!employeeId) return [];
 
-  return tasks.filter((task) => task.assignedTo === employeeId);
+  return tasks.filter((task) => isOnTask(task, employeeId));
 };
 
 // "2026-08-15" → "Aug 15, 2026"
@@ -115,6 +205,40 @@ export const formatTimestamp = (ms) =>
         minute: "2-digit",
       })
     : "--";
+
+// Timestamp → "Oct 28" (saal sirf tab jab is saal ka na ho) — chhoti jagah ke liye
+export const formatDay = (ms) => {
+  if (!ms) return "";
+  const date = new Date(ms);
+  return date.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    ...(date.getFullYear() !== new Date().getFullYear() ? { year: "numeric" } : {}),
+  });
+};
+
+const earliest = (values) => {
+  const list = values.filter(Boolean);
+  return list.length ? Math.min(...list) : null;
+};
+
+/*
+| Kab shuru hua. Server ab startedAt rakhta hai (pehli baar In Progress);
+| purane tasks/steps par nahi — tab sabse pehla session, aur task ke liye
+| status history mein pehla "In Progress".
+*/
+export const taskStartedAt = (task, sessions = [], activityEntries = []) =>
+  task?.startedAt ||
+  earliest([
+    ...sessions.map((session) => session.startedAt),
+    ...activityEntries
+      .filter((entry) => entry.toStatus === "In Progress")
+      .map((entry) => entry.timestamp),
+  ]);
+
+export const stepStartedAt = (step, sessions = []) =>
+  step?.startedAt ||
+  earliest(sessions.filter((session) => session.subtaskId === step?.id).map((session) => session.startedAt));
 
 /*
 | Kitna waqt laga — formatTimestamp waqt ka bindu batata hai, ye lambai.
@@ -380,32 +504,35 @@ export const assigneeName = (task, employees) =>
   "Unassigned";
 
 /*
-| Ek employee ke wo tasks jo abhi In Progress hain — task ko chhodkar jise
-| hum start karne ja rahe hain.
-|
-| Ek waqt par ek hi kaam chal sakta hai, isliye start karne se pehle page
-| yahi list nikaalta hai aur unhe Paused bhej deta hai. List (array) lautti
-| hai, ek task nahi: purana data ya do tab se ek saath badla hua status —
-| dono soorat mein ek se zyada mil sakte hain, aur tab sab rukne chahiye.
-|
-| assignedTo khaali ho to khaali list: bina assignee wale tasks ka koi
-| "ek waqt par ek" niyam nahi banta.
+| Hafte ka pehla din (Somvar) — "is hafte poore hue" ki ginti ke liye.
+| Keys zero-padded hain, isliye string compare kaafi hai.
 */
-export const runningTasksOf = (tasks = [], assignedTo, exceptTaskId) => {
-  if (!assignedTo) return [];
+export const weekStartKey = (today = todayInputValue()) => {
+  const date = new Date(`${today}T00:00:00`);
+  const offset = (date.getDay() + 6) % 7;
+  date.setDate(date.getDate() - offset);
+  return getDateKey(date);
+};
 
-  return tasks.filter(
-    (task) =>
-      task.assignedTo === assignedTo &&
-      task.id !== exceptTaskId &&
-      task.status === IN_PROGRESS_STATUS
-  );
+/*
+| Kab poora hua. Naye tasks par completedAt hota hai; purane Completed
+| tasks par sirf updatedAt — wahi sabse paas ka andaza hai.
+*/
+const completedDateKey = (task) => {
+  const at = task?.completedAt || task?.updatedAt;
+  return Number.isFinite(at) ? getDateKey(at) : "";
 };
 
 // Status-wise ginti — summary cards aur Task Progress dono ke liye.
 // today optional hai taaki purane call (sirf tasks ke saath) bhi chalte rahein.
 export const taskSummary = (tasks, today = todayInputValue()) => ({
   total: tasks.length,
+  open: tasks.filter((task) => task.status !== COMPLETED_STATUS).length,
+  doneThisWeek: tasks.filter(
+    (task) =>
+      task.status === COMPLETED_STATUS &&
+      completedDateKey(task) >= weekStartKey(today)
+  ).length,
   todo: tasks.filter((task) => task.status === "To Do").length,
   active: tasks.filter((task) => task.status === IN_PROGRESS_STATUS).length,
   paused: tasks.filter((task) => task.status === PAUSED_STATUS).length,
@@ -557,22 +684,102 @@ const lastTouched = (task) => Math.max(task.updatedAt || 0, task.createdAt || 0)
 export const recentTasks = (tasks = [], limit = 5) =>
   [...tasks].sort((a, b) => lastTouched(b) - lastTouched(a)).slice(0, limit);
 
-// Search + status dono lagakar list chhaanti hai
-export const filterTasks = (tasks, { search, statusFilter, employees, allStatuses }) => {
+/*
+| Due filter ka sawaal — "overdue", "today", "week", "none". Khaali matlab
+| koi filter nahi.
+*/
+const matchesDue = (task, due, today) => {
+  if (!due) return true;
+  if (due === "overdue") return isOverdue(task, today);
+  if (due === "today") return task.dueDate === today;
+  if (due === "none") return !task.dueDate;
+
+  if (due === "week") {
+    const end = new Date(`${today}T00:00:00`);
+    end.setDate(end.getDate() + 7);
+    return Boolean(task.dueDate) && task.dueDate >= today && task.dueDate <= getDateKey(end);
+  }
+
+  return true;
+};
+
+/*
+| Search + saare filter ek saath. Search title, description aur team ke
+| har insaan ke naam mein dhoondhta hai. assignee filter team par chalta
+| hai — member wala task bhi us insaan ke filter mein aata hai.
+|
+| Purane call (sirf search + status) bhi chalte hain — baaki filter khaali.
+*/
+export const filterTasks = (
+  tasks,
+  {
+    search = "",
+    statusFilter,
+    allStatuses,
+    priority = "",
+    assignee = "",
+    due = "",
+    names = {},
+    employees = [],
+    today = todayInputValue(),
+  }
+) => {
   const text = search.trim().toLowerCase();
 
   return tasks.filter((task) => {
+    const people = teamOf(task).map((id) =>
+      (names[id] || employees.find((employee) => employee.id === id)?.name || id).toLowerCase()
+    );
+
     const matchesSearch =
       !text ||
       (task.title || "").toLowerCase().includes(text) ||
-      assigneeName(task, employees).toLowerCase().includes(text);
+      (task.description || "").toLowerCase().includes(text) ||
+      people.some((name) => name.includes(text));
 
     const matchesStatus =
-      statusFilter === allStatuses || task.status === statusFilter;
+      !statusFilter || statusFilter === allStatuses || task.status === statusFilter;
 
-    return matchesSearch && matchesStatus;
+    return (
+      matchesSearch &&
+      matchesStatus &&
+      (!priority || (task.priority || "Medium") === priority) &&
+      (!assignee || isOnTask(task, assignee)) &&
+      matchesDue(task, due, today)
+    );
   });
 };
+
+const PRIORITY_RANK = { High: 0, Medium: 1, Low: 2 };
+
+/*
+| Kram. "due" — sabse jaldi wali date upar, bina date wale neeche. Completed
+| hamesha sabse neeche, kyunki unpar kuch karna baaki nahi.
+| Spread zaroori hai — sort() mutate karta hai, aur list state se aati hai.
+*/
+export const sortTasks = (tasks = [], sort = "due") =>
+  [...tasks].sort((a, b) => {
+    const doneA = a.status === COMPLETED_STATUS;
+    const doneB = b.status === COMPLETED_STATUS;
+    if (doneA !== doneB) return doneA ? 1 : -1;
+
+    if (sort === "priority") {
+      const rank =
+        (PRIORITY_RANK[a.priority] ?? 1) - (PRIORITY_RANK[b.priority] ?? 1);
+      if (rank) return rank;
+    }
+
+    if (sort === "created") return (b.createdAt || 0) - (a.createdAt || 0);
+
+    if (sort === "updated") {
+      return Math.max(b.updatedAt || 0, b.createdAt || 0) -
+        Math.max(a.updatedAt || 0, a.createdAt || 0);
+    }
+
+    if (!a.dueDate) return b.dueDate ? 1 : 0;
+    if (!b.dueDate) return -1;
+    return a.dueDate.localeCompare(b.dueDate);
+  });
 
 // Error ho to laal border wala input, warna normal
 export const fieldClass = (error) => (error ? ERROR_INPUT_CLASS : INPUT_CLASS);
@@ -611,20 +818,17 @@ export const taskActivityList = (activity) =>
         timestamp: Number(key) || entry?.timestamp || 0,
       }))
     )
-    .filter(isStatusEntry)
+    .filter(isTimelineEntry)
     .sort((a, b) => b.timestamp - a.timestamp);
 
 /*
-| Sirf status ke badlaav timeline mein aate hain — "kisne, kab, kahan se
-| kahan". Task ka banna aur kisi ko milna activity nahi hai; wo baatein run
-| ke createdAt/createdBy/assignedTo mein poori tarah padi hain.
+| Timeline mein kya aata hai: status ke badlaav (toStatus), aur naye
+| tasks par har typed entry — edit, team, steps, archive.
 |
-| toStatus hi is entry ki pehchaan hai: status badla ho tabhi wo hota hai.
-| Purani create/assignment entries mein wo hai hi nahi, isliye Firebase mein
-| jo pehle se padi hain wo apne aap chhant jaati hain — na dikhti hain, na
-| delete karni padti hain.
+| Bahut purani create/assignment entries mein na type hai na toStatus,
+| isliye wo pehle ki tarah apne aap chhant jaati hain.
 */
-const isStatusEntry = (entry) => Boolean(entry?.toStatus);
+const isTimelineEntry = (entry) => Boolean(entry?.toStatus || entry?.type);
 
 /*
 |--------------------------------------------------------------------------
@@ -687,32 +891,4 @@ export const taskTimeSpent = (entries = [], now = Date.now()) => {
   if (running) closeSession(now);
 
   return { total, running, perEmployee };
-};
-
-/*
-| Entry ka padhne wala matter. Normal entries mein text store nahi hota —
-| sirf fromStatus/toStatus — isliye wording kabhi bhi badli ja sakti hai
-| aur purani entries bhi nayi bhasha bolne lagti hain.
-|
-| message sirf wahan store hota hai jahan usme aisi baat ho jo kisi field
-| mein nahi hai — jaise auto-pause, jisme doosre task ka naam hota hai.
-|
-| Kram maayne rakhta hai. Har shart pehle type dekhti hai aur phir purane
-| ishaare par gir jaati hai, isliye bina-type wali purani entry bhi wahi
-| line dikhati hai jo pehle dikhati thi.
-*/
-export const activityLabel = (entry) => {
-  if (!entry) return "";
-
-  // Auto-pause: message mein us doosre task ka naam hai jo shuru hua, aur wo
-  // baat kisi field mein nahi — isliye yahi ek text store hota hai
-  if (entry.type === ACTIVITY_TYPE.AUTO_PAUSED || entry.message) {
-    return entry.message || `Status changed from ${entry.fromStatus} to ${entry.toStatus}`;
-  }
-
-  // Pehla status change: iske pehle koi status tha hi nahi, to "kahan se"
-  // likhne ko kuch nahi
-  if (!entry.fromStatus) return `Status set to ${entry.toStatus}`;
-
-  return `Status changed from ${entry.fromStatus} to ${entry.toStatus}`;
 };

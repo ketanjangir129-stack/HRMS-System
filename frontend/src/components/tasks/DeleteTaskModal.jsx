@@ -1,16 +1,29 @@
 import { useEffect } from "react";
-import { Loader2, Trash2, X } from "lucide-react";
+import { Archive, Loader2, Trash2, X } from "lucide-react";
 
 /*
 |--------------------------------------------------------------------------
-| Delete Task Modal
+| Archive / Delete Task Modal
 |--------------------------------------------------------------------------
-| window.confirm ki jagah — baaki app jaisa dikhne wala confirmation.
-| Khud delete nahi karta, sirf onConfirm bula deta hai.
+| Do kaam, ek shakal:
+|   archive  — task list se hat-ta hai, history bachi rehti hai, wapas aa
+|              sakta hai (Archived tab se). Ye default hai.
+|   delete   — hamesha ke liye, task aur uski poori history. Sirf Owner,
+|              aur sirf Archived tab se.
+|
+| count > 1 ho to bulk archive — wahi modal, gintī ke saath.
 |--------------------------------------------------------------------------
 */
 
-function DeleteTaskModal({ open, task, deleting, onConfirm, onClose }) {
+function DeleteTaskModal({
+  open,
+  task,
+  count = 1,
+  permanent = false,
+  deleting,
+  onConfirm,
+  onClose,
+}) {
   // Escape se band, aur peeche ka page scroll na ho
   useEffect(() => {
     if (!open) return;
@@ -31,6 +44,9 @@ function DeleteTaskModal({ open, task, deleting, onConfirm, onClose }) {
 
   if (!open) return null;
 
+  const many = count > 1;
+  const name = many ? `${count} tasks` : task?.title || "This task";
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-sm"
@@ -47,14 +63,16 @@ function DeleteTaskModal({ open, task, deleting, onConfirm, onClose }) {
         <div className="flex items-center justify-between border-b border-line px-6 py-5">
           <div className="flex items-center gap-3">
             <div className="ui-tile ui-tile-sm bg-red-50 text-red-600">
-              <Trash2 size={20} />
+              {permanent ? <Trash2 size={20} /> : <Archive size={20} />}
             </div>
             <div>
               <h2 id="delete-task-title" className="ui-card-title">
-                Delete task
+                {permanent ? "Delete permanently" : many ? "Archive tasks" : "Archive task"}
               </h2>
               <p className="text-sm text-ink-subtle">
-                This action cannot be undone.
+                {permanent
+                  ? "This action cannot be undone."
+                  : "You can restore it later from the Archived tab."}
               </p>
             </div>
           </div>
@@ -72,15 +90,11 @@ function DeleteTaskModal({ open, task, deleting, onConfirm, onClose }) {
 
         {/* Body */}
         <div className="px-6 py-5">
-          {/*
-            Header already keh chuka hai ki ye wapas nahi hoga, isliye yahan
-            wo baat dobara nahi — bas kaunsa task ja raha hai aur kiske liye.
-          */}
           <p className="text-sm text-ink-muted">
-            <span className="font-semibold text-ink">
-              {task?.title || "This task"}
-            </span>{" "}
-            will be removed for everyone.
+            <span className="font-semibold text-ink">{name}</span>{" "}
+            {permanent
+              ? "and all of its history, steps and comments will be removed for everyone."
+              : `will be removed from everyone's list. ${many ? "Their" : "Its"} history is kept.`}
           </p>
         </div>
 
@@ -104,7 +118,9 @@ function DeleteTaskModal({ open, task, deleting, onConfirm, onClose }) {
             className="ui-btn bg-red-600 text-white shadow-sm hover:bg-red-700"
           >
             {deleting && <Loader2 size={16} className="animate-spin" />}
-            {deleting ? "Deleting..." : "Delete task"}
+            {deleting
+              ? permanent ? "Deleting..." : "Archiving..."
+              : permanent ? "Delete permanently" : many ? `Archive ${count} tasks` : "Archive task"}
           </button>
         </div>
       </div>

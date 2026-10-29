@@ -79,6 +79,55 @@ export const SECTION_ROW_LIMIT = 5;
 export const ALL_STATUSES = "All statuses";
 
 /*
+| Upar ke tabs — wo listen jo log roz kholte hain. Har tab sirf ek filter
+| hai, alag data nahi; "archived" hi ek hai jo server se alag aata hai.
+|
+| needs: is tab ke liye kya chahiye — page usi se tab chhupata hai, taaki
+| Employee ko "Assigned by me" jaisa bekaar tab na dikhe.
+*/
+export const TASK_VIEWS = [
+  { key: "all", label: "All tasks", needs: "viewAll" },
+  { key: "mine", label: "My tasks", needs: "employee" },
+  { key: "assigned", label: "Assigned by me", needs: "create" },
+  { key: "overdue", label: "Overdue", tone: "danger" },
+  { key: "completed", label: "Completed" },
+  { key: "archived", label: "Archived", needs: "archive" },
+];
+
+export const DUE_FILTERS = [
+  { value: "", label: "Any time" },
+  { value: "overdue", label: "Overdue" },
+  { value: "today", label: "Due today" },
+  { value: "week", label: "Next 7 days" },
+  { value: "none", label: "No due date" },
+];
+
+export const SORT_OPTIONS = [
+  { value: "due", label: "Due date" },
+  { value: "priority", label: "Priority" },
+  { value: "updated", label: "Recently updated" },
+  { value: "created", label: "Newest first" },
+];
+
+// Ek page par kitni rows — pehle 5 thi, jisme har doosra click "next" hota
+export const TASK_PAGE_SIZE = 10;
+
+/*
+| Avatar ke rang — naam se tay hote hain (hash), isliye ek insaan har jagah
+| ek hi rang mein dikhta hai. Wahi tint jodi jo badges ki hai.
+*/
+export const AVATAR_TONES = [
+  "bg-blue-50 text-blue-700 ring-blue-200",
+  "bg-emerald-50 text-emerald-700 ring-emerald-200",
+  "bg-amber-50 text-amber-700 ring-amber-200",
+  "bg-violet-50 text-violet-700 ring-violet-200",
+  "bg-rose-50 text-rose-700 ring-rose-200",
+  "bg-teal-50 text-teal-700 ring-teal-200",
+  "bg-orange-50 text-orange-700 ring-orange-200",
+  "bg-sky-50 text-sky-700 ring-sky-200",
+];
+
+/*
 | Dashboard section ka "View all" table ko usi section ki list par le jaata
 | hai. Khaali string matlab koi context nahi — poori list.
 */
@@ -98,6 +147,7 @@ export const EMPTY_TASK_FORM = {
   title: "",
   description: "",
   assignedTo: "",
+  members: [],
   dueDate: "",
   priority: DEFAULT_PRIORITY,
 };
