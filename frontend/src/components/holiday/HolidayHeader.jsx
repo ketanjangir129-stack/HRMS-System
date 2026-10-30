@@ -1,4 +1,9 @@
-import { FiCalendar, FiPlus, FiRefreshCw } from "react-icons/fi";
+import {
+  FiCalendar,
+  FiPlus,
+  FiRefreshCw,
+  FiUploadCloud,
+} from "react-icons/fi";
 
 /*
 |--------------------------------------------------------------------------
@@ -30,6 +35,7 @@ function HolidayHeader({
   year,
   setYear,
   onAddHoliday,
+  onImportHolidays,
   onRefresh,
   loading = false,
   totalHolidays = 0,
@@ -152,6 +158,22 @@ function HolidayHeader({
           Refresh
 
         </button>
+
+        {canAddHoliday && onImportHolidays && (
+
+          <button
+            type="button"
+            onClick={onImportHolidays}
+            className="ui-btn ui-btn-secondary col-span-2 w-full font-semibold sm:w-auto"
+          >
+
+            <FiUploadCloud size={17} />
+
+            Import Holidays
+
+          </button>
+
+        )}
 
         {canAddHoliday && (
 

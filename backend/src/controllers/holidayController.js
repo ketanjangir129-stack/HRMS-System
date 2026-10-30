@@ -177,6 +177,51 @@ const deleteHoliday = async (req, res) => {
   }
 };
 
+const importHolidays = async (req, res) => {
+  try {
+    const result = await holidayService.importHolidays(
+      req.user.companyCode,
+      req.body?.holidays,
+      req.user
+    );
+
+    return sendResult(res, { success: true, ...result }, 201);
+  } catch (error) {
+    return handleError(res, error, "Unable to import holidays.");
+  }
+};
+
+const uploadHolidayImage = async (req, res) => {
+  try {
+    const result = await holidayService.setHolidayImage(
+      req.user.companyCode,
+      req.params.date,
+      req.params.holidayId,
+      req.file,
+      req.user
+    );
+
+    return sendResult(res, { success: true, ...result });
+  } catch (error) {
+    return handleError(res, error, "Unable to upload the holiday image.");
+  }
+};
+
+const removeHolidayImage = async (req, res) => {
+  try {
+    const result = await holidayService.removeHolidayImage(
+      req.user.companyCode,
+      req.params.date,
+      req.params.holidayId,
+      req.user
+    );
+
+    return sendResult(res, { success: true, ...result });
+  } catch (error) {
+    return handleError(res, error, "Unable to remove the holiday image.");
+  }
+};
+
 module.exports = {
   getHolidays,
   getUpcomingHolidays,
@@ -184,4 +229,7 @@ module.exports = {
   createHoliday,
   updateHoliday,
   deleteHoliday,
+  importHolidays,
+  uploadHolidayImage,
+  removeHolidayImage,
 };

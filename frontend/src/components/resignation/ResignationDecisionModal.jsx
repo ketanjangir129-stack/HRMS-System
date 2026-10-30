@@ -152,7 +152,7 @@ function DecisionForm({
 
           <div className="flex min-w-0 items-center gap-3">
 
-            <div className={`ui-tile-sm flex ${style.tile}`}>
+            <div className={`ui-tile ui-tile-sm ${style.tile}`}>
               <Icon className="h-5 w-5" />
             </div>
 

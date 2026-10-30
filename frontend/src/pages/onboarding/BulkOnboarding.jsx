@@ -103,6 +103,12 @@ function BulkOnboarding() {
     const [submitting, setSubmitting] = useState(false);
     const [progress, setProgress] = useState({ done: 0, total: 0 });
     const [results, setResults] = useState([]);
+    const [leaveWarningOpen, setLeaveWarningOpen] = useState(false);
+
+    /* The running batch's request, so "Ignore" can abort it, and the route the
+       user was heading to when the warning stopped them. */
+    const abortRef = useRef(null);
+    const pendingRouteRef = useRef(null);
 
     /*
     | Where each invitation email has got to, keyed by employee id:
@@ -156,6 +162,75 @@ function BulkOnboarding() {
         resultPagination.resetPagination();
 
     }, [results]);
+
+    const openLeaveWarning = (route) => {
+
+        pendingRouteRef.current = route;
+
+        setLeaveWarningOpen(true);
+    };
+
+    /*
+    |----------------------------------------------------------------------
+    | Holding the user on the page while a batch is running
+    |----------------------------------------------------------------------
+    | Leaving unmounts the page halfway through the run. The sidebar and
+    | every other in-app link is an <a>, so their clicks are caught on the
+    | way down — before React Router sees them — and turned into the
+    | warning instead. A reload or closed tab gets the browser's own prompt.
+    */
+    useEffect(() => {
+
+        if (!submitting) {
+            return undefined;
+        }
+
+        const handleLinkClick = (event) => {
+
+            if (
+                event.defaultPrevented ||
+                event.button !== 0 ||
+                event.metaKey ||
+                event.ctrlKey ||
+                event.shiftKey ||
+                event.altKey
+            ) {
+                return;
+            }
+
+            const anchor = event.target.closest?.("a[href]");
+
+            if (!anchor || anchor.target === "_blank") {
+                return;
+            }
+
+            const url = new URL(anchor.href, window.location.href);
+
+            if (url.origin !== window.location.origin) {
+                return;
+            }
+
+            event.preventDefault();
+            event.stopPropagation();
+
+            openLeaveWarning(`${url.pathname}${url.search}${url.hash}`);
+        };
+
+        const handleBeforeUnload = (event) => {
+
+            event.preventDefault();
+            event.returnValue = "";
+        };
+
+        document.addEventListener("click", handleLinkClick, true);
+        window.addEventListener("beforeunload", handleBeforeUnload);
+
+        return () => {
+            document.removeEventListener("click", handleLinkClick, true);
+            window.removeEventListener("beforeunload", handleBeforeUnload);
+        };
+
+    }, [submitting]);
 
     /*
     | Reading and validating are one action from the user's point of view, so
@@ -260,6 +335,10 @@ function BulkOnboarding() {
             return;
         }
 
+        const controller = new AbortController();
+
+        abortRef.current = controller;
+
         setSubmitting(true);
         setProgress({ done: 0, total: report.valid.length });
 
@@ -273,8 +352,14 @@ function BulkOnboarding() {
             const outcomes = await createBulkOnboardingRequests(
                 companyCode,
                 employees,
-                (done, total) => setProgress({ done, total })
+                (done, total) => setProgress({ done, total }),
+                controller.signal
             );
+
+            // Cancelled from the warning — the page has already been reset.
+            if (controller.signal.aborted) {
+                return;
+            }
 
             setResults(outcomes);
             setStep("result");
@@ -295,14 +380,60 @@ function BulkOnboarding() {
 
         } catch (error) {
 
+            if (controller.signal.aborted) {
+                return;
+            }
+
             console.error(error);
 
             toast.error("Bulk onboarding failed. Please try again.");
 
         } finally {
 
-            setSubmitting(false);
+            if (abortRef.current === controller) {
+                abortRef.current = null;
+                setSubmitting(false);
+            }
 
+        }
+    };
+
+    /* "OK" on the warning — the run carries on and the user stays put. */
+    const keepBulkOnboarding = () => {
+
+        pendingRouteRef.current = null;
+
+        setLeaveWarningOpen(false);
+    };
+
+    /*
+    | "Ignore" on the warning — the request is aborted, which also stops the
+    | server before the rows it has not reached yet, the wizard is reset, and
+    | the user goes on to wherever they were heading when it stopped them.
+    */
+    const stopBulkOnboarding = () => {
+
+        abortRef.current?.abort();
+        abortRef.current = null;
+
+        const route = pendingRouteRef.current;
+
+        pendingRouteRef.current = null;
+
+        setLeaveWarningOpen(false);
+        setSubmitting(false);
+        setProgress({ done: 0, total: 0 });
+        setResults([]);
+        setEmailState({});
+        setFile(null);
+        setReport(null);
+        setUnknownHeadings([]);
+        setStep("guide");
+
+        toast.info("Bulk onboarding cancelled.");
+
+        if (route) {
+            navigate(route);
         }
     };
 
@@ -444,7 +575,14 @@ function BulkOnboarding() {
 
                     <button
                         type="button"
-                        onClick={() => navigate("/OnboardDashboard")}
+                        onClick={() => {
+                            // Bulk onboarding chal raha ho to leave ka chance nahi — pehle warning
+                            if (submitting) {
+                                openLeaveWarning("/OnboardDashboard");
+                                return;
+                            }
+                            navigate("/OnboardDashboard");
+                        }}
                         title="Go back"
                         aria-label="Go back"
                         className="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 shadow-sm transition-all hover:border-blue-500 hover:text-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 sm:h-11 sm:w-11"
@@ -1386,6 +1524,75 @@ function BulkOnboarding() {
 
                 </div>
 
+            )}
+
+            {/*
+              Warning pop jab bulk onboarding process chal raha ho. Leave ya
+              section switch ka choice hi nahi — pehle ye puchta hai. "Ignore" dabane
+              par run cancel hoti hai, "OK" par process chalta rehta hai aur user
+              page par rehta hai.
+            */}
+            {submitting && leaveWarningOpen && (
+
+                <div
+                    className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-sm"
+                    onClick={keepBulkOnboarding}
+                >
+                    <div
+                        onClick={(e) => e.stopPropagation()}
+                        className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl"
+                    >
+                        <div className="mb-5 flex items-start justify-between gap-4">
+                            <div className="flex items-center gap-3">
+                                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-amber-50 text-xl text-amber-600">
+                                    <FiAlertTriangle />
+                                </div>
+                                <h2 className="text-xl font-bold tracking-tight text-slate-900">
+                                    Bulk Onboarding In Process
+                                </h2>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={keepBulkOnboarding}
+                                title="Close"
+                                aria-label="Close warning"
+                                className="flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600"
+                            >
+                                <FiX />
+                            </button>
+                        </div>
+
+                        <p className="text-sm leading-relaxed text-slate-600">
+                            Employees Bulk Onboarding is currently in process. Click OK
+                            to stay on this page and let it finish, or Ignore to cancel
+                            the process.
+                        </p>
+
+                        <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-700">
+                            If you ignore, the remaining employees will not be onboarded.
+                            Employees already processed will stay under Onboarding Requests.
+                        </div>
+
+                        <div className="mt-6 flex justify-end gap-3">
+                            <button
+                                type="button"
+                                onClick={keepBulkOnboarding}
+                                className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-600 transition-all duration-200 hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-300 focus:ring-offset-2"
+                            >
+                                OK
+                            </button>
+
+                            <button
+                                type="button"
+                                onClick={stopBulkOnboarding}
+                                className="inline-flex items-center gap-2 rounded-xl bg-red-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-red-600/20 transition-all duration-200 hover:-translate-y-0.5 hover:bg-red-700 hover:shadow-lg hover:shadow-red-600/30 focus:outline-none focus:ring-2 focus:ring-red-400 focus:ring-offset-2"
+                            >
+                                <FiAlertTriangle className="text-[15px]" />
+                                Ignore
+                            </button>
+                        </div>
+                    </div>
+                </div>
             )}
 
         </div>

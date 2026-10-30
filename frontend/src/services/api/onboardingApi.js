@@ -66,14 +66,14 @@ export const createOnboardingRequestApi = (employeeInfo) =>
     })
   );
 
-export const createBulkOnboardingRequestsApi = (employees) =>
-  apiRequest(
-    "/onboarding/bulk",
-    jsonRequest("POST", {
+export const createBulkOnboardingRequestsApi = (employees, signal) =>
+  apiRequest("/onboarding/bulk", {
+    ...jsonRequest("POST", {
       employees,
       origin: window.location.origin,
-    })
-  );
+    }),
+    signal,
+  });
 
 export const getIdentityIndexApi = () =>
   apiRequest("/onboarding/identity-index");

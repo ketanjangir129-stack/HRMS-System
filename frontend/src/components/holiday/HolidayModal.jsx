@@ -4,16 +4,20 @@ import {
   FiAlertCircle,
   FiCalendar,
   FiLoader,
+  FiPlus,
   FiX,
 } from "react-icons/fi";
 import {
+  HOLIDAY_DATE_MODE,
   HOLIDAY_DESCRIPTION_MAX,
+  HOLIDAY_MULTIPLE_DATES_MAX,
   HOLIDAY_NAME_MAX,
   HOLIDAY_TYPE,
   HOLIDAY_TYPES,
 } from "../../utils/holiday/holidayConstants";
 import {
   findHolidayConflict,
+  findHolidayDatesConflict,
   findHolidayRangeConflict,
   formatHolidayDateWithDay,
   getDayName,
@@ -53,6 +57,24 @@ const fieldClass = (hasError) =>
       : "border-line focus:border-brand focus:ring-brand-ring"
   }`;
 
+const DATE_MODES = [
+  {
+    value: HOLIDAY_DATE_MODE.SINGLE,
+    label: "Single day",
+    hint: "One holiday on one date.",
+  },
+  {
+    value: HOLIDAY_DATE_MODE.RANGE,
+    label: "Date range",
+    hint: "Consecutive days, e.g. a Diwali or Eid break.",
+  },
+  {
+    value: HOLIDAY_DATE_MODE.MULTIPLE,
+    label: "Multiple dates",
+    hint: "Separate dates under one name, e.g. every second Saturday.",
+  },
+];
+
 function FieldError({ message }) {
 
   if (!message) return null;
@@ -81,13 +103,20 @@ function HolidayForm({
     name: holiday?.name || "",
     date: holiday?.date || "",
     endDate: holiday?.date || "",
-    isMultiDay: false,
+    dateMode: HOLIDAY_DATE_MODE.SINGLE,
+    dates: [],
     type: holiday?.type || HOLIDAY_TYPE.NATIONAL,
     description: holiday?.description || "",
     isOptional: Boolean(holiday?.isOptional),
   }));
 
   const [errors, setErrors] = useState({});
+
+  // The date being picked before it is added to the list in "multiple" mode.
+  const [pendingDate, setPendingDate] = useState("");
+
+  const isRange = form.dateMode === HOLIDAY_DATE_MODE.RANGE;
+  const isMultiple = form.dateMode === HOLIDAY_DATE_MODE.MULTIPLE;
 
   useEffect(() => {
 
@@ -131,7 +160,7 @@ function HolidayForm({
   };
 
   const multiDayCount =
-    form.isMultiDay && form.date && form.endDate && form.endDate >= form.date
+    isRange && form.date && form.endDate && form.endDate >= form.date
       ? Math.round(
           (new Date(`${form.endDate}T00:00:00Z`).getTime() -
             new Date(`${form.date}T00:00:00Z`).getTime()) /
@@ -144,17 +173,49 @@ function HolidayForm({
   | save button is ever pressed.
   */
 
-  const conflict =
-    form.date
+  const conflict = isMultiple
+    ? findHolidayDatesConflict(holidays, form.dates)
+    : form.date
       ? findHolidayConflict(holidays, {
           date: form.date,
           ignoreId: holiday?.holidayId || "",
         })
       : null;
 
+  const addPendingDate = () => {
+
+    if (!pendingDate) return;
+
+    if (form.dates.includes(pendingDate)) {
+      toast.info("That date is already in the list.");
+      return;
+    }
+
+    if (form.dates.length >= HOLIDAY_MULTIPLE_DATES_MAX) {
+      toast.error(`At most ${HOLIDAY_MULTIPLE_DATES_MAX} dates can be added at once.`);
+      return;
+    }
+
+    setField("dates", [...form.dates, pendingDate].sort());
+    setErrors((current) => {
+      const next = { ...current };
+      delete next.date;
+      return next;
+    });
+    setPendingDate("");
+
+  };
+
+  const removeDate = (value) =>
+    setField("dates", form.dates.filter((item) => item !== value));
+
   const handleSubmit = async () => {
 
-    const validation = validateHolidayForm(form);
+    const validation = validateHolidayForm({
+      ...form,
+      isMultiDay: isRange,
+      ...(isMultiple ? { dates: form.dates } : { dates: undefined }),
+    });
 
     if (Object.keys(validation).length > 0) {
 
@@ -167,9 +228,34 @@ function HolidayForm({
     }
 
     /*
+    | Several separate dates, all under one name
+    */
+    if (isMultiple) {
+
+      const clash = findHolidayDatesConflict(holidays, form.dates);
+
+      if (clash) {
+        toast.error(`Conflict: ${clash.name} is already recorded on ${clash.date}.`);
+        return;
+      }
+
+      await onSubmit({
+        name: form.name.trim(),
+        date: form.dates[0],
+        dates: form.dates,
+        type: form.type,
+        description: form.description.trim(),
+        isOptional: form.isOptional,
+      });
+
+      return;
+
+    }
+
+    /*
     | Multi-day range conflict check
     */
-    if (form.isMultiDay && form.endDate && form.endDate !== form.date) {
+    if (isRange && form.endDate && form.endDate !== form.date) {
 
       const clash = findHolidayRangeConflict(holidays, {
         startDate: form.date,
@@ -306,43 +392,114 @@ function HolidayForm({
 
           </div>
 
-          {/* Multi-Day Festival Toggle (Only when creating a new holiday) */}
+          {/*
+          | How the dates are given. Only when creating: an edit is always one
+          | record on one date.
+          */}
           {!isEdit && (
-            <div className="flex items-center justify-between rounded-xl border border-line bg-surface-muted px-4 py-3 sm:px-5">
-              <div>
-                <span className="block text-sm font-semibold text-ink">
-                  Multi-Day Holiday / Festival
-                </span>
-                <span className="text-xs text-ink-subtle">
-                  Declare multiple consecutive holiday dates (e.g. Diwali, Eid break).
-                </span>
+            <div>
+              <span className="ui-eyebrow mb-1.5 block">Dates</span>
+              <div className="grid grid-cols-3 gap-1 rounded-xl border border-line bg-surface-muted p-1">
+                {DATE_MODES.map((mode) => (
+                  <button
+                    key={mode.value}
+                    type="button"
+                    onClick={() => {
+                      setField("dateMode", mode.value);
+                      if (
+                        mode.value === HOLIDAY_DATE_MODE.RANGE &&
+                        (!form.endDate || form.endDate < form.date)
+                      ) {
+                        setField("endDate", form.date || "");
+                      }
+                      if (
+                        mode.value === HOLIDAY_DATE_MODE.MULTIPLE &&
+                        form.dates.length === 0 &&
+                        form.date
+                      ) {
+                        setField("dates", [form.date]);
+                      }
+                    }}
+                    className={`cursor-pointer rounded-lg px-2 py-2 text-xs font-semibold transition-all sm:text-sm ${
+                      form.dateMode === mode.value
+                        ? "bg-surface text-blue-700 shadow-sm ring-1 ring-blue-200"
+                        : "text-ink-subtle hover:text-ink"
+                    }`}
+                  >
+                    {mode.label}
+                  </button>
+                ))}
               </div>
-              <button
-                type="button"
-                role="switch"
-                aria-checked={form.isMultiDay}
-                onClick={() => {
-                  const nextState = !form.isMultiDay;
-                  setField("isMultiDay", nextState);
-                  if (nextState && (!form.endDate || form.endDate < form.date)) {
-                    setField("endDate", form.date || "");
-                  }
-                }}
-                className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full transition-colors ${
-                  form.isMultiDay ? "bg-blue-600" : "bg-slate-300"
-                }`}
-              >
-                <span
-                  className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
-                    form.isMultiDay ? "translate-x-6" : "translate-x-1"
-                  }`}
-                />
-              </button>
+              <p className="mt-1.5 text-xs text-ink-faint">
+                {DATE_MODES.find((mode) => mode.value === form.dateMode)?.hint}
+              </p>
             </div>
           )}
 
-          {/* Date Selection: Range vs Single */}
-          {form.isMultiDay ? (
+          {/* Date Selection: Multiple, Range or Single */}
+          {isMultiple ? (
+            <div>
+              <label
+                htmlFor="holiday-multi-date"
+                className="ui-eyebrow mb-1.5 block"
+              >
+                Holiday Dates <span className="text-red-500">*</span>
+              </label>
+
+              <div className="flex gap-2">
+                <input
+                  id="holiday-multi-date"
+                  type="date"
+                  value={pendingDate}
+                  onChange={(event) => setPendingDate(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      event.preventDefault();
+                      addPendingDate();
+                    }
+                  }}
+                  className={`${fieldClass(errors.date)} cursor-pointer`}
+                />
+                <button
+                  type="button"
+                  onClick={addPendingDate}
+                  disabled={!pendingDate}
+                  className="ui-btn ui-btn-secondary shrink-0 font-semibold disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <FiPlus /> Add
+                </button>
+              </div>
+
+              <FieldError message={errors.date} />
+
+              {form.dates.length > 0 && (
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {form.dates.map((item) => (
+                    <span
+                      key={item}
+                      className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 py-1 pl-3 pr-1.5 text-xs font-semibold text-blue-700 ring-1 ring-blue-200"
+                    >
+                      {formatHolidayDateWithDay(item)}
+                      <button
+                        type="button"
+                        onClick={() => removeDate(item)}
+                        aria-label={`Remove ${item}`}
+                        className="flex h-5 w-5 cursor-pointer items-center justify-center rounded-full hover:bg-blue-100"
+                      >
+                        <FiX size={12} />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              {form.dates.length > 0 && (
+                <p className="mt-2 text-xs text-ink-faint">
+                  {form.dates.length} {form.dates.length === 1 ? "date" : "dates"} selected. Each one is saved as its own holiday under this name.
+                </p>
+              )}
+            </div>
+          ) : isRange ? (
             <div className="space-y-3">
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div>
@@ -437,7 +594,7 @@ function HolidayForm({
               Holiday Type <span className="text-red-500">*</span>
             </label>
 
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
 
               {HOLIDAY_TYPES.map((item) => (
 

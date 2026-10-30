@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useParams, useSearchParams, useNavigate } from "react-router-dom";
-import { FiArrowLeft, FiDownload } from "react-icons/fi";
+import { FiArrowLeft, FiDownload, FiMail, FiMapPin, FiPhone, FiUsers } from "react-icons/fi";
 import useAuth from "../../hooks/useAuth";
 import useRoleAccess from "../../hooks/useRoleAccess";
 import { getPayrollHistory } from "../../services/payroll/PayRollServices";
@@ -98,26 +98,50 @@ const measureAvailableHeight = (canvas) => {
 };
 
 /*
-| Every block down the sheet is the same object: a bordered table under a
-| tinted bar that names it and runs its full width. Only the columns beneath
-| the bar change from block to block, so the sheet reads as one document
-| rather than a stack of unrelated panels.
+| Every block down the sheet is the same object: a bordered card with a
+| tinted bar that names it, and — where the block holds amounts — the
+| Description / Amount line under that bar. Only the columns beneath change
+| from block to block, so the sheet reads as one document rather than a
+| stack of unrelated panels.
 */
-const Block = ({ heading, columns, className = "", children }) => (
-  <table className={`${styles.blockTable} ${className}`}>
-    <thead>
-      <tr>
-        <th colSpan={columns}>{heading}</th>
-      </tr>
-    </thead>
+const Block = ({
+  heading,
+  columns,
+  columnHeadings,
+  className = "",
+  children,
+}) => (
+  <div className={`${styles.block} ${className}`}>
+    <table className={styles.blockTable}>
+      <thead>
+        <tr className={styles.headingRow}>
+          <th colSpan={columns}>{heading}</th>
+        </tr>
 
-    <tbody>{children}</tbody>
-  </table>
+        {columnHeadings ? (
+          <tr className={styles.columnRow}>
+            {columnHeadings.map((label) => (
+              <th key={label} scope="col">
+                {label}
+              </th>
+            ))}
+          </tr>
+        ) : null}
+      </thead>
+
+      <tbody>{children}</tbody>
+    </table>
+  </div>
 );
 
 /* A label on the left and its one reading on the right, a line each. */
-const DetailTable = ({ heading, className, rows }) => (
-  <Block heading={heading} columns={2} className={className}>
+const DetailTable = ({ heading, className, rows, columnHeadings }) => (
+  <Block
+    heading={heading}
+    columns={2}
+    className={className}
+    columnHeadings={columnHeadings}
+  >
     {rows.map((row) => (
       <tr key={row.label}>
         <th scope="row">{row.label}</th>
@@ -128,42 +152,42 @@ const DetailTable = ({ heading, className, rows }) => (
 );
 
 /*
-| Two label/value pairs to a line. Attendance is a column of small counts, and
-| one pair per line would leave the block half empty and twice as tall as it
-| needs to be.
+| The attendance block is one line of counts under one line of labels — the
+| seven columns are read across, not as label/value pairs, so it cannot use
+| the two-column shape above.
 */
-const PairTable = ({ heading, rows }) => {
-  const lines = [];
-
-  for (let index = 0; index < rows.length; index += 2) {
-    lines.push([rows[index], rows[index + 1]]);
-  }
-
-  return (
-    <Block heading={heading} columns={4} className={styles.pairTable}>
-      {lines.map(([left, right]) => (
-        <tr key={left.title}>
-          <th scope="row">{left.title}</th>
-          <td className={left.tone ? styles[left.tone] : undefined}>
-            {left.value}
-          </td>
-
-          {right ? (
-            <>
-              <th scope="row">{right.title}</th>
-              <td className={right.tone ? styles[right.tone] : undefined}>
-                {right.value}
-              </td>
-            </>
-          ) : (
-            /* An odd number of counts leaves the last line half used. */
-            <td className={styles.pairFiller} colSpan={2} />
-          )}
+const AttendanceTable = ({ heading, rows }) => (
+  <div className={styles.block}>
+    <table className={`${styles.blockTable} ${styles.attendanceTable}`}>
+      <thead>
+        <tr className={styles.headingRow}>
+          <th colSpan={rows.length}>{heading}</th>
         </tr>
-      ))}
-    </Block>
-  );
-};
+
+        <tr className={styles.columnRow}>
+          {rows.map((row) => (
+            <th key={row.title} scope="col">
+              {row.title}
+            </th>
+          ))}
+        </tr>
+      </thead>
+
+      <tbody>
+        <tr>
+          {rows.map((row) => (
+            <td
+              key={row.title}
+              className={row.tone ? styles[row.tone] : undefined}
+            >
+              {row.value}
+            </td>
+          ))}
+        </tr>
+      </tbody>
+    </table>
+  </div>
+);
 
 /*
 | Earnings and deductions are read across from one another, so their totals
@@ -179,7 +203,12 @@ const AmountTable = ({ heading, rows, totalLabel, totalAmount, bodyRows }) => {
   const lines = rows.length > 0 ? rows : [{ title: "None", amount: 0 }];
 
   return (
-    <Block heading={heading} columns={2} className={styles.amountTable}>
+    <Block
+      heading={heading}
+      columns={2}
+      className={styles.amountTable}
+      columnHeadings={["Description", "Amount"]}
+    >
       {lines.map((item) => (
         <tr key={item.title}>
           <td>{item.title}</td>
@@ -216,7 +245,7 @@ const AmountTable = ({ heading, rows, totalLabel, totalAmount, bodyRows }) => {
 */
 const countTone = (value, tone) => (Number(value) > 0 ? tone : undefined);
 
-/* Listed in reading order: the pair table fills each line left to right. */
+/* Listed in the order the reference template prints them, left to right. */
 const buildAttendanceRows = (summary = {}) => [
   { title: "Working Days", value: summary.workingDays ?? 0 },
   {
@@ -622,7 +651,7 @@ const PaySlip = () => {
             type="button"
             onClick={() => navigate(backPath)}
             title={backLabel}
-            className={`ui-btn ui-btn-secondary font-semibold ${styles.back}`}
+            className={`ui-btn ui-btn-secondary font-semibold ${styles.back} ${styles.backButton}`}
           >
             <FiArrowLeft className="shrink-0" />
             Back
@@ -639,7 +668,7 @@ const PaySlip = () => {
             value={selectedMonth}
             onChange={(event) => setSelectedMonth(event.target.value)}
             aria-label="Payslip month"
-            className="cursor-pointer rounded-xl border border-line bg-surface px-3 py-2.5 text-sm font-semibold text-ink-muted outline-none transition-all focus:border-brand focus:ring-2 focus:ring-brand-ring"
+            className={`cursor-pointer rounded-xl border border-line bg-surface px-3 py-2.5 text-sm font-semibold text-ink-muted outline-none transition-all focus:border-brand focus:ring-2 focus:ring-brand-ring ${styles.monthSelect}`}
           >
             {payrolls.map((item) => (
               <option key={item.payrollMonth} value={item.payrollMonth}>
@@ -651,7 +680,7 @@ const PaySlip = () => {
           <button
             type="button"
             onClick={handleDownload}
-            className="ui-btn ui-btn-primary font-semibold"
+            className={`ui-btn ui-btn-primary font-semibold ${styles.downloadButton}`}
           >
             <FiDownload className="shrink-0" />
             {/*
@@ -680,28 +709,30 @@ const PaySlip = () => {
           >
             {/* Header */}
             <div className={styles.header}>
-              <div className={styles.headerLeft}>
-                {/*
-                | The company is named here and reached in the footer, so the
-                | band is left holding one line and can give the name the room.
-                */}
+              <div className={styles.headerBrand}>
                 <h2 className={styles.companyName}>
                   {company?.companyName || "Company"}
                 </h2>
-                <p className={styles.companyLine}>{company?.mobile || ""}</p>
 
-                <div className={styles.triangle} />
+                {/* The reference template carries a brand line under the name;
+                    the company's own address is the one real line we have. */}
+                <p className={styles.companyLine}>
+                  {company?.address || company?.mobile || ""}
+                </p>
               </div>
 
-              <div className={styles.headerRight}>
-                <div className={styles.logo}>
-                  <span className={styles.logoTop}>HRMS</span>
-                  <span className={styles.logoMain}>SYSTEM</span>
-                </div>
+              <div className={styles.logo}>
+                <FiUsers className={styles.logoIcon} />
+                <span className={styles.logoTop}>HRMS</span>
+                <span className={styles.logoMain}>SYSTEM</span>
               </div>
             </div>
 
-            <h1 className={styles.title}>Pay Slip</h1>
+            <div className={styles.titleRow}>
+              <span className={styles.titleRule} aria-hidden="true" />
+              <h1 className={styles.title}>Payslip</h1>
+              <span className={styles.titleRule} aria-hidden="true" />
+            </div>
 
             {/* Employee Information */}
             <div className={styles.section}>
@@ -733,7 +764,7 @@ const PaySlip = () => {
 
             {/* Attendance Summary */}
             <div className={styles.section}>
-              <PairTable
+              <AttendanceTable
                 heading="Attendance Summary"
                 rows={buildAttendanceRows(payroll.attendanceSummary)}
               />
@@ -744,6 +775,7 @@ const PaySlip = () => {
               <DetailTable
                 heading="Payroll Calculation"
                 className={styles.figureTable}
+                columnHeadings={["Description", "Amount"]}
                 rows={buildCalculationRows(calculation)}
               />
             </div>
@@ -751,7 +783,8 @@ const PaySlip = () => {
             {/* Net Salary */}
             <div className={styles.netSalary}>
               <div className={styles.netBanner}>
-                <span>Net Salary</span>
+                <span className={styles.netLabel}>Net Salary</span>
+                <span className={styles.netDivider} aria-hidden="true" />
                 <span className={styles.netAmount}>
                   {formatAmount(calculation.netPayable)}
                 </span>
@@ -766,30 +799,43 @@ const PaySlip = () => {
             <footer className={styles.footer}>
               <div className={styles.footerInner}>
                 <div className={styles.footerBlock}>
-                  <span className={styles.footerLabel}>Address</span>
-                  <span className={styles.footerValue}>
-                    {company?.address || "--"}
-                  </span>
+                  <FiMapPin className={styles.footerIcon} />
+                  <div className={styles.footerText}>
+                    <span className={styles.footerLabel}>Address</span>
+                    <span className={styles.footerValue}>
+                      {company?.address || "--"}
+                    </span>
+                  </div>
                 </div>
 
                 <div className={styles.footerBlock}>
-                  <span className={styles.footerLabel}>Mobile</span>
-                  <span className={styles.footerValue}>
-                    {company?.mobile || "--"}
-                  </span>
+                  <FiPhone className={styles.footerIcon} />
+                  <div className={styles.footerText}>
+                    <span className={styles.footerLabel}>Mobile</span>
+                    <span className={styles.footerValue}>
+                      {company?.mobile || "--"}
+                    </span>
+                  </div>
                 </div>
 
                 <div className={styles.footerBlock}>
-                  <span className={styles.footerLabel}>Email</span>
-                  <span className={styles.footerValue}>
-                    {company?.email || "--"}
-                  </span>
+                  <FiMail className={styles.footerIcon} />
+                  <div className={styles.footerText}>
+                    <span className={styles.footerLabel}>Email</span>
+                    <span className={styles.footerValue}>
+                      {company?.email || "--"}
+                    </span>
+                  </div>
                 </div>
               </div>
 
-              <p className={styles.footNote}>
-                This is a computer-generated payslip.
-              </p>
+              <div className={styles.footNoteRow}>
+                <span className={styles.footNoteRule} aria-hidden="true" />
+                <p className={styles.footNote}>
+                  This is a computer-generated payslip.
+                </p>
+                <span className={styles.footNoteRule} aria-hidden="true" />
+              </div>
             </footer>
           </div>
         </div>

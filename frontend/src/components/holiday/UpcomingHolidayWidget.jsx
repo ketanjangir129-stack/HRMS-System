@@ -2,21 +2,15 @@ import { useNavigate } from "react-router-dom";
 import {
   FiAlertTriangle,
   FiArrowRight,
-  FiBriefcase,
   FiCalendar,
-  FiFlag,
-  FiStar,
   FiSun,
 } from "react-icons/fi";
 
 import useAuth from "../../hooks/useAuth";
+import useHolidayImage from "../../hooks/useHolidayImage";
 import useLiveUpcomingHolidays from "../../hooks/useLiveUpcomingHolidays";
 import useRoleAccess from "../../hooks/useRoleAccess";
-import { HOLIDAY_TYPE } from "../../utils/holiday/holidayConstants";
-import {
-  formatDaysUntil,
-  formatHolidayDate,
-} from "../../utils/holiday/holidayUtils";
+import HolidayBanner from "./common/HolidayBanner";
 
 /*
 |--------------------------------------------------------------------------
@@ -28,14 +22,12 @@ import {
 | rather than behind a link to /holidays, which only a few roles can open at
 | all.
 |
-| A row is read left to right as a sentence: the date, what kind of day it is,
-| its name, and how far away it is. The date leads because that is the thing
-| being looked up, and the countdown closes because that is what decides
-| whether it matters this week.
+| Each holiday is a banner: date, type, name and countdown over the holiday's
+| own picture. The next one is drawn larger, because "when is the next day
+| off" is the question this card is actually asked.
 |
-| The colour of a row is its type, taken from the same palette the holiday
-| badges use, so a National day looks the same here as it does on the holiday
-| screen.
+| A role that can edit holidays sees a camera button on each banner to set
+| the picture for that festival, event or holiday.
 |--------------------------------------------------------------------------
 */
 
@@ -43,83 +35,13 @@ import {
 // year the card would never show.
 const UPCOMING_LIMIT = 20;
 
-/*
-| Type ke hisaab se icon aur rang. Optional holiday apna alag rang leta hai:
-| daftar band hone aur chhutti le sakne ka farq type se zyada matter karta
-| hai, isliye wahi row par dikhta hai.
-*/
-
-const TYPE_TONES = {
-
-  [HOLIDAY_TYPE.NATIONAL]: {
-    Icon: FiFlag,
-    tile: "bg-blue-50 text-blue-600",
-    month: "text-blue-600",
-  },
-
-  [HOLIDAY_TYPE.FESTIVAL]: {
-    Icon: FiStar,
-    tile: "bg-amber-50 text-amber-600",
-    month: "text-amber-600",
-  },
-
-  [HOLIDAY_TYPE.COMPANY]: {
-    Icon: FiBriefcase,
-    tile: "bg-violet-50 text-violet-600",
-    month: "text-violet-600",
-  },
-
-};
-
-const OPTIONAL_TONE = {
-  Icon: FiSun,
-  tile: "bg-emerald-50 text-emerald-600",
-  month: "text-emerald-600",
-};
-
-const FALLBACK_TONE = {
-  Icon: FiCalendar,
-  tile: "bg-slate-100 text-slate-500",
-  month: "text-slate-500",
-};
-
-const toneFor = (holiday) => {
-
-  if (holiday?.isOptional) return OPTIONAL_TONE;
-
-  return TYPE_TONES[holiday?.type] || FALLBACK_TONE;
-
-};
-
-/*
-| "National Holiday", ya optional hone par "Restricted Holiday" — kyunki wo
-| din band nahi hota, sirf lena ho to liya ja sakta hai.
-*/
-
-const holidayLabel = (holiday) => {
-
-  if (holiday?.isOptional) return "Restricted Holiday";
-
-  return holiday?.type ? `${holiday.type} Holiday` : "Holiday";
-
-};
-
-// "in 3 days" row ke shuru mein "In 3 days" padha jaata hai.
-const countdownLabel = (days) => {
-
-  const label = formatDaysUntil(days);
-
-  return label.charAt(0).toUpperCase() + label.slice(1);
-
-};
-
 function UpcomingHolidayWidget() {
 
   const navigate = useNavigate();
 
   const { company } = useAuth();
 
-  const { canAccessPage } = useRoleAccess();
+  const { canAccessPage, canAccessSection } = useRoleAccess();
 
   const companyCode =
     company?.companyCode || localStorage.getItem("companyCode");
@@ -134,6 +56,8 @@ function UpcomingHolidayWidget() {
     UPCOMING_LIMIT
   );
 
+  const { busyId, upload, remove } = useHolidayImage(companyCode, reload);
+
   /*
   | Calendar link sirf unhi ko jinke paas holiday page ka access hai. Baaki
   | sab ke liye wo link route guard tak le jaakar wapas bhej deta.
@@ -141,7 +65,7 @@ function UpcomingHolidayWidget() {
 
   const canOpenCalendar = canAccessPage("holidays");
 
-  const next = holidays[0];
+  const canEditImage = canAccessSection("holidays.edit");
 
   return (
 
@@ -149,7 +73,7 @@ function UpcomingHolidayWidget() {
 
       {/* Header */}
 
-      <div className="flex items-center justify-between gap-4 px-5 pb-4 pt-5 sm:px-6 sm:pt-6">
+      <div className="flex items-start justify-between gap-4 px-5 pb-4 pt-5 sm:px-6 sm:pt-6">
 
         <div className="min-w-0">
 
@@ -164,12 +88,12 @@ function UpcomingHolidayWidget() {
           <button
             type="button"
             onClick={() => navigate("/holidays")}
-            className="group flex shrink-0 cursor-pointer items-center gap-1.5 text-xs font-semibold text-blue-600 transition hover:text-blue-700"
+            className="group mt-1 flex shrink-0 cursor-pointer items-center gap-1.5 text-xs font-semibold text-blue-600 transition hover:text-blue-700 sm:text-sm"
           >
             View Calendar
             <FiArrowRight
               className="transition-transform group-hover:translate-x-0.5"
-              size={14}
+              size={15}
             />
           </button>
 
@@ -181,28 +105,15 @@ function UpcomingHolidayWidget() {
 
       {loading && (
 
-        <div className="space-y-2 px-4 pb-4">
+        <div className="space-y-2 px-4 pb-4 sm:px-5">
 
-          {Array.from({ length: 4 }).map((_, index) => (
+          <div className="h-[104px] animate-pulse rounded-2xl bg-slate-200/80" />
 
+          {Array.from({ length: 2 }).map((_, index) => (
             <div
               key={index}
-              className="flex items-center gap-4 rounded-xl bg-slate-50 px-3 py-3"
-            >
-
-              <div className="h-12 w-12 shrink-0 animate-pulse rounded-xl bg-white" />
-
-              <div className="h-11 w-11 shrink-0 animate-pulse rounded-xl bg-slate-100" />
-
-              <div className="flex-1 space-y-2">
-                <div className="h-4 w-40 animate-pulse rounded-md bg-slate-200" />
-                <div className="h-3 w-24 animate-pulse rounded-md bg-slate-100" />
-              </div>
-
-              <div className="h-7 w-24 shrink-0 animate-pulse rounded-full bg-slate-100" />
-
-            </div>
-
+              className="h-[76px] animate-pulse rounded-2xl bg-slate-100"
+            />
           ))}
 
         </div>
@@ -266,137 +177,32 @@ function UpcomingHolidayWidget() {
 
           {/*
           | The scroll is capped rather than sized to the content, so a company
-          | with twenty holidays ahead does not stretch the dashboard row. Four
-          | rows are visible, and the fifth peeking under the fold is what says
-          | there is more to scroll to.
+          | with twenty holidays ahead does not stretch the dashboard row.
           */}
 
-          <div className="ui-scroll max-h-76 space-y-2 overflow-y-auto px-4 pb-2 sm:px-5">
+          <div className="ui-scroll max-h-88 space-y-2 overflow-y-auto px-4 pb-4 sm:px-5">
 
-            {holidays.map((holiday) => {
+            {holidays.map((holiday, index) => (
 
-              const isNext = holiday.holidayId === next?.holidayId;
+              <HolidayBanner
+                key={holiday.holidayId}
+                holiday={holiday}
+                featured={index === 0}
+                canEditImage={canEditImage}
+                busy={busyId === holiday.holidayId}
+                onUploadImage={upload}
+                onRemoveImage={remove}
+              />
 
-              const tone = toneFor(holiday);
-
-              const { Icon } = tone;
-
-              return (
-
-                /*
-                | The next one is the answer to the question the card is
-                | actually asked - "when is the next day off" - so it is
-                | drawn as a filled brand panel and the rest of the list
-                | recedes to quiet rows behind it. A tint alone was not
-                | enough separation once the whole app went indigo.
-                */
-                <div
-                  key={holiday.holidayId}
-                  className={`relative flex items-center gap-3 overflow-hidden rounded-xl px-3 py-3 transition-colors sm:gap-4 ${
-                    isNext
-                      ? "bg-linear-to-br from-blue-500 to-blue-600 text-white shadow-md"
-                      : "bg-slate-50 hover:bg-slate-100"
-                  }`}
-                >
-
-                  {/* An oversized ghost of the type glyph, bled off the
-                      corner. Decoration only, so it is hidden from the
-                      reader rather than announced twice. */}
-                  {isNext && (
-                    <Icon
-                      aria-hidden="true"
-                      className="pointer-events-none absolute -bottom-6 -right-5 h-28 w-28 opacity-10"
-                    />
-                  )}
-
-                  {/* Date */}
-
-                  <div
-                    className={`relative flex h-12 w-12 shrink-0 flex-col items-center justify-center rounded-xl ${
-                      isNext
-                        ? "border border-white/20 bg-white/10 backdrop-blur-md"
-                        : "bg-white shadow-sm"
-                    }`}
-                  >
-
-                    <span
-                      className={`text-base font-bold leading-none ${
-                        isNext ? "text-white" : "text-slate-900"
-                      }`}
-                    >
-                      {String(holiday.date).slice(8, 10)}
-                    </span>
-
-                    <span
-                      className={`mt-1 text-[10px] font-bold uppercase leading-none tracking-wide ${
-                        isNext ? "text-blue-100" : "text-slate-500"
-                      }`}
-                    >
-                      {formatHolidayDate(holiday.date).slice(3, 6)}
-                    </span>
-
-                  </div>
-
-                  {/* Type - the tinted tile only reads on a white row, so on
-                      the filled one the glyph carries the type by itself. */}
-
-                  <div
-                    className={`relative flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${
-                      isNext
-                        ? "border border-white/20 bg-white/10 text-white"
-                        : tone.tile
-                    }`}
-                  >
-                    <Icon size={20} />
-                  </div>
-
-                  {/* Name */}
-
-                  <div className="relative min-w-0 flex-1">
-
-                    <p
-                      className={`truncate text-[15px] font-bold ${
-                        isNext ? "text-white" : "text-slate-900"
-                      }`}
-                    >
-                      {holiday.name}
-                    </p>
-
-                    <p
-                      className={`mt-0.5 truncate text-xs ${
-                        isNext ? "text-blue-100" : "text-slate-400"
-                      }`}
-                    >
-                      {holidayLabel(holiday)}
-                    </p>
-
-                  </div>
-
-                  {/* Countdown */}
-
-                  <span
-                    className={`relative shrink-0 whitespace-nowrap rounded-full px-3 py-1 text-[11px] font-semibold ${
-                      isNext
-                        ? "bg-black/15 text-white"
-                        : "bg-slate-100 text-slate-600"
-                    }`}
-                  >
-                    {countdownLabel(holiday.daysUntil)}
-                  </span>
-
-                </div>
-
-              );
-
-            })}
+            ))}
 
           </div>
 
           {/* Footer */}
 
-          <div className="mt-2 flex items-center gap-2 border-t border-slate-100 px-5 py-3.5 text-xs font-medium text-slate-500 sm:px-6">
+          <div className="flex items-center gap-2 border-t border-slate-100 px-5 py-3.5 text-xs font-medium text-slate-500 sm:px-6 sm:text-sm">
 
-            <FiCalendar size={14} className="shrink-0" />
+            <FiCalendar size={15} className="shrink-0" />
 
             {holidays.length} upcoming{" "}
             {holidays.length === 1 ? "holiday" : "holidays"}

@@ -191,12 +191,21 @@ const createOnboardingRequest = async (companyCode, employeeInfo, origin) => {
   };
 };
 
-const createBulkOnboardingRequests = async (companyCode, employees = [], origin) => {
+const createBulkOnboardingRequests = async (
+  companyCode,
+  employees = [],
+  origin,
+  isCancelled
+) => {
   const total = employees.length;
   const index = await buildEmployeeIdentityIndex(companyCode);
   const results = [];
 
   for (let position = 0; position < total; position += 1) {
+    if (typeof isCancelled === "function" && isCancelled()) {
+      break;
+    }
+
     const employeeInfo = employees[position];
     const employeeId = String(employeeInfo.employeeId || "").trim().toUpperCase();
 

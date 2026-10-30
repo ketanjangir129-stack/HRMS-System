@@ -165,11 +165,25 @@ const createBulk = async (req, res) => {
       });
     }
 
+    // The page aborts the request when the user cancels a running batch; the
+    // connection closing before we respond is the signal to stop the loop.
+    let cancelled = false;
+    res.on("close", () => {
+      if (!res.writableEnded) {
+        cancelled = true;
+      }
+    });
+
     const results = await onboardingService.createBulkOnboardingRequests(
       companyCode,
       employees,
-      origin
+      origin,
+      () => cancelled
     );
+
+    if (cancelled) {
+      return;
+    }
 
     return res.status(200).json({
       success: true,

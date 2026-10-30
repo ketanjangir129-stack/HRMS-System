@@ -4,6 +4,7 @@ import { toast } from "react-toastify";
 import DeleteHolidayModal from "../../components/holiday/DeleteHolidayModal";
 import HolidayCalendar from "../../components/holiday/HolidayCalendar/HolidayCalendar";
 import HolidayHeader from "../../components/holiday/HolidayHeader";
+import HolidayImportModal from "../../components/holiday/HolidayImportModal";
 import HolidayModal from "../../components/holiday/HolidayModal";
 import HolidayStatsCards from "../../components/holiday/HolidayStatsCards";
 import HolidayTable from "../../components/holiday/HolidayTable";
@@ -12,6 +13,7 @@ import useAuth from "../../hooks/useAuth";
 import useHolidays from "../../hooks/useHolidays";
 import useRoleAccess from "../../hooks/useRoleAccess";
 import useUpcomingHolidays from "../../hooks/useUpcomingHolidays";
+import { importHolidays } from "../../services/holidayServices/holidayService";
 import { getHolidayStats } from "../../utils/holiday/holidayUtils";
 
 /*
@@ -57,6 +59,9 @@ function HolidayDashboard() {
 
   const [submitting, setSubmitting] = useState(false);
   const [deleting, setDeleting] = useState(false);
+
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [importing, setImporting] = useState(false);
 
   const {
     holidays,
@@ -185,7 +190,7 @@ function HolidayDashboard() {
           : savedElsewhere
             ? `Holiday added to ${result.year}.`
             : result?.count && result.count > 1
-              ? `${result.count} festival holidays added successfully.`
+              ? `${result.count} holidays added successfully.`
               : "Holiday added successfully."
       );
 
@@ -206,6 +211,64 @@ function HolidayDashboard() {
     } finally {
 
       setSubmitting(false);
+
+    }
+
+  };
+
+  /*
+  |--------------------------------------------------------------------------
+  | Import
+  |--------------------------------------------------------------------------
+  | Adding holidays from a file is adding holidays, so it is gated on the
+  | same permission as the Add button.
+  */
+
+  const handleImport = async (rows) => {
+
+    if (!canAddHoliday) {
+      toast.error("You are not allowed to add holidays.");
+      return;
+    }
+
+    setImporting(true);
+
+    try {
+
+      const result = await importHolidays(companyCode, rows);
+
+      if (!result?.success) {
+        toast.error(result?.message || "Failed to import holidays.");
+        return;
+      }
+
+      const notes = [
+        result.skipped.length ? `${result.skipped.length} skipped (date already a holiday)` : "",
+        result.invalid.length ? `${result.invalid.length} rejected` : "",
+      ].filter(Boolean);
+
+      if (result.count > 0) {
+        toast.success(
+          `${result.count} ${result.count === 1 ? "holiday" : "holidays"} imported${notes.length ? `, ${notes.join(", ")}` : ""}.`
+        );
+      } else {
+        toast.warning(`No holidays were imported${notes.length ? `: ${notes.join(", ")}` : ""}.`);
+      }
+
+      reload();
+      reloadUpcoming();
+
+      setShowImportModal(false);
+
+    } catch (importError) {
+
+      console.error(importError);
+
+      toast.error(importError?.message || "Failed to import holidays.");
+
+    } finally {
+
+      setImporting(false);
 
     }
 
@@ -267,6 +330,7 @@ function HolidayDashboard() {
         loading={loading || upcomingLoading}
         onRefresh={handleRefresh}
         onAddHoliday={openAddModal}
+        onImportHolidays={() => setShowImportModal(true)}
         canAddHoliday={canAddHoliday}
         totalHolidays={stats.total}
       />
@@ -309,10 +373,13 @@ function HolidayDashboard() {
             {showUpcoming && (
               <div className={showCalendar ? "xl:col-span-7" : "xl:col-span-12"}>
                 <UpcomingHolidayCard
+                  companyCode={companyCode}
                   holidays={upcoming}
                   loading={upcomingLoading}
                   error={upcomingError}
                   onRetry={reloadUpcoming}
+                  canEditImage={canEditHoliday}
+                  onImageChanged={handleRefresh}
                 />
               </div>
             )}
@@ -350,6 +417,20 @@ function HolidayDashboard() {
         submitting={submitting}
         onSubmit={handleSave}
         onClose={closeHolidayModal}
+      />
+
+      <HolidayImportModal
+        open={showImportModal}
+        companyCode={companyCode}
+        importing={importing}
+        onImport={handleImport}
+        onClose={() => {
+
+          if (importing) return;
+
+          setShowImportModal(false);
+
+        }}
       />
 
       <DeleteHolidayModal

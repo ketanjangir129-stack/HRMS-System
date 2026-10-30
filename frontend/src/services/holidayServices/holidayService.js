@@ -8,6 +8,7 @@ import {
   HOLIDAY_NAME_MAX,
   HOLIDAY_NAME_MIN,
   HOLIDAY_DESCRIPTION_MAX,
+  HOLIDAY_MULTIPLE_DATES_MAX,
   HOLIDAY_TYPE_OPTIONS,
   UPCOMING_HOLIDAY_LIMIT,
 } from "../../utils/holiday/holidayConstants";
@@ -22,6 +23,9 @@ import {
   createHolidayApi,
   updateHolidayApi,
   deleteHolidayApi,
+  importHolidaysApi,
+  uploadHolidayImageApi,
+  removeHolidayImageApi,
 } from "../api/holidayApi";
 
 /*
@@ -149,15 +153,32 @@ const validateHolidayInput = (holiday = {}) => {
     return `Holiday name cannot exceed ${HOLIDAY_NAME_MAX} characters.`;
   }
 
-  const date = String(holiday.date || "").trim();
+  const isValidDate = (value) => {
+    const parsed = DATE_PATTERN.test(value) ? parseDateKey(value) : null;
+    return Boolean(parsed) && getDateKey(parsed) === value;
+  };
+
+  if (Array.isArray(holiday.dates)) {
+    if (holiday.dates.length === 0) {
+      return "Add at least one holiday date.";
+    }
+    if (holiday.dates.length > HOLIDAY_MULTIPLE_DATES_MAX) {
+      return `At most ${HOLIDAY_MULTIPLE_DATES_MAX} dates can be declared at once.`;
+    }
+    if (!holiday.dates.every((d) => isValidDate(String(d).trim()))) {
+      return "One of the selected dates is not valid.";
+    }
+  }
+
+  const date = String(
+    holiday.date || (Array.isArray(holiday.dates) ? holiday.dates[0] : "") || ""
+  ).trim();
 
   if (!date) {
     return "Holiday date is required.";
   }
 
-  const parsed = DATE_PATTERN.test(date) ? parseDateKey(date) : null;
-
-  if (!parsed || getDateKey(parsed) !== date) {
+  if (!isValidDate(date)) {
     return "Please select a valid holiday date.";
   }
 
@@ -226,13 +247,18 @@ export const createHoliday = async (companyCode, holiday) => {
     };
   }
 
-  const date = String(holiday.date).trim();
+  const dates = Array.isArray(holiday.dates)
+    ? [...new Set(holiday.dates.map((d) => String(d).trim()))].sort()
+    : null;
+
+  const date = dates ? dates[0] : String(holiday.date).trim();
 
   try {
     const result = await createHolidayApi({
       name: String(holiday.name).trim(),
       date,
-      ...(holiday.isMultiDay && holiday.endDate
+      ...(dates ? { dates } : {}),
+      ...(!dates && holiday.isMultiDay && holiday.endDate
         ? {
             isMultiDay: true,
             endDate: String(holiday.endDate).trim(),
@@ -275,7 +301,8 @@ export const createHoliday = async (companyCode, holiday) => {
       {
         ...first,
         name: created.length > 1 ? String(holiday.name).trim() : first?.name,
-        endDate: created.length > 1 ? last?.date : undefined,
+        // Separate dates are not a range, so only a range names an end date.
+        endDate: created.length > 1 && !dates ? last?.date : undefined,
       },
       holidayId
     ).catch((notificationError) => {
@@ -539,6 +566,107 @@ export const deleteHoliday = async (
       "Delete Holiday Error",
       "Failed to delete holiday."
     );
+  }
+};
+
+/*
+|--------------------------------------------------------------------------
+| Import Holidays
+|--------------------------------------------------------------------------
+| Rows already parsed and checked by the import modal. The server checks
+| them again and skips any date that is already a holiday, so the result
+| reports what was added, what was skipped and what was rejected.
+*/
+
+export const importHolidays = async (companyCode, rows = []) => {
+  if (!companyCode) {
+    return { success: false, message: "Company not found." };
+  }
+
+  try {
+    const result = await importHolidaysApi(
+      rows.map((row) => ({
+        rowNumber: row.rowNumber,
+        date: row.date,
+        name: row.name,
+        type: row.type,
+        description: row.description || "",
+        isOptional: Boolean(row.isOptional),
+      }))
+    );
+
+    if (apiFailed(result)) {
+      return {
+        success: false,
+        message: apiErrorMessage(result, "Failed to import holidays."),
+      };
+    }
+
+    clearHolidayCache(companyCode);
+
+    return {
+      success: true,
+      count: result.count || 0,
+      skipped: Array.isArray(result.skipped) ? result.skipped : [],
+      invalid: Array.isArray(result.invalid) ? result.invalid : [],
+      years: Array.isArray(result.years) ? result.years : [],
+    };
+  } catch (error) {
+    throw failWith(error, "Import Holidays Error", "Failed to import holidays.");
+  }
+};
+
+/*
+|--------------------------------------------------------------------------
+| Holiday Image
+|--------------------------------------------------------------------------
+| The banner picture behind a holiday on the upcoming panels. Every day of a
+| multi-day holiday gets the same picture.
+*/
+
+export const uploadHolidayImage = async (companyCode, holiday, file) => {
+  if (!companyCode || !holiday?.date || !holiday?.holidayId) {
+    return { success: false, message: "Holiday not found." };
+  }
+
+  try {
+    const result = await uploadHolidayImageApi(holiday.date, holiday.holidayId, file);
+
+    if (apiFailed(result)) {
+      return {
+        success: false,
+        message: apiErrorMessage(result, "Failed to upload the image."),
+      };
+    }
+
+    clearHolidayCache(companyCode);
+
+    return { success: true, imageUrl: result.imageUrl };
+  } catch (error) {
+    throw failWith(error, "Upload Holiday Image Error", "Failed to upload the image.");
+  }
+};
+
+export const removeHolidayImage = async (companyCode, holiday) => {
+  if (!companyCode || !holiday?.date || !holiday?.holidayId) {
+    return { success: false, message: "Holiday not found." };
+  }
+
+  try {
+    const result = await removeHolidayImageApi(holiday.date, holiday.holidayId);
+
+    if (apiFailed(result)) {
+      return {
+        success: false,
+        message: apiErrorMessage(result, "Failed to remove the image."),
+      };
+    }
+
+    clearHolidayCache(companyCode);
+
+    return { success: true };
+  } catch (error) {
+    throw failWith(error, "Remove Holiday Image Error", "Failed to remove the image.");
   }
 };
 

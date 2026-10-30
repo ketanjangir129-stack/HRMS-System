@@ -86,7 +86,8 @@
 
 .holiday-calendar .holiday-national abbr,
 .holiday-calendar .holiday-festival abbr,
-.holiday-calendar .holiday-company abbr {
+.holiday-calendar .holiday-company abbr,
+.holiday-calendar .holiday-event abbr {
   width: 30px;
   height: 30px;
   display: inline-flex;
@@ -114,6 +115,10 @@
   background: #8b5cf6;
 }
 
+.holiday-calendar .holiday-event abbr {
+  background: #ec4899;
+}
+
 /* An optional holiday is drawn as an outline rather than a filled circle, so
    a day the office is closed reads differently from a day that may be taken
    off at a glance. */
@@ -134,6 +139,10 @@
 
 .holiday-calendar .holiday-optional.holiday-company abbr {
   color: #8b5cf6;
+}
+
+.holiday-calendar .holiday-optional.holiday-event abbr {
+  color: #ec4899;
 }
 
 /* Small screens
@@ -165,7 +174,8 @@
 
   .holiday-calendar .holiday-national abbr,
   .holiday-calendar .holiday-festival abbr,
-  .holiday-calendar .holiday-company abbr {
+  .holiday-calendar .holiday-company abbr,
+  .holiday-calendar .holiday-event abbr {
     width: 26px;
     height: 26px;
   }
@@ -281,4 +291,8 @@
 
 .dark .holiday-calendar .holiday-optional.holiday-company abbr {
   color: var(--color-violet-400);
+}
+
+.dark .holiday-calendar .holiday-optional.holiday-event abbr {
+  color: var(--color-pink-400);
 }

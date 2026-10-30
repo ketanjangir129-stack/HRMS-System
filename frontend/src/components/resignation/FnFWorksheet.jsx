@@ -219,7 +219,7 @@ function FnFWorksheet({
 
           <div className="flex items-center gap-3 border-b border-line px-5 py-4">
 
-            <span className="ui-tile-sm flex bg-emerald-50 text-emerald-600">
+            <span className="ui-tile ui-tile-sm bg-emerald-50 text-emerald-600">
               <TrendingUp className="h-4 w-4" />
             </span>
 
@@ -264,7 +264,7 @@ function FnFWorksheet({
 
           <div className="flex items-center gap-3 border-b border-line px-5 py-4">
 
-            <span className="ui-tile-sm flex bg-red-50 text-red-600">
+            <span className="ui-tile ui-tile-sm bg-red-50 text-red-600">
               <TrendingDown className="h-4 w-4" />
             </span>
 

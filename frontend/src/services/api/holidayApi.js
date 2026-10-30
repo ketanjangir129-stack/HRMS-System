@@ -33,3 +33,21 @@ export const deleteHolidayApi = (date, holidayId) =>
     `/holidays/${encodeURIComponent(date)}/${encodeURIComponent(holidayId)}`,
     { method: "DELETE" }
   );
+
+export const importHolidaysApi = (holidays) =>
+  apiRequest("/holidays/import", jsonRequest("POST", { holidays }));
+
+export const uploadHolidayImageApi = (date, holidayId, file) => {
+  const body = new FormData();
+  body.append("image", file);
+  return apiRequest(
+    `/holidays/${encodeURIComponent(date)}/${encodeURIComponent(holidayId)}/image`,
+    { method: "PUT", body }
+  );
+};
+
+export const removeHolidayImageApi = (date, holidayId) =>
+  apiRequest(
+    `/holidays/${encodeURIComponent(date)}/${encodeURIComponent(holidayId)}/image`,
+    { method: "DELETE" }
+  );

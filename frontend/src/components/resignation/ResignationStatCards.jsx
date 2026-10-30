@@ -92,7 +92,7 @@ function ResignationStatCards({ summary = {} }) {
 
             <div className="flex items-center gap-3">
 
-              <span className={`ui-tile-sm flex ${card.accent}`}>
+              <span className={`ui-tile ui-tile-sm ${card.accent}`}>
                 <Icon className="h-4 w-4" />
               </span>
 
@@ -100,7 +100,7 @@ function ResignationStatCards({ summary = {} }) {
 
                 <p className="ui-eyebrow truncate">{card.label}</p>
 
-                <p className={`mt-0.5 text-2xl font-bold ${card.value}`}>
+                <p className={`mt-0.5 text-2xl font-bold leading-tight ${card.value}`}>
                   {summary[card.key] ?? 0}
                 </p>
 

@@ -100,7 +100,7 @@ function EquipmentChecklist({
 
               <div className="flex min-w-0 items-center gap-3">
 
-                <span className="ui-tile-sm flex bg-surface-muted text-ink-subtle">
+                <span className="ui-tile ui-tile-sm bg-surface-muted text-ink-subtle">
                   <Icon className="h-4 w-4" />
                 </span>
 

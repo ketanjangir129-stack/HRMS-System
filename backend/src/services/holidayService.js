@@ -1,8 +1,12 @@
 
 const db = require("../config/firebase");
+const cloudinary = require("../config/cloudinary");
 const { getDateKey } = require("../utils/attendanceDate");
+const { uploadFile } = require("./uploadServices");
 
-const HOLIDAY_TYPES = ["National", "Festival", "Company"];
+// "Event" is a fixed company event (Annual Day, Foundation Day) - declared by
+// the company like "Company", but kept apart so it can be told from a closure.
+const HOLIDAY_TYPES = ["National", "Festival", "Company", "Event"];
 
 /*
 | Writes for one company run one at a time. The duplicate check reads the
@@ -129,7 +133,7 @@ const validateHoliday = (input, { partial = false } = {}) => {
 
   if (!partial || input.type !== undefined) {
     if (!HOLIDAY_TYPES.includes(input.type)) {
-      fail("Holiday type must be National, Festival, or Company.");
+      fail("Holiday type must be National, Festival, Company, or Event.");
     }
 
     result.type = input.type;
@@ -322,8 +326,80 @@ const newHolidayId = (companyCode, date) =>
     .ref(`companies/${companyCode}/holidays/${getMonthPath(date)}`)
     .push().key;
 
+const MAX_MULTIPLE_DATES = 60;
+
+/*
+| Several separate dates under one name and type (every second Saturday, a
+| festival observed on two non-consecutive days). Each date is its own record,
+| written together with a shared group id, exactly like a range.
+*/
+const createHolidayDates = async (companyCode, input, actor) => {
+  if (!Array.isArray(input.dates) || input.dates.length === 0) {
+    fail("Select at least one holiday date.");
+  }
+
+  const dateList = [...new Set(input.dates.map((d) => validateDate(String(d).trim())))]
+    .sort();
+
+  if (dateList.length > MAX_MULTIPLE_DATES) {
+    fail(`At most ${MAX_MULTIPLE_DATES} dates can be declared at once.`);
+  }
+
+  const holidays = dateList.map((date) => validateHoliday({ ...input, date }));
+
+  const years = [...new Set(dateList.map(getYear))];
+  const yearRecords = Object.fromEntries(
+    await Promise.all(
+      years.map(async (y) => [y, await getYearRecords(companyCode, y)])
+    )
+  );
+
+  for (const holiday of holidays) {
+    await ensureNoDuplicate(companyCode, holiday, {
+      records: yearRecords[getYear(holiday.date)],
+    });
+  }
+
+  const groupId = dateList.length > 1 ? newHolidayId(companyCode, dateList[0]) : undefined;
+  const records = [];
+  const updates = {};
+
+  holidays.forEach((holidayData) => {
+    const holidayId = newHolidayId(companyCode, holidayData.date);
+    const record = withoutUndefined({
+      ...holidayData,
+      holidayId,
+      groupId,
+      ...actor,
+    });
+    records.push(record);
+    updates[holidayPath(companyCode, holidayData.date, holidayId)] = record;
+  });
+
+  await db.ref().update(updates);
+
+  return {
+    holiday: records[0],
+    holidays: records,
+    count: records.length,
+    year: getYear(dateList[0]),
+    years: years.map(Number),
+    isMultiDay: records.length > 1,
+  };
+};
+
 const createHoliday = (companyCode, input, user) =>
   withCompanyLock(companyCode, async () => {
+    if (Array.isArray(input?.dates)) {
+      const now = Date.now();
+      return createHolidayDates(companyCode, input, {
+        createdBy: await resolveActorName(companyCode, user),
+        createdById: actorId(user),
+        createdAt: now,
+        updatedAt: now,
+      });
+    }
+
     const isMultiDay = Boolean(
       input?.isMultiDay &&
         input?.endDate &&
@@ -492,6 +568,223 @@ const deleteHoliday = async (companyCode, date, holidayId) => {
   };
 };
 
+/*
+|--------------------------------------------------------------------------
+| Import
+|--------------------------------------------------------------------------
+| Rows from a Date / Name / Type / Description file, already parsed by the
+| browser. Every row is validated again here; a bad row is reported back
+| rather than failing the whole file, and a date that is already a holiday
+| (in the database or earlier in the same file) is skipped, not overwritten.
+| Everything that passes is written in one atomic update.
+*/
+
+const MAX_IMPORT_ROWS = 500;
+
+const importHolidays = (companyCode, rows, user) =>
+  withCompanyLock(companyCode, async () => {
+    if (!Array.isArray(rows) || rows.length === 0) {
+      fail("The file has no holiday rows to import.");
+    }
+
+    if (rows.length > MAX_IMPORT_ROWS) {
+      fail(`At most ${MAX_IMPORT_ROWS} holidays can be imported at once.`);
+    }
+
+    const valid = [];
+    const invalid = [];
+
+    rows.forEach((row, index) => {
+      const rowNumber = Number(row?.rowNumber) || index + 1;
+      try {
+        valid.push({
+          rowNumber,
+          holiday: validateHoliday({
+            name: row?.name,
+            date: typeof row?.date === "string" ? row.date.trim() : row?.date,
+            type: row?.type,
+            description: row?.description ?? "",
+            isOptional: typeof row?.isOptional === "boolean" ? row.isOptional : false,
+          }),
+        });
+      } catch (error) {
+        invalid.push({ rowNumber, message: error.message });
+      }
+    });
+
+    const years = [...new Set(valid.map((v) => getYear(v.holiday.date)))];
+    const takenDates = new Map();
+
+    await Promise.all(
+      years.map(async (y) => {
+        (await getYearRecords(companyCode, y)).forEach((record) => {
+          if (record?.date) takenDates.set(record.date, record.name);
+        });
+      })
+    );
+
+    const skipped = [];
+    const updates = {};
+    const created = [];
+    const now = Date.now();
+    const createdBy = await resolveActorName(companyCode, user);
+    const createdById = actorId(user);
+
+    valid.forEach(({ rowNumber, holiday }) => {
+      if (takenDates.has(holiday.date)) {
+        skipped.push({
+          rowNumber,
+          date: holiday.date,
+          message: `"${takenDates.get(holiday.date)}" already exists on ${holiday.date}.`,
+        });
+        return;
+      }
+
+      takenDates.set(holiday.date, holiday.name);
+
+      const holidayId = newHolidayId(companyCode, holiday.date);
+      const record = {
+        ...holiday,
+        holidayId,
+        source: "IMPORT",
+        createdBy,
+        createdById,
+        createdAt: now,
+        updatedAt: now,
+      };
+
+      created.push(record);
+      updates[holidayPath(companyCode, holiday.date, holidayId)] = record;
+    });
+
+    if (created.length > 0) {
+      await db.ref().update(updates);
+    }
+
+    return {
+      count: created.length,
+      holidays: created,
+      skipped,
+      invalid,
+      years: [...new Set(created.map((h) => Number(getYear(h.date))))],
+    };
+  });
+
+/*
+|--------------------------------------------------------------------------
+| Holiday Image
+|--------------------------------------------------------------------------
+| A banner picture for the upcoming holidays panels (diyas for Diwali, a flag
+| for Independence Day). Stored on Cloudinary; the record keeps the URL.
+|
+| The days of a multi-day holiday share one picture, so setting it on one day
+| sets it on every day in the same group.
+*/
+
+const IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+const IMAGE_MAX_BYTES = 5 * 1024 * 1024;
+
+// A group spans at most MAX_MULTIPLE_DATES days from its first date, so it
+// can only reach into the neighbouring year from January or December.
+const groupYears = (date) => {
+  const year = Number(getYear(date));
+  const month = Number(date.slice(5, 7));
+  return [
+    ...(month === 1 ? [year - 1] : []),
+    year,
+    ...(month === 12 ? [year + 1] : []),
+  ].map(String);
+};
+
+const findGroupPaths = async (companyCode, holiday) => {
+  if (!holiday.groupId) {
+    return [holidayPath(companyCode, holiday.date, holiday.holidayId)];
+  }
+
+  const lists = await Promise.all(
+    groupYears(holiday.date).map((y) => getYearRecords(companyCode, y))
+  );
+
+  const members = lists
+    .flat()
+    .filter((record) => record.groupId === holiday.groupId && record.date);
+
+  return members.length
+    ? members.map((record) => holidayPath(companyCode, record.date, record.holidayId))
+    : [holidayPath(companyCode, holiday.date, holiday.holidayId)];
+};
+
+const destroyImage = async (publicId) => {
+  if (!publicId) return;
+  try {
+    await cloudinary.uploader.destroy(publicId, { resource_type: "image" });
+  } catch (error) {
+    // The record no longer points at it, so a leftover asset is harmless.
+    console.error("Holiday image cleanup failed:", error);
+  }
+};
+
+const writeHolidayImage = async (companyCode, date, holidayId, image, user) => {
+  const existing = await getHoliday(companyCode, date, holidayId);
+  const paths = await findGroupPaths(companyCode, existing);
+  const now = Date.now();
+  const updatedBy = await resolveActorName(companyCode, user);
+
+  const updates = {};
+  paths.forEach((path) => {
+    updates[`${path}/imageUrl`] = image?.url || null;
+    updates[`${path}/imagePublicId`] = image?.publicId || null;
+    updates[`${path}/updatedAt`] = now;
+    updates[`${path}/updatedBy`] = updatedBy;
+    updates[`${path}/updatedById`] = actorId(user);
+  });
+
+  await db.ref().update(updates);
+
+  if (existing.imagePublicId && existing.imagePublicId !== image?.publicId) {
+    await destroyImage(existing.imagePublicId);
+  }
+
+  return {
+    holidayId,
+    imageUrl: image?.url || null,
+    updatedCount: paths.length,
+  };
+};
+
+const setHolidayImage = async (companyCode, date, holidayId, file, user) => {
+  validateDate(date);
+  validateHolidayId(holidayId);
+
+  if (!file?.buffer) {
+    fail("Please choose an image to upload.");
+  }
+
+  if (!IMAGE_TYPES.includes(file.mimetype)) {
+    fail("Only JPG, PNG, WEBP or GIF images are allowed.");
+  }
+
+  if (file.size > IMAGE_MAX_BYTES) {
+    fail("Image must be smaller than 5 MB.");
+  }
+
+  // Confirm the holiday exists before anything is uploaded.
+  await getHoliday(companyCode, date, holidayId);
+
+  const uploaded = await uploadFile(file.buffer, {
+    folder: `hrms/${companyCode}/holidays`,
+    resourceType: "image",
+    maxBytes: IMAGE_MAX_BYTES,
+    fileName: `${holidayId}_${file.originalname || "banner"}`,
+    keepExisting: true,
+  });
+
+  return writeHolidayImage(companyCode, date, holidayId, uploaded, user);
+};
+
+const removeHolidayImage = (companyCode, date, holidayId, user) =>
+  writeHolidayImage(companyCode, date, holidayId, null, user);
+
 module.exports = {
   getHoliday,
   listHolidays,
@@ -499,4 +792,7 @@ module.exports = {
   createHoliday,
   updateHoliday,
   deleteHoliday,
+  importHolidays,
+  setHolidayImage,
+  removeHolidayImage,
 };

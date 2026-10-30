@@ -127,15 +127,26 @@ export const createSalary = async (
 |--------------------------------------------------------------------------
 | Bulk Import
 |--------------------------------------------------------------------------
-| Sends the rows an import has already checked to the backend in one call
+| Sends the rows an import has already checked to the backend
 | (POST /api/salary/import). The backend revalidates every row, reprices
 | statutory deductions from the stored policy and writes each structure,
 | so the preview totals are never trusted — only earnings, manual
 | deductions, effectiveFrom and status travel.
 |
+| The rows go up a few at a time rather than in one call, so the overlay can
+| count them off as they land instead of sitting on "0 of N" until the whole
+| file is done. Rows are independent on the backend, so splitting the file
+| changes nothing about what is written; `rowIndex` in each response is local
+| to its chunk and is offset back to the row's place in the file.
+|
 | One row failing does not stop the rest. A run that gave up half way would
 | leave somebody guessing which half, so every row is attempted and reported.
+| A refusal of the very first chunk (no permission, bad session) still throws,
+| since then nothing was written; a chunk failing later marks only its own
+| rows, so the ones already saved are not reported as lost.
 */
+const IMPORT_CHUNK_SIZE = 10;
+
 export const importSalaries = async (
     companyCode,
     rows = [],
@@ -159,32 +170,60 @@ export const importSalaries = async (
         status: row.status,
     }));
 
-    const response = await importSalariesApi(payload, {
-        updateExisting,
-        updatedBy,
-    });
+    const outcomes = new Map();
 
-    if (!response?.success) {
-        throw new Error(response?.message || "The import could not be completed.");
+    const failures = new Map();
+
+    for (let start = 0; start < payload.length; start += IMPORT_CHUNK_SIZE) {
+
+        const chunk = payload.slice(start, start + IMPORT_CHUNK_SIZE);
+
+        let response;
+
+        try {
+            response = await importSalariesApi(chunk, {
+                updateExisting,
+                updatedBy,
+            });
+        }
+        catch (error) {
+            response = {
+                success: false,
+                message: error?.message || "The import could not be completed.",
+            };
+        }
+
+        if (!response?.success) {
+
+            if (start === 0) {
+                throw new Error(response?.message || "The import could not be completed.");
+            }
+
+            chunk.forEach((_, offset) =>
+                failures.set(start + offset, response?.message)
+            );
+        }
+        else {
+            (response.data?.results || []).forEach((result) =>
+                outcomes.set(start + result.rowIndex, result)
+            );
+        }
+
+        onProgress?.(Math.min(start + chunk.length, rows.length), rows.length);
     }
 
-    const outcomes = new Map(
-        (response.data?.results || []).map((result) => [result.rowIndex, result])
-    );
-
-    const results = rows.map((row, position) => {
+    return rows.map((row, position) => {
         const result = outcomes.get(position);
 
         return {
             ...row,
             outcome: result?.outcome || "failed",
-            message: result?.message || "Could not save this salary.",
+            message:
+                result?.message ||
+                failures.get(position) ||
+                "Could not save this salary.",
         };
     });
-
-    onProgress?.(rows.length, rows.length);
-
-    return results;
 
 };
 

@@ -506,6 +506,7 @@ export const getHolidayStats = (
     national: 0,
     festival: 0,
     company: 0,
+    event: 0,
     optional: 0,
     mandatory: 0,
     upcoming: 0,
@@ -526,6 +527,10 @@ export const getHolidayStats = (
 
       case HOLIDAY_TYPE.COMPANY:
         stats.company++;
+        break;
+
+      case HOLIDAY_TYPE.EVENT:
+        stats.event++;
         break;
 
       default:
@@ -669,7 +674,21 @@ export const validateHolidayForm = (form = {}) => {
     ? parseDateKey(date)
     : null;
 
-  if (!date) {
+  if (Array.isArray(form.dates)) {
+
+    // Multiple separate dates: each one is checked the same way.
+    if (form.dates.length === 0) {
+      errors.date = "Add at least one holiday date.";
+    } else if (
+      form.dates.some((item) => {
+        const value = DATE_PATTERN.test(item) ? parseDateKey(item) : null;
+        return !value || getDateKey(value) !== item;
+      })
+    ) {
+      errors.date = "One of the selected dates is not valid.";
+    }
+
+  } else if (!date) {
     errors.date = "Please select a holiday date.";
   } else if (!parsed || getDateKey(parsed) !== date) {
     errors.date = "Please select a valid holiday date.";
@@ -724,6 +743,17 @@ export const findHolidayConflict = (
       if (!holiday || holiday.holidayId === ignoreId) return false;
       return holiday.date === date;
     }) || null
+  );
+};
+
+export const findHolidayDatesConflict = (
+  holidays = [],
+  dates = []
+) => {
+  const wanted = new Set(dates);
+
+  return (
+    holidays.find((holiday) => holiday && wanted.has(holiday.date)) || null
   );
 };
 

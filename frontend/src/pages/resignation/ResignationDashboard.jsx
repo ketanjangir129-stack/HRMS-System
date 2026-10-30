@@ -401,7 +401,7 @@ function ResignationDashboard() {
                 <div className="flex min-w-0 items-start gap-3">
 
                   <span
-                    className={`ui-tile-sm flex ${step.urgent
+                    className={`ui-tile ui-tile-sm ${step.urgent
                         ? "bg-amber-100 text-amber-700"
                         : "bg-surface text-ink-subtle"
                       }`}

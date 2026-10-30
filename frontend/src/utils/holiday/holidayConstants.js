@@ -16,20 +16,25 @@
 |--------------------------------------------------------------------------
 | Holiday Types
 |--------------------------------------------------------------------------
-| Three types plus the optional flag, which is what the stats cards count:
-| National, Festival, Company and "optional" across all three.
+| Four types plus the optional flag, which is what the stats cards count:
+| National, Festival, Company, Event and "optional" across all of them.
+|
+| Event is a fixed company event (Annual Day, Foundation Day). Like every
+| other type it is a day off for attendance and leave.
 */
 
 export const HOLIDAY_TYPE = {
   NATIONAL: "National",
   FESTIVAL: "Festival",
   COMPANY: "Company",
+  EVENT: "Event",
 };
 
 export const HOLIDAY_TYPE_OPTIONS = [
   HOLIDAY_TYPE.NATIONAL,
   HOLIDAY_TYPE.FESTIVAL,
   HOLIDAY_TYPE.COMPANY,
+  HOLIDAY_TYPE.EVENT,
 ];
 
 /*
@@ -52,6 +57,11 @@ export const HOLIDAY_TYPES = [
     label: "Company",
     description: "Declared by the company",
   },
+  {
+    value: HOLIDAY_TYPE.EVENT,
+    label: "Company Event",
+    description: "Fixed event, e.g. Annual Day",
+  },
 ];
 
 /*
@@ -66,12 +76,14 @@ export const HOLIDAY_TYPE_BADGES = {
   [HOLIDAY_TYPE.NATIONAL]: "bg-blue-50 text-blue-700 ring-blue-200",
   [HOLIDAY_TYPE.FESTIVAL]: "bg-amber-50 text-amber-700 ring-amber-200",
   [HOLIDAY_TYPE.COMPANY]: "bg-violet-50 text-violet-700 ring-violet-200",
+  [HOLIDAY_TYPE.EVENT]: "bg-pink-50 text-pink-700 ring-pink-200",
 };
 
 export const HOLIDAY_TYPE_DOTS = {
   [HOLIDAY_TYPE.NATIONAL]: "bg-blue-500",
   [HOLIDAY_TYPE.FESTIVAL]: "bg-amber-500",
   [HOLIDAY_TYPE.COMPANY]: "bg-violet-500",
+  [HOLIDAY_TYPE.EVENT]: "bg-pink-500",
 };
 
 export const OPTIONAL_BADGE =
@@ -89,6 +101,7 @@ export const HOLIDAY_CALENDAR_LEGEND = [
   { label: "National", color: "bg-blue-500" },
   { label: "Festival", color: "bg-amber-500" },
   { label: "Company", color: "bg-violet-500" },
+  { label: "Event", color: "bg-pink-500" },
 ];
 
 /*
@@ -132,3 +145,31 @@ export const UPCOMING_HOLIDAYS = 5;
 */
 
 export const UPCOMING_HOLIDAY_LIMIT = 10;
+
+/*
+|--------------------------------------------------------------------------
+| Multiple Dates, Import & Images
+|--------------------------------------------------------------------------
+| The limits match the backend, so a file or a date list is refused here
+| with a clear message instead of by the server.
+*/
+
+export const HOLIDAY_DATE_MODE = {
+  SINGLE: "single",
+  RANGE: "range",
+  MULTIPLE: "multiple",
+};
+
+export const HOLIDAY_MULTIPLE_DATES_MAX = 60;
+
+export const HOLIDAY_IMPORT_MAX_ROWS = 500;
+
+export const HOLIDAY_IMPORT_MAX_BYTES = 5 * 1024 * 1024;
+
+export const HOLIDAY_IMPORT_COLUMNS = ["Date", "Name", "Type", "Description"];
+
+export const HOLIDAY_IMPORT_ACCEPT = ".xlsx,.xls,.csv,.pdf";
+
+export const HOLIDAY_IMAGE_ACCEPT = "image/jpeg,image/png,image/webp,image/gif";
+
+export const HOLIDAY_IMAGE_MAX_BYTES = 5 * 1024 * 1024;

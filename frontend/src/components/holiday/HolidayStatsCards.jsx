@@ -4,6 +4,7 @@ import {
   FiCalendar,
   FiFlag,
   FiGift,
+  FiStar,
 } from "react-icons/fi";
 
 /*
@@ -28,7 +29,7 @@ import {
 | loaded cards will, and the page does not jump when the counts arrive.
 */
 const GRID_CLASS =
-  "grid grid-cols-2 gap-3 sm:gap-6 md:grid-cols-3 xl:grid-cols-5";
+  "grid grid-cols-2 gap-3 sm:gap-6 md:grid-cols-3 xl:grid-cols-6";
 
 function HolidayStatsCards({ stats, loading = false }) {
 
@@ -98,6 +99,16 @@ function HolidayStatsCards({ stats, loading = false }) {
       color: "bg-violet-500",
       iconBg: "bg-violet-50",
       iconColor: "text-violet-600",
+    },
+
+    {
+      title: "Events",
+      value: stats?.event || 0,
+      subtitle: "Fixed company events",
+      icon: <FiStar />,
+      color: "bg-pink-500",
+      iconBg: "bg-pink-50",
+      iconColor: "text-pink-600",
     },
 
     {

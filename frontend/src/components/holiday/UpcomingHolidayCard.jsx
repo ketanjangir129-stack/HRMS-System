@@ -1,16 +1,13 @@
-import { FiCalendar, FiSun } from "react-icons/fi";
+import { FiSun } from "react-icons/fi";
 import { AttendancePanel } from "../attendance/common/AttendancePanel";
 import {
   EmptyState,
   ErrorState,
   TableSkeleton,
 } from "../attendance/common/AttendanceState";
-import {
-  formatDaysUntil,
-  formatHolidayDate,
-  getDayName,
-} from "../../utils/holiday/holidayUtils";
-import HolidayTypeBadge from "./common/HolidayTypeBadge";
+import useHolidayImage from "../../hooks/useHolidayImage";
+import { formatDaysUntil } from "../../utils/holiday/holidayUtils";
+import HolidayBanner from "./common/HolidayBanner";
 
 /*
 |--------------------------------------------------------------------------
@@ -23,19 +20,28 @@ import HolidayTypeBadge from "./common/HolidayTypeBadge";
 | in January, and a panel that stopped at the 31st would be empty exactly
 | when it is most useful.
 |
-| The first row is drawn larger than the rest, because "the next holiday" is
-| the one question this panel is opened to answer.
+| Drawn with the same banners as the Dashboard card. The first is larger,
+| because "the next holiday" is the one question this panel is opened to
+| answer. A role that can edit holidays can set each banner's picture here.
 |--------------------------------------------------------------------------
 */
 
 function UpcomingHolidayCard({
+  companyCode,
   holidays = [],
   loading = false,
   error = "",
   onRetry,
+  canEditImage = false,
+  onImageChanged,
 }) {
 
-  const [next, ...rest] = holidays;
+  const [next] = holidays;
+
+  const { busyId, upload, remove } = useHolidayImage(
+    companyCode,
+    onImageChanged
+  );
 
   return (
 
@@ -72,104 +78,19 @@ function UpcomingHolidayCard({
 
       {!loading && !error && holidays.length > 0 && (
 
-        <div className="divide-y divide-line-subtle">
+        <div className="ui-scroll max-h-[440px] space-y-2.5 overflow-y-auto p-4 sm:p-5">
 
-          {/* Next holiday */}
+          {holidays.map((holiday, index) => (
 
-          <div className="flex flex-col gap-3 bg-brand/5 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:px-6 sm:py-5">
-
-            <div className="flex min-w-0 items-center gap-3 sm:gap-4">
-
-              {/*
-              | A date block rather than an icon: the date is the thing being
-              | looked up, so it is what the eye should land on first.
-              */}
-              <div className="flex h-12 w-12 shrink-0 flex-col items-center justify-center rounded-2xl bg-brand text-white shadow-sm shadow-brand/20 sm:h-14 sm:w-14">
-
-                <span className="text-base font-bold leading-none sm:text-lg">
-                  {String(next.date).slice(8, 10)}
-                </span>
-
-                <span className="mt-0.5 text-[10px] font-semibold uppercase tracking-wide">
-                  {formatHolidayDate(next.date).slice(3, 6)}
-                </span>
-
-              </div>
-
-              <div className="min-w-0">
-
-                <p className="truncate text-sm font-bold text-ink sm:text-base">
-                  {next.name}
-                </p>
-
-                <p className="mt-0.5 truncate text-xs text-ink-subtle">
-                  {getDayName(next.date)} · {formatHolidayDate(next.date)}
-                </p>
-
-              </div>
-
-            </div>
-
-            {/* Indented to clear the date block when the row stacks on mobile. */}
-            <div className="flex shrink-0 flex-wrap items-center gap-2 pl-15 sm:pl-0">
-
-              <span className="ui-badge bg-surface text-blue-700 ring-1 ring-blue-200">
-                {formatDaysUntil(next.daysUntil)}
-              </span>
-
-              <HolidayTypeBadge
-                type={next.type}
-                isOptional={next.isOptional}
-                size="sm"
-              />
-
-            </div>
-
-          </div>
-
-          {/* The rest */}
-
-          {rest.map((holiday) => (
-
-            <div
+            <HolidayBanner
               key={holiday.holidayId}
-              className="flex flex-col gap-3 px-4 py-4 transition-colors hover:bg-surface-muted sm:flex-row sm:items-center sm:justify-between sm:px-6"
-            >
-
-              <div className="flex min-w-0 items-start gap-3">
-
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
-                  <FiCalendar />
-                </div>
-
-                <div className="min-w-0">
-
-                  <p className="truncate text-sm font-semibold text-ink-muted">
-                    {holiday.name}
-                  </p>
-
-                  <p className="mt-0.5 truncate text-xs text-ink-subtle">
-                    {getDayName(holiday.date, { short: true })} ·{" "}
-                    {formatHolidayDate(holiday.date)} ·{" "}
-                    {formatDaysUntil(holiday.daysUntil)}
-                  </p>
-
-                </div>
-
-              </div>
-
-              {/* Indented to clear the icon when the row stacks on mobile. */}
-              <div className="flex shrink-0 items-center gap-2 pl-13 sm:pl-0">
-
-                <HolidayTypeBadge
-                  type={holiday.type}
-                  isOptional={holiday.isOptional}
-                  size="sm"
-                />
-
-              </div>
-
-            </div>
+              holiday={holiday}
+              featured={index === 0}
+              canEditImage={canEditImage}
+              busy={busyId === holiday.holidayId}
+              onUploadImage={upload}
+              onRemoveImage={remove}
+            />
 
           ))}
 

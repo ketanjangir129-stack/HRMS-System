@@ -241,13 +241,13 @@ accountHolderName: {
 // Employee Details — Documents / Identification
 
 uan: {
-  required: true,
+  required: false,
   pattern: /^\d{12}$/,
   message: "UAN must contain exactly 12 digits.",
 },
 
 esic: {
-  required: true,
+  required: false,
   pattern: /^\d{10}$/,
   message: "Enter a valid 10-digit ESIC insurance number.",
 },

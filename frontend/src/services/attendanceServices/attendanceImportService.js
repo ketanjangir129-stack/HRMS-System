@@ -546,10 +546,32 @@ export const completeImportRun = async (companyCode, run) => {
 /*
 | The most recent runs, newest first.
 |
-| Ordered and limited by the database rather than in the browser, so opening
-| the history downloads the last twenty entries and not every import a company
-| has ever run.
+| Ordered and limited by the database wherever it will do it, so opening the
+| history downloads the last twenty entries and not every import a company has
+| ever run. See the note on the fallback below for when it will not.
 */
+
+const newestFirst = (value, limit) =>
+  Object.values(value || {})
+    .sort((a, b) => (b?.uploadedAt || 0) - (a?.uploadedAt || 0))
+    .slice(0, limit);
+
+/*
+| An ordered query needs `.indexOn: ["uploadedAt"]` on this node, and the rules
+| for it have never been deployed. Without it Firebase rejects the read with
+| "Index not defined", which left the panel on "Could not load history" while
+| every run sat in the database.
+|
+| So the ordered query is tried and a refusal over the index falls back to
+| reading the node whole, sorting and trimming in the browser - the same
+| fallback the department import history uses. The node holds one small record
+| per import, so this is cheap and only ever runs until the index exists.
+| Anything that is not an index complaint - a denied read, a dropped
+| connection - is still raised, because those are real and the panel says so.
+*/
+
+const isMissingIndexError = (error) =>
+  String(error?.message || "").toLowerCase().includes("index not defined");
 
 export const getImportHistory = async (companyCode, limit = 20) => {
 
@@ -557,19 +579,31 @@ export const getImportHistory = async (companyCode, limit = 20) => {
 
     if (!companyCode) return [];
 
-    const snapshot = await get(
-      query(
-        ref(db, importsPath(companyCode)),
-        orderByChild("uploadedAt"),
-        limitToLast(limit)
-      )
-    );
+    const node = ref(db, importsPath(companyCode));
+
+    let snapshot;
+
+    try {
+
+      snapshot = await get(
+        query(node, orderByChild("uploadedAt"), limitToLast(limit))
+      );
+
+    } catch (queryError) {
+
+      if (!isMissingIndexError(queryError)) throw queryError;
+
+      console.warn(
+        `Attendance import history is not indexed. Add ".indexOn": ["uploadedAt"] at ${importsPath(companyCode)}.`
+      );
+
+      snapshot = await get(node);
+
+    }
 
     if (!snapshot.exists()) return [];
 
-    return Object.values(snapshot.val()).sort(
-      (a, b) => (b?.uploadedAt || 0) - (a?.uploadedAt || 0)
-    );
+    return newestFirst(snapshot.val(), limit);
 
   } catch (error) {
 
